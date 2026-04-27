@@ -17,24 +17,58 @@ export function ProjectTasksPanel({ projectId }: Props) {
   );
 
   return (
-    <section className="task-attempt-section">
-      <h3>Recent project tasks</h3>
-      {projectTasks.isLoading ? (
-        <p className="muted">Loading tasks...</p>
-      ) : memberTasks.length === 0 ? (
-        <p className="muted">No tasks are assigned to this project yet.</p>
-      ) : (
-        <ol className="project-task-list">
+    <section className="pd__card" aria-labelledby="pd-tasks-title">
+      <div className="pd__card-head">
+        <div className="pd__icon pd__icon--green" aria-hidden="true">
+          <svg width="18" height="18" viewBox="0 0 18 18" fill="none">
+            <path d="M6.75 9l1.5 1.5 3-3" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
+            <rect x="2.25" y="2.25" width="13.5" height="13.5" rx="3" stroke="currentColor" strokeWidth="1.2" opacity="0.5" />
+          </svg>
+        </div>
+        <div>
+          <h2 id="pd-tasks-title" className="pd__card-title">
+            Linked tasks
+          </h2>
+          <p className="pd__card-desc">Recent work in this project</p>
+        </div>
+      </div>
+
+      {projectTasks.isLoading ? <TaskListSkeleton /> : null}
+
+      {!projectTasks.isLoading && memberTasks.length === 0 ? (
+        <div className="pd__empty">
+          <p>No tasks linked to this project yet</p>
+        </div>
+      ) : null}
+
+      {memberTasks.length > 0 ? (
+        <ul className="pd__task-list">
           {memberTasks.slice(0, 8).map((task) => (
             <li key={task.id}>
-              <Link to={`/tasks/${encodeURIComponent(task.id)}`}>
-                {task.title}
+              <Link
+                to={`/tasks/${encodeURIComponent(task.id)}`}
+                className="pd__task-row"
+              >
+                <span className="pd__task-title">{task.title}</span>
+                <span className="pd__task-chip">{task.status}</span>
               </Link>
-              <span className="muted">{task.status}</span>
             </li>
           ))}
-        </ol>
-      )}
+        </ul>
+      ) : null}
     </section>
+  );
+}
+
+function TaskListSkeleton() {
+  return (
+    <div className="pd__task-skeleton" aria-hidden="true">
+      {Array.from({ length: 3 }).map((_, i) => (
+        <div key={i} className="pd__task-skeleton-row">
+          <span className="pd__shimmer" style={{ width: `${58 - i * 12}%`, height: "0.875rem" }} />
+          <span className="pd__shimmer" style={{ width: "3.5rem", height: "0.75rem" }} />
+        </div>
+      ))}
+    </div>
   );
 }

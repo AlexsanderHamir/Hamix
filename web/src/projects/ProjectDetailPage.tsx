@@ -25,46 +25,88 @@ export function ProjectDetailPage() {
   }
 
   return (
-    <section className="panel task-detail-panel project-page">
-      <header className="project-context-hero project-detail-hero">
-        <Link to="/projects" className="project-context-back-link">
-          <span aria-hidden="true">‹</span>
+    <section className="panel task-detail-panel pd">
+      <header className="pd__header">
+        <Link to="/projects" className="pd__back project-context-back-link">
+          <span aria-hidden="true">&#8249;</span>
           All projects
         </Link>
         {project.data ? (
-          <div className="project-context-hero__project" aria-label="Current project">
-            <h2>{project.data.name}</h2>
+          <div className="pd__header-title" aria-label="Current project">
+            <h1>{project.data.name}</h1>
+            <span
+              className={
+                project.data.status === "archived"
+                  ? "pd__badge pd__badge--muted"
+                  : "pd__badge pd__badge--live"
+              }
+            >
+              <span className="pd__badge-dot" aria-hidden="true" />
+              {project.data.status}
+            </span>
           </div>
         ) : null}
       </header>
 
-      {project.isLoading ? <p className="muted">Loading project...</p> : null}
+      {project.data?.description ? (
+        <p className="pd__subtitle">{project.data.description}</p>
+      ) : null}
+
+      {project.isLoading ? <ProjectDetailSkeleton /> : null}
+
       {project.error ? (
-        <div className="err" role="alert">
-          {project.error.message}
+        <div className="pd__error" role="alert">
+          <div className="pd__error-dot" aria-hidden="true" />
+          <div>
+            <p className="pd__error-title">Unable to load this project</p>
+            <p className="pd__error-message">{project.error.message}</p>
+          </div>
         </div>
       ) : null}
+
       {project.data ? (
-        <>
+        <div className="pd__grid">
           <ProjectSettingsPanel project={project.data} />
-          <section className="task-attempt-section project-context-page-card">
-            <div>
-              <p className="project-context-page-card__eyebrow">Memory nodes</p>
-              <h3>Project context</h3>
-              <p className="muted">
-                Keep reusable facts, decisions, and constraints close to this project.
+
+          <Link
+            to={`/projects/${encodeURIComponent(projectId)}/context`}
+            className="pd__context-card"
+            aria-labelledby="pd-context-title"
+          >
+            <div className="pd__context-icon" aria-hidden="true">
+              <svg width="20" height="20" viewBox="0 0 20 20" fill="none">
+                <circle cx="10" cy="5" r="2" fill="currentColor" opacity="0.9" />
+                <circle cx="5" cy="14" r="2" fill="currentColor" opacity="0.55" />
+                <circle cx="15" cy="14" r="2" fill="currentColor" opacity="0.55" />
+                <path d="M10 7v3M8.5 12l-2 1M11.5 12l2 1" stroke="currentColor" strokeWidth="1.2" opacity="0.35" />
+              </svg>
+            </div>
+            <div className="pd__context-body">
+              <h2 id="pd-context-title" className="pd__context-title">
+                Project context
+              </h2>
+              <p className="pd__context-desc">
+                Memory nodes, decisions, and constraints
               </p>
             </div>
-            <Link
-              to={`/projects/${encodeURIComponent(projectId)}/context`}
-              className="button-link"
-            >
-              Open context
-            </Link>
-          </section>
+            <svg className="pd__context-arrow" width="16" height="16" viewBox="0 0 16 16" fill="none" aria-hidden="true">
+              <path d="M6 4l4 4-4 4" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
+            </svg>
+          </Link>
+
           <ProjectTasksPanel projectId={projectId} />
-        </>
+        </div>
       ) : null}
     </section>
+  );
+}
+
+function ProjectDetailSkeleton() {
+  return (
+    <div className="pd__skeleton" aria-hidden="true">
+      <div className="pd__shimmer pd__shimmer--card" />
+      <div className="pd__shimmer pd__shimmer--card pd__shimmer--card-sm" />
+      <div className="pd__shimmer pd__shimmer--card pd__shimmer--card-sm" />
+    </div>
   );
 }

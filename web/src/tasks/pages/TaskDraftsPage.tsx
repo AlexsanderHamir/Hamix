@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { TASK_TIMINGS } from "@/constants/tasks";
 import { useDelayedTrue } from "@/lib/useDelayedTrue";
 import { EmptyState } from "@/shared/EmptyState";
@@ -62,7 +62,7 @@ export function TaskDraftsPage({ app }: Props) {
      React Query refetches the draft list periodically; on each refetch
      the page re-renders and `now` updates naturally — no manual interval
      required. */
-  const renderNow = useMemo(() => new Date(), [drafts]);
+  const renderNow = new Date();
 
   useEffect(() => {
     const draftIds = new Set(drafts.map((d) => d.id));

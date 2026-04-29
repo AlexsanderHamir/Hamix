@@ -1,5 +1,6 @@
 import type { TaskDraftSummary } from "@/types";
 import { TASK_DRAFTS } from "@/constants/tasks";
+import { formatRelativeTime } from "@/shared/time/relativeTime";
 
 const DRAFTS_PER_PAGE = TASK_DRAFTS.resumeModalPerPage;
 
@@ -32,6 +33,8 @@ export function DraftResumeModalDraftStack({
   onPreviousPage,
   onNextPage,
 }: Props) {
+  const now = new Date();
+
   return (
     <div
       className={`stack draft-resume-state draft-resume-state--${draftListState}`}
@@ -72,23 +75,72 @@ export function DraftResumeModalDraftStack({
           aria-hidden={showLoadingState}
         >
           {contentState === "empty" ? (
-            <p className="muted" role="status" aria-live="polite">
-              No saved drafts yet. Start fresh to create your first one.
-            </p>
+            <div className="draft-resume-empty" role="status" aria-live="polite">
+              <div className="draft-resume-empty__glyph" aria-hidden="true">
+                <svg viewBox="0 0 24 24" fill="none" focusable="false">
+                  <path
+                    d="M7 7.25h10M7 11.25h6M7 15.25h4"
+                    stroke="currentColor"
+                    strokeWidth="1.7"
+                    strokeLinecap="round"
+                  />
+                  <path
+                    d="M5.75 3.75h8.9L18.25 7.4v12.85H5.75V3.75Z"
+                    stroke="currentColor"
+                    strokeWidth="1.7"
+                    strokeLinejoin="round"
+                  />
+                  <path
+                    d="M14.25 3.9v3.85h3.85"
+                    stroke="currentColor"
+                    strokeWidth="1.7"
+                    strokeLinejoin="round"
+                  />
+                </svg>
+              </div>
+              <p className="draft-resume-empty__title">No saved drafts yet.</p>
+              <p className="draft-resume-empty__text">
+                Start fresh to compose your first task. Any interrupted draft
+                will return here automatically.
+              </p>
+            </div>
           ) : (
             <>
               <div className="draft-resume-list" role="list" aria-label="Saved drafts">
-                {visibleDrafts.map((d) => (
-                  <button
-                    key={d.id}
-                    type="button"
-                    className="secondary draft-resume-action draft-resume-item"
-                    onClick={() => onResume(d.id)}
-                    disabled={resumePending}
-                  >
-                    Resume: {d.name}
-                  </button>
-                ))}
+                {visibleDrafts.map((d) => {
+                  const lastEdited = d.updated_at || d.created_at;
+                  const relative = formatRelativeTime(lastEdited, now);
+                  return (
+                    <button
+                      key={d.id}
+                      type="button"
+                      className="secondary draft-resume-action draft-resume-item"
+                      onClick={() => onResume(d.id)}
+                      disabled={resumePending}
+                      aria-label={`Resume: ${d.name}`}
+                    >
+                      <span className="draft-resume-item__meta">
+                        <span className="draft-resume-item__name">{d.name}</span>
+                        {lastEdited && relative ? (
+                          <time
+                            className="draft-resume-item__time"
+                            dateTime={lastEdited}
+                            title={lastEdited}
+                          >
+                            Edited {relative}
+                          </time>
+                        ) : (
+                          <span className="draft-resume-item__time">
+                            Ready to continue
+                          </span>
+                        )}
+                      </span>
+                      <span className="draft-resume-item__cta" aria-hidden="true">
+                        Resume
+                      </span>
+                    </button>
+                  );
+                })}
               </div>
               <div className="draft-resume-footer">
                 <p className="muted draft-resume-page-indicator">

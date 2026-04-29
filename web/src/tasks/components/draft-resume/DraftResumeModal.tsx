@@ -77,8 +77,23 @@ export function DraftResumeModal({
   return (
     <Modal onClose={onClose} labelledBy="draft-resume-modal-title" size="wide">
       <section className="panel modal-sheet modal-sheet--edit modal-sheet--draft-resume">
-        <h2 id="draft-resume-modal-title">Resume a draft or start fresh</h2>
-        <p className="muted">Pick an existing draft to continue, or start a new one.</p>
+        <header className="draft-resume-header">
+          <div className="draft-resume-header__text">
+            <h2 id="draft-resume-modal-title" className="term-arrow">
+              <span>Resume a draft or start fresh</span>
+            </h2>
+            <p className="draft-resume-lede term-prompt muted" aria-hidden="true">
+              <span>recover --draft --or-start-fresh</span>
+            </p>
+            <p className="draft-resume-subtitle">
+              Pick an existing draft to continue, or start a new one.
+            </p>
+          </div>
+          <span className="draft-resume-count-pill" aria-live="polite">
+            <strong>{drafts.length}</strong>{" "}
+            {drafts.length === 1 ? "saved draft" : "saved drafts"}
+          </span>
+        </header>
         {loadError ? (
           onRetryLoad ? (
             <div className="err error-banner" role="alert">

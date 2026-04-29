@@ -54,11 +54,59 @@
  * density Stripe / Vercel / Linear settings pages land on. Bottom
  * padding leaves room for the action footer without it colliding with
  * the page edge.
+ *
+ * The brand-tinted top accent strip + soft radial wash give the page
+ * the same "framed surface" feel as the create modal and All Tasks
+ * panel, so the three top-level surfaces read as one design family.
  */
 .settings-page {
+  position: relative;
   max-width: 760px;
   margin: 32px auto 48px;
-  padding: 0 20px 56px;
+  padding: 28px 24px 56px;
+  background:
+    radial-gradient(
+      circle at 12% -10%,
+      color-mix(in srgb, var(--brand) 6%, transparent) 0%,
+      transparent 55%
+    ),
+    linear-gradient(
+      180deg,
+      color-mix(in srgb, var(--brand) 2.5%, transparent) 0%,
+      transparent 220px
+    );
+  border-radius: var(--radius-xl, 16px);
+}
+
+/* Brand-tinted top accent strip — same vocabulary as
+   `.task-create-modal-sheet::before` and `.task-list-section-panel::before`
+   so the operator's eye learns one banner across the app. */
+.settings-page::before {
+  content: "";
+  position: absolute;
+  top: 0;
+  left: 12%;
+  right: 12%;
+  height: 1px;
+  background: linear-gradient(
+    90deg,
+    transparent 0%,
+    color-mix(in srgb, var(--brand) 32%, transparent) 18%,
+    color-mix(in srgb, var(--brand) 38%, transparent) 50%,
+    color-mix(in srgb, var(--brand) 32%, transparent) 82%,
+    transparent 100%
+  );
+  pointer-events: none;
+  border-top-left-radius: var(--radius-xl, 16px);
+  border-top-right-radius: var(--radius-xl, 16px);
+}
+
+/* Match the brand-glyph opacity used on the create modal and
+   All Tasks panel so the `>` and `$` glyphs feel like the same
+   typographic mark across surfaces. */
+.settings-page .term-arrow::before,
+.settings-page .term-prompt::before {
+  opacity: 0.78;
 }
 
 /*
@@ -84,23 +132,42 @@
 .settings-page-heading {
   display: flex;
   flex-direction: column;
-  gap: 4px;
+  gap: 6px;
   min-width: 0;
 }
 
 .settings-page-title {
   margin: 0;
-  font-size: 22px;
+  font-size: 26px;
   font-weight: 600;
-  letter-spacing: -0.01em;
+  letter-spacing: -0.018em;
   color: var(--text-primary, var(--color-text, #1a1a1a));
+  line-height: 1.15;
 }
 
 .settings-page-subtitle {
   margin: 0;
-  font-size: 13px;
+  font-size: var(--text-sm, 0.875rem);
   line-height: 1.5;
   color: var(--text-secondary, var(--color-text-muted, #555));
+}
+
+/*
+ * One-line terminal lede underneath the title — sibling pattern to
+ * `.task-list-section-lede` and `.task-create-modal-lede`. Stays
+ * `aria-hidden` so screen readers don't repeat the page intent
+ * already conveyed by the heading + subtitle.
+ */
+.settings-page-lede {
+  margin: 2px 0 0;
+  font-family: var(--font-mono);
+  font-size: var(--text-xs, 0.75rem);
+  letter-spacing: 0.02em;
+  color: color-mix(in srgb, var(--text-tertiary, #777) 90%, transparent);
+}
+
+.settings-page-lede.term-prompt::before {
+  opacity: 0.62;
 }
 
 .settings-page-saved-chip {
@@ -214,6 +281,12 @@
  * single line. The prior inset `<legend>` sitting astride the
  * border was a 1990s form pattern — we explicitly reset it to a
  * flow element so the card can own the visual frame.
+ *
+ * On hover / focus-within the card lifts to `--shadow-sm` and
+ * the border tone strengthens slightly — the same Apple/Stripe
+ * "this row is in focus" affordance used everywhere else in the
+ * app, so the operator gets clear feedback about which section
+ * they're acting on without needing a stronger color treatment.
  */
 .settings-fieldset {
   position: relative;
@@ -221,11 +294,64 @@
   flex-direction: column;
   gap: 14px;
   margin: 0;
-  padding: 20px 22px 22px;
+  padding: 22px 24px 22px;
   border: 1px solid var(--border-hairline, var(--color-border, #e5e5e7));
-  border-radius: var(--radius-md, 10px);
+  border-radius: var(--radius-lg, 12px);
   background: var(--surface-card, #fff);
   box-shadow: var(--shadow-xs, 0 1px 2px rgb(0 0 0 / 4%));
+  transition:
+    border-color var(--duration-short, 150ms) ease,
+    box-shadow var(--duration-short, 200ms) ease,
+    transform var(--duration-short, 150ms) ease;
+}
+
+@media (hover: hover) {
+  .settings-fieldset:hover {
+    border-color: color-mix(in srgb, var(--brand) 16%, var(--border-hairline));
+    box-shadow:
+      0 1px 0 color-mix(in srgb, var(--brand) 6%, transparent),
+      var(--shadow-sm, 0 4px 12px rgb(0 0 0 / 6%));
+  }
+}
+
+.settings-fieldset:focus-within {
+  border-color: color-mix(in srgb, var(--brand) 24%, var(--border-hairline));
+  box-shadow:
+    0 1px 0 color-mix(in srgb, var(--brand) 8%, transparent),
+    var(--shadow-sm, 0 4px 12px rgb(0 0 0 / 6%));
+}
+
+/* Brand-tinted left accent rail — `0.5px → 2px` slim bar that
+   anchors the card visually without stealing weight from the
+   heading. Only visible on hover / focus-within so the cards
+   stay quiet at rest. Mirrors Apple System Settings' subtle
+   "selected row" treatment. */
+.settings-fieldset::before {
+  content: "";
+  position: absolute;
+  left: 0;
+  top: 16px;
+  bottom: 16px;
+  width: 2px;
+  border-radius: 2px;
+  background: linear-gradient(
+    180deg,
+    color-mix(in srgb, var(--brand) 65%, transparent) 0%,
+    color-mix(in srgb, var(--brand) 30%, transparent) 100%
+  );
+  opacity: 0;
+  transition: opacity var(--duration-short, 200ms) ease;
+  pointer-events: none;
+}
+
+@media (hover: hover) {
+  .settings-fieldset:hover::before {
+    opacity: 0.6;
+  }
+}
+
+.settings-fieldset:focus-within::before {
+  opacity: 1;
 }
 
 /* Deep link /settings#cursor-agent — keep section clear of sticky app header */
@@ -239,10 +365,30 @@ fieldset.settings-fieldset#cursor-agent {
   width: auto;
   margin: 0;
   padding: 0;
-  font-size: 15px;
+  font-size: var(--text-md, 16px);
   font-weight: 600;
-  letter-spacing: -0.005em;
+  letter-spacing: -0.008em;
   color: var(--text-primary, var(--color-text, #1a1a1a));
+}
+
+/*
+ * `.term-prompt` legend variant — picks up the `$` glyph from the
+ * shared base treatment so each section heading reads as a console
+ * prompt and the page feels of-a-piece with the create modal and
+ * All Tasks section heads. The base `.term-prompt` styles set
+ * `display: inline-flex` on a non-heading element; the explicit
+ * override below keeps the legend tight against its `<span>`
+ * label without the brand glyph drifting onto its own baseline.
+ */
+.settings-fieldset > .settings-fieldset-legend.term-prompt {
+  display: inline-flex;
+  align-items: baseline;
+  gap: 0.55ch;
+  width: auto;
+}
+
+.settings-fieldset > .settings-fieldset-legend.term-prompt::before {
+  font-size: 0.95em;
 }
 
 /*
@@ -252,10 +398,59 @@ fieldset.settings-fieldset#cursor-agent {
  * to give the page a consistent two-tier typographic rhythm.
  */
 .settings-section-subtitle {
-  margin: -8px 0 4px;
-  font-size: 13px;
+  margin: -6px 0 4px;
+  font-size: var(--text-sm, 13px);
   line-height: 1.5;
   color: var(--text-secondary, var(--color-text-muted, #555));
+}
+
+/*
+ * Stagger fade-in for the top-level form children — same easing
+ * curve and duration budget as the create modal and All Tasks
+ * panel so the operator perceives the page settling into place
+ * with the same cadence they're already trained on.
+ *
+ * Disabled under reduced-motion so the form simply appears.
+ */
+.settings-form > * {
+  animation: settings-fade-up
+    var(--duration-ui-phase, 320ms)
+    var(--ease-ui, cubic-bezier(0.22, 1, 0.36, 1))
+    both;
+  animation-delay: var(--settings-fade-delay, 0ms);
+}
+
+.settings-form > *:nth-child(1) { --settings-fade-delay: 0ms; }
+.settings-form > *:nth-child(2) { --settings-fade-delay: 40ms; }
+.settings-form > *:nth-child(3) { --settings-fade-delay: 80ms; }
+.settings-form > *:nth-child(4) { --settings-fade-delay: 120ms; }
+.settings-form > *:nth-child(5) { --settings-fade-delay: 160ms; }
+.settings-form > *:nth-child(6) { --settings-fade-delay: 200ms; }
+.settings-form > *:nth-child(7) { --settings-fade-delay: 240ms; }
+
+.settings-page-header {
+  animation: settings-fade-up
+    var(--duration-ui-phase, 320ms)
+    var(--ease-ui, cubic-bezier(0.22, 1, 0.36, 1))
+    both;
+}
+
+@keyframes settings-fade-up {
+  from {
+    opacity: 0;
+    transform: translateY(6px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .settings-form > *,
+  .settings-page-header {
+    animation: none;
+  }
 }
 
 .settings-field {
@@ -609,27 +804,59 @@ fieldset.settings-fieldset#cursor-agent {
  * of the form.
  */
 .settings-actions {
+  position: relative;
   display: flex;
   align-items: center;
   justify-content: space-between;
   gap: 12px;
   flex-wrap: wrap;
-  margin-top: 8px;
-  padding: 14px 18px;
+  margin-top: 12px;
+  padding: 16px 20px;
   border: 1px solid var(--border-hairline, var(--color-border, #e5e5e7));
-  border-radius: var(--radius-md, 10px);
+  border-radius: var(--radius-lg, 12px);
   background: var(--surface-card, #fff);
   box-shadow: var(--shadow-xs, 0 1px 2px rgb(0 0 0 / 4%));
+  transition:
+    border-color var(--duration-short, 200ms) ease,
+    background var(--duration-short, 200ms) ease,
+    box-shadow var(--duration-short, 200ms) ease;
 }
 
 .settings-actions[data-dirty="true"] {
-  border-color: color-mix(in srgb, var(--brand, #635bff) 22%, transparent);
+  border-color: color-mix(in srgb, var(--brand, #635bff) 28%, transparent);
   background:
     linear-gradient(
       180deg,
-      color-mix(in srgb, var(--brand, #635bff) 5%, transparent) 0%,
-      var(--surface-card, #fff) 70%
+      color-mix(in srgb, var(--brand, #635bff) 7%, transparent) 0%,
+      var(--surface-card, #fff) 80%
     );
+  box-shadow:
+    0 1px 0 color-mix(in srgb, var(--brand) 10%, transparent),
+    var(--shadow-sm, 0 4px 12px rgb(0 0 0 / 6%));
+}
+
+/* Top brand-tinted accent bar on the dirty-state footer — mirrors
+   the create modal footer treatment so "you have unsaved changes"
+   reads as the same affordance regardless of which page the
+   operator is on. */
+.settings-actions[data-dirty="true"]::before {
+  content: "";
+  position: absolute;
+  top: -1px;
+  left: 18%;
+  right: 18%;
+  height: 1px;
+  background: linear-gradient(
+    90deg,
+    transparent 0%,
+    color-mix(in srgb, var(--brand) 38%, transparent) 22%,
+    color-mix(in srgb, var(--brand) 48%, transparent) 50%,
+    color-mix(in srgb, var(--brand) 38%, transparent) 78%,
+    transparent 100%
+  );
+  border-top-left-radius: var(--radius-lg, 12px);
+  border-top-right-radius: var(--radius-lg, 12px);
+  pointer-events: none;
 }
 
 .settings-actions-status {

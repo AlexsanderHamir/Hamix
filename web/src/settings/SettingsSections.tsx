@@ -53,6 +53,16 @@ export function SettingsHeader({
         <p className="settings-page-subtitle">
           Runtime and workspace configuration for this installation.
         </p>
+        {/* One-line terminal lede mirrors the create modal's
+           `$ compose --next-up` and the All Tasks page's
+           `$ query --next-up --filter --review`, so the three top-level
+           surfaces feel like siblings instead of unrelated pages. */}
+        <p
+          className="settings-page-lede term-prompt muted"
+          aria-hidden="true"
+        >
+          <span>tune --runtime --workspace --agent</span>
+        </p>
       </div>
       {lastUpdated ? (
         <span
@@ -116,7 +126,9 @@ export function AgentWorkerSettingsSection({
 }) {
   return (
     <fieldset className="settings-fieldset">
-      <legend>Agent worker</legend>
+      <legend className="settings-fieldset-legend term-prompt">
+        <span>Agent worker</span>
+      </legend>
       <p className="settings-section-subtitle">
         Pick up ready tasks and hand them to the configured runner.
       </p>
@@ -192,7 +204,9 @@ export function DisplaySettingsSection({
   const customValue = form.displayTimezone.trim();
   return (
     <fieldset className="settings-fieldset">
-      <legend>Display</legend>
+      <legend className="settings-fieldset-legend term-prompt">
+        <span>Display</span>
+      </legend>
       <label className="settings-field">
         <span className="settings-field-label">Timezone</span>
         <TimezoneCombobox
@@ -224,7 +238,9 @@ export function WorkspaceSettingsSection({
 }) {
   return (
     <fieldset className="settings-fieldset">
-      <legend>Workspace</legend>
+      <legend className="settings-fieldset-legend term-prompt">
+        <span>Workspace</span>
+      </legend>
       <p className="settings-section-subtitle">
         The repository the agent will execute tasks in.
       </p>
@@ -272,7 +288,9 @@ export function CursorAgentSettingsSection({
 }) {
   return (
     <fieldset className="settings-fieldset" id="cursor-agent">
-      <legend>Cursor agent (CLI)</legend>
+      <legend className="settings-fieldset-legend term-prompt">
+        <span>Cursor agent (CLI)</span>
+      </legend>
       <p className="settings-section-subtitle">
         Model override and CLI binary used by the Cursor runner.
       </p>
@@ -376,7 +394,9 @@ export function RunTimeoutSettingsSection({
 }) {
   return (
     <fieldset className="settings-fieldset">
-      <legend>Run timeout</legend>
+      <legend className="settings-fieldset-legend term-prompt">
+        <span>Run timeout</span>
+      </legend>
       <p className="settings-section-subtitle">
         Hard ceiling on any single agent run&apos;s wall-clock duration.
       </p>

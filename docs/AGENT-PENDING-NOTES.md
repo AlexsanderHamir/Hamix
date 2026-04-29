@@ -30,60 +30,6 @@ Format for each entry:
 
 ## Open
 
-### Test scenarios surface as a header trigger, not a new task type
-- Date: 2026-04-29
-- From task: Pre-defined test scenarios
-- Decision needed: The operator asked for "pre-defined task types for
-  testing". Should they live as a new `task_type` enum value (alongside
-  General / Bug fix / Feature / Refactor / Docs / DMAP), or as a
-  separate "Insert a scenario" affordance that auto-fills the existing
-  fields without changing the task taxonomy?
-- Default chosen if no answer: Separate affordance — a "Test scenarios"
-  trigger button in the create-modal header opens a popover that fills
-  Title / Prompt / Priority / Task type / Done criteria. Avoids backend
-  schema / migration changes, keeps production task-type analytics clean,
-  and lets each scenario pick a real production task type
-  (`refactor`, `docs`, `bug_fix`, `feature`) that the agent worker
-  already understands.
-- Files affected: `web/src/tasks/test-scenarios/`,
-  `web/src/tasks/components/task-create-modal/TestScenariosTrigger.tsx`,
-  `web/src/tasks/components/task-create-modal/TestScenariosPopover.tsx`,
-  `web/src/tasks/components/task-create-modal/TaskCreateModal.tsx`,
-  `web/src/tasks/hooks/useTaskCreateFlow.ts` (`applyTestScenario`).
-
-### Test scenarios catalog scope (10 entries, 2 per difficulty)
-- Date: 2026-04-29
-- From task: Pre-defined test scenarios
-- Decision needed: The catalog ships with 10 scenarios — 2 per difficulty
-  (Trivial / Easy / Medium / Hard / Expert). Should we ship more (e.g.
-  3–4 per bucket), or fewer? Should we add language-specific scenarios
-  on top of the codebase-agnostic ones?
-- Default chosen if no answer: Started small with 2 per bucket so the
-  popover stays scannable. Every scenario is fully codebase-agnostic
-  (refers to "the longest function", "the README", "the hottest path"
-  rather than language-specific symbols). Operators can edit any field
-  after applying a scenario, so they don't have to wait for a perfectly
-  matching preset.
-- Files affected: `web/src/tasks/test-scenarios/testScenarios.ts`
-  (`TEST_SCENARIOS`).
-
-### Test scenarios do not overwrite project / runner / model / schedule
-- Date: 2026-04-29
-- From task: Pre-defined test scenarios
-- Decision needed: Picking a scenario fills Title / Prompt / Priority /
-  Task type / Checklist but leaves Project / Runner / Model / Schedule /
-  Pending subtasks alone. Is that the intended boundary, or should
-  scenarios also force a particular runner / model so test runs are
-  reproducible?
-- Default chosen if no answer: Leave the runtime configuration alone.
-  An operator who has already configured "always run against project X
-  with model Y" should not have those wiped by picking a scenario. If
-  reproducible runtime presets become a requirement, fold them in by
-  adding optional `runner` / `cursorModel` fields to the `TestScenario`
-  type and apply them only when set.
-- Files affected: `web/src/tasks/hooks/useTaskCreateFlow.ts`
-  (`applyTestScenario`).
-
 ### Stats strip lives inside the task list panel, not at the page top
 - Date: 2026-04-29
 - From task: All Tasks page polish
@@ -426,3 +372,72 @@ Format for each entry:
   natural language ("Schedule…") plus the ellipsis-disclosure convention is
   the same affordance vocabulary Stripe / Linear use; trying to enumerate
   examples in the label ("10m / 1h / 1d") would only crowd the button.
+
+### Test scenarios surface as a header trigger, not a new task type
+- Date: 2026-04-29
+- From task: Pre-defined test scenarios
+- Decision needed: The operator asked for "pre-defined task types for
+  testing". Should they live as a new `task_type` enum value (alongside
+  General / Bug fix / Feature / Refactor / Docs / DMAP), or as a
+  separate "Insert a scenario" affordance that auto-fills the existing
+  fields without changing the task taxonomy?
+- Default chosen if no answer: Separate affordance — a "Test scenarios"
+  trigger button in the create-modal header opens a popover that fills
+  Title / Prompt / Priority / Task type / Done criteria. Avoids backend
+  schema / migration changes, keeps production task-type analytics clean,
+  and lets each scenario pick a real production task type
+  (`refactor`, `docs`, `bug_fix`, `feature`) that the agent worker
+  already understands.
+- Files affected: `web/src/tasks/test-scenarios/`,
+  `web/src/tasks/components/task-create-modal/TestScenariosTrigger.tsx`,
+  `web/src/tasks/components/task-create-modal/TestScenariosPopover.tsx`,
+  `web/src/tasks/components/task-create-modal/TaskCreateModal.tsx`,
+  `web/src/tasks/hooks/useTaskCreateFlow.ts` (`applyTestScenario`).
+- Resolution (2026-04-29): Confirmed header-trigger pattern. Adding a
+  `task_type=test` enum value would pollute production analytics (every
+  metric would need a "real tasks vs test scenarios" filter forever) and
+  require a backend migration for what is fundamentally a UI-only
+  affordance. The trigger / popover is a zero-cost, zero-migration path.
+
+### Test scenarios catalog scope (10 entries, 2 per difficulty)
+- Date: 2026-04-29
+- From task: Pre-defined test scenarios
+- Decision needed: The catalog ships with 10 scenarios — 2 per difficulty
+  (Trivial / Easy / Medium / Hard / Expert). Should we ship more (e.g.
+  3–4 per bucket), or fewer? Should we add language-specific scenarios
+  on top of the codebase-agnostic ones?
+- Default chosen if no answer: Started small with 2 per bucket so the
+  popover stays scannable. Every scenario is fully codebase-agnostic
+  (refers to "the longest function", "the README", "the hottest path"
+  rather than language-specific symbols). Operators can edit any field
+  after applying a scenario, so they don't have to wait for a perfectly
+  matching preset.
+- Files affected: `web/src/tasks/test-scenarios/testScenarios.ts`
+  (`TEST_SCENARIOS`).
+- Resolution (2026-04-29): Confirmed start-small default. Scaling the
+  catalog has zero technical cost — `TEST_SCENARIOS` is a typed array,
+  any future agent can append entries. Shipping 10 scannable scenarios
+  is better than shipping 40 nobody reads through; the bar to add more
+  is only "an operator asks for one we don't have".
+
+### Test scenarios do not overwrite project / runner / model / schedule
+- Date: 2026-04-29
+- From task: Pre-defined test scenarios
+- Decision needed: Picking a scenario fills Title / Prompt / Priority /
+  Task type / Checklist but leaves Project / Runner / Model / Schedule /
+  Pending subtasks alone. Is that the intended boundary, or should
+  scenarios also force a particular runner / model so test runs are
+  reproducible?
+- Default chosen if no answer: Leave the runtime configuration alone.
+  An operator who has already configured "always run against project X
+  with model Y" should not have those wiped by picking a scenario. If
+  reproducible runtime presets become a requirement, fold them in by
+  adding optional `runner` / `cursorModel` fields to the `TestScenario`
+  type and apply them only when set.
+- Files affected: `web/src/tasks/hooks/useTaskCreateFlow.ts`
+  (`applyTestScenario`).
+- Resolution (2026-04-29): Confirmed runtime-untouched default. The
+  principle: a "fill the form for me" affordance must never silently
+  redirect the run to a different runner / project. If reproducible
+  presets become a requirement, the type already has room to grow
+  optional `runner` / `cursorModel` fields applied only when set.

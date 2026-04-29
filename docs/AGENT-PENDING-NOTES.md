@@ -30,67 +30,6 @@ Format for each entry:
 
 ## Open
 
-### Drafts page reuses `task-list-section-panel` chrome rather than its own
-- Date: 2026-04-29
-- From task: Drafts page polish
-- Decision needed: The drafts page wraps its content in `panel
-  task-list-section-panel` so it inherits the brand-tinted top
-  accent strip, the soft vertical gradient, the lifted `$` glyph,
-  and the staggered fade-in defined for the All Tasks page. Should
-  it instead get its own `task-drafts-section-panel` modifier and a
-  fully-independent CSS surface?
-- Default chosen if no answer: Reuse. The rules in
-  `app-task-list-controls.css` are framed as "section panel polish
-  — mirrors the create-modal treatment so the two surfaces feel
-  like siblings". Drafts is a third sibling under the same parent
-  shell pattern; copying the CSS into a `task-drafts-section-panel`
-  twin would just be drift waiting to happen. New drafts-only
-  rules live in the dedicated partial
-  `web/src/app/styles/task-drafts/app-task-drafts.css` so the
-  shared shell stays generic.
-- Files affected: `web/src/tasks/pages/TaskDraftsPage.tsx`,
-  `web/src/app/styles/task-drafts/app-task-drafts.css`,
-  `web/src/app/App.css`.
-
-### Drafts row exposes title + relative timestamp, not just buttons
-- Date: 2026-04-29
-- From task: Drafts page polish
-- Decision needed: The legacy row was two flat buttons —
-  `Resume: <name>` / `Delete` — with the title baked into the
-  Resume button's label. The polished row lifts the title into a
-  dedicated `.draft-row__name` cell with an `Edited <relative>`
-  sub-label. Should the title also stay in the Resume button text,
-  or is the dedicated cell enough?
-- Default chosen if no answer: Dedicated cell only; the Resume
-  button now reads simply `Resume`. The button still carries the
-  full `aria-label="Open draft <name> in create form"` (preserved
-  from the previous implementation so all `App.test.tsx` queries
-  by accessible-name keep passing). Visible duplication added
-  noise without adding scannability — the title cell is more
-  prominent and the timestamp is the new useful piece.
-- Files affected: `web/src/tasks/pages/TaskDraftsPage.tsx`
-  (Resume / Delete button cluster + meta cell layout).
-
-### `formatRelativeTime` lives under `web/src/shared/time/`
-- Date: 2026-04-29
-- From task: Drafts page polish
-- Decision needed: The drafts page needs an "Edited 5 min ago"
-  affordance and there is no existing relative-time helper. Should
-  the helper live as a one-off utility inside the drafts page, or
-  as a shared module under `web/src/shared/time/`?
-- Default chosen if no answer: Shared module. Stripe / Linear /
-  Apple settings UI all use the same compact relative-time
-  formatting in dozens of surfaces (audit rows, recent activity,
-  last-updated chips). Keeping it shared from day one means the
-  next caller (Settings "Last saved" chip, task list updated_at
-  column, audit timeline) doesn't need to invent another variant.
-  The helper has its own test suite (`relativeTime.test.ts`,
-  10 tests) and ships with explicit bucket boundaries, future-time
-  collapse, and unparseable-input tolerance.
-- Files affected: `web/src/shared/time/relativeTime.ts`,
-  `web/src/shared/time/relativeTime.test.ts`,
-  `web/src/tasks/pages/TaskDraftsPage.tsx`.
-
 ### Navbar uses an underline accent under the active item AND the existing brand pill
 - Date: 2026-04-29
 - From task: Navbar polish
@@ -142,25 +81,6 @@ Format for each entry:
   character with the rest of the calm, terminal-inflected aesthetic.
 - Files affected: `web/src/settings/settings.css`
   (`.app-header-settings-link:hover .app-header-settings-icon`).
-
-### Drafts row does not surface project / runner / task-type metadata
-- Date: 2026-04-29
-- From task: Drafts page polish
-- Decision needed: A draft can carry `project_id`,
-  `project_context_item_ids`, runner / model selection, schedule,
-  priority, task type, etc. — none of which are visible on the
-  drafts list (only name and updated_at). Should the row also
-  surface project / priority / task-type pills?
-- Default chosen if no answer: Stay with name + relative time
-  only. The drafts page is a "pick one to resume" surface, not a
-  comparison surface. Adding pills would (a) require a richer
-  `TaskDraftSummary` shape from the backend (currently
-  `id/name/created_at/updated_at`), (b) crowd the row, and (c)
-  duplicate state the operator will see the moment they Resume
-  into the create modal. If a user reports "I can't tell my drafts
-  apart", revisit by adding a `payload_summary` to the draft list
-  endpoint and surfacing one or two pills here.
-- Files affected: `web/src/tasks/pages/TaskDraftsPage.tsx`.
 
 ---
 
@@ -465,3 +385,104 @@ Format for each entry:
   the same vocabulary every other polished surface uses; flattening it
   would degrade the heading rhythm across the whole app, not just on
   Settings.
+
+### Drafts page reuses `task-list-section-panel` chrome rather than its own
+- Date: 2026-04-29
+- From task: Drafts page polish
+- Decision needed: The drafts page wraps its content in `panel
+  task-list-section-panel` so it inherits the brand-tinted top
+  accent strip, the soft vertical gradient, the lifted `$` glyph,
+  and the staggered fade-in defined for the All Tasks page. Should
+  it instead get its own `task-drafts-section-panel` modifier and a
+  fully-independent CSS surface?
+- Default chosen if no answer: Reuse. The rules in
+  `app-task-list-controls.css` are framed as "section panel polish
+  — mirrors the create-modal treatment so the two surfaces feel
+  like siblings". Drafts is a third sibling under the same parent
+  shell pattern; copying the CSS into a `task-drafts-section-panel`
+  twin would just be drift waiting to happen. New drafts-only
+  rules live in the dedicated partial
+  `web/src/app/styles/task-drafts/app-task-drafts.css` so the
+  shared shell stays generic.
+- Files affected: `web/src/tasks/pages/TaskDraftsPage.tsx`,
+  `web/src/app/styles/task-drafts/app-task-drafts.css`,
+  `web/src/app/App.css`.
+- Resolution (2026-04-29): Confirmed reuse. Forking
+  `task-list-section-panel` into a near-identical `task-drafts-section-panel`
+  twin is the kind of CSS drift that compounds for years; a shared shell
+  with feature-specific partials is the canonical pattern. If the Drafts
+  surface ever needs chrome the All Tasks page does NOT need, the
+  modifier can be added then — until then, less surface = less drift.
+
+### Drafts row exposes title + relative timestamp, not just buttons
+- Date: 2026-04-29
+- From task: Drafts page polish
+- Decision needed: The legacy row was two flat buttons —
+  `Resume: <name>` / `Delete` — with the title baked into the
+  Resume button's label. The polished row lifts the title into a
+  dedicated `.draft-row__name` cell with an `Edited <relative>`
+  sub-label. Should the title also stay in the Resume button text,
+  or is the dedicated cell enough?
+- Default chosen if no answer: Dedicated cell only; the Resume
+  button now reads simply `Resume`. The button still carries the
+  full `aria-label="Open draft <name> in create form"` (preserved
+  from the previous implementation so all `App.test.tsx` queries
+  by accessible-name keep passing). Visible duplication added
+  noise without adding scannability — the title cell is more
+  prominent and the timestamp is the new useful piece.
+- Files affected: `web/src/tasks/pages/TaskDraftsPage.tsx`
+  (Resume / Delete button cluster + meta cell layout).
+- Resolution (2026-04-29): Confirmed dedicated cell. The title belongs
+  to the row, not to the button — every list view in Stripe / Linear /
+  Notion separates the row's identity from its actions. The `aria-label`
+  preserves accessible-name continuity so screen readers still hear
+  "Open draft <name> in create form" when the button takes focus.
+
+### `formatRelativeTime` lives under `web/src/shared/time/`
+- Date: 2026-04-29
+- From task: Drafts page polish
+- Decision needed: The drafts page needs an "Edited 5 min ago"
+  affordance and there is no existing relative-time helper. Should
+  the helper live as a one-off utility inside the drafts page, or
+  as a shared module under `web/src/shared/time/`?
+- Default chosen if no answer: Shared module. Stripe / Linear /
+  Apple settings UI all use the same compact relative-time
+  formatting in dozens of surfaces (audit rows, recent activity,
+  last-updated chips). Keeping it shared from day one means the
+  next caller (Settings "Last saved" chip, task list updated_at
+  column, audit timeline) doesn't need to invent another variant.
+  The helper has its own test suite (`relativeTime.test.ts`,
+  10 tests) and ships with explicit bucket boundaries, future-time
+  collapse, and unparseable-input tolerance.
+- Files affected: `web/src/shared/time/relativeTime.ts`,
+  `web/src/shared/time/relativeTime.test.ts`,
+  `web/src/tasks/pages/TaskDraftsPage.tsx`.
+- Resolution (2026-04-29): Confirmed shared module. Inlining as a
+  drafts-only utility would guarantee the next caller invents a
+  divergent twin (different bucket boundaries, different "just now"
+  threshold, different unparseable-input handling). The shared module
+  with full test coverage is the cheap-now / pays-forever path.
+
+### Drafts row does not surface project / runner / task-type metadata
+- Date: 2026-04-29
+- From task: Drafts page polish
+- Decision needed: A draft can carry `project_id`,
+  `project_context_item_ids`, runner / model selection, schedule,
+  priority, task type, etc. — none of which are visible on the
+  drafts list (only name and updated_at). Should the row also
+  surface project / priority / task-type pills?
+- Default chosen if no answer: Stay with name + relative time
+  only. The drafts page is a "pick one to resume" surface, not a
+  comparison surface. Adding pills would (a) require a richer
+  `TaskDraftSummary` shape from the backend (currently
+  `id/name/created_at/updated_at`), (b) crowd the row, and (c)
+  duplicate state the operator will see the moment they Resume
+  into the create modal. If a user reports "I can't tell my drafts
+  apart", revisit by adding a `payload_summary` to the draft list
+  endpoint and surfacing one or two pills here.
+- Files affected: `web/src/tasks/pages/TaskDraftsPage.tsx`.
+- Resolution (2026-04-29): Confirmed minimal row. Adding pills now
+  would either ship them empty (the backend doesn't return the data
+  yet) or force a backend change for a UI that nobody has asked to be
+  richer. The doc trail above is enough that a future operator can
+  retrace the path if the need ever surfaces.

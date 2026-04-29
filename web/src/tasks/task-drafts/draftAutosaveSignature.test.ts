@@ -17,6 +17,8 @@ function baseInput(): DraftAutosaveSignatureInput {
     runner: TASK_TEST_DEFAULTS.runner,
     cursorModel: TASK_TEST_DEFAULTS.cursor_model,
     parentId: "",
+    projectId: "",
+    projectContextItemIds: [],
     checklistInherit: false,
     checklistItems: [],
     pendingSubtasks: [],
@@ -120,6 +122,8 @@ describe("draftAutosaveSignature", () => {
         task_type: "general",
         ...TASK_TEST_DEFAULTS,
         parent_id: "",
+        project_id: "",
+        project_context_item_ids: [],
         checklist_inherit: false,
         checklist_items: [],
         pending_subtasks: [
@@ -136,5 +140,31 @@ describe("draftAutosaveSignature", () => {
         dmap_config: { commitLimit: "1", domain: "", description: "" },
       },
     });
+  });
+
+  it("changes when project context selection flips", () => {
+    const a = draftAutosaveSignature({
+      ...baseInput(),
+      projectId: "project-1",
+      projectContextItemIds: ["ctx-1"],
+    });
+    const b = draftAutosaveSignature({
+      ...baseInput(),
+      projectId: "project-1",
+      projectContextItemIds: ["ctx-1", "ctx-2"],
+    });
+    expect(a).not.toBe(b);
+  });
+
+  it("changes when the bound project changes", () => {
+    const a = draftAutosaveSignature({
+      ...baseInput(),
+      projectId: "project-1",
+    });
+    const b = draftAutosaveSignature({
+      ...baseInput(),
+      projectId: "project-2",
+    });
+    expect(a).not.toBe(b);
   });
 });

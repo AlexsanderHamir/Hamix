@@ -31,6 +31,15 @@ export type DraftAutosaveSignatureInput = {
   runner: string;
   cursorModel: string;
   parentId: string;
+  /**
+   * Project the operator is composing against. Empty string means "no
+   * project bound". Folded into the autosave signature so changing the
+   * project (or its selected context items) flips the dirty bit and
+   * triggers an autosave.
+   */
+  projectId: string;
+  /** User-selected project context item ids. Order matters and is preserved. */
+  projectContextItemIds: string[];
   checklistInherit: boolean;
   checklistItems: string[];
   pendingSubtasks: PendingSubtaskDraft[];
@@ -69,6 +78,8 @@ export function draftAutosaveSignature(
       runner: input.runner,
       cursor_model: input.cursorModel,
       parent_id: input.parentId,
+      project_id: input.projectId,
+      project_context_item_ids: input.projectContextItemIds,
       checklist_inherit: input.checklistInherit,
       checklist_items: input.checklistItems,
       pending_subtasks: input.pendingSubtasks.map((st) => ({

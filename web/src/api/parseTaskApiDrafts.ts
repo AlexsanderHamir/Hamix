@@ -154,6 +154,18 @@ function parseDraftPayload(value: unknown): TaskDraftPayload {
           ),
         }
       : {}),
+    ...(typeof value.project_id === "string"
+      ? {
+          project_id: parseString(value.project_id, "payload.project_id"),
+        }
+      : {}),
+    ...(Array.isArray(value.project_context_item_ids)
+      ? {
+          project_context_item_ids: value.project_context_item_ids.map((id, i) =>
+            parseString(id, `payload.project_context_item_ids[${i}]`),
+          ),
+        }
+      : {}),
   };
 }
 

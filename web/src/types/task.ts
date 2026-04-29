@@ -385,6 +385,18 @@ export type TaskDraftPayload = {
     checklist_items: string[];
     checklist_inherit: boolean;
   }>;
+  /**
+   * Optional in older drafts. When present, the draft restores the project
+   * the operator was composing against on save. Empty string means "no
+   * project bound" (falls back to the default project on resume).
+   */
+  project_id?: string;
+  /**
+   * Optional in older drafts. Mirrors the task's `project_context_item_ids`
+   * so the REFERENCES block in the prompt editor reappears with the same
+   * memory nodes the operator selected before closing the modal.
+   */
+  project_context_item_ids?: string[];
   latest_evaluation?: {
     overall_score: number;
     overall_summary: string;

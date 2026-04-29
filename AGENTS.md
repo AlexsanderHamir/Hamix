@@ -2,6 +2,12 @@
 
 Use this file as the first pass before editing code. Long-form contracts live in `docs/`; this file is a map and checklist.
 
+> **Pending operator decisions:** Before starting any new task, read
+> [docs/AGENT-PENDING-NOTES.md](docs/AGENT-PENDING-NOTES.md). Past agents may have
+> left technical-choice trade-offs that need the operator's attention. If your
+> work touches the same surface, raise the open entry in chat before re-locking
+> a default. When you finish a session, append any new follow-ups there.
+
 ## Read order
 
 | Order | Doc | Why |

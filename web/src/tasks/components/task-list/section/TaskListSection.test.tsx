@@ -115,7 +115,7 @@ describe("TaskListSection", () => {
     expect(screen.getByText("Syncing with server…")).toBeInTheDocument();
   });
 
-  it("shows empty copy when not loading and no tasks", () => {
+  it("shows the welcome empty state when not loading and no tasks", () => {
     renderWithRouter(
       <TaskListSection
         tasks={[]}
@@ -127,7 +127,12 @@ describe("TaskListSection", () => {
         onRequestDelete={vi.fn()}
       />,
     );
+    // Title stays "No tasks yet" (precise, used as a page-ready sentinel
+    // by App.test.tsx integration tests). Description copy is refreshed
+    // to be more inviting; assert on a phrase from the new body so a
+    // future copy regression is caught here.
     expect(screen.getByText(/no tasks yet/i)).toBeInTheDocument();
+    expect(screen.getByText(/dispatch your first run/i)).toBeInTheDocument();
     expect(
       screen.getByRole("region", { name: /^all tasks$/i }),
     ).toBeInTheDocument();
@@ -504,7 +509,8 @@ describe("TaskListSection", () => {
       await user.click(screen.getByTestId("task-list-bulk-bar-reschedule"));
       const fixedNow = Date.UTC(2026, 3, 19, 12, 0, 0);
       const dateNow = vi.spyOn(Date, "now").mockReturnValue(fixedNow);
-      await user.click(screen.getByTestId("schedule-picker-in-1h"));
+      await user.click(screen.getByTestId("schedule-picker-quick-trigger"));
+      await user.click(screen.getByTestId("schedule-picker-quick-hour-1"));
       dateNow.mockRestore();
       await user.click(screen.getByTestId("task-bulk-reschedule-submit"));
       await waitFor(() => {
@@ -632,7 +638,8 @@ describe("TaskListSection", () => {
       await user.click(screen.getByTestId("task-list-bulk-bar-reschedule"));
       const fixedNow = Date.UTC(2026, 3, 19, 12, 0, 0);
       const dateNow = vi.spyOn(Date, "now").mockReturnValue(fixedNow);
-      await user.click(screen.getByTestId("schedule-picker-in-1h"));
+      await user.click(screen.getByTestId("schedule-picker-quick-trigger"));
+      await user.click(screen.getByTestId("schedule-picker-quick-hour-1"));
       dateNow.mockRestore();
       await user.click(screen.getByTestId("task-bulk-reschedule-submit"));
       await waitFor(() => {

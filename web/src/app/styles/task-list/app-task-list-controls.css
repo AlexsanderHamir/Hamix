@@ -3,33 +3,168 @@
   padding-bottom: min(14rem, 42vh);
 }
 
+/* —— Section panel polish — mirrors the create-modal treatment so the two
+   surfaces feel like siblings (same brand-tinted top accent strip, same
+   subtle vertical gradient, same rhythm). The base `.panel` styling stays
+   untouched; this scope kicks in only on the task-list shell. —— */
+.task-list-section-panel.panel {
+  background:
+    linear-gradient(
+      180deg,
+      var(--bg-elevated) 0%,
+      color-mix(in srgb, var(--bg-elevated) 96%, var(--bg-page)) 100%
+    );
+}
+
+.task-list-section-panel.panel::before {
+  content: "";
+  position: absolute;
+  inset: 0 0 auto 0;
+  height: 2px;
+  border-top-left-radius: var(--radius-lg);
+  border-top-right-radius: var(--radius-lg);
+  background: linear-gradient(
+    90deg,
+    transparent 0%,
+    var(--brand-border-soft) 12%,
+    var(--brand) 50%,
+    var(--brand-border-soft) 88%,
+    transparent 100%
+  );
+  opacity: 0.55;
+  pointer-events: none;
+}
+
+/* Lift the `$` glyph on this surface so the page heading reads as a
+   deliberate anchor, matching the same tweak on the create modal. */
+.task-list-section-panel .term-prompt::before {
+  opacity: 0.78;
+}
+
 .task-list-section-head {
   display: flex;
   flex-wrap: wrap;
-  align-items: center;
+  align-items: flex-start;
   justify-content: space-between;
   gap: 0.75rem 1rem;
   margin-bottom: var(--space-4);
+  padding-bottom: 0.85rem;
+  border-bottom: 1px solid color-mix(in srgb, var(--border-hairline) 80%, transparent);
+}
+
+.task-list-section-head__text {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+  min-width: 0;
 }
 
 .task-list-section-head h2 {
   margin: 0;
 }
 
+.task-list-section-lede {
+  margin: 0;
+  font-size: var(--text-help);
+  letter-spacing: 0.005em;
+  opacity: 0.85;
+}
+
 .task-list-section-actions {
   flex-shrink: 0;
 }
 
+/* —— Quiet inline scoreboard (TaskListStatsStrip). Sits between the heading
+   and the filters so operators see the room state at a glance without
+   scrolling. Brand-tinted only on non-default tones; "total" / "ready" stay
+   neutral so the strip never reads as alarming on a fresh database. —— */
+
+.task-list-stats-strip {
+  margin-bottom: var(--space-4);
+}
+
+.task-list-stats-strip__list {
+  list-style: none;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.45rem;
+  margin: 0;
+  padding: 0;
+}
+
+.task-list-stats-strip__pill {
+  display: inline-flex;
+  align-items: baseline;
+  gap: 0.4rem;
+  padding: 0.3rem 0.65rem;
+  border-radius: var(--radius-full);
+  border: 1px solid var(--border-hairline);
+  background: var(--bg-elevated);
+  box-shadow: var(--shadow-inset-lip);
+  font-size: var(--text-xs);
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--text-tertiary);
+}
+
+.task-list-stats-strip__value {
+  font-family: var(--font-mono);
+  font-variant-numeric: tabular-nums;
+  font-size: var(--text-sm);
+  font-weight: 600;
+  letter-spacing: -0.01em;
+  text-transform: none;
+  color: var(--text-primary);
+}
+
+.task-list-stats-strip__label {
+  font-weight: 500;
+}
+
+.task-list-stats-strip__pill[data-tone="accent"] {
+  background: var(--brand-surface-faint);
+  border-color: var(--brand-border-soft);
+  color: var(--brand-text-strong);
+}
+
+.task-list-stats-strip__pill[data-tone="accent"] .task-list-stats-strip__value {
+  color: var(--brand-text-strong);
+}
+
+.task-list-stats-strip__pill[data-tone="warn"] {
+  background: var(--warning-soft);
+  border-color: var(--warning-border);
+  color: var(--warning-ink);
+}
+
+.task-list-stats-strip__pill[data-tone="warn"] .task-list-stats-strip__value {
+  color: var(--warning-ink);
+}
+
+.task-list-stats-strip__pill[data-tone="info"] {
+  background: color-mix(in srgb, var(--brand-surface-subtle) 70%, var(--bg-elevated));
+  border-color: var(--brand-border-faint);
+  color: var(--brand-text-muted);
+}
+
+.task-list-stats-strip__pill[data-tone="info"] .task-list-stats-strip__value {
+  color: var(--brand-text-strong);
+}
+
+/* —— Filters row — kept as a soft well, but with stronger visual rhythm so
+   it reads as a deliberate "filter shelf" rather than three loose
+   dropdowns + a search box. Matches the create modal's elevated wells. —— */
 .task-list-filters {
   display: flex;
   flex-wrap: wrap;
   gap: var(--space-3);
   align-items: flex-end;
   margin-bottom: var(--space-4);
-  padding: var(--space-3);
+  padding: var(--space-3) var(--space-4);
   border: 1px solid var(--border-hairline);
-  border-radius: var(--radius-md);
+  border-radius: var(--radius-lg);
   background: color-mix(in srgb, var(--bg-subtle) 62%, var(--bg-elevated));
+  box-shadow: var(--shadow-chrome-xs-soft);
 }
 
 .task-list-filter-field {
@@ -96,6 +231,73 @@
   text-align: center;
   padding: 3rem 1.5rem;
   vertical-align: middle;
+}
+
+/* Fresh-database welcome — quiet brand wash so the page does not feel like
+   a blank slate. Only applies when `tasks.length === 0`; the post-filter
+   "no matching tasks" case stays neutral so the operator's eye reads
+   "this is a filter outcome" instead of "your workspace is empty". */
+.empty-state.empty-state--task-list-fresh {
+  position: relative;
+  padding: 2rem 1.75rem 2.25rem;
+  border-radius: var(--radius-lg);
+  border: 1px solid var(--brand-border-faint);
+  background:
+    radial-gradient(
+      ellipse at top,
+      var(--brand-surface-faint),
+      transparent 65%
+    ),
+    var(--bg-elevated);
+  max-width: min(34rem, 100%);
+  margin-inline: auto;
+}
+
+.empty-state.empty-state--task-list-fresh .empty-state__title {
+  font-size: var(--text-xl);
+  letter-spacing: -0.02em;
+}
+
+.empty-state.empty-state--task-list-fresh .empty-state__icon-wrap {
+  color: var(--brand-text-strong);
+  opacity: 0.85;
+}
+
+.empty-state.empty-state--task-list-fresh .empty-state__description {
+  font-size: var(--text-sm);
+  line-height: 1.55;
+}
+
+/* Subtle stagger fade-in for the section's children. Matches the same
+   `--ease-ui` curve and `--duration-ui-phase` budget the create modal
+   uses so both surfaces feel like they were composed by the same hand.
+   Disabled under reduced-motion. */
+.task-list-section-panel > * {
+  animation: task-list-section-enter var(--duration-ui-phase)
+    var(--ease-ui) both;
+}
+
+.task-list-section-panel > *:nth-child(1) { animation-delay: 0ms; }
+.task-list-section-panel > *:nth-child(2) { animation-delay: 30ms; }
+.task-list-section-panel > *:nth-child(3) { animation-delay: 60ms; }
+.task-list-section-panel > *:nth-child(4) { animation-delay: 90ms; }
+.task-list-section-panel > *:nth-child(n+5) { animation-delay: 120ms; }
+
+@keyframes task-list-section-enter {
+  from {
+    opacity: 0;
+    transform: translateY(4px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .task-list-section-panel > * {
+    animation: none;
+  }
 }
 
 .prompt-preview {

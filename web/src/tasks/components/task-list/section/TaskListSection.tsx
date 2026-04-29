@@ -11,8 +11,9 @@ import { useDelayedTrue } from "@/lib/useDelayedTrue";
 import { TaskListDataTable } from "../table/TaskListDataTable";
 import { TaskListFilters } from "../filters/TaskListFilters";
 import { TaskListSectionHeading } from "./TaskListSectionHeading";
+import { TaskListStatsStrip } from "./TaskListStatsStrip";
 import { TaskPager } from "../pager/TaskPager";
-import type { Task } from "@/types";
+import type { Task, TaskStatsResponse } from "@/types";
 import type { TaskWithDepth } from "../../../task-tree";
 import type { DeleteTargetInput } from "../../../hooks/useTaskDeleteFlow";
 import type { EmptyStateAction } from "@/shared/EmptyState";
@@ -73,6 +74,13 @@ type Props = {
   emptyListAction?: EmptyStateAction;
   /** Optional toolbar on the title row (e.g. home “New task”). */
   actions?: ReactNode;
+  /**
+   * Optional `GET /tasks/stats` projection. When supplied AND total > 0 the
+   * section renders a quiet inline stats strip below the heading (counts
+   * for ready / critical / scheduled / etc). Pass `null` while the stats
+   * query is loading or has errored — the strip self-hides on falsy data.
+   */
+  taskStats?: TaskStatsResponse | null;
 };
 
 const LOADING_STATUS_DELAY_MS = 220;
@@ -99,6 +107,7 @@ export const TaskListSection = memo(function TaskListSection({
   onRequestDelete,
   emptyListAction,
   actions,
+  taskStats,
 }: Props) {
   const statusDelayMs = smoothTransitions ? LOADING_STATUS_DELAY_MS : 0;
   const showLoadingLine = useDelayedTrue(loading, statusDelayMs);
@@ -284,8 +293,12 @@ export const TaskListSection = memo(function TaskListSection({
     !loading && (hasPrevPage || hasNextPage || tasks.length === listPageSize);
 
   return (
-    <section className="panel" aria-labelledby="task-list-heading">
+    <section
+      className="panel task-list-section-panel"
+      aria-labelledby="task-list-heading"
+    >
       <TaskListSectionHeading actions={actions} />
+      <TaskListStatsStrip stats={taskStats} />
       {refreshing && !loading && !hideBackgroundRefreshHint ? (
         <p className="sync-hint task-list-phase-msg" aria-live="polite" role="status">
           Syncing with server…

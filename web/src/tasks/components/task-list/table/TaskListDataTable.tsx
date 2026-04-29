@@ -242,12 +242,14 @@ export function TaskListDataTable({
             <tr className="task-list-empty-row">
               <td colSpan={colSpan} className="task-list-empty-cell">
                 <EmptyState
-                  className="empty-state--in-table"
+                  className="empty-state--in-table empty-state--task-list-fresh"
                   title="No tasks yet"
                   description={
                     <>
-                      Use <strong>New task</strong> above to add your first task.
-                      Status, priority, and prompt previews appear here.
+                      Hit <strong>New task</strong> to dispatch your first run.
+                      Once a task is in flight, this table tracks its status,
+                      priority, and prompt preview live as the worker picks
+                      it up.
                     </>
                   }
                   action={emptyListAction}

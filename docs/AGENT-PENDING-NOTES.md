@@ -30,43 +30,6 @@ Format for each entry:
 
 ## Open
 
-### Settings page lede copy is `tune --runtime --workspace --agent`
-- Date: 2026-04-29
-- From task: Settings page polish
-- Decision needed: The new one-line terminal lede underneath the
-  page subtitle reads `$ tune --runtime --workspace --agent`. Should
-  it instead be `$ configure --runtime` / `$ admin --runtime` / a
-  single-flag `$ settings --tune`? The pattern matches the create
-  modal (`$ compose --next-up`) and the All Tasks page
-  (`$ query --next-up --filter --review`) — three "verb plus the
-  flags this surface acts on" phrases.
-- Default chosen if no answer: `tune` because it is the verb most
-  consistent with what this page does (turn knobs on the live system),
-  and the flags map 1:1 to the actual fieldset section names so the
-  lede doubles as a table-of-contents.
-- Files affected: `web/src/settings/SettingsSections.tsx`
-  (`.settings-page-lede`).
-
-### Settings fieldsets keep separate cards rather than collapsing into one panel
-- Date: 2026-04-29
-- From task: Settings page polish
-- Decision needed: The All Tasks page and the New Task modal are each
-  rendered as a single `.panel` chrome wrapping all their content. The
-  Settings page deliberately keeps its multiple fieldset cards (Agent
-  worker / Display / Workspace / Cursor agent / Run timeout). Should
-  they be merged into one panel for total parity?
-- Default chosen if no answer: Keep the separate cards. Apple System
-  Settings, Stripe Dashboard settings, and Linear preferences all
-  group settings into discrete cards because each section is
-  independently navigable, scroll-anchorable (`/settings#cursor-agent`
-  works), and saveable in isolation. Merging them would lose the
-  per-section brand-tinted left rail / focus-within affordance, hurt
-  scroll-into-view, and crowd the page. Visual continuity with the
-  other surfaces comes from the shared brand top-strip + radial wash
-  on the page itself, not from a single panel chrome.
-- Files affected: `web/src/settings/settings.css` (`.settings-page`,
-  `.settings-fieldset`).
-
 ### Drafts page reuses `task-list-section-panel` chrome rather than its own
 - Date: 2026-04-29
 - From task: Drafts page polish
@@ -198,20 +161,6 @@ Format for each entry:
   apart", revisit by adding a `payload_summary` to the draft list
   endpoint and surfacing one or two pills here.
 - Files affected: `web/src/tasks/pages/TaskDraftsPage.tsx`.
-
-### Settings page section glyphs use `$` (not `>`) to match the form intent
-- Date: 2026-04-29
-- From task: Settings page polish
-- Decision needed: The page heading uses `term-arrow` (`>`) and the
-  fieldset legends use `term-prompt` (`$`). Should the legends use
-  the same arrow as the page heading for tighter heading hierarchy?
-- Default chosen if no answer: `$` for legends because the create
-  modal headers and All Tasks section heads also use `$` — the `>` is
-  reserved for top-of-page H2 only. Mixing `>` in legend positions
-  would visually flatten the H2 → fieldset hierarchy and make the
-  page read like a bullet list instead of a section group.
-- Files affected: `web/src/settings/SettingsSections.tsx` (legends),
-  `web/src/settings/settings.css` (`.settings-fieldset > .settings-fieldset-legend.term-prompt`).
 
 ---
 
@@ -451,3 +400,68 @@ Format for each entry:
   cadence. The warmth gain comes from the inviting description, not
   from cuter title copy. Avoiding ~12 test churn for a copy nuance is
   the right trade.
+
+### Settings page lede copy is `tune --runtime --workspace --agent`
+- Date: 2026-04-29
+- From task: Settings page polish
+- Decision needed: The new one-line terminal lede underneath the
+  page subtitle reads `$ tune --runtime --workspace --agent`. Should
+  it instead be `$ configure --runtime` / `$ admin --runtime` / a
+  single-flag `$ settings --tune`? The pattern matches the create
+  modal (`$ compose --next-up`) and the All Tasks page
+  (`$ query --next-up --filter --review`) — three "verb plus the
+  flags this surface acts on" phrases.
+- Default chosen if no answer: `tune` because it is the verb most
+  consistent with what this page does (turn knobs on the live system),
+  and the flags map 1:1 to the actual fieldset section names so the
+  lede doubles as a table-of-contents.
+- Files affected: `web/src/settings/SettingsSections.tsx`
+  (`.settings-page-lede`).
+- Resolution (2026-04-29): Confirmed `tune --runtime --workspace --agent`.
+  `configure` is a noun-leaning verb; `admin` reads bureaucratic; a
+  single flag would lose the table-of-contents value. `tune` keeps the
+  page feeling like a live instrument the operator adjusts.
+
+### Settings fieldsets keep separate cards rather than collapsing into one panel
+- Date: 2026-04-29
+- From task: Settings page polish
+- Decision needed: The All Tasks page and the New Task modal are each
+  rendered as a single `.panel` chrome wrapping all their content. The
+  Settings page deliberately keeps its multiple fieldset cards (Agent
+  worker / Display / Workspace / Cursor agent / Run timeout). Should
+  they be merged into one panel for total parity?
+- Default chosen if no answer: Keep the separate cards. Apple System
+  Settings, Stripe Dashboard settings, and Linear preferences all
+  group settings into discrete cards because each section is
+  independently navigable, scroll-anchorable (`/settings#cursor-agent`
+  works), and saveable in isolation. Merging them would lose the
+  per-section brand-tinted left rail / focus-within affordance, hurt
+  scroll-into-view, and crowd the page. Visual continuity with the
+  other surfaces comes from the shared brand top-strip + radial wash
+  on the page itself, not from a single panel chrome.
+- Files affected: `web/src/settings/settings.css` (`.settings-page`,
+  `.settings-fieldset`).
+- Resolution (2026-04-29): Confirmed separate cards. The
+  `/settings#cursor-agent` deep-link contract alone justifies discrete
+  fieldsets — collapsing them into one panel would either (a) break the
+  scroll-into-view affordance or (b) require synthetic anchors that
+  don't match the visual structure. Card-per-section is the right model.
+
+### Settings page section glyphs use `$` (not `>`) to match the form intent
+- Date: 2026-04-29
+- From task: Settings page polish
+- Decision needed: The page heading uses `term-arrow` (`>`) and the
+  fieldset legends use `term-prompt` (`$`). Should the legends use
+  the same arrow as the page heading for tighter heading hierarchy?
+- Default chosen if no answer: `$` for legends because the create
+  modal headers and All Tasks section heads also use `$` — the `>` is
+  reserved for top-of-page H2 only. Mixing `>` in legend positions
+  would visually flatten the H2 → fieldset hierarchy and make the
+  page read like a bullet list instead of a section group.
+- Files affected: `web/src/settings/SettingsSections.tsx` (legends),
+  `web/src/settings/settings.css` (`.settings-fieldset > .settings-fieldset-legend.term-prompt`).
+- Resolution (2026-04-29): Confirmed `$` for legends, `>` reserved for
+  H2. The two-glyph hierarchy (`>` for the page, `$` for sections) is
+  the same vocabulary every other polished surface uses; flattening it
+  would degrade the heading rhythm across the whole app, not just on
+  Settings.

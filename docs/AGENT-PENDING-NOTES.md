@@ -30,55 +30,6 @@ Format for each entry:
 
 ## Open
 
-### REFERENCES block lives outside the TipTap document
-- Date: 2026-04-29
-- From task: Project Context Mentions
-- Decision needed: Should the read-only REFERENCES block be a non-editable
-  TipTap node inside the prompt document, or stay as a sibling React component
-  rendered above `<EditorContent>` (current choice)?
-- Default chosen if no answer: Sibling React component. Keeps `initial_prompt`
-  HTML clean (no extra wrapper tags sneaking into stored prompts), keeps the
-  backend prompt-injection contract unchanged, and makes the block trivially
-  non-editable by construction.
-- Files affected: `web/src/tasks/components/rich-prompt/RichPromptEditor.tsx`,
-  `web/src/tasks/components/rich-prompt/ProjectReferencesBlock.tsx`.
-
-### Single chip per `#` selection regardless of children
-- Date: 2026-04-29
-- From task: Project Context Mentions
-- Decision needed: When the operator picks "Reference this node and its
-  children", should the editor insert one chip per node or just one chip for
-  the picked node (with the descendants only showing in the REFERENCES block)?
-- Default chosen if no answer: One chip for the picked node. Avoids polluting
-  the prompt body with a long list of chips when a deep tree is referenced;
-  the REFERENCES block always shows the full expanded set.
-- Files affected: `web/src/tasks/components/rich-prompt/RichPromptEditor.tsx`
-  (`insertProjectContextChip`).
-
-### Short ID format = first 6 alphanumerics, lowercased
-- Date: 2026-04-29
-- From task: Project Context Mentions
-- Decision needed: Is six characters enough to disambiguate context items
-  side-by-side, or should we use a longer suffix (8+) for projects with many
-  similarly-named nodes?
-- Default chosen if no answer: 6 chars. Matches the example in the original
-  plan (`#Decision title · a1b2c3`) and reads compactly inside chips.
-- Files affected: `web/src/projects/projectContextRefs.ts`
-  (`PROJECT_CONTEXT_SHORT_ID_LENGTH`).
-
-### Choose context chooser still exposes list + tree views
-- Date: 2026-04-29
-- From task: Project Context Mentions
-- Decision needed: Plan said "compact selected-context panel"; the chooser
-  modal itself still has the full list/tree toggle for browsing. Is that the
-  intended scope, or should the chooser collapse to a single search-driven
-  picker now that `#` is the primary add path?
-- Default chosen if no answer: Kept the existing list/tree toggle for
-  discovery; only changed the selection semantics (clicking a node now opens
-  the node-only / with-children dialog, replacing the old multi-checkbox
-  flow).
-- Files affected: `web/src/projects/ProjectContextPicker.tsx`.
-
 ### Quick-pick offset bucket bounds
 - Date: 2026-04-29
 - From task: Schedule quick-pick popover
@@ -398,4 +349,68 @@ Format for each entry:
 
 ## Resolved
 
-_(empty — move entries here with date and outcome once the operator confirms.)_
+### REFERENCES block lives outside the TipTap document
+- Date: 2026-04-29
+- From task: Project Context Mentions
+- Decision needed: Should the read-only REFERENCES block be a non-editable
+  TipTap node inside the prompt document, or stay as a sibling React component
+  rendered above `<EditorContent>` (current choice)?
+- Default chosen if no answer: Sibling React component. Keeps `initial_prompt`
+  HTML clean (no extra wrapper tags sneaking into stored prompts), keeps the
+  backend prompt-injection contract unchanged, and makes the block trivially
+  non-editable by construction.
+- Files affected: `web/src/tasks/components/rich-prompt/RichPromptEditor.tsx`,
+  `web/src/tasks/components/rich-prompt/ProjectReferencesBlock.tsx`.
+- Resolution (2026-04-29): Confirmed sibling-component default. The contract
+  with the backend (IDs are the source of truth, prompt HTML stays clean) is
+  the right boundary; embedding the block as a TipTap node would invite
+  accidental edits and complicate prompt sanitization.
+
+### Single chip per `#` selection regardless of children
+- Date: 2026-04-29
+- From task: Project Context Mentions
+- Decision needed: When the operator picks "Reference this node and its
+  children", should the editor insert one chip per node or just one chip for
+  the picked node (with the descendants only showing in the REFERENCES block)?
+- Default chosen if no answer: One chip for the picked node. Avoids polluting
+  the prompt body with a long list of chips when a deep tree is referenced;
+  the REFERENCES block always shows the full expanded set.
+- Files affected: `web/src/tasks/components/rich-prompt/RichPromptEditor.tsx`
+  (`insertProjectContextChip`).
+- Resolution (2026-04-29): Confirmed single-chip default. The chip is the
+  operator's anchor in the prose; the REFERENCES block is the audit surface.
+  Painting one chip per descendant would crowd the prompt and confuse the
+  intent — "I referenced one branch" reads more clearly as one chip.
+
+### Short ID format = first 6 alphanumerics, lowercased
+- Date: 2026-04-29
+- From task: Project Context Mentions
+- Decision needed: Is six characters enough to disambiguate context items
+  side-by-side, or should we use a longer suffix (8+) for projects with many
+  similarly-named nodes?
+- Default chosen if no answer: 6 chars. Matches the example in the original
+  plan (`#Decision title · a1b2c3`) and reads compactly inside chips.
+- Files affected: `web/src/projects/projectContextRefs.ts`
+  (`PROJECT_CONTEXT_SHORT_ID_LENGTH`).
+- Resolution (2026-04-29): Confirmed 6-char default. Six lowercase
+  alphanumerics yield ~2.2 billion unique prefixes — collision is effectively
+  impossible at any realistic project size. If a real collision ever surfaces
+  inside a single project we can grow `PROJECT_CONTEXT_SHORT_ID_LENGTH` in
+  one place; the shape stays stable.
+
+### Choose context chooser still exposes list + tree views
+- Date: 2026-04-29
+- From task: Project Context Mentions
+- Decision needed: Plan said "compact selected-context panel"; the chooser
+  modal itself still has the full list/tree toggle for browsing. Is that the
+  intended scope, or should the chooser collapse to a single search-driven
+  picker now that `#` is the primary add path?
+- Default chosen if no answer: Kept the existing list/tree toggle for
+  discovery; only changed the selection semantics (clicking a node now opens
+  the node-only / with-children dialog, replacing the old multi-checkbox
+  flow).
+- Files affected: `web/src/projects/ProjectContextPicker.tsx`.
+- Resolution (2026-04-29): Confirmed the discovery path stays. `#` is the
+  speed path for "I know what I want"; the chooser is the discovery path for
+  "I'm browsing what's available". Keeping both honors the two distinct user
+  intents instead of forcing every operator into the same flow.

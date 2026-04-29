@@ -28,16 +28,30 @@ export function ProjectContextPage() {
   return (
     <section className="panel task-detail-panel pc">
       <header className="pc__header">
-        <Link
-          to={`/projects/${encodeURIComponent(projectId)}`}
-          className="pd__back project-context-back-link"
-        >
-          <span aria-hidden="true">&#8249;</span>
-          Back to project
-        </Link>
+        <div className="pc__header-main">
+          <Link
+            to={`/projects/${encodeURIComponent(projectId)}`}
+            className="pd__back project-context-back-link"
+          >
+            <span aria-hidden="true">&#8249;</span>
+            Back to project
+          </Link>
+          <div className="pc__header-title">
+            <h2 className="term-arrow">
+              <span>{project.data?.name ?? "Project context"}</span>
+            </h2>
+            <p className="pc__lede term-prompt muted" aria-hidden="true">
+              <span>memory --nodes --relationships</span>
+            </p>
+            <p className="pc__subtitle">
+              Capture decisions, constraints, notes, and risks the agent can
+              borrow when working inside this project.
+            </p>
+          </div>
+        </div>
         {project.data ? (
           <div className="pc__project-pill" aria-label="Current project">
-            <h2>{project.data.name}</h2>
+            <span>{project.data.name}</span>
           </div>
         ) : null}
       </header>

@@ -33,14 +33,52 @@ export function ProjectListPage() {
 
   return (
     <section className="panel task-detail-panel pl">
+      <header className="pl__head">
+        <div className="pl__head-text">
+          <h2 className="term-arrow">
+            <span>Projects</span>
+          </h2>
+          <p className="pl__lede term-prompt muted" aria-hidden="true">
+            <span>organize --context --memory</span>
+          </p>
+          <p className="pl__subtitle">
+            Group tasks around a shared context space so the agent can borrow
+            the right project memory at run time.
+          </p>
+        </div>
+        <dl className="pl__stats" aria-label="Project summary">
+          <div className="pl__stat">
+            <dd>{projects.length}</dd>
+            <dt>total</dt>
+          </div>
+          <span className="pl__stat-sep" aria-hidden="true" />
+          <div className="pl__stat pl__stat--active">
+            <dd>{activeCount}</dd>
+            <dt>active</dt>
+          </div>
+          <span className="pl__stat-sep" aria-hidden="true" />
+          <div className="pl__stat">
+            <dd>{archivedCount}</dd>
+            <dt>archived</dt>
+          </div>
+        </dl>
+      </header>
+
       <div className="pl__create-area">
+        <div className="pl__create-copy">
+          <p className="pl__create-label">Create project</p>
+          <p className="pl__create-help">
+            Start a context space for a repo, product area, or recurring
+            workflow.
+          </p>
+        </div>
         <form className="pl__create" onSubmit={submitProject} aria-label="Create project">
           <input
             id="project-create-name"
             className="pl__create-input"
             value={name}
             onChange={(e) => setName(e.target.value)}
-            placeholder="New project name..."
+            placeholder="e.g. Billing platform"
             required
             aria-label="Project name"
           />
@@ -60,25 +98,6 @@ export function ProjectListPage() {
       ) : null}
 
       <div className="pl__list-section">
-        <div className="pl__list-header">
-          <dl className="pl__stats" aria-label="Project summary">
-            <div className="pl__stat">
-              <dd>{projects.length}</dd>
-              <dt>total</dt>
-            </div>
-            <span className="pl__stat-sep" aria-hidden="true" />
-            <div className="pl__stat pl__stat--active">
-              <dd>{activeCount}</dd>
-              <dt>active</dt>
-            </div>
-            <span className="pl__stat-sep" aria-hidden="true" />
-            <div className="pl__stat">
-              <dd>{archivedCount}</dd>
-              <dt>archived</dt>
-            </div>
-          </dl>
-        </div>
-
         {isLoading ? <ProjectListSkeleton /> : null}
         {error ? (
           <div className="pd__inline-error" role="alert">

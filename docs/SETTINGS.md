@@ -25,6 +25,11 @@ All fields live in [`pkgs/tasks/domain/app_settings.go`](../pkgs/tasks/domain/ap
 | `max_run_duration_seconds` | int (≥ 0) | `0` (no limit) | Per-run wall-clock cap forwarded to `runner.Request.Timeout`. `0` means "no limit" — `runner.Run` is not wrapped with a timeout and only ends on completion, operator cancel, or process shutdown. Positive values are honoured exactly; negatives are rejected by the DB CHECK. |
 | `agent_pickup_delay_seconds` | int (≥ 0) | `5` | Delay applied to newly-created ready tasks before the worker can dequeue them. `0` disables the delay. |
 | `project_step_gate_grace_seconds` | int (`0`–`604800`) | `300` | Seconds between “all tasks in this step are `done`” and automatic gate release when the step is in `pending_release` and not on hold. `0` means release as soon as the step enters `pending_release` (subject to the same sweep / transactional evaluation as positive values). Capped at one week (`604800`) to avoid accidental absurd delays. |
+| `project_goal_gate_grace_seconds` | int (`0`–`604800`) | `300` | Same semantics as step gates for **project goals**: after every criterion on a goal is satisfied, `pending_release` waits this many seconds before auto-release unless the operator holds or releases early. `0` = immediate. |
+| `goal_gate_notify_email_enabled` | bool | `false` | When true, the store may invoke a future notifier when a goal enters `pending_release` (not wired in V1 — preference only). |
+| `goal_gate_notify_sms_enabled` | bool | `false` | When true, reserved for future SMS notification on goal `pending_release` (not wired in V1). |
+| `step_gate_notify_email_enabled` | bool | `false` | When true, reserved for future email when a step enters `pending_release` (not wired in V1). |
+| `step_gate_notify_sms_enabled` | bool | `false` | When true, reserved for future SMS when a step enters `pending_release` (not wired in V1). |
 | `display_timezone` | string | `""` | IANA timezone used by the SPA to render operator-facing timestamps. Empty means auto-detect from the browser. Non-empty values are validated with `time.LoadLocation`. |
 | `optimistic_mutations_enabled` | bool | `true` | Compatibility field retained on the wire and in the DB. Optimistic mutations are always enabled for new rows and no longer configurable in Settings. |
 | `sse_replay_enabled` | bool | `true` | Compatibility field retained on the wire and in the DB. Lossless SSE replay is always active in `/events`; older rows are migrated to true on read. |
@@ -73,7 +78,7 @@ The supervisor's `Reload` re-reads the row, decides whether to spawn / drain the
 
 - `runner` is set to a non-empty string that is not registered in `pkgs/agents/runner/registry`.
 - `max_run_duration_seconds` is negative.
-- `project_step_gate_grace_seconds` is outside `0..604800`.
+- `project_step_gate_grace_seconds` or `project_goal_gate_grace_seconds` is outside `0..604800`.
 - `repo_root` is set to a path that contains a NUL byte.
 
 The DB CHECK constraints enforce the singleton id and the non-negative timeout; AutoMigrate keeps the schema aligned across SQLite (tests) and Postgres (production).

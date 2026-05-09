@@ -35,6 +35,11 @@ type settingsResponse struct {
 	OptimisticMutationsEnabled  bool   `json:"optimistic_mutations_enabled"`
 	SSEReplayEnabled            bool   `json:"sse_replay_enabled"`
 	ProjectStepGateGraceSeconds int    `json:"project_step_gate_grace_seconds"`
+	ProjectGoalGateGraceSeconds int    `json:"project_goal_gate_grace_seconds"`
+	GoalGateNotifyEmailEnabled  bool   `json:"goal_gate_notify_email_enabled"`
+	GoalGateNotifySmsEnabled    bool   `json:"goal_gate_notify_sms_enabled"`
+	StepGateNotifyEmailEnabled  bool   `json:"step_gate_notify_email_enabled"`
+	StepGateNotifySmsEnabled    bool   `json:"step_gate_notify_sms_enabled"`
 	UpdatedAt                   string `json:"updated_at,omitempty"`
 }
 
@@ -57,6 +62,11 @@ type settingsPatchBody struct {
 	OptimisticMutationsEnabled  *bool   `json:"optimistic_mutations_enabled,omitempty"`
 	SSEReplayEnabled            *bool   `json:"sse_replay_enabled,omitempty"`
 	ProjectStepGateGraceSeconds *int    `json:"project_step_gate_grace_seconds,omitempty"`
+	ProjectGoalGateGraceSeconds *int    `json:"project_goal_gate_grace_seconds,omitempty"`
+	GoalGateNotifyEmailEnabled  *bool   `json:"goal_gate_notify_email_enabled,omitempty"`
+	GoalGateNotifySmsEnabled    *bool   `json:"goal_gate_notify_sms_enabled,omitempty"`
+	StepGateNotifyEmailEnabled  *bool   `json:"step_gate_notify_email_enabled,omitempty"`
+	StepGateNotifySmsEnabled    *bool   `json:"step_gate_notify_sms_enabled,omitempty"`
 }
 
 // probeRequest is the JSON body for POST /settings/probe-cursor. Both
@@ -154,6 +164,11 @@ func (h *Handler) patchSettings(w http.ResponseWriter, r *http.Request) {
 		AgentPickupDelaySeconds:     body.AgentPickupDelaySeconds,
 		DisplayTimezone:             body.DisplayTimezone,
 		ProjectStepGateGraceSeconds: body.ProjectStepGateGraceSeconds,
+		ProjectGoalGateGraceSeconds: body.ProjectGoalGateGraceSeconds,
+		GoalGateNotifyEmailEnabled:  body.GoalGateNotifyEmailEnabled,
+		GoalGateNotifySmsEnabled:    body.GoalGateNotifySmsEnabled,
+		StepGateNotifyEmailEnabled:  body.StepGateNotifyEmailEnabled,
+		StepGateNotifySmsEnabled:    body.StepGateNotifySmsEnabled,
 		// optimistic_mutations_enabled / sse_replay_enabled are not
 		// user-configurable; ignore if present in the JSON body.
 	}
@@ -327,6 +342,11 @@ func settingsResponseFrom(cfg store.AppSettings) settingsResponse {
 		OptimisticMutationsEnabled:  cfg.OptimisticMutationsEnabled,
 		SSEReplayEnabled:            cfg.SSEReplayEnabled,
 		ProjectStepGateGraceSeconds: cfg.ProjectStepGateGraceSeconds,
+		ProjectGoalGateGraceSeconds: cfg.ProjectGoalGateGraceSeconds,
+		GoalGateNotifyEmailEnabled:  cfg.GoalGateNotifyEmailEnabled,
+		GoalGateNotifySmsEnabled:    cfg.GoalGateNotifySmsEnabled,
+		StepGateNotifyEmailEnabled:  cfg.StepGateNotifyEmailEnabled,
+		StepGateNotifySmsEnabled:    cfg.StepGateNotifySmsEnabled,
 	}
 	if !cfg.UpdatedAt.IsZero() {
 		resp.UpdatedAt = cfg.UpdatedAt.UTC().Format(time.RFC3339)

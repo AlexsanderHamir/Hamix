@@ -20,4 +20,12 @@ var (
 	// ErrProjectStepHasTasks is returned when deleting a project step that
 	// tasks still reference. Handlers map this to HTTP 409.
 	ErrProjectStepHasTasks = errors.New("tasks: project step has tasks")
+
+	// ErrProjectGoalHasSteps is returned when deleting a project goal that
+	// steps still reference. Handlers map this to HTTP 409.
+	ErrProjectGoalHasSteps = errors.New("tasks: project goal has steps")
+
+	// ErrProjectGoalHasDependents is returned when deleting a project goal
+	// that other goals still list as a prerequisite.
+	ErrProjectGoalHasDependents = errors.New("tasks: project goal has dependents")
 )

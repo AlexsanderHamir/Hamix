@@ -132,10 +132,53 @@ func (s *Store) GetTaskContextSnapshotForCycle(ctx context.Context, cycleID stri
 	return projects.GetSnapshotForCycle(ctx, s.db, cycleID)
 }
 
-// ListProjectSteps returns ordered steps for a project.
-func (s *Store) ListProjectSteps(ctx context.Context, projectID string) ([]domain.ProjectStep, error) {
+// ListProjectSteps returns ordered steps for a project. When goalID is empty,
+// every step is returned; otherwise only steps for that goal.
+func (s *Store) ListProjectSteps(ctx context.Context, projectID, goalID string) ([]domain.ProjectStep, error) {
 	slog.Debug("trace", "cmd", storeLogCmd, "operation", "tasks.store.ListProjectSteps")
-	return projects.ListProjectSteps(ctx, s.db, projectID)
+	return projects.ListProjectSteps(ctx, s.db, projectID, goalID)
+}
+
+// CreateProjectGoalInput is the store input for creating a project goal.
+type CreateProjectGoalInput = projects.CreateProjectGoalInput
+
+// UpdateProjectGoalInput is the store input for patching a project goal.
+type UpdateProjectGoalInput = projects.UpdateProjectGoalInput
+
+// ListProjectGoals returns goals for a project.
+func (s *Store) ListProjectGoals(ctx context.Context, projectID string) ([]domain.ProjectGoal, error) {
+	slog.Debug("trace", "cmd", storeLogCmd, "operation", "tasks.store.ListProjectGoals")
+	return projects.ListProjectGoals(ctx, s.db, projectID)
+}
+
+// CreateProjectGoal inserts a project goal.
+func (s *Store) CreateProjectGoal(ctx context.Context, projectID string, input CreateProjectGoalInput) (domain.ProjectGoal, error) {
+	slog.Debug("trace", "cmd", storeLogCmd, "operation", "tasks.store.CreateProjectGoal")
+	return projects.CreateProjectGoal(ctx, s.db, projectID, input)
+}
+
+// GetProjectGoal returns one goal scoped to a project.
+func (s *Store) GetProjectGoal(ctx context.Context, projectID, goalID string) (domain.ProjectGoal, error) {
+	slog.Debug("trace", "cmd", storeLogCmd, "operation", "tasks.store.GetProjectGoal")
+	return projects.GetProjectGoal(ctx, s.db, projectID, goalID)
+}
+
+// UpdateProjectGoal patches one project goal.
+func (s *Store) UpdateProjectGoal(ctx context.Context, projectID, goalID string, input UpdateProjectGoalInput) (domain.ProjectGoal, error) {
+	slog.Debug("trace", "cmd", storeLogCmd, "operation", "tasks.store.UpdateProjectGoal")
+	return projects.UpdateProjectGoal(ctx, s.db, projectID, goalID, input)
+}
+
+// DeleteProjectGoal removes a goal when no steps or dependents reference it.
+func (s *Store) DeleteProjectGoal(ctx context.Context, projectID, goalID string) error {
+	slog.Debug("trace", "cmd", storeLogCmd, "operation", "tasks.store.DeleteProjectGoal")
+	return projects.DeleteProjectGoal(ctx, s.db, projectID, goalID)
+}
+
+// SweepProjectGoalGates releases goal gates whose grace deadline has passed.
+func (s *Store) SweepProjectGoalGates(ctx context.Context, now time.Time) ([]string, error) {
+	slog.Debug("trace", "cmd", storeLogCmd, "operation", "tasks.store.SweepProjectGoalGates")
+	return projects.SweepProjectGoalGates(ctx, s.db, now)
 }
 
 // CreateProjectStep inserts a project step.

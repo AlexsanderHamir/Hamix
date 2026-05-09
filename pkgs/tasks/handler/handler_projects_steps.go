@@ -20,7 +20,8 @@ func (h *Handler) listProjectSteps(w http.ResponseWriter, r *http.Request) {
 		writeStoreError(w, r, op, err)
 		return
 	}
-	steps, err := h.store.ListProjectSteps(r.Context(), projectID)
+	goalFilter := strings.TrimSpace(r.URL.Query().Get("goal_id"))
+	steps, err := h.store.ListProjectSteps(r.Context(), projectID, goalFilter)
 	if err != nil {
 		writeStoreError(w, r, op, err)
 		return
@@ -64,11 +65,18 @@ func (h *Handler) createProjectStep(w http.ResponseWriter, r *http.Request) {
 		writeError(w, r, op, err, http.StatusBadRequest)
 		return
 	}
+	gid := strings.TrimSpace(body.GoalID)
+	if gid == "" {
+		writeStoreError(w, r, op, fmt.Errorf("%w: goal_id required", domain.ErrInvalidInput))
+		return
+	}
 	step, err := h.store.CreateProjectStep(r.Context(), projectID, store.CreateProjectStepInput{
 		ID:          body.ID,
+		GoalID:      &gid,
 		Title:       body.Title,
 		Description: body.Description,
 		SortOrder:   body.SortOrder,
+		Criteria:    body.Criteria,
 	})
 	if err != nil {
 		writeStoreError(w, r, op, err)
@@ -113,6 +121,7 @@ func (h *Handler) patchProjectStep(w http.ResponseWriter, r *http.Request) {
 		Description: body.Description,
 		SortOrder:   body.SortOrder,
 		GateAction:  gateAction,
+		Criteria:    body.Criteria,
 	})
 	if err != nil {
 		writeStoreError(w, r, op, err)

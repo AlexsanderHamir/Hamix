@@ -21,12 +21,19 @@ const (
 	gateActionClearHold = "clear_hold"
 )
 
+const (
+	maxProjectStepCriteria       = 40
+	maxProjectStepCriterionChars = 500
+)
+
 // CreateProjectStepInput is the store input for creating a project step.
 type CreateProjectStepInput struct {
 	ID          string
+	GoalID      *string
 	Title       string
 	Description string
 	SortOrder   *int
+	Criteria    []domain.ProjectStepCriterion
 }
 
 // UpdateProjectStepInput is a partial update for one step row plus gate actions.
@@ -35,21 +42,119 @@ type UpdateProjectStepInput struct {
 	Description *string
 	SortOrder   *int
 	GateAction  *string
+	Criteria    *[]domain.ProjectStepCriterion
 }
 
-// ListProjectSteps returns steps for a project ordered by sort_order ASC.
-func ListProjectSteps(ctx context.Context, db *gorm.DB, projectID string) ([]domain.ProjectStep, error) {
+// ListProjectSteps returns steps for a project. When goalID is non-empty, only
+// steps in that goal bucket are returned; otherwise every step is included, ordered
+// by goal bucket then sort_order.
+func ListProjectSteps(ctx context.Context, db *gorm.DB, projectID, goalID string) ([]domain.ProjectStep, error) {
 	defer kernel.DeferLatency(kernel.OpListProjectSteps)()
 	slog.Debug("trace", "cmd", logCmd, "operation", "tasks.store.projects.ListProjectSteps")
 	projectID = strings.TrimSpace(projectID)
 	if projectID == "" {
 		return nil, fmt.Errorf("%w: project id required", domain.ErrInvalidInput)
 	}
+	q := db.WithContext(ctx).Where("project_id = ?", projectID)
+	goalID = strings.TrimSpace(goalID)
+	if goalID != "" {
+		q = q.Where("goal_id = ?", goalID)
+	}
 	var rows []domain.ProjectStep
-	if err := db.WithContext(ctx).Where("project_id = ?", projectID).Order("sort_order ASC").Find(&rows).Error; err != nil {
+	if err := q.Order("(CASE WHEN goal_id IS NULL OR goal_id = '' THEN 0 ELSE 1 END) ASC").Order("goal_id ASC").Order("sort_order ASC").Find(&rows).Error; err != nil {
 		return nil, fmt.Errorf("list project steps: %w", err)
 	}
 	return rows, nil
+}
+
+func normalizeProjectStepCriteria(raw []domain.ProjectStepCriterion) ([]domain.ProjectStepCriterion, error) {
+	slog.Debug("trace", "cmd", logCmd, "operation", "tasks.store.projects.normalizeProjectStepCriteria")
+	if len(raw) == 0 {
+		return []domain.ProjectStepCriterion{}, nil
+	}
+	if len(raw) > maxProjectStepCriteria {
+		return nil, fmt.Errorf("%w: at most %d criteria per step", domain.ErrInvalidInput, maxProjectStepCriteria)
+	}
+	out := make([]domain.ProjectStepCriterion, 0, len(raw))
+	for i, c := range raw {
+		text := strings.TrimSpace(c.Text)
+		if text == "" {
+			return nil, fmt.Errorf("%w: criterion text required", domain.ErrInvalidInput)
+		}
+		if len(text) > maxProjectStepCriterionChars {
+			return nil, fmt.Errorf("%w: criterion text too long", domain.ErrInvalidInput)
+		}
+		id := strings.TrimSpace(c.ID)
+		if id == "" {
+			id = uuid.NewString()
+		}
+		sortOrder := c.SortOrder
+		if sortOrder <= 0 {
+			sortOrder = i + 1
+		}
+		out = append(out, domain.ProjectStepCriterion{
+			ID:        id,
+			Text:      text,
+			Done:      c.Done,
+			SortOrder: sortOrder,
+		})
+	}
+	return out, nil
+}
+
+func loadProjectStepGateGraceSeconds(db *gorm.DB) int {
+	slog.Debug("trace", "cmd", logCmd, "operation", "tasks.store.projects.loadProjectStepGateGraceSeconds")
+	var row domain.AppSettings
+	if err := db.First(&row, "id = ?", domain.AppSettingsRowID).Error; err != nil {
+		return domain.DefaultProjectStepGateGraceSeconds
+	}
+	return row.ProjectStepGateGraceSeconds
+}
+
+func advanceProjectStepGateIfReady(tx *gorm.DB, step *domain.ProjectStep, graceSeconds int, now time.Time) error {
+	slog.Debug("trace", "cmd", logCmd, "operation", "tasks.store.projects.advanceProjectStepGateIfReady")
+	switch step.GateStatus {
+	case domain.ProjectStepGateActive:
+		if graceSeconds <= 0 {
+			return releaseStepAndUnlockNext(tx, step, now)
+		}
+		deadline := now.Add(time.Duration(graceSeconds) * time.Second)
+		step.GateStatus = domain.ProjectStepGatePendingRelease
+		step.PendingReleaseDeadlineUTC = &deadline
+		step.UpdatedAt = now
+		if err := tx.Save(step).Error; err != nil {
+			return mapWriteError(err)
+		}
+		gs := loadGateSettings(tx)
+		if GateGraceNotify != nil {
+			GateGraceNotify.NotifyStepPendingRelease(context.Background(), step.ProjectID, step.ID, deadline.UnixMilli(), gs.stepEmail, gs.stepSMS)
+		}
+		return nil
+	case domain.ProjectStepGatePendingRelease:
+		return nil
+	default:
+		return nil
+	}
+}
+
+func tryAdvanceStepGateIfTasksAndCriteriaComplete(tx *gorm.DB, stepID string, now time.Time) error {
+	slog.Debug("trace", "cmd", logCmd, "operation", "tasks.store.projects.tryAdvanceStepGateIfTasksAndCriteriaComplete")
+	var step domain.ProjectStep
+	if err := tx.Clauses(clause.Locking{Strength: "UPDATE"}).First(&step, "id = ?", stepID).Error; err != nil {
+		return mapNotFound(err)
+	}
+	var pending int64
+	if err := tx.Model(&domain.Task{}).Where("project_step_id = ? AND status <> ?", stepID, domain.StatusDone).Count(&pending).Error; err != nil {
+		return fmt.Errorf("count open tasks for step: %w", err)
+	}
+	if pending > 0 {
+		return nil
+	}
+	if !domain.StepCriteriaAllDone(step.Criteria) {
+		return nil
+	}
+	grace := loadProjectStepGateGraceSeconds(tx)
+	return advanceProjectStepGateIfReady(tx, &step, grace, now)
 }
 
 // CreateProjectStep inserts one step with gate status derived from existing steps.
@@ -71,28 +176,47 @@ func CreateProjectStep(ctx context.Context, db *gorm.DB, projectID string, input
 	if n == 0 {
 		return domain.ProjectStep{}, fmt.Errorf("%w: project not found", domain.ErrInvalidInput)
 	}
+	if input.GoalID == nil || strings.TrimSpace(*input.GoalID) == "" {
+		return domain.ProjectStep{}, fmt.Errorf("%w: goal_id required", domain.ErrInvalidInput)
+	}
+	gid := strings.TrimSpace(*input.GoalID)
+	var goalCount int64
+	if err := db.WithContext(ctx).Model(&domain.ProjectGoal{}).Where("id = ? AND project_id = ?", gid, projectID).Count(&goalCount).Error; err != nil {
+		return domain.ProjectStep{}, fmt.Errorf("goal lookup: %w", err)
+	}
+	if goalCount == 0 {
+		return domain.ProjectStep{}, fmt.Errorf("%w: goal not in project", domain.ErrInvalidInput)
+	}
 	id := strings.TrimSpace(input.ID)
 	if id == "" {
 		id = uuid.NewString()
 	}
+	qMax := db.WithContext(ctx).Model(&domain.ProjectStep{}).Where("project_id = ? AND goal_id = ?", projectID, gid)
 	var maxOrder int
-	if err := db.WithContext(ctx).Model(&domain.ProjectStep{}).Where("project_id = ?", projectID).Select("COALESCE(MAX(sort_order),0)").Scan(&maxOrder).Error; err != nil {
+	if err := qMax.Select("COALESCE(MAX(sort_order),0)").Scan(&maxOrder).Error; err != nil {
 		return domain.ProjectStep{}, fmt.Errorf("step sort scan: %w", err)
 	}
 	sortOrder := maxOrder + 1
 	if input.SortOrder != nil && *input.SortOrder > 0 {
 		sortOrder = *input.SortOrder
 	}
+	criteria, err := normalizeProjectStepCriteria(input.Criteria)
+	if err != nil {
+		return domain.ProjectStep{}, err
+	}
 	now := time.Now().UTC()
-	gate := initialGateStatusForNewStep(db.WithContext(ctx), projectID, sortOrder, now)
+	gidPtr := gid
+	gate := initialGateStatusForNewStep(db.WithContext(ctx), projectID, &gidPtr, sortOrder, now)
 	row := domain.ProjectStep{
 		ID:          id,
 		ProjectID:   projectID,
+		GoalID:      &gidPtr,
 		Title:       title,
 		Description: strings.TrimSpace(input.Description),
 		SortOrder:   sortOrder,
 		GateStatus:  gate,
 		GateHold:    false,
+		Criteria:    criteria,
 		CreatedAt:   now,
 		UpdatedAt:   now,
 	}
@@ -109,10 +233,17 @@ func CreateProjectStep(ctx context.Context, db *gorm.DB, projectID string, input
 	return out, nil
 }
 
-func initialGateStatusForNewStep(db *gorm.DB, projectID string, sortOrder int, now time.Time) domain.ProjectStepGateStatus {
+func initialGateStatusForNewStep(db *gorm.DB, projectID string, goalID *string, sortOrder int, now time.Time) domain.ProjectStepGateStatus {
 	slog.Debug("trace", "cmd", logCmd, "operation", "tasks.store.projects.initialGateStatusForNewStep")
+	q := db.Where("project_id = ? AND sort_order < ?", projectID, sortOrder)
+	if goalID == nil || strings.TrimSpace(*goalID) == "" {
+		q = q.Where("(goal_id IS NULL OR goal_id = '')")
+	} else {
+		g := strings.TrimSpace(*goalID)
+		q = q.Where("goal_id = ?", g)
+	}
 	var prior []domain.ProjectStep
-	if err := db.Where("project_id = ? AND sort_order < ?", projectID, sortOrder).Order("sort_order ASC").Find(&prior).Error; err != nil || len(prior) == 0 {
+	if err := q.Order("sort_order ASC").Find(&prior).Error; err != nil || len(prior) == 0 {
 		return domain.ProjectStepGateActive
 	}
 	for _, p := range prior {
@@ -123,34 +254,81 @@ func initialGateStatusForNewStep(db *gorm.DB, projectID string, sortOrder int, n
 	return domain.ProjectStepGateActive
 }
 
-// recalcLockedSteps promotes locked steps to active when every lower sort_order step is released.
+// recalcLockedSteps promotes locked steps within each (project, goal) bucket when
+// every lower sort_order step in that bucket is released. Steps whose goal is
+// still locked are forced to locked unless already released.
 func recalcLockedSteps(db *gorm.DB, projectID string, now time.Time) error {
 	slog.Debug("trace", "cmd", logCmd, "operation", "tasks.store.projects.recalcLockedSteps")
-	var rows []domain.ProjectStep
-	if err := db.Where("project_id = ?", projectID).Order("sort_order ASC").Find(&rows).Error; err != nil {
+	var goals []domain.ProjectGoal
+	if err := db.Where("project_id = ?", projectID).Find(&goals).Error; err != nil {
 		return err
 	}
+	goalStatus := make(map[string]domain.ProjectStepGateStatus, len(goals))
+	for _, g := range goals {
+		goalStatus[g.ID] = g.GateStatus
+	}
+
+	var rows []domain.ProjectStep
+	if err := db.Where("project_id = ?", projectID).
+		Order("(CASE WHEN goal_id IS NULL OR goal_id = '' THEN 0 ELSE 1 END) ASC").
+		Order("goal_id ASC").
+		Order("sort_order ASC").
+		Find(&rows).Error; err != nil {
+		return err
+	}
+
+	stepBucketKey := func(st *domain.ProjectStep) string {
+		if st.GoalID == nil || strings.TrimSpace(*st.GoalID) == "" {
+			return ""
+		}
+		return strings.TrimSpace(*st.GoalID)
+	}
+
+	prevBucket := "__init__"
+	priorReleasedInBucket := true
 	for i := range rows {
-		if rows[i].GateStatus != domain.ProjectStepGateLocked {
-			continue
+		st := &rows[i]
+		bucket := stepBucketKey(st)
+		if bucket != prevBucket {
+			priorReleasedInBucket = true
+			prevBucket = bucket
 		}
-		ok := true
-		for j := 0; j < i; j++ {
-			if rows[j].GateStatus != domain.ProjectStepGateReleased {
-				ok = false
-				break
+
+		goalLocked := bucket != "" && goalStatus[bucket] == domain.ProjectStepGateLocked
+		if goalLocked {
+			if st.GateStatus == domain.ProjectStepGateReleased {
+				priorReleasedInBucket = true
+				continue
 			}
-		}
-		if !ok {
+			if st.GateStatus != domain.ProjectStepGateLocked {
+				if err := db.Model(&domain.ProjectStep{}).Where("id = ?", st.ID).Updates(map[string]any{
+					"gate_status": string(domain.ProjectStepGateLocked),
+					"updated_at":  now,
+				}).Error; err != nil {
+					return err
+				}
+				st.GateStatus = domain.ProjectStepGateLocked
+			}
+			priorReleasedInBucket = false
 			continue
 		}
-		rows[i].GateStatus = domain.ProjectStepGateActive
-		rows[i].UpdatedAt = now
-		if err := db.Model(&domain.ProjectStep{}).Where("id = ?", rows[i].ID).Updates(map[string]any{
-			"gate_status": string(domain.ProjectStepGateActive),
-			"updated_at":  now,
-		}).Error; err != nil {
-			return err
+
+		switch st.GateStatus {
+		case domain.ProjectStepGateReleased:
+			priorReleasedInBucket = true
+		case domain.ProjectStepGateActive, domain.ProjectStepGatePendingRelease:
+			priorReleasedInBucket = false
+		case domain.ProjectStepGateLocked:
+			if priorReleasedInBucket {
+				if err := db.Model(&domain.ProjectStep{}).Where("id = ?", st.ID).Updates(map[string]any{
+					"gate_status": string(domain.ProjectStepGateActive),
+					"updated_at":  now,
+				}).Error; err != nil {
+					return err
+				}
+				st.GateStatus = domain.ProjectStepGateActive
+			}
+			priorReleasedInBucket = false
 		}
 	}
 	return nil
@@ -181,7 +359,7 @@ func UpdateProjectStep(ctx context.Context, db *gorm.DB, projectID, stepID strin
 	if projectID == "" || stepID == "" {
 		return domain.ProjectStep{}, fmt.Errorf("%w: project id and step id required", domain.ErrInvalidInput)
 	}
-	if input.Title == nil && input.Description == nil && input.SortOrder == nil && input.GateAction == nil {
+	if input.Title == nil && input.Description == nil && input.SortOrder == nil && input.GateAction == nil && input.Criteria == nil {
 		return domain.ProjectStep{}, fmt.Errorf("%w: no fields to update", domain.ErrInvalidInput)
 	}
 	var out domain.ProjectStep
@@ -206,6 +384,13 @@ func UpdateProjectStep(ctx context.Context, db *gorm.DB, projectID, stepID strin
 				return fmt.Errorf("%w: sort_order must be positive", domain.ErrInvalidInput)
 			}
 			row.SortOrder = *input.SortOrder
+		}
+		if input.Criteria != nil {
+			criteria, err := normalizeProjectStepCriteria(*input.Criteria)
+			if err != nil {
+				return err
+			}
+			row.Criteria = criteria
 		}
 		row.UpdatedAt = now
 		saved := false
@@ -254,6 +439,11 @@ func UpdateProjectStep(ctx context.Context, db *gorm.DB, projectID, stepID strin
 		}
 		if err := recalcLockedSteps(tx, projectID, now); err != nil {
 			return err
+		}
+		if input.Criteria != nil {
+			if err := tryAdvanceStepGateIfTasksAndCriteriaComplete(tx, stepID, now); err != nil {
+				return err
+			}
 		}
 		if err := tx.First(&out, "id = ?", stepID).Error; err != nil {
 			return mapNotFound(err)
@@ -317,21 +507,10 @@ func MaybeAdvanceStepGateAfterTaskDone(tx *gorm.DB, task *domain.Task, graceSeco
 	if pending > 0 {
 		return nil
 	}
-	switch step.GateStatus {
-	case domain.ProjectStepGateActive:
-		if graceSeconds <= 0 {
-			return releaseStepAndUnlockNext(tx, &step, now)
-		}
-		deadline := now.Add(time.Duration(graceSeconds) * time.Second)
-		step.GateStatus = domain.ProjectStepGatePendingRelease
-		step.PendingReleaseDeadlineUTC = &deadline
-		step.UpdatedAt = now
-		return tx.Save(&step).Error
-	case domain.ProjectStepGatePendingRelease:
-		return nil
-	default:
+	if !domain.StepCriteriaAllDone(step.Criteria) {
 		return nil
 	}
+	return advanceProjectStepGateIfReady(tx, &step, graceSeconds, now)
 }
 
 func releaseStepAndUnlockNext(tx *gorm.DB, step *domain.ProjectStep, now time.Time) error {

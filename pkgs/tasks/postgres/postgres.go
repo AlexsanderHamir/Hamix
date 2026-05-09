@@ -72,6 +72,7 @@ func Migrate(ctx context.Context, db *gorm.DB) error {
 	}
 	if err := db.WithContext(ctx).AutoMigrate(
 		&domain.Project{},
+		&domain.ProjectGoal{},
 		&domain.ProjectStep{},
 		&domain.Task{},
 		&domain.TaskEvent{},

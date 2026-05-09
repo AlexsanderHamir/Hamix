@@ -674,15 +674,40 @@ func startReadyTaskAgents(ctx context.Context, taskStore *store.Store, hub *hand
 		if st == nil {
 			return nil
 		}
-		ids, err := st.SweepProjectStepGates(sweepCtx, time.Now().UTC())
-		if err != nil || hub == nil {
+		now := time.Now().UTC()
+		stepIDs, err := st.SweepProjectStepGates(sweepCtx, now)
+		if err != nil {
 			return err
 		}
-		for _, pid := range ids {
-			if strings.TrimSpace(pid) == "" {
+		goalIDs, err := st.SweepProjectGoalGates(sweepCtx, now)
+		if err != nil {
+			return err
+		}
+		if hub == nil {
+			return nil
+		}
+		seen := make(map[string]struct{})
+		for _, pid := range stepIDs {
+			pid = strings.TrimSpace(pid)
+			if pid == "" {
 				continue
 			}
-			hub.Publish(handler.TaskChangeEvent{Type: handler.ProjectStepUpdated, ID: strings.TrimSpace(pid)})
+			if _, ok := seen[pid]; ok {
+				continue
+			}
+			seen[pid] = struct{}{}
+			hub.Publish(handler.TaskChangeEvent{Type: handler.ProjectStepUpdated, ID: pid})
+		}
+		for _, pid := range goalIDs {
+			pid = strings.TrimSpace(pid)
+			if pid == "" {
+				continue
+			}
+			if _, ok := seen[pid]; ok {
+				continue
+			}
+			seen[pid] = struct{}{}
+			hub.Publish(handler.TaskChangeEvent{Type: handler.ProjectGoalUpdated, ID: pid})
 		}
 		return nil
 	})

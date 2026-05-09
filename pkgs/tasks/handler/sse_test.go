@@ -19,15 +19,17 @@ import (
 
 func TestSSE_subscriberGaugeTracksSubscribe(t *testing.T) {
 	g := middleware.SSESubscribersGauge()
-	base := testutil.ToFloat64(g)
 	h := NewSSEHub()
 	_, cancel := h.Subscribe()
-	if got := testutil.ToFloat64(g); got != base+1 {
-		t.Fatalf("after subscribe: got %v want %v", got, base+1)
+	// RecordSSESubscriberGauge sets the process gauge to this hub's len(subs),
+	// it does not add to a prior value. Another test may have left a different
+	// number on the gauge, so assert the fresh hub's cardinality, not base+delta.
+	if got := testutil.ToFloat64(g); got != 1 {
+		t.Fatalf("after subscribe: got %v want 1", got)
 	}
 	cancel()
-	if got := testutil.ToFloat64(g); got != base {
-		t.Fatalf("after cancel: got %v want %v", got, base)
+	if got := testutil.ToFloat64(g); got != 0 {
+		t.Fatalf("after cancel: got %v want 0", got)
 	}
 }
 

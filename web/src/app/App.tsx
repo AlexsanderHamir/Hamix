@@ -130,9 +130,6 @@ function AppShell({ app }: { app: ReturnType<typeof useTasksApp> }) {
               </Link>
             </div>
           </div>
-          <p className="app-tagline term-prompt" aria-hidden="true">
-            <span>capture --work --ship-with-clarity</span>
-          </p>
         </header>
         {app.error ? <ErrorBanner message={app.error} /> : null}
 

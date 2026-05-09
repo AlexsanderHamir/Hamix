@@ -14,6 +14,8 @@ type Task struct {
 	Priority      Priority `json:"priority" gorm:"not null;check:chk_tasks_priority,priority IN ('low','medium','high','critical')"`
 	TaskType      TaskType `json:"task_type" gorm:"not null;default:general;check:chk_tasks_task_type,task_type IN ('general','bug_fix','feature','refactor','docs')"`
 	ProjectID     *string  `json:"project_id,omitempty" gorm:"index"`
+	// ProjectStepID optionally binds the task to a project step (same project as ProjectID).
+	ProjectStepID *string `json:"project_step_id,omitempty" gorm:"index"`
 	// ProjectContextItemIDs is the user-selected subset of project context to pass to agent runs.
 	ProjectContextItemIDs []string `json:"project_context_item_ids,omitempty" gorm:"column:project_context_item_ids;serializer:json;type:jsonb;not null;default:'[]'"`
 	ParentID              *string  `json:"parent_id,omitempty" gorm:"index"`
@@ -29,7 +31,8 @@ type Task struct {
 	// eligible as soon as status is ready (legacy rows and zero-delay creates).
 	PickupNotBefore *time.Time `json:"pickup_not_before,omitempty" gorm:"index"`
 
-	Project *Project `json:"-" gorm:"foreignKey:ProjectID;references:ID;constraint:OnDelete:SET NULL"`
+	Project     *Project     `json:"-" gorm:"foreignKey:ProjectID;references:ID;constraint:OnDelete:SET NULL"`
+	ProjectStep *ProjectStep `json:"-" gorm:"foreignKey:ProjectStepID;references:ID;constraint:OnDelete:SET NULL"`
 }
 
 // Project is shared context memory for a long-running body of work. Tasks can
@@ -43,6 +46,25 @@ type Project struct {
 	CreatedAt      time.Time     `json:"created_at" gorm:"not null;index"`
 	UpdatedAt      time.Time     `json:"updated_at" gorm:"not null;index"`
 }
+
+// ProjectStep is one ordered stage of work within a project. Tasks may reference
+// a step via Task.ProjectStepID while remaining members of the project via Task.ProjectID.
+type ProjectStep struct {
+	ID                         string                `json:"id" gorm:"primaryKey"`
+	ProjectID                  string                `json:"project_id" gorm:"not null;index;uniqueIndex:idx_project_steps_project_sort,priority:1"`
+	Title                      string                `json:"title" gorm:"not null"`
+	Description                string                `json:"description" gorm:"type:text;not null;default:''"`
+	SortOrder                  int                   `json:"sort_order" gorm:"not null;uniqueIndex:idx_project_steps_project_sort,priority:2"`
+	GateStatus                 ProjectStepGateStatus `json:"gate_status" gorm:"not null;index;default:'locked';check:chk_project_steps_gate_status,gate_status IN ('locked','active','pending_release','released')"`
+	GateHold                   bool                  `json:"gate_hold" gorm:"not null;default:false"`
+	PendingReleaseDeadlineUTC *time.Time `json:"pending_release_deadline,omitempty" gorm:"column:pending_release_deadline_utc;index"`
+	CreatedAt                  time.Time             `json:"created_at" gorm:"not null;index"`
+	UpdatedAt                  time.Time             `json:"updated_at" gorm:"not null;index"`
+
+	Project *Project `json:"-" gorm:"foreignKey:ProjectID;references:ID;constraint:OnDelete:CASCADE"`
+}
+
+func (ProjectStep) TableName() string { return "project_steps" }
 
 // ProjectContextItem is a human-inspectable memory item attached to a project.
 type ProjectContextItem struct {

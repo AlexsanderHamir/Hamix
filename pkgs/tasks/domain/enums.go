@@ -38,6 +38,19 @@ const (
 	ProjectStatusArchived ProjectStatus = "archived"
 )
 
+// ProjectStepGateStatus is the gate lifecycle for one ordered project step.
+// Linear ordering: a step stays locked until the previous step is released;
+// active work runs until every assigned task is done; pending_release starts
+// the grace window; released unblocks the next step.
+type ProjectStepGateStatus string
+
+const (
+	ProjectStepGateLocked         ProjectStepGateStatus = "locked"
+	ProjectStepGateActive        ProjectStepGateStatus = "active"
+	ProjectStepGatePendingRelease ProjectStepGateStatus = "pending_release"
+	ProjectStepGateReleased      ProjectStepGateStatus = "released"
+)
+
 // ProjectContextKind identifies the role a context item plays in project memory.
 type ProjectContextKind string
 

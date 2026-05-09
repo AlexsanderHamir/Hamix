@@ -16,4 +16,8 @@ var (
 	// persisted state (for example a uniqueness or ordering constraint).
 	// Handlers map this to HTTP 409.
 	ErrConflict = errors.New("tasks: conflict")
+
+	// ErrProjectStepHasTasks is returned when deleting a project step that
+	// tasks still reference. Handlers map this to HTTP 409.
+	ErrProjectStepHasTasks = errors.New("tasks: project step has tasks")
 )

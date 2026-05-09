@@ -325,6 +325,7 @@ var skipSlogRequirement = map[string]struct{}{
 	// log), worker context assembly (cycle run logs), and handler JSON/query
 	// parsers (HTTP handlers log first).
 	"github.com/AlexsanderHamir/T2A/pkgs/tasks/domain\tProjectContextItem.TableName":                 {},
+	"github.com/AlexsanderHamir/T2A/pkgs/tasks/domain\tProjectStep.TableName":                       {},
 	"github.com/AlexsanderHamir/T2A/pkgs/tasks/domain\tProjectContextEdge.TableName":                 {},
 	"github.com/AlexsanderHamir/T2A/pkgs/tasks/domain\tTaskContextSnapshot.TableName":                {},
 	"github.com/AlexsanderHamir/T2A/pkgs/tasks/domain\tDefaultProject":                               {},

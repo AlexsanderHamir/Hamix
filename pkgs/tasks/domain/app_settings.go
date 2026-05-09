@@ -41,6 +41,10 @@ import (
 //     model) deferred by this many seconds so the worker does not dequeue them
 //     immediately (smoother UX right after create). Default 5. Set to 0 to
 //     disable the delay.
+//   - ProjectStepGateGraceSeconds: after every task in a project step is done,
+//     the step enters pending_release for this many seconds before auto-releasing
+//     the gate (unless the operator holds or releases early). 0 means release
+//     immediately when the last task reaches done. Capped server-side (see store).
 //   - DisplayTimezone: IANA timezone identifier (e.g. "America/New_York")
 //     used by the SPA to render every operator-facing timestamp
 //     (scheduled pickup time, "last updated", etc.). Validated server-side
@@ -67,7 +71,8 @@ type AppSettings struct {
 	CursorBin                  string    `gorm:"not null;default:''"`
 	CursorModel                string    `gorm:"not null;default:''"`
 	MaxRunDurationSeconds      int       `gorm:"not null;default:0;check:chk_app_settings_max_run_duration_seconds,max_run_duration_seconds >= 0"`
-	AgentPickupDelaySeconds    int       `gorm:"not null;default:5;check:chk_app_settings_agent_pickup_delay_seconds,agent_pickup_delay_seconds >= 0"`
+	AgentPickupDelaySeconds       int `gorm:"not null;default:5;check:chk_app_settings_agent_pickup_delay_seconds,agent_pickup_delay_seconds >= 0"`
+	ProjectStepGateGraceSeconds   int `gorm:"column:project_step_gate_grace_seconds;not null;default:300;check:chk_app_settings_project_step_gate_grace_seconds,project_step_gate_grace_seconds >= 0 AND project_step_gate_grace_seconds <= 604800"`
 	DisplayTimezone            string    `gorm:"not null;default:''"`
 	OptimisticMutationsEnabled bool      `gorm:"not null;default:true"`
 	SSEReplayEnabled           bool      `gorm:"not null;default:true"`
@@ -86,6 +91,10 @@ const DefaultRunner = "cursor"
 // DefaultAgentPickupDelaySeconds is the seed value for AgentPickupDelaySeconds
 // on first boot (seconds before the worker may dequeue a newly created ready task).
 const DefaultAgentPickupDelaySeconds = 5
+
+// DefaultProjectStepGateGraceSeconds is the seed value for ProjectStepGateGraceSeconds
+// on first boot (seconds of operator review window after all step tasks are done).
+const DefaultProjectStepGateGraceSeconds = 300
 
 // DefaultDisplayTimezone is the seed value for DisplayTimezone on first
 // boot. Empty string is the "auto-detect" sentinel: the SPA reads it as
@@ -112,7 +121,8 @@ func DefaultAppSettings() AppSettings {
 		RepoRoot:                   "",
 		CursorBin:                  "",
 		MaxRunDurationSeconds:      0,
-		AgentPickupDelaySeconds:    DefaultAgentPickupDelaySeconds,
+		AgentPickupDelaySeconds:       DefaultAgentPickupDelaySeconds,
+		ProjectStepGateGraceSeconds:   DefaultProjectStepGateGraceSeconds,
 		DisplayTimezone:            DefaultDisplayTimezone,
 		OptimisticMutationsEnabled: true,
 		SSEReplayEnabled:           true,

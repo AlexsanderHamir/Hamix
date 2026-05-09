@@ -1,413 +1,45 @@
-# Task Scheduling — Operator-Controlled Agent Pickup Time
+# Task scheduling — agent pickup deferral
 
-Operators can defer when the agent worker is allowed to pick up a task
-by setting `tasks.pickup_not_before` (RFC3339 UTC). This document covers
-the contract, the runtime invariants, and the implementation decisions.
-
-> Cross-reference: `.cursor/plans/task_scheduling_e74b47fe.plan.md` is
-> the executable plan; this doc is the durable, human-facing reference.
+Operators defer when the worker may pick up a task using `tasks.pickup_not_before` (RFC3339 UTC). This doc is the durable reference for wire shape, runtime paths, and invariants. REST field semantics: [API-HTTP.md](./API-HTTP.md).
 
 ## Substrate
 
-- `domain.Task.PickupNotBefore *time.Time` (column `pickup_not_before`,
-  indexed) — see `pkgs/tasks/domain/models.go`. `nil` means "no
-  deferral; pick up as soon as the worker is free".
-- The wire encoding is RFC3339 UTC on `Task.pickup_not_before` (string
-  or `null` to clear).
-- App-wide default deferral: `app_settings.agent_pickup_delay_seconds`
-  is added to `time.Now().UTC()` when a task is created in
-  `status=ready` AND the operator did not pass an explicit
-  `pickup_not_before` on the create body.
+- `domain.Task.PickupNotBefore *time.Time` → column `pickup_not_before` (indexed). `nil` means pick up as soon as the worker is free.
+- Wire: RFC3339 UTC string or JSON `null` to clear on `PATCH` (see API-HTTP for create vs patch rules).
+- Default deferral on create: `app_settings.agent_pickup_delay_seconds` is applied when creating `status=ready` and the client omits `pickup_not_before`.
 
 ## Three paths to the worker
 
-The agent dequeue path MUST agree with the SQL eligibility filter
-(`status='ready'` AND `(pickup_not_before IS NULL OR pickup_not_before <= now())`.
-See `pkgs/tasks/store/internal/ready/ready.go:ListQueueCandidates`.)
+Eligibility in SQL: `status='ready'` AND `(pickup_not_before IS NULL OR pickup_not_before <= now())` — see `pkgs/tasks/store/internal/ready/ready.go` (`ListQueueCandidates`).
 
-1. **Immediate in-memory notify (fast path).**
-   When a task becomes ready and `ShouldNotifyReadyNow` is true, `Store.notifyReadyTask`
-   pushes a snapshot onto the bounded `MemoryQueue` (same process as `taskapi`).
-   Callers: `Store.Create`, `Store.Update`, `Store.ApplyDevTaskRowMirror` when the
-   schedule is already due.
+1. **Immediate notify** — When the row is ready now, `Store.notifyReadyTask` pushes onto the in-process `MemoryQueue` (`Create` / `Update` / `ApplyDevTaskRowMirror` when due).
+2. **Pickup wake** — Future `pickup_not_before`: `PickupWakeScheduler` schedules a wake; startup `Hydrate` reloads deferred rows. See [AGENT-QUEUE.md](./AGENT-QUEUE.md).
+3. **Reconcile** — `RunReconcileLoop` backstops missed notifies (fixed 2m tick).
 
-2. **Pickup wake (`pkgs/agents.PickupWakeScheduler`).**
-   When a ready task has `pickup_not_before` in the future, the store calls
-   `PickupWake.Schedule` instead of notifying. A min-heap and one timer enqueue
-   shortly after the deadline (after `Get` + `ShouldNotifyReadyNow`). At
-   `taskapi` startup, `Hydrate` replays deferred rows from
-   `ListDeferredReadyPickupTasks`.
+**Invariant:** the memory queue must never contain a task the SQL filter would reject; `ShouldNotifyReadyNow` matches `pickup_not_before <= now()` with the same semantics as the query.
 
-3. **Periodic reconcile (backstop).**
-   `agents.RunReconcileLoop` runs `ReconcileReadyTasksNotQueued` at startup and
-   every `ReconcileTickInterval` (2 min, fixed). It catches restarts, missed
-   notifies, and full buffers.
+**Latency:** pickup wake fires near the deadline; reconcile bounds worst-case delay to one tick if the wake path misses.
 
-**Invariant:** the in-memory queue MUST NEVER contain a task that the SQL filter
-would reject. `ShouldNotifyReadyNow` mirrors `pickup_not_before <= now()`
-byte-for-byte; see `TestShouldNotifyReadyNow_unitTable`.
+## UI and API
 
-**Latency:** when a deferred task becomes due, pickup wake typically delivers
-within timer resolution; reconcile bounds worst-case delay to at most one
-`ReconcileTickInterval` if the wake path misses. See [AGENT-QUEUE.md](./AGENT-QUEUE.md)
-and [future considerations](./future-considerations/scheduling-and-agents.md) for
-multi-instance and clock-skew notes.
+Schedules are edited from the SPA (create flow, task detail, bulk actions) and via `POST`/`PATCH /tasks` as documented in API-HTTP.
 
-## Operator workflow (forward reference)
+## Multi-replica, clock skew, packages
 
-The plan ships UI in stages 3–5: create-modal `SchedulePicker`,
-detail-page edit/clear panel, and bulk reschedule from the list.
-Until those stages land, schedules can only be set indirectly via
-`agent_pickup_delay_seconds` (global) or via direct SQL.
+`MemoryQueue` and `PickupWakeScheduler` are **single-process**. Today: one `taskapi` per database that runs the queue consumer, or equivalent exclusivity.
 
-## Implementation decisions
+Horizontal HTTP scale without a single consumer requires **distributed claiming** (row locks, leases, external broker, etc.); reconcile does not provide cross-replica mutual exclusion.
 
-This section is **append-only** and dated. Each entry corresponds to a
-non-obvious choice made during implementation — the kind a future
-maintainer would otherwise have to reverse-engineer from diffs.
-Format: `YYYY-MM-DD — [stage] — choice: rationale (commit SHA).`
+`PickupWakeScheduler` uses the **process clock**; SQL uses **database `now()`** at query time — keep **NTP** aligned on app hosts and Postgres.
 
-- **2026-04-19 — [Stage 0] — `shouldNotifyReadyNow` lives in
-  `facade_tasks.go` rather than `internal/notify`.**
-  Rationale: the gate's correctness depends on `domain.Task` shape
-  (specifically the `PickupNotBefore` field), which the public facade
-  already owns. Pushing it down to `internal/notify` would force that
-  package to import `domain` just to type-check a single field — a
-  larger blast radius than keeping a 6-line private helper next to
-  the only callers (`Create`, `Update`, `ApplyDevTaskRowMirror`).
-  Rejected alternative: thread a `func(*time.Time) bool` predicate
-  into `notify.Holder`. Simpler today; we can refactor when (and if)
-  a third caller appears.
+`store.PickupWake` lives in `pkgs/tasks/store` and is implemented in `pkgs/agents` to avoid import cycles; extract a neutral package only if the graph forces it.
 
-- **2026-04-19 — [Stage 0] — Strict `After` comparison ("exactly now"
-  notifies).**
-  Rationale: matches the SQL filter `pickup_not_before <= now()`
-  byte-for-byte. Inverting either side would create a 1ns window
-  where the two queues disagree.
+## Invariants worth preserving
 
-- **2026-04-19 — [Stage 1] — Prepend "UTC" to
-  `Intl.supportedValuesOf("timeZone")` in `supportedTimezones()`.**
-  Rationale: `supportedValuesOf` returns the canonical IANA names and
-  intentionally omits the legacy alias "UTC" (its canonical name is
-  "Etc/UTC"). The backend's seed default is the literal string "UTC"
-  (`domain.DefaultDisplayTimezone`); without prepending, a fresh
-  install's SettingsPage would show no "UTC" option even though every
-  timestamp on the page is currently in UTC. Operator-friendly UI
-  trumps strict canonicalisation here. Rejected alternative: rewrite
-  the backend default to "Etc/UTC" — that would gratuitously change
-  the wire shape and the seed log line for every existing install.
+- `shouldNotifyReadyNow` stays aligned with the SQL predicate (strict `After` vs `<=` pairing).
+- On `PATCH`, empty string and JSON `null` both clear `pickup_not_before`; on `POST`, empty string for this field is rejected.
+- Clearing a future schedule on an already-`ready` task must notify immediately (not only on status transitions).
+- Schedule-only changes do not append a dedicated `task_events` row; they still surface through normal `task_updated` / list invalidation.
+- Autosave drafts intentionally omit the ephemeral schedule choice (wall-clock anchor); reopening clears it.
 
-- **2026-04-19 — [Stage 1] — `formatInAppTimezone` returns the input
-  string verbatim on parse failure rather than empty.**
-  Rationale: an unparseable timestamp is almost certainly a bug
-  somewhere upstream (truncated string, wrong field). Showing the
-  raw value gives the operator (and us) a fighting chance to spot
-  the malformed payload during triage; silently rendering nothing
-  hides the problem. Empty string is reserved for the "no value"
-  case (null/undefined/empty), where blank IS the correct render.
-
-- **2026-04-19 — [Stage 2] — Empty-string `pickup_not_before` on PATCH
-  is treated as "clear" (symmetric with JSON `null`).**
-  Rationale: the SchedulePicker UI in Stage 3 emits an empty string
-  from a cleared `<input type="datetime-local">`. Treating it the
-  same as JSON `null` means the SPA never has to special-case the two
-  shapes when serializing the picker's emit value. The semantically
-  cleaner alternative — reject empty string and require `null` — was
-  rejected because every API client would then need a coalescing
-  helper (`val === "" ? null : val`) at every call site. PATCH-only:
-  on `POST /tasks` the empty string is **rejected** so a missing
-  schedule on create has exactly one wire shape ("omit the field").
-
-- **2026-04-19 — [Stage 2] — `pickup_not_before` changes do NOT emit
-  a task-event audit row.**
-  Rationale: scheduling is operator-facing **metadata**, not part of
-  the task's narrative event log. The wire-level slog line on the
-  HTTP handler (`debugHTTPRequest` with `patch_pickup_not_before`)
-  IS the audit trail and is queryable in log search. Adding an
-  `EventScheduleChanged` would force a new domain enum value, an
-  SSE consumer wiring (today there is no consumer), and a doc
-  update for `domain.EventType` — three new abstractions for a
-  field that already round-trips through `task_updated`. Rejected
-  alternative: emit the event anyway "for symmetry with
-  `EventStatusChanged`". Symmetry isn't a goal in itself; the
-  status change has external behaviour consequences (descendant
-  done-checks, agent pickup eligibility) that justify a permanent
-  audit row. A schedule change has none.
-
-- **2026-04-19 — [Stage 2] — `Store.Update` notifies the in-memory
-  ready queue when ANY pickup-touching PATCH lands on a `ready`
-  task whose new `pickup_not_before` is "now or past" — not only on
-  `prev != ready` transitions.**
-  Rationale: clearing a future schedule (operator hits "Clear") on
-  an already-ready task must wake the worker immediately; otherwise
-  the task waits up to one reconcile tick (`ReconcileTickInterval`, 2 min)
-  for no good reason. The narrower "transition only" gate from Stage 0
-  was correct for `Create` and `Update`-into-`ready` but became
-  insufficient once schedules are operator-mutable. The
-  `shouldNotifyReadyNow` invariant is preserved: we only notify
-  when the SQL filter would also accept the row.
-
-
-- **2026-04-19 — [Stage 3] — The create-modal SchedulePicker treats
-  the operator's chosen `display_timezone` as the only source of
-  truth for the rendered wall-clock literal — never the host
-  browser's zone.**
-  Rationale: a native `<input type="datetime-local">` shows naive
-  local time without a zone suffix. If we let the browser interpret
-  that literal in the user's host zone, an operator in Tokyo
-  configuring a fleet that displays in `America/New_York` would
-  type `09:00` expecting NY morning and get Tokyo morning instead.
-  Implementation: `isoToZonedDatetimeLocal`/`zonedDatetimeLocalToIso`
-  in `web/src/shared/time/appTimezone.ts` round-trip through
-  `Intl.DateTimeFormat` parts in the chosen zone. Caption
-  underneath the input always shows the formatted instant in the
-  app TZ so the operator sees what was actually scheduled.
-
-- **2026-04-19 — [Stage 3] — Quick-pick chips never produce a
-  no-op deferral into the past.**
-  Rationale: an operator clicking "Tonight 9 PM" at 22:00 means
-  "the next 21:00", not "an hour ago". `computeQuickPickIso` falls
-  forward to tomorrow's 21:00 when today's 21:00 has already passed
-  in the app TZ. Similarly, "Next Monday 9 AM" on a Monday goes
-  to next week (+7 days), not today, because typing "Next Monday"
-  on a Monday almost never means "today". DST forward + backward
-  are covered by tests (spring-forward 2026-03-08 and fall-back
-  2026-11-01 in America/New_York).
-
-- **2026-04-19 — [Stage 3] — The `newSchedule` value is NOT
-  persisted to the autosave draft.**
-  Rationale: drafts capture the *content* of a future task; the
-  operator's notion "I want this picked up 4 hours from now" is
-  anchored to wall-clock time, which would silently drift if we
-  serialised the absolute UTC instant into the draft and the user
-  resumed days later (e.g. "4 hours from now" becoming "4 hours
-  ago" after a long weekend). A schedule chosen during a draft
-  edit session is reset on close + on draft resume. If draft-side
-  scheduling becomes a request, store the chip *kind* + a `now`
-  snapshot rather than the absolute instant so the resumed draft
-  re-anchors correctly.
-
-- **2026-04-19 — [Stage 3] — `SchedulePicker` takes `appTimezone`
-  as a prop instead of calling `useAppTimezone()` internally.**
-  Rationale: keeping the picker decoupled from the
-  `useAppSettings` hook (which depends on a `QueryClientProvider`
-  context) makes it trivially testable with any zone in isolation
-  and reusable in stages 4 & 5 where the same picker may render
-  inside detail / list contexts that already have the zone in
-  scope. Today the create modal looks up the zone once via
-  `useAppTimezone()` in `TaskHome.tsx` and forwards it; later
-  stages should follow the same pattern.
-
-
-- **2026-04-19 — [Stage 4] — TaskDetailSchedule renders nothing
-  when the task is in a terminal status (`done` / `failed`)
-  AND has no schedule.**
-  Rationale: terminal tasks never pick up again. Showing a
-  "Schedule" button that has no observable effect would be a
-  classic dead-affordance UX trap. Edge case: a terminal task that
-  *already* carries a schedule (rare — happens when a PATCH flips
-  status to `done` while `pickup_not_before` is still set) shows
-  a read-only badge with no Edit/Clear controls. Surfacing the
-  badge keeps the historical fact visible (operators looking at a
-  done task can still tell "this was scheduled for X"), while
-  hiding the controls makes it clear the field can no longer be
-  meaningfully changed.
-
-- **2026-04-19 — [Stage 4] — TaskDetailSchedule uses a local
-  `useMutation` instead of routing through `useTaskPatchFlow`.**
-  Rationale: `useTaskPatchFlow` is shaped around the full edit form
-  (`title`/`initial_prompt`/`status`/`priority`/`task_type`/`checklist_inherit`)
-  and would force the schedule panel to fabricate or thread those
-  unrelated fields. The local mutation only sends
-  `{ pickup_not_before }` and performs the same query
-  invalidations (`taskQueryKeys.all` + `task-stats`) so cache
-  refresh behaviour is identical. If `useTaskPatchFlow` ever grows
-  a "patch only these fields" mode (or splits per concern), this
-  panel can adopt it.
-
-- **2026-04-19 — [Stage 4] — The Edit modal seeds its draft from
-  `task.pickup_not_before` only while the modal is closed.**
-  Rationale: if a remote PATCH wins via SSE invalidation and the
-  underlying task value changes mid-edit, blindly re-seeding the
-  draft would clobber the operator's in-progress edit. Re-seeding
-  only when the modal isn't open keeps the next "Edit" click
-  starting from server truth without stomping on a live editor
-  session. Documented because it's the kind of subtle gate where
-  the obvious code (always sync) is wrong.
-
-- **2026-04-19 — [Stage 4] — The "Edit" button on an unscheduled
-  non-terminal task is labelled "Schedule".**
-  Rationale: "Edit" implies an existing value being modified.
-  Operators landing on a task that has never been scheduled need
-  the affordance to read as "create" semantics, otherwise the
-  button feels like dead chrome. Same `data-testid`
-  (`task-detail-schedule-edit`) for both states because they're
-  the same control wired to the same modal — only the label
-  flips.
-
-
-- **2026-04-19 — [Stage 5] — The synthetic "scheduled" status filter
-  lives next to the real statuses in the existing CustomSelect
-  rather than as a separate "schedule" checkbox.**
-  Rationale: operators reach for it the same way ("show me what is
-  deferred"), and a third filter row would crowd the toolbar for
-  zero functional gain. The synthetic value is plumbed through the
-  same `TaskListClientStatusFilter` union so the existing
-  reset-on-change wiring just works. The bucket matches
-  `status === "ready" && pickup_not_before > now`; rows with a
-  past `pickup_not_before` (an operator clicked the past, or the
-  schedule expired before pickup) are NOT shown — they are
-  effectively just "ready", which the regular `ready` filter
-  already covers. Per the locked decision `scope=agent_only`,
-  scheduled tasks are NEVER hidden from the default list — this
-  is a UX affordance only.
-
-- **2026-04-19 — [Stage 5] — Bulk selection state is section-local
-  React state, NOT URL-synced.**
-  Rationale: bulk selection is ephemeral by design. URL syncing
-  would make stale selections survive reloads and back-button
-  navigation, which is the opposite of what we want — the locked
-  guardrail "Selection state clears on filter change, sort change,
-  or successful bulk action" demands the selection be tied to the
-  current view. Implemented in `useTaskListSelection` with a
-  `clearSelection` callback the section invokes from its filter-
-  reset effect. Subtle bug fixed during implementation: the effect
-  must depend on the destructured `clearSelection` (stable via
-  useCallback) rather than the whole `selection` object literal,
-  because the hook returns a fresh object on every render and
-  depending on the object would clear the selection on every
-  checkbox toggle.
-
-- **2026-04-19 — [Stage 5] — Bulk PATCH uses a tiny local
-  `runWithConcurrency` helper instead of `useTaskPatchFlow` or an
-  external `pLimit` dependency.**
-  Rationale: `useTaskPatchFlow` requires a full `TaskPatchInput`
-  shape per task and runs an optimistic-per-row update path that
-  is overkill when every PATCH carries the same single field
-  (`pickup_not_before`). The local helper bounds concurrency at 5
-  (matches the locked plan: "shared concurrency cap") so a
-  200-row selection does not thundering-herd the API. Adding a
-  `pLimit` dependency for ~30 lines of code with one call site
-  would have been a clear over-engineering signal. The helper
-  returns per-task `{ ok, value | error }` results so the section
-  can aggregate failures into a single combined toast ("3 of 12
-  reschedules failed: ...") instead of N individual ones — exactly
-  the UX the plan calls out.
-
-- **2026-04-19 — [Stage 5] — Clear-schedule confirmation is a
-  native `window.confirm`, not a custom modal.**
-  Rationale: the plan calls for "a confirmation step ... if N > 5"
-  and `window.confirm` ships zero new components / zero new
-  styling decisions for a one-off destructive flow. The bulk
-  reschedule MODAL is custom because operators interact with the
-  picker; a single yes/no for a bulk clear does not justify the
-  same machinery. If the design system later grows a canonical
-  confirm component, switching here is a single-line edit.
-
-- **2026-04-19 — [Stage 5] — Bulk reschedule modal closes only on
-  full success; partial failure leaves it open with the error
-  banner.**
-  Rationale: when 1 of 3 reschedules fails, closing the modal
-  would force the operator to re-select the failed rows and
-  re-enter the picker just to retry. Leaving it open lets them
-  hit the same "Reschedule N" button again — react-query
-  invalidation has already refetched the rows, so the next
-  attempt will only retry the still-unscheduled ones (the
-  successful rows now carry the new `pickup_not_before` and would
-  be a no-op PATCH if the operator left them selected; we
-  deliberately do NOT auto-deselect succeeded rows because the
-  operator may want to deliberately overwrite them with a new
-  schedule).
-
-- **2026-04-19 — [Stage 5] — `TaskListDataTable` accepts
-  `selection` as an optional prop rather than always rendering
-  checkboxes.**
-  Rationale: future callers that embed the table in a no-bulk
-  context (subtask widget, embedded picker, etc.) get the
-  historical 5-column layout for free with zero conditionals at
-  the call site. The list section opts in by passing the
-  selection bindings; everywhere else the table is unchanged.
-  This is the "additive over destructive" principle from the
-  execution-discipline section: zero risk to non-list call sites.
-
-- **2026-04-19 — [Stage 6] — `scheduled` counter ships as a
-  top-level key on `GET /tasks/stats`, not as a nested field
-  under `by_status`.**
-  Rationale: `by_status['ready']` already counts ALL ready rows
-  (including the deferred ones); shadowing it with a nested
-  "ready_now" / "ready_scheduled" split would force every existing
-  consumer to relearn what the longstanding `ready` count means.
-  A flat sibling counter `scheduled` is purely additive — old
-  clients keep their semantics, new ones opt in. The wire shape
-  contract test (`assertStatsEnvelopeKeys`) was updated from ten
-  to eleven mandatory keys to pin the new field.
-
-- **2026-04-19 — [Stage 6] — `awaiting_scheduled_task` ships as a
-  diagnostic *hint* surfaced in `effectiveSettingsLog.IdleReason`,
-  NOT as a real `decideIdle` return value that prevents the
-  worker from spawning.**
-  Rationale: the supervisor's `applySettings` is invoked only on
-  Start and Reload — there is no periodic re-evaluation. If
-  `decideIdle` returned `(true, "awaiting_scheduled_task")` for
-  every "queue empty + scheduled > 0" snapshot, the worker would
-  be torn down and never re-spawned when the schedule horizon
-  expired (the reconcile loop would push the row into the SQL
-  queue, but no worker would consume it). The conservative
-  reading of the plan's intent — "make the *absence* of work due
-  to scheduling visible" — is satisfied by surfacing the reason
-  in the log line that operators already read on every
-  Start/Reload, while keeping the worker live so it picks up the
-  task the moment its time arrives. The pure helper
-  `decideSchedulingIdleHint(queueEmpty, scheduledCount)` and the
-  bounded `probeSchedulingHint(ctx)` integration wrapper are
-  separate from `decideIdle` precisely so this divergence is
-  obvious in code review. If a future plan needs the strict
-  "idle the worker entirely when only scheduled" semantic,
-  `applySettings` would also need a periodic re-tick driven from
-  the existing reconcile loop — out of scope here.
-
-- **2026-04-19 — [Stage 6] — `probeSchedulingHint` short-circuits
-  the stats round-trip when the queue probe already returned at
-  least one row.**
-  Rationale: the predicate "queue empty AND scheduled > 0" is
-  false the moment any row is dequeue-eligible, regardless of
-  what `stats.Scheduled` says. Skipping the second
-  bounded-2-second `TaskStats` call on the hot path
-  (every Start/Reload) keeps supervisor state transitions snappy
-  even when the DB is under load. Errors on either probe degrade
-  silently to `""` so the effective-config log line never breaks
-  because a transient DB blip happened to coincide with a
-  Reload.
-
-- **2026-04-19 — [Stage 6] — `parseTaskStatsResponse` defaults
-  the new `scheduled` field to `0` when the server omits the key,
-  rather than throwing.**
-  Rationale: the wire-shape contract test on the Go side
-  guarantees the field is always present going forward, but the
-  defaulting branch covers the rollback path where an older
-  backend ships next to a newer SPA (deployment skew). Throwing
-  on an absent key would force the SPA to render the entire
-  stats UI as an error banner during such a window,
-  which is much worse than briefly under-counting deferred
-  tasks. The "0" default is exactly what an empty database
-  would emit, so the user-visible behaviour matches "no work
-  scheduled" — never a silent lie. The
-  `defaults scheduled to 0 when omitted` parser test pins this
-  behaviour so a future stricter validator can't quietly remove
-  it without also touching the deployment story.
-
-- **2026-04-19 — [Stage 6] — Scheduled (deferred) KPI placed
-  immediately after Ready, ahead of Critical, on the
-  Observability overview grid.**
-  Rationale: the plan's wording was "between Ready and In flight"
-  but the live grid orders the in-flight KPIs (Running / Blocked /
-  In review) BEFORE Ready (which sits next to Critical at the end
-  of the row, by the existing convention that "actionable now"
-  comes last). Inserting the new card directly after Ready keeps
-  it visually adjacent to the count it qualifies — the operator's
-  natural eye-flow is "Ready=5, Scheduled=12" → "the agent has 5
-  things to do now and 12 queued for later", which is exactly the
-  mental model the new card needs to teach. Going strictly
-  literal on "between Ready and In flight" would have meant
-  splitting the in-flight cluster (Running away from Blocked /
-  Review), an unrelated regression.
+Older long-form dated implementation notes were removed from this file to reduce churn; see **git history** for `docs/SCHEDULING.md` before 2026-05-09 if you need the original narrative.

@@ -13,4 +13,4 @@ Operator playbooks for teams that wire alerts around `taskapi` runtime signals. 
 | `TaskAPISSEDroppedFramesElevated` | [alert-sse-dropped-frames.md](./alert-sse-dropped-frames.md) |
 | Readiness (external probe) | [alert-readiness.md](./alert-readiness.md) |
 
-**Roadmap:** further metrics (domain counters, store latency) are listed in [OBSERVABILITY-ROADMAP.md](../OBSERVABILITY-ROADMAP.md).
+**Roadmap:** future tracing/exemplars are listed under **Future observability** in [OBSERVABILITY.md](../OBSERVABILITY.md).

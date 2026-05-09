@@ -157,14 +157,14 @@ SSE is a hint: it does not carry full task bodies. The follow-up GET returns aut
 12. No ETag / If-Match on tasks; concurrent edits to the same row last-winner within locking rules (see [PERSISTENCE.md](./PERSISTENCE.md)).
 13. If JSON encoding of a success response fails after headers are sent, the handler logs an error; clients may see a truncated body (rare for `domain.Task` shapes).
 14. **`Idempotency-Key`** is honored only inside a single `taskapi` process (in-memory cache + `singleflight`); multiple replicas or restarts do not share entries. Cache memory is bounded by `T2A_IDEMPOTENCY_MAX_ENTRIES` / `T2A_IDEMPOTENCY_MAX_BYTES` with oldest-entry eviction. For keyed `POST`/`PATCH`, unknown `Content-Length` is rejected with `400` and oversized bodies with `413`.
-15. **Cycles vs flat audit log:** `task_cycles` / `task_cycle_phases` are the typed source of truth for execution state ("is this task running right now?", "which phase?", "what was the last attempt's outcome?"); `task_events` stays the append-only audit witness. Every cycle/phase mutation appends a mirror row to `task_events` in the **same SQL transaction** (rolled back together on failure) — see [EXECUTION-CYCLES.md](./EXECUTION-CYCLES.md). This is a deliberate dual-write, not a join: `GET /tasks/{id}/events` keeps showing a complete timeline, and the new `task_cycle_*` types are intentionally excluded from `domain.EventTypeAcceptsUserResponse` so mirror rows stay observational. The two stores are not consolidated and must not be: scanning the audit log to answer "what is true now" was the cost the cycles substrate was created to remove.
-16. **Agent worker is in-process and single-instance.** When `app_settings.worker_enabled` is true and `app_settings.repo_root` is set (see [SETTINGS.md](./SETTINGS.md)), one goroutine inside `taskapi` consumes the ready-task queue and drives execution cycles via the configured runner. There is no cross-replica coordination: running two `taskapi` instances with the worker enabled is **not supported** because each replica's startup orphan sweep would race the other's in-flight cycles, and the per-task claim is enforced by the store's "at most one running cycle per task" guard rather than a database lease. Operator-grade durability + multi-replica claiming is V4 of [AGENTIC-LAYER-PLAN.md](./AGENTIC-LAYER-PLAN.md); the V1 contract and security model are pinned in [AGENT-WORKER.md](./AGENT-WORKER.md).
+15. **Cycles vs audit log:** typed `task_cycles` / `task_cycle_phases` are authoritative for live execution state; each mutation mirrors into append-only `task_events` in the **same transaction**. Do not merge those concerns back into a single store — rationale and API in [EXECUTION-CYCLES.md](./EXECUTION-CYCLES.md).
+16. **Agent worker:** in-process single consumer; multiple `taskapi` replicas with the worker enabled are **not supported**. V1 contract and security: [AGENT-WORKER.md](./AGENT-WORKER.md); enablement via [SETTINGS.md](./SETTINGS.md); long-term multi-replica story: [AGENTIC-LAYER-PLAN.md](./AGENTIC-LAYER-PLAN.md).
 
 ## Out of scope (today)
 
 - CORS (assume same origin or a gateway in front).
 - Outbound webhooks.
-- ETag / conditional GET (possible future optimization; see `UI_TASK.MD`).
+- ETag / conditional GET (possible future optimization; track as a proposal if prioritized).
 - Versioned SQL migrations and multi-step schema upgrades.
 - OpenTelemetry-style distributed tracing (only `slog` logs and Prometheus HTTP metrics today).
 

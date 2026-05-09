@@ -50,7 +50,6 @@ Keep this section lightweight for MVP. Runtime metrics exist, but checked-in dep
 | --- | --- |
 | [OBSERVABILITY.md](./OBSERVABILITY.md) | Logging, metrics, correlation, and measurement scripts. |
 | [SLOs.md](./SLOs.md) | Realtime UX SLO definitions and RUM sources. |
-| [REALTIME.md](./REALTIME.md) | Shipped realtime/SSE smoothness decisions. |
 | [runbooks/](./runbooks/) | Optional operator playbooks if you wire alerts. |
 
 ## Future Work
@@ -60,9 +59,7 @@ These are not current runtime contracts.
 | Doc | Use it for |
 | --- | --- |
 | [AGENTIC-LAYER-PLAN.md](./AGENTIC-LAYER-PLAN.md) | Long-term V2–V4 worker roadmap. |
-| [OBSERVABILITY-ROADMAP.md](./OBSERVABILITY-ROADMAP.md) | Future observability work such as OTel. |
 | [proposals/](./proposals/) | Designs that have not shipped. |
-| [future-considerations/](./future-considerations/) | Scaling notes and deferred ideas. |
 
 ## Where To Update
 

@@ -1,6 +1,6 @@
 # Observability standard (T2A)
 
-This document defines **how we measure** logging and correlation in `taskapi`, and **how we increase** test coverage when we change the API or background behavior. It complements [RUNTIME-ENV.md](./RUNTIME-ENV.md) (startup, env), [API-HTTP.md](./API-HTTP.md) (routes, health), and the [DESIGN.md](./DESIGN.md) hub. **Phased observability improvements** (Prometheus, SLOs, tracing): [OBSERVABILITY-ROADMAP.md](./OBSERVABILITY-ROADMAP.md). **Starter SLIs / SLOs** (30d window, error budget framing): § **SLIs and SLOs** below.
+This document defines **how we measure** logging and correlation in `taskapi`, and **how we increase** test coverage when we change the API or background behavior. It complements [RUNTIME-ENV.md](./RUNTIME-ENV.md) (startup, env), [API-HTTP.md](./API-HTTP.md) (routes, health), and the [DESIGN.md](./DESIGN.md) hub. **Starter SLIs / SLOs** (30d window, error budget framing): section **SLIs and SLOs** below. **Tracing backlog:** section **Future observability** at the end of this file.
 
 ## Goals
 
@@ -47,7 +47,7 @@ We do **not** treat a single percentage as a product SLO. Use the **checklists**
 | **Readiness** | Tell DB probe timeouts from other failures | **`GET /health/ready`**: when the **`database`** check fails, **`readiness check failed`** at **Warn** (**`operation`** **`health.ready`**) includes **`timeout_sec`** (**`store.DefaultReadyTimeout`**, **2**) and **`deadline_exceeded`** when the error chain is **`context.DeadlineExceeded`**. See **`docs/API-HTTP.md`** (health). |
 | **Handler panic** | Rare bugs, easier triage | **`operation`** **`http.recover`** at **Error**: **`request_id`**, **`method`**, **`path`**, **`route`** (mux pattern when set), **`duration_ms`** (wall time until panic; there is no `http.access` line when the handler panics), **`panic`**, **`stack`**. Request id is attached in **`WithRecovery`** before inner middleware so correlation matches **`X-Request-ID`**. Client sees **500** JSON (**`internal server error`**). |
 | **SQL traces** | DB latency and shape | GORM → same `slog` sink; parameterized SQL; statements slower than **`T2A_GORM_SLOW_QUERY_MS`** (default 200ms, `0` disables) log at **Warn** with elapsed time and SQL in the `trace` group. |
-| **Metrics** | Rates, histograms, SLO dashboards | **`GET /metrics`** (Prometheus text): `taskapi_http_*` (including idempotency **replay** and **cache eviction** counters), **`taskapi_domain_tasks_*`** (create/update/delete), **`taskapi_store_operation_duration_seconds`** (store entrypoint latency by fixed **`op`** label), **`taskapi_agent_queue_*`**, `taskapi_sse_subscribers`, `taskapi_sse_dropped_frames_total`, **`taskapi_build_info`** (deploy/version labels), and **`taskapi_db_pool_*`** ([`sql.DB.Stats`](https://pkg.go.dev/database/sql#DBStats) on scrape) as in [API-HTTP.md](./API-HTTP.md); plus standard **`go_*`** and **`process_*`** collectors from `taskapi` startup ([OBSERVABILITY-ROADMAP.md](./OBSERVABILITY-ROADMAP.md) phases A2–A3, C1–C2, C3). **`taskapi_http_request_duration_seconds`** uses **SLO-tuned** histogram buckets (finer below 1s; tail to 10s) — see [API-HTTP.md](./API-HTTP.md) Prometheus table and `pkgs/tasks/middleware/metrics_http.go` (`httpRequestDurationSecondsBuckets`). Health paths excluded from HTTP latency series where documented. Per-IP limit: **`T2A_RATE_LIMIT_PER_MIN`**. Idempotency cache TTL: **`T2A_IDEMPOTENCY_TTL`**. Responses include the same baseline security headers as the API (`handler.WrapPrometheusHandler`, headers only—no per-scrape `handler.setAPISecurityHeaders` debug trace). Restrict scrapes in production. |
+| **Metrics** | Rates, histograms, SLO dashboards | **`GET /metrics`** (Prometheus text): `taskapi_http_*` (including idempotency **replay** and **cache eviction** counters), **`taskapi_domain_tasks_*`** (create/update/delete), **`taskapi_store_operation_duration_seconds`** (store entrypoint latency by fixed **`op`** label), **`taskapi_agent_queue_*`**, `taskapi_sse_subscribers`, `taskapi_sse_dropped_frames_total`, **`taskapi_build_info`** (deploy/version labels), and **`taskapi_db_pool_*`** ([`sql.DB.Stats`](https://pkg.go.dev/database/sql#DBStats) on scrape) as in [API-HTTP.md](./API-HTTP.md); plus standard **`go_*`** and **`process_*`** collectors from `taskapi` startup. **`taskapi_http_request_duration_seconds`** uses **SLO-tuned** histogram buckets (finer below 1s; tail to 10s) — see [API-HTTP.md](./API-HTTP.md) Prometheus table and `pkgs/tasks/middleware/metrics_http.go` (`httpRequestDurationSecondsBuckets`). Health paths excluded from HTTP latency series where documented. Per-IP limit: **`T2A_RATE_LIMIT_PER_MIN`**. Idempotency cache TTL: **`T2A_IDEMPOTENCY_TTL`**. Responses include the same baseline security headers as the API (`handler.WrapPrometheusHandler`, headers only—no per-scrape `handler.setAPISecurityHeaders` debug trace). Restrict scrapes in production. |
 | **Distributed traces** | Span graphs across services | Not in scope for single-process `taskapi` unless we adopt OpenTelemetry later. |
 
 ## Grafana / PromQL (`GET /metrics`)
@@ -81,7 +81,7 @@ Example queries (adjust `[5m]` to your scrape interval and range habits; `job` /
 
 For an MVP, start with the PromQL expressions above directly in your metrics tool. Add recording rules outside the repo only when dashboards become too expensive to query live.
 
-### SLIs and SLOs (roadmap B1)
+### SLIs and SLOs
 
 **Definitions:** an **SLI** is a measurable signal (ratio, quantile, or probe outcome). An **SLO** is a target for that SLI over a **time window** (here: **30 rolling calendar days** unless your org standard differs). The **error budget** is how much “bad” SLI you can spend in that window before the SLO is at risk (e.g. for 99.9% success, budget ≈ **0.1%** bad events).
 
@@ -95,9 +95,9 @@ The three SLIs below are **defaults for `taskapi`** — adjust targets and queri
 
 **Alternative third SLI (Prometheus-native):** if you do not yet have blackbox metrics, use **DB pool health**: e.g. alert when `rate(taskapi_db_pool_wait_count_total[5m])` is sustained above a small threshold (tune per pool size); document the threshold as the SLO.
 
-**Error budget in practice:** roll a **30d** window in Grafana or Mimir; use **multi-window, multi-burn-rate** alerts so short spikes do not page while slow burns do ([OBSERVABILITY-ROADMAP.md](./OBSERVABILITY-ROADMAP.md) phase **B2**). Example: for SLI 1 at 99.9%, a **5m** burn at 10× normal `5xx` rate consumes budget quickly — encode in alert rules when you add them.
+**Error budget in practice:** roll a **30d** window in Grafana or Mimir; use **multi-window, multi-burn-rate** alerts (Google SRE workbook) so short spikes do not page while slow burns do. Example: for SLI 1 at 99.9%, a **5m** burn at 10× normal `5xx` rate consumes budget quickly — encode in alert rules when you add them.
 
-### Prometheus alerting (roadmap B2)
+### Prometheus alerting
 
 If you wire Prometheus alerts around `taskapi`, start from these runtime signals:
 
@@ -107,7 +107,7 @@ If you wire Prometheus alerts around `taskapi`, start from these runtime signals
 
 Keep runbook links in **[`docs/runbooks/`](./runbooks/)** if your alert manager supports them.
 
-### 5xx and `request failed` logging (roadmap A5)
+### 5xx and `request failed` logging
 
 - **`http.access`** (`operation` **`http.access`**, non-probe routes): includes **`duration_ms`**, **`status`**, **`route`**, **`path`**, **`method`**; **`request_id`** is added by the JSON `slog` handler from context when present.
 - **`request failed`** (`writeError` / `writeStoreError`, **`logRequestFailure`**): **`operation`**, **`http_status`**, **`err`**, explicit **`request_id`** and **`route`** (for grep and Loki-style queries). **`duration_ms`** for the same request appears on the companion **`http.access`** line when the request completes without panicking.
@@ -193,6 +193,15 @@ Add **tracing** when:
 - You outgrow correlation via `request_id` alone.
 
 When we introduce either, update this doc and `docs/API-HTTP.md` (`GET /metrics`) so operators know how to scrape or export data.
+
+## Future observability
+
+Not implemented yet:
+
+- **D1 — OpenTelemetry:** traces for `taskapi` + OTLP export when multi-service or deep latency debugging is required.
+- **D2 — Exemplars / log correlation:** trace IDs on spans and in `slog`; histogram exemplars where the backend supports them.
+
+**Principles (do not regress):** keep **low cardinality** (no per-user or per-task labels on hot series; `route` stays the mux pattern). **`GET /metrics`** has no app auth — restrict at the network. Keep **health probes** out of HTTP SLI histograms where they are already excluded (`middleware.omitHTTPMetrics`).
 
 ## Related docs and rules
 

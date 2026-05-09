@@ -24,12 +24,7 @@ export function SubtaskTree({
         className="task-detail-section-empty"
         icon={<EmptyStateSubtasksGlyph />}
         title="No subtasks yet"
-        description={
-          <>
-            Use <strong>Add subtask</strong> above to break work into smaller
-            steps.
-          </>
-        }
+        description="Use Add subtask to break work into smaller steps."
       />
     );
   }

@@ -168,12 +168,7 @@ export function TaskDetailChecklistSection({
             className="task-detail-section-empty"
             icon={<EmptyStateChecklistGlyph />}
             title="No criteria yet"
-            description={
-              <>
-                Use <strong>Add criterion</strong> above to describe what must
-                be true before this task can be marked done.
-              </>
-            }
+            description="Use Add criterion to define what must be true before this task is done."
           />
         ) : (
           <TaskDetailChecklistItemList

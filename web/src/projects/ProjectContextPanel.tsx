@@ -403,7 +403,7 @@ export function ProjectContextPanel({ projectId }: Props) {
       ) : items.length === 0 ? (
         <EmptyState
           title="No context nodes yet"
-          description="Add durable project memory nodes, then connect them as the work evolves."
+          description="Add memory nodes and connect them as the work evolves."
           action={{
             label: "Add memory",
             onClick: () => setAddNodeOpen(true),

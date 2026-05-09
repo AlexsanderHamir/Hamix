@@ -198,39 +198,31 @@
   vertical-align: middle;
 }
 
-/* Fresh-database welcome — quiet brand wash so the page does not feel like
-   a blank slate. Only applies when `tasks.length === 0`; the post-filter
-   "no matching tasks" case stays neutral so the operator's eye reads
-   "this is a filter outcome" instead of "your workspace is empty". */
+/* Fresh-database welcome — hairline panel when the workspace has no tasks.
+   Post-filter "no matching tasks" stays unscoped so it reads as a filter outcome. */
 .empty-state.empty-state--task-list-fresh {
   position: relative;
-  padding: 2rem 1.75rem 2.25rem;
+  padding: var(--space-8) var(--space-6);
   border-radius: var(--radius-lg);
-  border: 1px solid var(--brand-border-faint);
-  background:
-    radial-gradient(
-      ellipse at top,
-      var(--brand-surface-faint),
-      transparent 65%
-    ),
-    var(--bg-elevated);
+  border: 1px solid var(--border-hairline);
+  background: var(--surface-1);
   max-width: min(34rem, 100%);
   margin-inline: auto;
 }
 
 .empty-state.empty-state--task-list-fresh .empty-state__title {
-  font-size: var(--text-xl);
-  letter-spacing: -0.02em;
+  font-size: var(--text-md);
+  letter-spacing: -0.015em;
 }
 
 .empty-state.empty-state--task-list-fresh .empty-state__icon-wrap {
-  color: var(--brand-text-strong);
-  opacity: 0.85;
+  color: var(--text-tertiary);
+  opacity: 1;
 }
 
 .empty-state.empty-state--task-list-fresh .empty-state__description {
   font-size: var(--text-sm);
-  line-height: 1.55;
+  line-height: 1.45;
 }
 
 /* Subtle stagger fade-in for the section's children. Matches the same

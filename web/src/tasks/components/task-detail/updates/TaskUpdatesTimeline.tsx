@@ -55,7 +55,7 @@ export function TaskUpdatesTimeline({
         <EmptyState
           icon={<EmptyStateTimelineGlyph />}
           title="No updates yet"
-          description="When agents and the system record changes, they will appear here in order."
+          description="Agent and system changes appear here in order."
         />
       ) : (
         <TaskUpdatesTimelineEventList

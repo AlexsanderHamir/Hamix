@@ -9,12 +9,10 @@ export function NotFoundPage() {
       className="panel task-detail-panel task-detail-content--enter"
       aria-labelledby="not-found-heading"
     >
-      <h2 className="task-detail-title term-arrow" id="not-found-heading">
-        <span>Page not found</span>
+      <h2 className="task-detail-title" id="not-found-heading">
+        Page not found
       </h2>
-      <p className="muted term-prompt">
-        <span>route 404 — no page matches this address</span>
-      </p>
+      <p className="muted">No page matches this address.</p>
       <p>
         <Link to="/" className="task-detail-back">
           <span aria-hidden="true">‹</span>

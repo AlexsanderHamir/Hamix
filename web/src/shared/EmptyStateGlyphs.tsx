@@ -2,8 +2,8 @@ export function EmptyStateTrayGlyph() {
   return (
     <svg
       className="empty-state__glyph"
-      width={48}
-      height={48}
+      width={20}
+      height={20}
       viewBox="0 0 48 48"
       fill="none"
       xmlns="http://www.w3.org/2000/svg"
@@ -35,8 +35,8 @@ export function EmptyStateTimelineGlyph() {
   return (
     <svg
       className="empty-state__glyph"
-      width={48}
-      height={48}
+      width={20}
+      height={20}
       viewBox="0 0 48 48"
       fill="none"
       xmlns="http://www.w3.org/2000/svg"
@@ -77,8 +77,8 @@ export function EmptyStateChecklistGlyph() {
   return (
     <svg
       className="empty-state__glyph"
-      width={48}
-      height={48}
+      width={20}
+      height={20}
       viewBox="0 0 48 48"
       fill="none"
       xmlns="http://www.w3.org/2000/svg"
@@ -107,8 +107,8 @@ export function EmptyStateSubtasksGlyph() {
   return (
     <svg
       className="empty-state__glyph"
-      width={48}
-      height={48}
+      width={20}
+      height={20}
       viewBox="0 0 48 48"
       fill="none"
       xmlns="http://www.w3.org/2000/svg"
@@ -155,8 +155,8 @@ export function EmptyStateFilterGlyph() {
   return (
     <svg
       className="empty-state__glyph"
-      width={48}
-      height={48}
+      width={20}
+      height={20}
       viewBox="0 0 48 48"
       fill="none"
       xmlns="http://www.w3.org/2000/svg"

@@ -234,7 +234,7 @@ export function TaskGraphPage() {
       <section className="panel task-graph-page task-graph-content--enter">
         <EmptyState
           title="Missing task id"
-          description="Open a task first, then use the graph view from its detail page."
+          description="Open a task from the list, then open Graph from its detail page."
           action={{
             label: "Back to all tasks",
             onClick: () => {

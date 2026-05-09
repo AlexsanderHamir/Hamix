@@ -244,14 +244,7 @@ export function TaskListDataTable({
                 <EmptyState
                   className="empty-state--in-table empty-state--task-list-fresh"
                   title="No tasks yet"
-                  description={
-                    <>
-                      Hit <strong>New task</strong> to dispatch your first run.
-                      Once a task is in flight, this table tracks its status,
-                      priority, and prompt preview live as the worker picks
-                      it up.
-                    </>
-                  }
+                  description="Use New task to add one. Status, priority, and prompt update as the worker runs."
                   action={emptyListAction}
                 />
               </td>
@@ -263,7 +256,7 @@ export function TaskListDataTable({
                   className="empty-state--in-table"
                   icon={<EmptyStateFilterGlyph />}
                   title="No matching tasks"
-                  description="Try a different status or priority, or clear the title search."
+                  description="Adjust filters or clear search."
                 />
               </td>
             </tr>

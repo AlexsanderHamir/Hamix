@@ -132,7 +132,7 @@ describe("TaskListSection", () => {
     // to be more inviting; assert on a phrase from the new body so a
     // future copy regression is caught here.
     expect(screen.getByText(/no tasks yet/i)).toBeInTheDocument();
-    expect(screen.getByText(/dispatch your first run/i)).toBeInTheDocument();
+    expect(screen.getByText(/Use New task to add one/i)).toBeInTheDocument();
     expect(
       screen.getByRole("region", { name: /^all tasks$/i }),
     ).toBeInTheDocument();

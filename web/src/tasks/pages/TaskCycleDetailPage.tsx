@@ -232,7 +232,7 @@ export function TaskCycleDetailPage() {
         ) : streamEvents.length === 0 ? (
           <EmptyState
             title="No Cursor updates yet"
-            description="No persisted Cursor updates for this attempt yet. Live updates can still appear while a phase is running."
+            description="No saved stream lines yet. Live output can still show while a phase runs."
             density="compact"
             hideIcon
           />
@@ -270,7 +270,7 @@ export function TaskCycleDetailPage() {
         ) : auditEvents.length === 0 ? (
           <EmptyState
             title="No audit events yet"
-            description="No task audit events reference this attempt. They will appear here once the run records cycle or phase activity."
+            description="No audit lines for this attempt yet. They appear as the run records activity."
             density="compact"
             hideIcon
           />

@@ -77,7 +77,7 @@ export function TaskCyclesPanel({ taskId, enabled = true }: Props) {
       aria-labelledby="task-detail-cycles-heading"
     >
       <h3
-        className="task-detail-section-heading term-prompt"
+        className="task-detail-section-heading"
         id="task-detail-cycles-heading"
       >
         <span>Execution cycles</span>

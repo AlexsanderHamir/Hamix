@@ -33,7 +33,7 @@ export function TaskUpdatesTimeline({
   return (
     <div className="task-detail-section task-detail-timeline">
       <h3
-        className="task-detail-section-heading term-prompt"
+        className="task-detail-section-heading"
         id="task-detail-updates-heading"
       >
         <span>Updates</span>

@@ -282,9 +282,7 @@ export function TaskGraphPage() {
         </Link>
       </nav>
       <header className="task-graph-header">
-        <h2 className="task-graph-title term-arrow">
-          <span>Task graph</span>
-        </h2>
+        <h2 className="task-graph-title">Task graph</h2>
         <p className="muted task-graph-meta" aria-live="polite">
           {layout.nodes.length.toLocaleString()}{" "}
           {layout.nodes.length === 1 ? "node" : "nodes"} rendered with viewport virtualization

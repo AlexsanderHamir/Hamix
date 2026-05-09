@@ -37,7 +37,7 @@
   border: 1px solid var(--border-soft);
   border-radius: var(--radius-md);
   background: var(--bg-subtle);
-  box-shadow: var(--shadow-chrome-xs);
+  box-shadow: none;
   overflow: auto;
   /* Reserve scrollbar gutter so skeleton → loaded graph does not shift when overflow appears */
   scrollbar-gutter: stable;

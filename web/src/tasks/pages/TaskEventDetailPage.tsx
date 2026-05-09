@@ -233,7 +233,7 @@ export function TaskEventDetailPage() {
           aria-label="Conversation on this event"
         >
           <h3
-            className="task-detail-subheading term-prompt"
+            className="task-detail-subheading"
             id="task-event-thread-heading"
           >
             <span>Conversation</span>

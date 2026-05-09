@@ -77,7 +77,7 @@ export function TaskDetailChecklistSection({
       <div className="task-detail-checklist-head">
         <div className="field-heading-with-req task-detail-checklist-title-row">
           <h3
-            className="task-detail-section-heading term-prompt"
+            className="task-detail-section-heading"
             id="task-checklist-heading"
           >
             <span>Done criteria</span>

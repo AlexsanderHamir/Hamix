@@ -12,7 +12,7 @@ export function TaskDetailPromptSection({
   return (
     <div className="task-detail-section task-detail-prompt">
       <h3
-        className="task-detail-section-heading term-prompt"
+        className="task-detail-section-heading"
         id="task-detail-prompt-heading"
       >
         <span>Initial prompt</span>

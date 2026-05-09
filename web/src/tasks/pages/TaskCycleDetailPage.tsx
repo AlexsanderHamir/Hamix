@@ -194,7 +194,7 @@ export function TaskCycleDetailPage() {
       </dl>
 
       <section className="task-attempt-section" aria-labelledby="attempt-phases">
-        <h3 className="task-detail-subheading term-prompt" id="attempt-phases">
+        <h3 className="task-detail-subheading" id="attempt-phases">
           <span>Phases</span>
         </h3>
         <ol className="task-attempt-phase-list">
@@ -221,7 +221,7 @@ export function TaskCycleDetailPage() {
 
       <section className="task-attempt-section" aria-labelledby="attempt-stream">
         <div className="task-attempt-section-heading-row">
-          <h3 className="task-detail-subheading term-prompt" id="attempt-stream">
+          <h3 className="task-detail-subheading" id="attempt-stream">
             <span>Cursor events</span>
           </h3>
         </div>
@@ -256,7 +256,7 @@ export function TaskCycleDetailPage() {
       </section>
 
       <section className="task-attempt-section" aria-labelledby="attempt-audit">
-        <h3 className="task-detail-subheading term-prompt" id="attempt-audit">
+        <h3 className="task-detail-subheading" id="attempt-audit">
           <span>T2A audit events</span>
         </h3>
         {auditQuery.isPending ? (

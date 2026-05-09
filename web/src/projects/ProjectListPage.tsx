@@ -36,15 +36,9 @@ export function ProjectListPage() {
     <section className="panel task-detail-panel pl">
       <header className="pl__head">
         <div className="pl__head-text">
-          <h2 className="term-arrow">
-            <span>Projects</span>
-          </h2>
-          <p className="pl__lede term-prompt muted" aria-hidden="true">
-            <span>organize --context --memory</span>
-          </p>
+          <h2 className="task-list-section-title">Projects</h2>
           <p className="pl__subtitle">
-            Group tasks around a shared context space so the agent can borrow
-            the right project memory at run time.
+            Shared context and memory for tasks in each project.
           </p>
         </div>
         <dl className="pl__stats" aria-label="Project summary">
@@ -108,7 +102,7 @@ export function ProjectListPage() {
         {!isLoading && !error && projects.length === 0 ? (
           <EmptyState
             title="No projects yet"
-            description="Create your first project to start organizing shared context."
+            description="Create a project to group related tasks."
             density="compact"
             hideIcon
           />

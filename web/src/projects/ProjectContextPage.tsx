@@ -37,15 +37,12 @@ export function ProjectContextPage() {
             Back to project
           </Link>
           <div className="pc__header-title">
-            <h2 className="term-arrow">
-              <span>{project.data?.name ?? "Project context"}</span>
+            <h2 className="task-list-section-title">
+              {project.data?.name ?? "Project context"}
             </h2>
-            <p className="pc__lede term-prompt muted" aria-hidden="true">
-              <span>memory --nodes --relationships</span>
-            </p>
             <p className="pc__subtitle">
-              Capture decisions, constraints, notes, and risks the agent can
-              borrow when working inside this project.
+              Decisions, constraints, and notes the agent can use for this
+              project.
             </p>
           </div>
         </div>

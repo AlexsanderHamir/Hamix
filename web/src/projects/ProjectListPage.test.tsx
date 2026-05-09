@@ -3,7 +3,7 @@ import { render, screen, within } from "@testing-library/react";
 import { MemoryRouter } from "react-router-dom";
 import { describe, expect, it } from "vitest";
 import { ROUTER_FUTURE_FLAGS } from "@/lib/routerFutureFlags";
-import type { Project } from "@/types";
+import { DEFAULT_PROJECT_ID, type Project } from "@/types";
 import { ProjectListPage } from "./ProjectListPage";
 import { projectQueryKeys } from "./queryKeys";
 
@@ -55,10 +55,28 @@ describe("ProjectListPage", () => {
     expect(within(summary).getByText("2")).toBeInTheDocument();
 
     const library = await screen.findByLabelText("Projects");
-    expect(within(library).getAllByRole("link")).toHaveLength(10);
-    expect(within(library).getByRole("link", { name: /project 10/i })).toHaveAttribute(
-      "href",
-      "/projects/project-10",
+    expect(within(library).getAllByRole("link")).toHaveLength(20);
+    expect(within(library).getAllByRole("button", { name: /^Delete project / })).toHaveLength(
+      10,
     );
+    expect(
+      within(library).getByRole("link", { name: /^Open project Project 10$/ }),
+    ).toHaveAttribute("href", "/projects/project-10");
+  });
+
+  it("does not render delete for the built-in default project row", () => {
+    const projects: Project[] = [
+      project(0, { id: DEFAULT_PROJECT_ID, name: "Default project" }),
+      project(1, { id: "custom-a", name: "Alpha" }),
+      project(2, { id: "custom-b", name: "Beta" }),
+    ];
+    renderPage(projects);
+    const library = screen.getByLabelText("Projects");
+    expect(within(library).getAllByRole("button", { name: /^Delete project / })).toHaveLength(
+      2,
+    );
+    expect(
+      within(library).queryByRole("button", { name: /^Delete project Default project$/ }),
+    ).not.toBeInTheDocument();
   });
 });

@@ -342,29 +342,6 @@
   font-weight: 500;
 }
 
-/* Underline accent below the active item — Stripe.com top-nav vocabulary
-   layered on top of our existing pill so the active item reads as
-   "you are here" via two complementary cues (color tint + underline)
-   instead of color alone. */
-.app-nav__link[aria-current="page"]::after {
-  content: "";
-  position: absolute;
-  left: 50%;
-  bottom: -3px;
-  width: 18px;
-  height: 2px;
-  border-radius: 2px;
-  background: linear-gradient(
-    90deg,
-    color-mix(in srgb, var(--brand) 40%, transparent) 0%,
-    var(--brand) 50%,
-    color-mix(in srgb, var(--brand) 40%, transparent) 100%
-  );
-  transform: translateX(-50%);
-  opacity: 0.85;
-  pointer-events: none;
-}
-
 .app-nav__link:focus-visible {
   outline: none;
   box-shadow: 0 0 0 3px var(--focus-ring);

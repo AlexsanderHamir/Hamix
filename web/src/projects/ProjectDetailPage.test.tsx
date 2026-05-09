@@ -3,7 +3,7 @@ import { render, screen } from "@testing-library/react";
 import { MemoryRouter, Route, Routes } from "react-router-dom";
 import { describe, expect, it } from "vitest";
 import { ROUTER_FUTURE_FLAGS } from "@/lib/routerFutureFlags";
-import type { Project } from "@/types";
+import { DEFAULT_PROJECT_ID, type Project } from "@/types";
 import { ProjectDetailPage } from "./ProjectDetailPage";
 import { projectQueryKeys } from "./queryKeys";
 
@@ -17,15 +17,18 @@ const testProject: Project = {
   updated_at: "2026-04-27T00:00:00Z",
 };
 
-function renderPage() {
+function renderPage(
+  project: Project = testProject,
+  initialPath = `/projects/${project.id}`,
+) {
   const queryClient = new QueryClient({
     defaultOptions: {
       queries: { retry: false, staleTime: Infinity },
       mutations: { retry: false },
     },
   });
-  queryClient.setQueryData(projectQueryKeys.detail(testProject.id), testProject);
-  queryClient.setQueryData(["tasks", "project-members", testProject.id], {
+  queryClient.setQueryData(projectQueryKeys.detail(project.id), project);
+  queryClient.setQueryData(["tasks", "project-members", project.id], {
     tasks: [],
     limit: 200,
     offset: 0,
@@ -33,10 +36,7 @@ function renderPage() {
 
   return render(
     <QueryClientProvider client={queryClient}>
-      <MemoryRouter
-        future={ROUTER_FUTURE_FLAGS}
-        initialEntries={[`/projects/${testProject.id}`]}
-      >
+      <MemoryRouter future={ROUTER_FUTURE_FLAGS} initialEntries={[initialPath]}>
         <Routes>
           <Route path="/projects/:projectId" element={<ProjectDetailPage />} />
         </Routes>
@@ -57,5 +57,20 @@ describe("ProjectDetailPage", () => {
       "/projects/project-1/context",
     );
     expect(screen.getByRole("heading", { name: /Linked tasks/ })).toBeInTheDocument();
+  });
+
+  it("shows delete project action for non-default projects", () => {
+    renderPage();
+    expect(screen.getByRole("button", { name: /Delete project…/ })).toBeInTheDocument();
+  });
+
+  it("does not show delete project action for the built-in default project", () => {
+    const builtIn: Project = {
+      ...testProject,
+      id: DEFAULT_PROJECT_ID,
+      name: "Default project",
+    };
+    renderPage(builtIn, `/projects/${encodeURIComponent(DEFAULT_PROJECT_ID)}`);
+    expect(screen.queryByRole("button", { name: /Delete project…/ })).not.toBeInTheDocument();
   });
 });

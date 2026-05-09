@@ -1,5 +1,5 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { Link, useNavigate, useParams, useSearchParams } from "react-router-dom";
 import {
   createProjectStep,
@@ -15,6 +15,7 @@ import { taskQueryKeys } from "@/tasks/task-query";
 import type { ProjectStep, ProjectStepCriterion, ProjectStepGateStatus } from "@/types";
 import { useProjectGoals } from "./hooks";
 import { projectQueryKeys } from "./queryKeys";
+import { ProjectStepCreateModal } from "./ProjectStepCreateModal";
 
 type ViewMode = "list" | "graph";
 
@@ -76,6 +77,7 @@ export function ProjectStepsPage() {
   const navigate = useNavigate();
   const queryClient = useQueryClient();
   const [view, setView] = useState<ViewMode>("list");
+  const [createStepModalOpen, setCreateStepModalOpen] = useState(false);
   const [newTitle, setNewTitle] = useState("");
   const [newDescription, setNewDescription] = useState("");
   const [criterionDrafts, setCriterionDrafts] = useState<string[]>([""]);
@@ -122,12 +124,21 @@ export function ProjectStepsPage() {
           .map((text, i) => ({ text, done: false, sort_order: i + 1 })),
       }),
     onSuccess: async () => {
+      setCreateStepModalOpen(false);
       setNewTitle("");
       setNewDescription("");
       setCriterionDrafts([""]);
       await invalidate();
     },
   });
+
+  const dismissCreateStepModal = useCallback(() => {
+    createMut.reset();
+    setNewTitle("");
+    setNewDescription("");
+    setCriterionDrafts([""]);
+    setCreateStepModalOpen(false);
+  }, [createMut]);
 
   const patchMut = useMutation({
     mutationFn: (input: {
@@ -274,23 +285,32 @@ export function ProjectStepsPage() {
                 Gates advance when every task in the step is done and every criterion is checked off.
               </p>
             </div>
-            <div className="ps__view-toggle" role="group" aria-label="View mode">
+            <div className="ps__lede-trail">
               <button
                 type="button"
-                className="ps__toggle-btn"
-                aria-pressed={view === "list"}
-                onClick={() => setView("list")}
+                className="primary"
+                onClick={() => setCreateStepModalOpen(true)}
               >
-                List
+                Add step
               </button>
-              <button
-                type="button"
-                className="ps__toggle-btn"
-                aria-pressed={view === "graph"}
-                onClick={() => setView("graph")}
-              >
-                Graph
-              </button>
+              <div className="ps__view-toggle" role="group" aria-label="View mode">
+                <button
+                  type="button"
+                  className="ps__toggle-btn"
+                  aria-pressed={view === "list"}
+                  onClick={() => setView("list")}
+                >
+                  List
+                </button>
+                <button
+                  type="button"
+                  className="ps__toggle-btn"
+                  aria-pressed={view === "graph"}
+                  onClick={() => setView("graph")}
+                >
+                  Graph
+                </button>
+              </div>
             </div>
           </div>
 
@@ -359,88 +379,19 @@ export function ProjectStepsPage() {
             </div>
           )}
 
-          <section className="ps__create" aria-labelledby="ps-create-title">
-            <h3 id="ps-create-title" className="ps__create-title">
-              Add step
-            </h3>
-            <form
-              className="ps__create-form"
-              onSubmit={(e) => {
-                e.preventDefault();
-                if (!newTitle.trim()) return;
-                void createMut.mutateAsync();
-              }}
-            >
-              <label className="field grow">
-                <span className="settings-field-label">Title</span>
-                <input
-                  value={newTitle}
-                  onChange={(ev) => setNewTitle(ev.target.value)}
-                  placeholder="e.g. JWT implementation"
-                  disabled={createMut.isPending}
-                  required
-                />
-              </label>
-              <label className="field grow">
-                <span className="settings-field-label">Description</span>
-                <textarea
-                  value={newDescription}
-                  onChange={(ev) => setNewDescription(ev.target.value)}
-                  placeholder="What this stage covers"
-                  rows={2}
-                  disabled={createMut.isPending}
-                />
-              </label>
-              <fieldset className="ps__criteria-fieldset">
-                <legend className="settings-field-label">Criteria (optional)</legend>
-                <p className="muted ps__criteria-help">Each line becomes a checklist item before the gate can advance.</p>
-                {criterionDrafts.map((line, idx) => (
-                  <div key={idx} className="ps__criteria-row">
-                    <input
-                      value={line}
-                      onChange={(ev) => {
-                        const next = [...criterionDrafts];
-                        next[idx] = ev.target.value;
-                        setCriterionDrafts(next);
-                      }}
-                      placeholder="Criterion text"
-                      disabled={createMut.isPending}
-                    />
-                    {criterionDrafts.length > 1 ? (
-                      <button
-                        type="button"
-                        className="secondary ps__criteria-remove"
-                        disabled={createMut.isPending}
-                        onClick={() =>
-                          setCriterionDrafts((rows) => rows.filter((_, j) => j !== idx))
-                        }
-                      >
-                        Remove
-                      </button>
-                    ) : null}
-                  </div>
-                ))}
-                <button
-                  type="button"
-                  className="secondary ps__criteria-add"
-                  disabled={createMut.isPending}
-                  onClick={() => setCriterionDrafts((rows) => [...rows, ""])}
-                >
-                  Add criterion line
-                </button>
-              </fieldset>
-              <div className="ps__create-actions">
-                <button type="submit" className="primary" disabled={createMut.isPending || !newTitle.trim()}>
-                  Create step
-                </button>
-              </div>
-            </form>
-            {createMut.error ? (
-              <p className="pd__error-message" role="alert">
-                {createMut.error.message}
-              </p>
-            ) : null}
-          </section>
+          <ProjectStepCreateModal
+            open={createStepModalOpen}
+            onDismiss={dismissCreateStepModal}
+            draftTitle={newTitle}
+            onDraftTitleChange={setNewTitle}
+            draftDescription={newDescription}
+            onDraftDescriptionChange={setNewDescription}
+            criterionDrafts={criterionDrafts}
+            onCriterionDraftsChange={setCriterionDrafts}
+            createPending={createMut.isPending}
+            createError={createMut.error}
+            onCreate={() => createMut.mutateAsync()}
+          />
 
           {patchMut.error ? (
             <p className="pd__error-message" role="alert">

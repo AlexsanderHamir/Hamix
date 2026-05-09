@@ -3949,6 +3949,13 @@
   gap: var(--space-4);
 }
 
+.ps__lede-trail {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-3);
+}
+
 .ps__crumb {
   margin: 0 0 var(--space-1);
   font-size: var(--text-sm);
@@ -4300,6 +4307,26 @@
   border: 1px solid var(--border-hairline);
   border-radius: var(--radius-lg);
   background: var(--bg-subtle);
+}
+
+.ps__create-modal {
+  display: grid;
+  gap: var(--space-4);
+}
+
+.ps__create-modal__head h2 {
+  margin: 0 0 var(--space-2);
+  font-size: var(--text-lg);
+  font-weight: 600;
+  letter-spacing: -0.02em;
+  color: var(--text-primary);
+}
+
+.ps__create-modal__head p {
+  margin: 0;
+  max-width: 52ch;
+  font-size: var(--text-sm);
+  line-height: 1.55;
 }
 
 .ps__create-title {

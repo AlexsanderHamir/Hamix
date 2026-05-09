@@ -1,8 +1,10 @@
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { render, screen, waitFor } from "@testing-library/react";
+import userEvent from "@testing-library/user-event";
 import { MemoryRouter, Route, Routes } from "react-router-dom";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { ROUTER_FUTURE_FLAGS } from "@/lib/routerFutureFlags";
+import { ModalStackProvider } from "@/shared/ModalStackContext";
 import { requestUrl } from "@/test/requestUrl";
 import type { Project } from "@/types";
 import { projectQueryKeys } from "./queryKeys";
@@ -81,16 +83,18 @@ describe("ProjectStepsPage", () => {
     });
 
     render(
-      <QueryClientProvider client={queryClient}>
-        <MemoryRouter
-          future={ROUTER_FUTURE_FLAGS}
-          initialEntries={[`/projects/${testProject.id}/steps?goal_id=goal-1`]}
-        >
-          <Routes>
-            <Route path="/projects/:projectId/steps" element={<ProjectStepsPage />} />
-          </Routes>
-        </MemoryRouter>
-      </QueryClientProvider>,
+      <ModalStackProvider>
+        <QueryClientProvider client={queryClient}>
+          <MemoryRouter
+            future={ROUTER_FUTURE_FLAGS}
+            initialEntries={[`/projects/${testProject.id}/steps?goal_id=goal-1`]}
+          >
+            <Routes>
+              <Route path="/projects/:projectId/steps" element={<ProjectStepsPage />} />
+            </Routes>
+          </MemoryRouter>
+        </QueryClientProvider>
+      </ModalStackProvider>,
     );
 
     await waitFor(() => {
@@ -102,5 +106,9 @@ describe("ProjectStepsPage", () => {
       "href",
       `/projects/${testProject.id}`,
     );
+
+    await userEvent.click(screen.getByRole("button", { name: /^Add step$/ }));
+    expect(screen.getByRole("dialog")).toBeInTheDocument();
+    expect(screen.getByRole("heading", { name: /Add a step/i })).toBeInTheDocument();
   });
 });

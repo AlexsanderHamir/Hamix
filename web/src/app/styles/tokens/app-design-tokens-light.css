@@ -1,48 +1,35 @@
 :root {
-  /* Neutrals — near-black / warm surfaces (no pure #000 / #fff for text & page) */
-  --slate-shadow: 15 23 42;
+  --slate-shadow: 10 10 10;
   --text-primary: #0a0a0a;
-  --text-secondary: rgb(75 85 99 / 92%);
-  --text-tertiary: rgb(107 114 128 / 78%);
+  --text-secondary: #6b6b6b;
+  --text-tertiary: rgb(107 107 107 / 78%);
   --text-disabled: #d1d5db;
-  /* On brand / saturated fills — avoids pure #fff while keeping contrast (DS §3) */
   --text-on-brand: #fafafa;
 
-  /*
-   * Terminal aesthetic: cleaner near-white page so monospace text
-   * reads as console output on paper. The previous mesh + tinted wash
-   * (purple / green radial spots) competed visually with the new
-   * uniform mono typography; we tone them way down via the
-   * --surface-glass-spot / --brand-mesh tokens without removing the
-   * gradient layers entirely.
-   */
-  --bg-page: #fbfbf9;
+  --bg-page: #f9f9f8;
   --bg-elevated: #ffffff;
-  --bg-subtle: #f4f4f1;
+  --bg-subtle: #f4f4f2;
   --surface-1: var(--bg-elevated);
   --surface-2: var(--bg-subtle);
   --surface-3: var(--neutral-fill-subtle);
   --surface-soft: var(--bg-subtle);
   --surface-card: var(--bg-elevated);
-  --bg-linear-wash-start: #f7f7f4;
-  --bg-linear-wash-end: #fbfbf9;
-  --bg-mesh-dark-brand-glow: rgb(30 27 75 / 25%);
-  --bg-mesh-dark-success-glow: rgb(20 83 45 / 12%);
-  --stream-dot-idle: rgb(60 60 67 / 25%);
+  --bg-linear-wash-start: #f9f9f8;
+  --bg-linear-wash-end: #ffffff;
+  --bg-mesh-dark-brand-glow: rgb(61 59 243 / 4%);
+  --bg-mesh-dark-success-glow: rgb(26 127 75 / 4%);
+  --stream-dot-idle: rgb(60 60 60 / 28%);
 
-  /* Brand — Stripe-style purple */
-  --brand: #635bff;
-  --brand-hover: #5046e5;
-  --brand-deep: #4338cc;
-  --brand-rgb: 99 91 255;
+  /* Brand — restrained indigo (links, active, live accents only) */
+  --brand: #3d3bf3;
+  --brand-hover: #3230c9;
+  --brand-deep: #2a28a8;
+  --brand-rgb: 61 59 243;
   --brand-muted: rgb(var(--brand-rgb) / 12%);
-  /* Terminal redesign: dial the brand radial spot in the body
-     gradient way down so the page reads as a clean console
-     surface instead of a tinted purple mesh. */
-  --brand-mesh: rgb(var(--brand-rgb) / 1.5%);
-  --brand-focus: rgb(var(--brand-rgb) / 32%);
-  --link: #5046e5;
-  --link-hover: #4338cc;
+  --brand-mesh: rgb(var(--brand-rgb) / 0%);
+  --brand-focus: rgb(var(--brand-rgb) / 28%);
+  --link: #3d3bf3;
+  --link-hover: #3230c9;
   --surface-hover: var(--brand-muted);
   --surface-press: rgb(var(--brand-rgb) / 16%);
   --focus-ring: var(--brand-focus);
@@ -106,7 +93,7 @@
   --neutral-lip-shadow: 0 1px 0 rgb(0 0 0 / 4%);
   --shadow-neutral-micro: 0 1px 2px rgb(0 0 0 / 6%);
 
-  --border-hairline: rgb(0 0 0 / 8%);
+  --border-hairline: #e5e5e3;
   --border-soft: rgb(0 0 0 / 12%);
   /* Outlined secondary actions — DS §7 (--color-border-strong ~16%) */
   --border-strong: rgb(var(--slate-shadow) / 16%);
@@ -166,22 +153,20 @@
   --radius-thread-bubble: 0.85rem;
 
   /* Semantic */
-  --success: #00a96e;
-  --success-bright: #00b87a;
-  --success-soft: rgb(0 169 110 / 12%);
-  --success-border: rgb(0 169 110 / 22%);
-  /* Terminal redesign: same rationale as --brand-mesh — keep the
-     body wash near-white instead of a green tint. */
-  --success-mesh: rgb(0 169 110 / 1%);
+  --success: #1a7f4b;
+  --success-bright: #1e9356;
+  --success-soft: rgb(26 127 75 / 14%);
+  --success-border: rgb(26 127 75 / 24%);
+  --success-mesh: rgb(26 127 75 / 0%);
   --success-thread-surface: rgb(16 185 129 / 10%);
   --success-thread-surface-soft: rgb(16 185 129 / 9%);
   --success-rich-focus-border: rgb(5 150 105 / 35%);
   /* @file chips in rich text (light lift on field surface — DS §3 / §7) */
   --surface-repo-file-chip-gradient: linear-gradient(180deg, rgb(250 250 252) 0%, rgb(244 244 248) 100%);
 
-  --danger: #dc2626;
+  --danger: #d93025;
   --danger-deep: #b91c1c;
-  --danger-bright: #ef4444;
+  --danger-bright: #e94236;
   --danger-soft: rgb(239 68 68 / 10%);
   /* Error banners / inline danger chrome (DS §11) */
   --danger-border: rgb(239 68 68 / 22%);
@@ -258,21 +243,13 @@
   --mention-syntax-number: #1e6fd6;
   --mention-syntax-function: #b35000;
 
-  font-family: var(--font-mono);
-  line-height: 1.55;
-  /*
-   * Monospace renders ~10% wider than the previous SF Pro stack, so
-   * we drop the body size half a tick to keep line lengths close to
-   * the documented 60–75ch target without rewriting every layout.
-   * `font-feature-settings` enables ligature-aware mono fonts
-   * (JetBrains, Cascadia) without forcing them on stacks that lack
-   * them.
-   */
+  font-family: var(--font-sans);
+  line-height: 1.5;
   font-size: var(--text-sm);
   color: var(--text-primary);
   background: var(--bg-page);
   color-scheme: light;
-  font-feature-settings: "kern" 1, "calt" 1, "ss01" 1, "cv11" 1;
+  font-feature-settings: "kern" 1, "calt" 1;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
 }

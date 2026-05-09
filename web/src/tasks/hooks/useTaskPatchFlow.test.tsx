@@ -28,6 +28,7 @@ function makeAppSettings(overrides: Partial<AppSettings> = {}): AppSettings {
     cursor_model: "",
     max_run_duration_seconds: 0,
     agent_pickup_delay_seconds: 5,
+    project_step_gate_grace_seconds: 300,
     display_timezone: "UTC",
     // Default ON in these tests because the tests describe the
     // optimistic code path; when testing pessimistic behavior pass

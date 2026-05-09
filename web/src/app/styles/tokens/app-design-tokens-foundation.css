@@ -1,21 +1,12 @@
-/* Design tokens — aligned with .cursor/rules/16-ui-ux-iteration.mdc */
+/* Design tokens — product chrome uses sans; mono reserved for prompts/code. */
 
 :root {
-  /*
-   * Terminal aesthetic (2026-04 redesign): monospace everywhere. The
-   * historical sans stack now points at the same mono cascade so every
-   * existing component immediately picks up the new look without
-   * touching consumer CSS. The `--font-prose` token is kept as an
-   * escape hatch for any future reading surface that explicitly opts
-   * out (long-form prose, marketing pages); none of the SPA pages use
-   * it today.
-   */
-  --font-mono: "JetBrains Mono", "IBM Plex Mono", "Cascadia Code",
+  --font-sans: "Inter", ui-sans-serif, system-ui, -apple-system, "Segoe UI",
+    Roboto, "Helvetica Neue", Arial, sans-serif;
+  --font-mono: "JetBrains Mono", "Geist Mono", "IBM Plex Mono", "Cascadia Code",
     "SF Mono", SFMono-Regular, "Roboto Mono", Menlo, Consolas,
     "Liberation Mono", monospace;
-  --font-sans: var(--font-mono);
-  --font-prose: -apple-system, BlinkMacSystemFont, "SF Pro Text",
-    "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+  --font-prose: var(--font-sans);
 
   /* Spacing — 4px base grid; use for layout rhythm (not one-off rem values) */
   --space-0: 0;
@@ -35,7 +26,8 @@
 
   /* Shell + cards: one horizontal inset keeps sticky header text aligned with panel body */
   --layout-max-width: 72rem;
-  --layout-gutter-x: var(--space-5);
+  /* Desktop shell gutter 48px — pair with media queries in app-shell.css */
+  --layout-gutter-x: var(--space-8);
   --layout-panel-padding-y: var(--space-6);
   /* Readable line length for marketing / long hints (DS §2 ~60–75ch; ~45rem at 16px) */
   --layout-readable-max: 45rem;
@@ -90,23 +82,24 @@
   --z-modal-busy: 3;
   --z-skip-link: 100001;
 
-  /* Typography scale (rem) */
-  --text-xs: 0.75rem;
-  /* Form labels, helper/error lines, dense table/section meta (DS §2 / §7 — ~13px) */
+  /*
+   * Type ramp capped to four visual sizes (redesign.mdc): 13 / 14 / 16 / 24px.
+   * Larger token names alias onto those four so existing consumers keep working.
+   */
+  --text-xs: 0.8125rem;
   --text-help: 0.8125rem;
   --text-sm: 0.875rem;
-  --text-base: 0.9375rem;
+  --text-base: 0.875rem;
   --text-md: 1rem;
-  --text-lg: 1.125rem;
-  --text-xl: 1.25rem;
-  /* Between xl and 2xl — dense app page titles (task detail, etc.) */
-  --text-title-app: 1.35rem;
+  --text-lg: 1rem;
+  --text-xl: 1rem;
+  --text-title-app: 1.5rem;
   --text-2xl: 1.5rem;
-  --text-3xl: 1.875rem;
-  --text-4xl: 2.25rem;
-  --text-5xl: 3rem;
-  --text-6xl: 3.75rem;
-  --text-7xl: 4.5rem;
+  --text-3xl: 1.5rem;
+  --text-4xl: 1.5rem;
+  --text-5xl: 1.5rem;
+  --text-6xl: 1.5rem;
+  --text-7xl: 1.5rem;
   /* Primary buttons, skip link, empty-state CTAs (DS §7) */
   --text-button-tracking: 0.01em;
 

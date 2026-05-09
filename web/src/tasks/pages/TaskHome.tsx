@@ -93,7 +93,7 @@ export function TaskHome({ app }: Props) {
       <button
         type="button"
         className="task-home-new-task-btn"
-        onClick={app.openCreateModal}
+        onClick={() => app.openCreateModal()}
         disabled={app.createModalOpen}
       >
         New task

@@ -95,7 +95,8 @@
 }
 
 /* Desktop dialog: elevation from shadow only (DS §6 / §12 — not border + shadow) */
-@media (min-width: var(--bp-md)) {
+/* 768px matches `--bp-md`; literal required for lightningcss @media minification. */
+@media (min-width: 768px) {
   .modal-shell {
     border-radius: var(--radius-xl);
     /* Keep desktop scrolling on shell, but hard-clip paint to avoid corner jitter. */

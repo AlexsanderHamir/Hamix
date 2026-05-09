@@ -11,7 +11,8 @@
   }
 }
 
-@media (max-width: var(--bp-md-max)) {
+/* 767px = below `--bp-md` (768px); literals required — lightningcss rejects `var()` in @media. */
+@media (max-width: 767px) {
   .modal-root {
     align-items: flex-end;
     justify-content: center;
@@ -90,7 +91,7 @@
   }
 }
 
-@media (max-width: var(--bp-md-max)) and (prefers-reduced-motion: reduce) {
+@media (max-width: 767px) and (prefers-reduced-motion: reduce) {
   .modal-shell {
     animation: none;
   }

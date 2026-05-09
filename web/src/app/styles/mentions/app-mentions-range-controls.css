@@ -123,7 +123,7 @@
   order: 2;
 }
 
-@media (max-width: var(--bp-md-max)) {
+@media (max-width: 767px) {
   .mention-range-modal .mention-range-panel {
     padding: var(--space-4);
   }

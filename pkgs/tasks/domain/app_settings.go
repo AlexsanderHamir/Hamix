@@ -63,20 +63,20 @@ import (
 //     SSE replay is always active in the `/events` handler; this column
 //     is migrated to true on read for older databases.
 type AppSettings struct {
-	ID                         uint      `gorm:"primaryKey;autoIncrement:false;check:chk_app_settings_singleton,id = 1"`
-	WorkerEnabled              bool      `gorm:"not null;default:true"`
-	AgentPaused                bool      `gorm:"not null;default:false"`
-	Runner                     string    `gorm:"not null;default:'cursor'"`
-	RepoRoot                   string    `gorm:"not null;default:''"`
-	CursorBin                  string    `gorm:"not null;default:''"`
-	CursorModel                string    `gorm:"not null;default:''"`
-	MaxRunDurationSeconds      int       `gorm:"not null;default:0;check:chk_app_settings_max_run_duration_seconds,max_run_duration_seconds >= 0"`
-	AgentPickupDelaySeconds       int `gorm:"not null;default:5;check:chk_app_settings_agent_pickup_delay_seconds,agent_pickup_delay_seconds >= 0"`
-	ProjectStepGateGraceSeconds   int `gorm:"column:project_step_gate_grace_seconds;not null;default:300;check:chk_app_settings_project_step_gate_grace_seconds,project_step_gate_grace_seconds >= 0 AND project_step_gate_grace_seconds <= 604800"`
-	DisplayTimezone            string    `gorm:"not null;default:''"`
-	OptimisticMutationsEnabled bool      `gorm:"not null;default:true"`
-	SSEReplayEnabled           bool      `gorm:"not null;default:true"`
-	UpdatedAt                  time.Time `gorm:"not null"`
+	ID                          uint      `gorm:"primaryKey;autoIncrement:false;check:chk_app_settings_singleton,id = 1"`
+	WorkerEnabled               bool      `gorm:"not null;default:true"`
+	AgentPaused                 bool      `gorm:"not null;default:false"`
+	Runner                      string    `gorm:"not null;default:'cursor'"`
+	RepoRoot                    string    `gorm:"not null;default:''"`
+	CursorBin                   string    `gorm:"not null;default:''"`
+	CursorModel                 string    `gorm:"not null;default:''"`
+	MaxRunDurationSeconds       int       `gorm:"not null;default:0;check:chk_app_settings_max_run_duration_seconds,max_run_duration_seconds >= 0"`
+	AgentPickupDelaySeconds     int       `gorm:"not null;default:5;check:chk_app_settings_agent_pickup_delay_seconds,agent_pickup_delay_seconds >= 0"`
+	ProjectStepGateGraceSeconds int       `gorm:"column:project_step_gate_grace_seconds;not null;default:300;check:chk_app_settings_project_step_gate_grace_seconds,project_step_gate_grace_seconds >= 0 AND project_step_gate_grace_seconds <= 604800"`
+	DisplayTimezone             string    `gorm:"not null;default:''"`
+	OptimisticMutationsEnabled  bool      `gorm:"not null;default:true"`
+	SSEReplayEnabled            bool      `gorm:"not null;default:true"`
+	UpdatedAt                   time.Time `gorm:"not null"`
 }
 
 // AppSettingsRowID is the singleton primary key. Every read/write of
@@ -114,18 +114,18 @@ const DefaultDisplayTimezone = ""
 // store.GetAppSettings already logs the seed-on-first-read decision.
 func DefaultAppSettings() AppSettings {
 	return AppSettings{
-		ID:                         AppSettingsRowID,
-		WorkerEnabled:              true,
-		AgentPaused:                false,
-		Runner:                     DefaultRunner,
-		RepoRoot:                   "",
-		CursorBin:                  "",
-		MaxRunDurationSeconds:      0,
-		AgentPickupDelaySeconds:       DefaultAgentPickupDelaySeconds,
-		ProjectStepGateGraceSeconds:   DefaultProjectStepGateGraceSeconds,
-		DisplayTimezone:            DefaultDisplayTimezone,
-		OptimisticMutationsEnabled: true,
-		SSEReplayEnabled:           true,
+		ID:                          AppSettingsRowID,
+		WorkerEnabled:               true,
+		AgentPaused:                 false,
+		Runner:                      DefaultRunner,
+		RepoRoot:                    "",
+		CursorBin:                   "",
+		MaxRunDurationSeconds:       0,
+		AgentPickupDelaySeconds:     DefaultAgentPickupDelaySeconds,
+		ProjectStepGateGraceSeconds: DefaultProjectStepGateGraceSeconds,
+		DisplayTimezone:             DefaultDisplayTimezone,
+		OptimisticMutationsEnabled:  true,
+		SSEReplayEnabled:            true,
 	}
 }
 

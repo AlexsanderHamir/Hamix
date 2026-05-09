@@ -37,8 +37,8 @@ type Patch struct {
 	DisplayTimezone *string
 	// OptimisticMutationsEnabled / SSEReplayEnabled are realtime rollout flags.
 	// See domain.AppSettings for the per-flag semantics.
-	OptimisticMutationsEnabled *bool
-	SSEReplayEnabled           *bool
+	OptimisticMutationsEnabled  *bool
+	SSEReplayEnabled            *bool
 	ProjectStepGateGraceSeconds *int
 }
 

@@ -50,16 +50,16 @@ type Project struct {
 // ProjectStep is one ordered stage of work within a project. Tasks may reference
 // a step via Task.ProjectStepID while remaining members of the project via Task.ProjectID.
 type ProjectStep struct {
-	ID                         string                `json:"id" gorm:"primaryKey"`
-	ProjectID                  string                `json:"project_id" gorm:"not null;index;uniqueIndex:idx_project_steps_project_sort,priority:1"`
-	Title                      string                `json:"title" gorm:"not null"`
-	Description                string                `json:"description" gorm:"type:text;not null;default:''"`
-	SortOrder                  int                   `json:"sort_order" gorm:"not null;uniqueIndex:idx_project_steps_project_sort,priority:2"`
-	GateStatus                 ProjectStepGateStatus `json:"gate_status" gorm:"not null;index;default:'locked';check:chk_project_steps_gate_status,gate_status IN ('locked','active','pending_release','released')"`
-	GateHold                   bool                  `json:"gate_hold" gorm:"not null;default:false"`
-	PendingReleaseDeadlineUTC *time.Time `json:"pending_release_deadline,omitempty" gorm:"column:pending_release_deadline_utc;index"`
-	CreatedAt                  time.Time             `json:"created_at" gorm:"not null;index"`
-	UpdatedAt                  time.Time             `json:"updated_at" gorm:"not null;index"`
+	ID                        string                `json:"id" gorm:"primaryKey"`
+	ProjectID                 string                `json:"project_id" gorm:"not null;index;uniqueIndex:idx_project_steps_project_sort,priority:1"`
+	Title                     string                `json:"title" gorm:"not null"`
+	Description               string                `json:"description" gorm:"type:text;not null;default:''"`
+	SortOrder                 int                   `json:"sort_order" gorm:"not null;uniqueIndex:idx_project_steps_project_sort,priority:2"`
+	GateStatus                ProjectStepGateStatus `json:"gate_status" gorm:"not null;index;default:'locked';check:chk_project_steps_gate_status,gate_status IN ('locked','active','pending_release','released')"`
+	GateHold                  bool                  `json:"gate_hold" gorm:"not null;default:false"`
+	PendingReleaseDeadlineUTC *time.Time            `json:"pending_release_deadline,omitempty" gorm:"column:pending_release_deadline_utc;index"`
+	CreatedAt                 time.Time             `json:"created_at" gorm:"not null;index"`
+	UpdatedAt                 time.Time             `json:"updated_at" gorm:"not null;index"`
 
 	Project *Project `json:"-" gorm:"foreignKey:ProjectID;references:ID;constraint:OnDelete:CASCADE"`
 }

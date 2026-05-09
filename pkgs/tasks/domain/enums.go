@@ -46,9 +46,9 @@ type ProjectStepGateStatus string
 
 const (
 	ProjectStepGateLocked         ProjectStepGateStatus = "locked"
-	ProjectStepGateActive        ProjectStepGateStatus = "active"
+	ProjectStepGateActive         ProjectStepGateStatus = "active"
 	ProjectStepGatePendingRelease ProjectStepGateStatus = "pending_release"
-	ProjectStepGateReleased      ProjectStepGateStatus = "released"
+	ProjectStepGateReleased       ProjectStepGateStatus = "released"
 )
 
 // ProjectContextKind identifies the role a context item plays in project memory.

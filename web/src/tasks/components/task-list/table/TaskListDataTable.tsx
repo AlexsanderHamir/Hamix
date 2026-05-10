@@ -12,6 +12,7 @@ import {
 import { TaskListDeleteGlyph, TaskListEditGlyph } from "./TaskListRowActionIcons";
 import { statusListLabel, taskListRowSubtitle } from "./taskListRowSubtitle";
 import { previewTextFromPrompt } from "../../../task-prompt";
+import { projectBadgeToneFromId } from "../../../projectBadgeTone";
 import {
   EmptyState,
   EmptyStateFilterGlyph,
@@ -374,7 +375,12 @@ export function TaskListDataTable({
                   </td>
                   <td className="cell-project">
                     {projectLabel ? (
-                      <span className="task-list-project-badge">
+                      <span
+                        className="task-list-project-badge"
+                        data-tone={String(
+                          projectBadgeToneFromId(t.project_id ?? ""),
+                        )}
+                      >
                         {projectLabel}
                       </span>
                     ) : (

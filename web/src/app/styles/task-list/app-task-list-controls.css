@@ -41,10 +41,8 @@
   flex-shrink: 0;
 }
 
-/* —— Quiet inline scoreboard (TaskListStatsStrip). Sits between the heading
-   and the filters so operators see the room state at a glance without
-   scrolling. Brand-tinted only on non-default tones; "total" / "ready" stay
-   neutral so the strip never reads as alarming on a fresh database. —— */
+/* —— Quiet inline scoreboard (TaskListStatsStrip). Sentence-case labels;
+   tones use pill / semantic tokens (no brand purple on this row). —— */
 
 .task-list-stats-strip {
   margin-bottom: var(--space-4);
@@ -54,7 +52,7 @@
   list-style: none;
   display: flex;
   flex-wrap: wrap;
-  gap: 0.45rem;
+  gap: var(--space-2);
   margin: 0;
   padding: 0;
 }
@@ -62,25 +60,22 @@
 .task-list-stats-strip__pill {
   display: inline-flex;
   align-items: baseline;
-  gap: 0.4rem;
-  padding: 0.3rem 0.65rem;
-  border-radius: var(--radius-full);
+  gap: 0.35rem;
+  padding: 0.25rem 0.5rem;
+  border-radius: var(--radius-md);
   border: 1px solid var(--border-hairline);
-  background: var(--bg-elevated);
-  box-shadow: var(--shadow-inset-lip);
+  background: var(--surface-1);
   font-size: var(--text-xs);
-  letter-spacing: 0.04em;
-  text-transform: uppercase;
-  color: var(--text-tertiary);
+  letter-spacing: 0.01em;
+  color: var(--text-secondary);
 }
 
 .task-list-stats-strip__value {
   font-family: var(--font-mono);
   font-variant-numeric: tabular-nums;
   font-size: var(--text-sm);
-  font-weight: 600;
+  font-weight: 500;
   letter-spacing: -0.01em;
-  text-transform: none;
   color: var(--text-primary);
 }
 
@@ -88,14 +83,14 @@
   font-weight: 500;
 }
 
-.task-list-stats-strip__pill[data-tone="accent"] {
-  background: var(--brand-surface-faint);
-  border-color: var(--brand-border-soft);
-  color: var(--brand-text-strong);
+.task-list-stats-strip__pill[data-tone="ready"] {
+  background: var(--pill-ready-bg);
+  border-color: var(--pill-ready-border);
+  color: var(--pill-ready-text);
 }
 
-.task-list-stats-strip__pill[data-tone="accent"] .task-list-stats-strip__value {
-  color: var(--brand-text-strong);
+.task-list-stats-strip__pill[data-tone="ready"] .task-list-stats-strip__value {
+  color: var(--pill-ready-text);
 }
 
 .task-list-stats-strip__pill[data-tone="warn"] {
@@ -108,14 +103,24 @@
   color: var(--warning-ink);
 }
 
-.task-list-stats-strip__pill[data-tone="info"] {
-  background: color-mix(in srgb, var(--brand-surface-subtle) 70%, var(--bg-elevated));
-  border-color: var(--brand-border-faint);
-  color: var(--brand-text-muted);
+.task-list-stats-strip__pill[data-tone="schedule"] {
+  background: var(--pill-priority-medium-bg);
+  border-color: var(--pill-priority-medium-border);
+  color: var(--pill-priority-medium-text);
 }
 
-.task-list-stats-strip__pill[data-tone="info"] .task-list-stats-strip__value {
-  color: var(--brand-text-strong);
+.task-list-stats-strip__pill[data-tone="schedule"] .task-list-stats-strip__value {
+  color: var(--pill-priority-medium-text);
+}
+
+.task-list-stats-strip__pill[data-tone="review"] {
+  background: var(--pill-priority-high-bg);
+  border-color: var(--pill-priority-high-border);
+  color: var(--pill-priority-high-text);
+}
+
+.task-list-stats-strip__pill[data-tone="review"] .task-list-stats-strip__value {
+  color: var(--pill-priority-high-text);
 }
 
 .task-list-filters {

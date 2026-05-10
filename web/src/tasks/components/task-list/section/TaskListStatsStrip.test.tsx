@@ -1,4 +1,4 @@
-import { render, screen } from "@testing-library/react";
+import { render, screen, within } from "@testing-library/react";
 import { describe, expect, it } from "vitest";
 import type { TaskStatsResponse } from "@/types";
 import { TaskListStatsStrip } from "./TaskListStatsStrip";
@@ -53,6 +53,9 @@ describe("TaskListStatsStrip", () => {
     render(
       <TaskListStatsStrip stats={makeStats({ total: 4, ready: 2 })} />,
     );
+    const strip = screen.getByTestId("task-list-stats-strip");
+    expect(within(strip).getByText("Total")).toBeInTheDocument();
+    expect(within(strip).getByText("Ready")).toBeInTheDocument();
     expect(screen.getByTestId("task-list-stats-total")).toHaveTextContent("4");
     expect(screen.getByTestId("task-list-stats-ready")).toHaveTextContent("2");
     expect(
@@ -87,5 +90,9 @@ describe("TaskListStatsStrip", () => {
     expect(screen.getByTestId("task-list-stats-blocked")).toHaveTextContent(
       "2",
     );
+    const strip = screen.getByTestId("task-list-stats-strip");
+    expect(within(strip).getByText("Scheduled")).toBeInTheDocument();
+    expect(within(strip).getByText("Review")).toBeInTheDocument();
+    expect(within(strip).getByText("Blocked")).toBeInTheDocument();
   });
 });

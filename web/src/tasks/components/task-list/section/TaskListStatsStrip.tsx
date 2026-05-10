@@ -10,8 +10,16 @@ type Pill = {
   key: string;
   value: number;
   label: string;
-  /** Visual tone: `default`, `accent` for ready, `warn` for critical, `info` for scheduled. */
-  tone: "default" | "accent" | "warn" | "info";
+  /**
+   * Surface tokens only — avoids brand purple on the scoreboard per redesign.
+   * `ready` = slate ready pill; `schedule` / `review` = distinct non-violet cues.
+   */
+  tone:
+    | "default"
+    | "ready"
+    | "warn"
+    | "schedule"
+    | "review";
 };
 
 /**
@@ -19,7 +27,8 @@ type Pill = {
  * filters row when at least one task exists. Quiet by design — Stripe-style
  * "operator scoreboard" rather than a full dashboard. Each pill carries a
  * tonal accent only when the count is non-zero so the strip never reads as
- * loud noise on a fresh database.
+ * loud noise on a fresh database. Labels are sentence case; tones use pill
+ * tokens, not brand purple on this row.
  *
  * Stats fields read directly from `GET /tasks/stats`; the component is a
  * pure projection that hides itself when there is nothing useful to show.
@@ -33,14 +42,14 @@ export function TaskListStatsStrip({ stats }: Props) {
     const review = stats.by_status?.review ?? 0;
     const blocked = stats.by_status?.blocked ?? 0;
     const next: Pill[] = [
-      { key: "total", value: stats.total, label: "total", tone: "default" },
-      { key: "ready", value: ready, label: "ready", tone: "accent" },
+      { key: "total", value: stats.total, label: "Total", tone: "default" },
+      { key: "ready", value: ready, label: "Ready", tone: "ready" },
     ];
     if (critical > 0) {
       next.push({
         key: "critical",
         value: critical,
-        label: "critical",
+        label: "Critical",
         tone: "warn",
       });
     }
@@ -48,23 +57,23 @@ export function TaskListStatsStrip({ stats }: Props) {
       next.push({
         key: "scheduled",
         value: scheduled,
-        label: "scheduled",
-        tone: "info",
+        label: "Scheduled",
+        tone: "schedule",
       });
     }
     if (review > 0) {
       next.push({
         key: "review",
         value: review,
-        label: "review",
-        tone: "info",
+        label: "Review",
+        tone: "review",
       });
     }
     if (blocked > 0) {
       next.push({
         key: "blocked",
         value: blocked,
-        label: "blocked",
+        label: "Blocked",
         tone: "warn",
       });
     }

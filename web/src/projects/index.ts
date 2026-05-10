@@ -2,7 +2,6 @@ export { ProjectContextEntryCard } from "./ProjectContextEntryCard";
 export { ProjectDetailPage } from "./ProjectDetailPage";
 export { ProjectGoalsEntryCard } from "./ProjectGoalsEntryCard";
 export { ProjectGoalsPage } from "./ProjectGoalsPage";
-export { ProjectStepsEntryCard } from "./ProjectStepsEntryCard";
 export { ProjectStepsPage } from "./ProjectStepsPage";
 export { ProjectStepSelect } from "./ProjectStepSelect";
 export { ProjectContextPage } from "./ProjectContextPage";

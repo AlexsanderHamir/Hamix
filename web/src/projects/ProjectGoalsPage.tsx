@@ -6,6 +6,7 @@ import { EmptyState } from "@/shared/EmptyState";
 import { useDocumentTitle } from "@/shared/useDocumentTitle";
 import type { ProjectGoal, ProjectGoalCriterion, ProjectStepGateStatus } from "@/types";
 import { projectQueryKeys } from "./queryKeys";
+import { ProjectGoalCreateModal } from "./ProjectGoalCreateModal";
 import { ProjectGoalsGraphView } from "./ProjectGoalsGraphView";
 import {
   truncateListDependencySummary,
@@ -71,6 +72,7 @@ export function ProjectGoalsPage() {
   const { projectId = "" } = useParams();
   const queryClient = useQueryClient();
   const [view, setView] = useState<ViewMode>("list");
+  const [createGoalOpen, setCreateGoalOpen] = useState(false);
   const [newTitle, setNewTitle] = useState("");
   const [newDescription, setNewDescription] = useState("");
   const [depsDraft, setDepsDraft] = useState("");
@@ -120,6 +122,7 @@ export function ProjectGoalsPage() {
       setNewDescription("");
       setDepsDraft("");
       setCriterionDrafts([""]);
+      setCreateGoalOpen(false);
       await invalidate();
     },
   });
@@ -147,7 +150,14 @@ export function ProjectGoalsPage() {
           <span aria-hidden="true">&#8249;</span>
           Back to project
         </Link>
-        <div className="pg__toolbar">
+        <div className="pg__header-actions">
+          <button
+            type="button"
+            className="secondary pg__header-new-goal"
+            onClick={() => setCreateGoalOpen(true)}
+          >
+            New goal
+          </button>
           <div className="pg__toggle" role="group" aria-label="View">
             <button
               type="button"
@@ -221,93 +231,21 @@ export function ProjectGoalsPage() {
         </span>
       </div>
 
-      <section className="pg__composer" aria-labelledby="pg-new-goal-title">
-        <h2 id="pg-new-goal-title" className="pg__composer-title">
-          New goal
-        </h2>
-        <label className="pg__label">
-          Title
-          <input
-            className="pg__input"
-            value={newTitle}
-            onChange={(e) => setNewTitle(e.target.value)}
-            autoComplete="off"
-          />
-        </label>
-        <label className="pg__label">
-          Description
-          <textarea
-            className="pg__textarea"
-            value={newDescription}
-            onChange={(e) => setNewDescription(e.target.value)}
-            rows={2}
-          />
-        </label>
-        <label className="pg__label">
-          Prerequisite goal ids (comma-separated, optional)
-          <input
-            className="pg__input"
-            value={depsDraft}
-            onChange={(e) => setDepsDraft(e.target.value)}
-            placeholder="uuid-of-prereq, another-uuid"
-            autoComplete="off"
-          />
-        </label>
-        <fieldset className="ps__criteria-fieldset">
-          <legend className="settings-field-label">Criteria (optional)</legend>
-          <p className="muted ps__criteria-help">
-            Checklist items that must be satisfied before the goal gate advances.
-          </p>
-          {criterionDrafts.map((line, idx) => (
-            <div key={idx} className="ps__criteria-row">
-              <input
-                className="pg__input"
-                value={line}
-                onChange={(ev) => {
-                  const next = [...criterionDrafts];
-                  next[idx] = ev.target.value;
-                  setCriterionDrafts(next);
-                }}
-                placeholder="Criterion text"
-                disabled={createMut.isPending}
-              />
-              {criterionDrafts.length > 1 ? (
-                <button
-                  type="button"
-                  className="secondary ps__criteria-remove"
-                  disabled={createMut.isPending}
-                  onClick={() => setCriterionDrafts((rows) => rows.filter((_, j) => j !== idx))}
-                >
-                  Remove
-                </button>
-              ) : null}
-            </div>
-          ))}
-          <button
-            type="button"
-            className="secondary ps__criteria-add"
-            disabled={createMut.isPending}
-            onClick={() => setCriterionDrafts((rows) => [...rows, ""])}
-          >
-            Add criterion line
-          </button>
-        </fieldset>
-        <div className="pg__composer-actions">
-          <button
-            type="button"
-            className="pg__btn pg__btn--primary"
-            disabled={!newTitle.trim() || createMut.isPending}
-            onClick={() => void createMut.mutate()}
-          >
-            Add goal
-          </button>
-        </div>
-        {createMut.error ? (
-          <p className="pg__error" role="alert">
-            {createMut.error.message}
-          </p>
-        ) : null}
-      </section>
+      <ProjectGoalCreateModal
+        open={createGoalOpen}
+        onDismiss={() => setCreateGoalOpen(false)}
+        draftTitle={newTitle}
+        onDraftTitleChange={setNewTitle}
+        draftDescription={newDescription}
+        onDraftDescriptionChange={setNewDescription}
+        depsDraft={depsDraft}
+        onDepsDraftChange={setDepsDraft}
+        criterionDrafts={criterionDrafts}
+        onCriterionDraftsChange={setCriterionDrafts}
+        createPending={createMut.isPending}
+        createError={createMut.error}
+        onCreate={() => createMut.mutateAsync()}
+      />
 
       {goalsQuery.isLoading ? <p className="muted">Loading goals…</p> : null}
       {goalsQuery.error ? (

@@ -292,6 +292,7 @@
   align-items: center;
   gap: 0.4rem;
   padding-inline: 0.5rem 0.55rem;
+  white-space: nowrap;
 }
 
 .cell-pill--status-table::before {

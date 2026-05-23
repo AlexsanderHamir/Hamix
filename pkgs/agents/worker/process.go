@@ -32,14 +32,10 @@ type processState struct {
 	// wall-clock duration into the metrics histogram.
 	startedAt time.Time
 	// effectiveModel is captured in startCycle from
-	// runner.EffectiveModel(req) so every TerminateCycle path
-	// (happy / panic / shutdown / best-effort) emits the SAME model
-	// label into the by-model Prometheus series the cycle's
-	// MetaJSON recorded — even if the operator edited
+	// runner.MetricsLabeler (or runner.EffectiveModel as fallback)
+	// so every TerminateCycle path emits the SAME model label into
+	// the by-model Prometheus series — even if the operator edited
 	// task.CursorModel between StartCycle and TerminateCycle.
-	// Empty string is the truthful "no model configured" value;
-	// the metrics adapter renders it as the empty label rather
-	// than substituting a synthetic default.
 	effectiveModel string
 }
 
@@ -227,9 +223,10 @@ func (w *Worker) transitionTask(ctx context.Context, taskID string, next domain.
 //
 // The Request is the same shape invokeRunner builds later (sans
 // per-run timeout, which is irrelevant to attribution). Intent is
-// recorded verbatim from task.CursorModel; the runner resolves
-// effective via Runner.EffectiveModel — both may be "" and that
-// empty string is the truth, not a placeholder.
+// Runner-specific metadata (e.g. model intent/effective) comes from
+// the CycleMetaProvider interface; metric model labels from
+// MetricsLabeler. Both may produce "" and that empty string is the
+// truth, not a placeholder.
 func (w *Worker) startCycle(ctx context.Context, task *domain.Task, state *processState) (*domain.TaskCycle, bool) {
 	slog.Debug("trace", "cmd", workerLogCmd, "operation", "agent.worker.Worker.startCycle",
 		"task_id", task.ID)
@@ -253,7 +250,12 @@ func (w *Worker) startCycle(ctx context.Context, task *domain.Task, state *proce
 	}
 	state.cycleID = cycle.ID
 	state.cycleStarted = true
-	state.effectiveModel = w.runner.EffectiveModel(req)
+	if ml, ok := w.runner.(runner.MetricsLabeler); ok {
+		labels := ml.MetricsLabels(req)
+		state.effectiveModel = labels["model"]
+	} else {
+		state.effectiveModel = w.runner.EffectiveModel(req)
+	}
 	w.publish(task.ID, cycle.ID)
 	return cycle, true
 }

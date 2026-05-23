@@ -163,15 +163,11 @@ func TestWorker_RunMetrics_observesShutdownAbort(t *testing.T) {
 	}
 }
 
-// TestWorker_RunMetrics_recordsEffectiveModelLabel locks in Phase 3
-// of the per-task runner+model attribution plan: the value
-// runner.EffectiveModel(req) returned at startCycle MUST appear in
-// the RecordRun observation, regardless of which terminate path
-// fires. Exercises the happy path (req.CursorModel wins) and the
-// runner-default path (empty req.CursorModel falls back to the
-// runner's default), and also pins the empty-string case (no
-// task model, no runner default) through as a verbatim empty
-// label rather than a synthetic default.
+// TestWorker_RunMetrics_recordsEffectiveModelLabel locks in the
+// per-task runner+model attribution contract: the model label
+// returned by runner.MetricsLabeler (or runner.EffectiveModel as
+// fallback) at startCycle MUST appear in the RecordRun observation,
+// regardless of which terminate path fires.
 func TestWorker_RunMetrics_recordsEffectiveModelLabel(t *testing.T) {
 	t.Parallel()
 

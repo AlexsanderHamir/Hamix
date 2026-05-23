@@ -281,19 +281,19 @@ func TestWorker_HappyPath_writesTwoPhasesAndSixMirrors(t *testing.T) {
 	if meta["runner"] != "fake" || meta["runner_version"] != "v0" || len(meta["prompt_hash"]) != 64 {
 		t.Fatalf("meta json shape = %+v", meta)
 	}
-	// Phase 1a-ii: cursor_model + cursor_model_effective MUST be
-	// present even when empty so the audit trail can distinguish
-	// "no model configured anywhere" from "key was never recorded
-	// (pre-feature cycle)". The harness task has no CursorModel and
-	// the runnerfake has no default model, so both should be "".
-	if _, ok := meta["cursor_model"]; !ok {
-		t.Fatalf("meta missing cursor_model (must be present, even empty): %+v", meta)
+	// cursor_model_intent + cursor_model_effective MUST be present
+	// even when empty so the audit trail can distinguish "no model
+	// configured anywhere" from "key was never recorded". The harness
+	// task has no CursorModel and the runnerfake has no default model,
+	// so both should be "".
+	if _, ok := meta["cursor_model_intent"]; !ok {
+		t.Fatalf("meta missing cursor_model_intent (must be present, even empty): %+v", meta)
 	}
 	if _, ok := meta["cursor_model_effective"]; !ok {
 		t.Fatalf("meta missing cursor_model_effective (must be present, even empty): %+v", meta)
 	}
-	if meta["cursor_model"] != "" || meta["cursor_model_effective"] != "" {
-		t.Fatalf("meta cursor_model/cursor_model_effective expected empty for default-only harness task: %+v", meta)
+	if meta["cursor_model_intent"] != "" || meta["cursor_model_effective"] != "" {
+		t.Fatalf("meta cursor_model_intent/cursor_model_effective expected empty for default-only harness task: %+v", meta)
 	}
 
 	phases, err := h.store.ListPhasesForCycle(bg, cycle.ID)
@@ -471,13 +471,12 @@ func TestWorker_SelectedProjectContext_injectsAndSnapshotsOnlySelectedItems(t *t
 	}
 }
 
-// TestWorker_StartCycle_recordsRunnerModelAttribution covers Phase
-// 1a-ii of the per-task runner/model attribution plan: every cycle
-// MUST persist both the operator's intent (Task.CursorModel verbatim)
-// and the runner's resolved effective model (Runner.EffectiveModel)
-// into TaskCycle.MetaJSON. The audit trail relies on having BOTH so
-// callers can answer "operator asked for X but adapter ran Y" without
-// a separate join.
+// TestWorker_StartCycle_recordsRunnerModelAttribution covers the
+// per-task runner/model attribution contract: every cycle MUST persist
+// both the operator's intent and the runner's resolved effective model
+// into TaskCycle.MetaJSON via the CycleMetaProvider interface. The
+// audit trail relies on having BOTH so callers can answer "operator
+// asked for X but adapter ran Y" without a separate join.
 //
 // The matrix covers the four meaningful combinations of (operator
 // intent, adapter default). The fifth row (both empty) is already
@@ -517,9 +516,9 @@ func TestWorker_StartCycle_recordsRunnerModelAttribution(t *testing.T) {
 			name:          "intent_with_whitespace_falls_back_to_default",
 			taskModel:     "   ",
 			runnerDefault: "opus",
-			// Persisted verbatim — the audit trail records the
-			// raw operator input, not a normalised version.
-			wantIntent:    "   ",
+			// CycleMetaProvider trims the intent string so
+			// whitespace-only is persisted as "".
+			wantIntent:    "",
 			wantEffective: "opus",
 		},
 	}
@@ -549,8 +548,8 @@ func TestWorker_StartCycle_recordsRunnerModelAttribution(t *testing.T) {
 			if err := json.Unmarshal(cycle.MetaJSON, &meta); err != nil {
 				t.Fatalf("unmarshal meta: %v (raw=%s)", err, cycle.MetaJSON)
 			}
-			if got := meta["cursor_model"]; got != tc.wantIntent {
-				t.Errorf("meta.cursor_model = %q, want %q (full meta=%+v)", got, tc.wantIntent, meta)
+			if got := meta["cursor_model_intent"]; got != tc.wantIntent {
+				t.Errorf("meta.cursor_model_intent = %q, want %q (full meta=%+v)", got, tc.wantIntent, meta)
 			}
 			if got := meta["cursor_model_effective"]; got != tc.wantEffective {
 				t.Errorf("meta.cursor_model_effective = %q, want %q (full meta=%+v)", got, tc.wantEffective, meta)

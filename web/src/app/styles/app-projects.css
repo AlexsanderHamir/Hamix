@@ -1409,7 +1409,7 @@ a.pg__btn:focus-visible {
 }
 
 .pg__error {
-  color: var(--danger, #b42318);
+  color: var(--danger);
 }
 
 .ps__row-link {
@@ -4395,7 +4395,7 @@ a.pg__btn:focus-visible {
 .ps__step-linkage__lead {
   text-transform: uppercase;
   letter-spacing: 0.04em;
-  font-size: 0.6875rem;
+  font-size: var(--text-xs);
   font-weight: 600;
   color: var(--text-tertiary);
 }

@@ -170,12 +170,12 @@ var skipSlogRequirement = map[string]struct{}{
 	// pkgs/tasks/domain: pure predicates / constructors with no I/O. Every
 	// caller (store.StartPhase, store.CompletePhase, store.GetAppSettings)
 	// already logs the surrounding decision with the relevant context.
-	"github.com/AlexsanderHamir/T2A/pkgs/tasks/domain\tValidPhaseTransition": {},
-	"github.com/AlexsanderHamir/T2A/pkgs/tasks/domain\tTerminalCycleStatus":  {},
-	"github.com/AlexsanderHamir/T2A/pkgs/tasks/domain\tTerminalPhaseStatus":  {},
-	"github.com/AlexsanderHamir/T2A/pkgs/tasks/domain\tDefaultAppSettings":   {},
-	"github.com/AlexsanderHamir/T2A/pkgs/tasks/domain\tStepCriteriaAllDone":  {},
-	"github.com/AlexsanderHamir/T2A/pkgs/tasks/domain\tGoalCriteriaAllDone": {},
+	"github.com/AlexsanderHamir/T2A/pkgs/tasks/domain\tValidPhaseTransition":  {},
+	"github.com/AlexsanderHamir/T2A/pkgs/tasks/domain\tTerminalCycleStatus":   {},
+	"github.com/AlexsanderHamir/T2A/pkgs/tasks/domain\tTerminalPhaseStatus":   {},
+	"github.com/AlexsanderHamir/T2A/pkgs/tasks/domain\tDefaultAppSettings":    {},
+	"github.com/AlexsanderHamir/T2A/pkgs/tasks/domain\tStepCriteriaAllDone":   {},
+	"github.com/AlexsanderHamir/T2A/pkgs/tasks/domain\tGoalCriteriaAllDone":   {},
 	"github.com/AlexsanderHamir/T2A/pkgs/tasks/domain\tProjectGoal.TableName": {},
 
 	// pkgs/tasks/calltrace: thin orchestration / pure-context helpers that

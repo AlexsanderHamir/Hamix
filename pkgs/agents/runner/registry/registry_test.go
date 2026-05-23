@@ -8,6 +8,7 @@ import (
 	"time"
 
 	"github.com/AlexsanderHamir/T2A/pkgs/agents/runner"
+	"github.com/AlexsanderHamir/T2A/pkgs/agents/runner/claudecode"
 	"github.com/AlexsanderHamir/T2A/pkgs/agents/runner/registry"
 	_ "github.com/AlexsanderHamir/T2A/pkgs/agents/runner/registry/all"
 )
@@ -18,17 +19,29 @@ import (
 // surface change.
 func TestList_pinsRegisteredRunners(t *testing.T) {
 	got := registry.List()
-	if len(got) != 1 {
-		t.Fatalf("registered runners = %d, want 1 (only cursor today): %+v", len(got), got)
+	if len(got) != 2 {
+		t.Fatalf("registered runners = %d, want 2 (claude-code + cursor): %+v", len(got), got)
 	}
-	if got[0].ID != registry.CursorRunnerID {
-		t.Errorf("[0].ID = %q, want %q", got[0].ID, registry.CursorRunnerID)
+
+	// List() sorts by ID, so claude-code comes first.
+	if got[0].ID != claudecode.RunnerID {
+		t.Errorf("[0].ID = %q, want %q", got[0].ID, claudecode.RunnerID)
 	}
-	if got[0].Label != registry.CursorRunnerLabel {
-		t.Errorf("[0].Label = %q, want %q", got[0].Label, registry.CursorRunnerLabel)
+	if got[0].Label != claudecode.RunnerLabel {
+		t.Errorf("[0].Label = %q, want %q", got[0].Label, claudecode.RunnerLabel)
 	}
-	if got[0].DefaultBinaryHint != registry.CursorDefaultBinaryHint {
-		t.Errorf("[0].DefaultBinaryHint = %q, want %q", got[0].DefaultBinaryHint, registry.CursorDefaultBinaryHint)
+	if got[0].DefaultBinaryHint != claudecode.DefaultBinaryHint {
+		t.Errorf("[0].DefaultBinaryHint = %q, want %q", got[0].DefaultBinaryHint, claudecode.DefaultBinaryHint)
+	}
+
+	if got[1].ID != registry.CursorRunnerID {
+		t.Errorf("[1].ID = %q, want %q", got[1].ID, registry.CursorRunnerID)
+	}
+	if got[1].Label != registry.CursorRunnerLabel {
+		t.Errorf("[1].Label = %q, want %q", got[1].Label, registry.CursorRunnerLabel)
+	}
+	if got[1].DefaultBinaryHint != registry.CursorDefaultBinaryHint {
+		t.Errorf("[1].DefaultBinaryHint = %q, want %q", got[1].DefaultBinaryHint, registry.CursorDefaultBinaryHint)
 	}
 }
 

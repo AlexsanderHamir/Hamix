@@ -6,5 +6,6 @@
 package all
 
 import (
+	_ "github.com/AlexsanderHamir/T2A/pkgs/agents/runner/claudecode"
 	_ "github.com/AlexsanderHamir/T2A/pkgs/agents/runner/cursor"
 )

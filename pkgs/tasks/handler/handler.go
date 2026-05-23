@@ -14,6 +14,9 @@ import (
 // Task routes: see README.md (handler_task_*.go). /repo: repo_handlers.go. SSE: sse.go.
 // Settings routes: handler_settings.go (GET/PATCH /settings, POST /settings/probe-cursor,
 // POST /settings/list-cursor-models, POST /settings/cancel-current-run).
+// Runner routes: handler_runners.go (GET /runners, GET /runners/{id}/config-schema,
+// POST /runners/{id}/probe, POST /runners/{id}/list-models,
+// POST /runners/{id}/validate-config).
 
 // AgentWorkerControl is the narrow surface the /settings handlers use
 // to drive the in-process agent worker. The cmd/taskapi supervisor
@@ -123,6 +126,11 @@ func NewHandler(s *store.Store, hub *SSEHub, rep *repo.Root, opts ...HandlerOpti
 	m.Handle("POST /settings/probe-cursor", http.HandlerFunc(h.probeCursor))
 	m.Handle("POST /settings/list-cursor-models", http.HandlerFunc(h.listCursorModels))
 	m.Handle("POST /settings/cancel-current-run", http.HandlerFunc(h.cancelCurrentRun))
+	m.Handle("GET /runners", http.HandlerFunc(h.listRunners))
+	m.Handle("GET /runners/{id}/config-schema", http.HandlerFunc(h.runnerConfigSchema))
+	m.Handle("POST /runners/{id}/probe", http.HandlerFunc(h.probeRunner))
+	m.Handle("POST /runners/{id}/list-models", http.HandlerFunc(h.listRunnerModels))
+	m.Handle("POST /runners/{id}/validate-config", http.HandlerFunc(h.validateRunnerConfig))
 	// /v1/rum is the SPA-side Real User Monitoring beacon. Documented
 	// in docs/SLOs.md; the browser ships batches via
 	// `navigator.sendBeacon` so the server returns 204 with no body.

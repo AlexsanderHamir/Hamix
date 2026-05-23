@@ -17,6 +17,7 @@ Backend design for `taskapi`: data flow, tradeoffs, and links to **focused contr
 | [PROJECT-CONTEXT.md](./PROJECT-CONTEXT.md) | Long-lived projects as shared context memory, task membership, and run-level context snapshots. |
 | [PERSISTENCE.md](./PERSISTENCE.md) | GORM, `task_events`, concurrency, AutoMigrate scope. |
 | [EXECUTION-CYCLES.md](./EXECUTION-CYCLES.md) | `task_cycles` / `task_cycle_phases` substrate, dual-write to `task_events`, state machine, where reads go. |
+| [CHECKLIST.md](./CHECKLIST.md) | Done criteria, verification guardrail, evidence fields, edit locks, and checklist HTTP routes. |
 | [EXTENSIBILITY.md](./EXTENSIBILITY.md) | Vertical slice: domain → store → handler → `web/`. |
 
 **`cmd/taskapi` wiring (code, not prose contracts):** binary layout [`cmd/taskapi/README.md`](../cmd/taskapi/README.md); startup env parsing in [`internal/taskapiconfig`](../internal/taskapiconfig); HTTP middleware stack in [`pkgs/tasks/middleware`](../pkgs/tasks/middleware) (`Stack` in `stack.go`, called from [`internal/taskapi`](../internal/taskapi) `NewHTTPHandler` with `calltrace.Path`); REST/SSE handlers in [`pkgs/tasks/handler`](../pkgs/tasks/handler) ([`README.md`](../pkgs/tasks/handler/README.md)).

@@ -1,4 +1,5 @@
 import type { TaskChecklistItemView } from "@/types";
+import { CHECKLIST_EVIDENCE_DISPLAY_CAP } from "@/types/task";
 
 type Props = {
   items: TaskChecklistItemView[];
@@ -36,7 +37,29 @@ export function TaskDetailChecklistItemList({
               >
                 {item.done ? "✓" : null}
               </span>
-              <span className="task-checklist-text">{item.text}</span>
+              <div className="task-checklist-text-block">
+                <span className="task-checklist-text">{item.text}</span>
+                {item.check ? (
+                  <code className="task-checklist-check">{item.check}</code>
+                ) : null}
+                {item.done && item.verified_by ? (
+                  <span className="task-checklist-verified-badge">
+                    Verified ({item.verified_by})
+                  </span>
+                ) : null}
+                {item.done && item.evidence ? (
+                  <details className="task-checklist-evidence">
+                    <summary>Evidence</summary>
+                    <pre>{item.evidence.slice(0, CHECKLIST_EVIDENCE_DISPLAY_CAP)}</pre>
+                  </details>
+                ) : null}
+                {item.done && item.verifier_reasoning ? (
+                  <details className="task-checklist-reasoning">
+                    <summary>Verifier reasoning</summary>
+                    <pre>{item.verifier_reasoning}</pre>
+                  </details>
+                ) : null}
+              </div>
             </div>
             {!checklistInherit ? (
               <div className="task-checklist-row-actions">

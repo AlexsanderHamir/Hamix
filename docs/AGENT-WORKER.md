@@ -97,6 +97,9 @@ sequenceDiagram
   end
   W->>R: Run(ctx, Request{TaskID, AttemptSeq, Phase=execute, Prompt, WorkingDir, Timeout})
   R-->>W: (Result, error)
+  opt verify_enabled and checklist items
+    W->>W: parse criteria-report.json, run checks, StartPhase(verify), parse verify-report.json
+  end
   W->>S: CompletePhase(execute, succeeded|failed, summary, details)
   W->>N: PublishCycleChange
   W->>S: TerminateCycle(cycle, succeeded|failed|aborted, reason)
@@ -104,6 +107,8 @@ sequenceDiagram
   W->>S: Update(task, status=done|failed)
   W->>Q: AckAfterRecv(task.ID)  (very last step)
 ```
+
+When `app_settings.verify_enabled` is true and the task has criteria, the worker injects criteria into the execute prompt, requires `.t2a/<cycle_id>/criteria-report.json`, optionally runs per-criterion shell `check` commands, runs a **verify** phase (see [CHECKLIST.md](./CHECKLIST.md)), and only calls `SetChecklistItemDoneWithEvidence` per criterion on full pass. Retries re-enter execute with verifier feedback until `verify_max_retries` is exhausted. When `verify_enabled` is false, the legacy path bulk-marks open criteria on a successful execute exit.
 
 Order is load-bearing:
 

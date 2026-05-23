@@ -16,6 +16,7 @@ import {
   ProjectGoalsGateSettingsSection,
   ProjectStepsGateSettingsSection,
   RunTimeoutSettingsSection,
+  VerificationSettingsSection,
   SettingsActions,
   SettingsHeader,
   SettingsLoadingState,
@@ -382,6 +383,8 @@ export function SettingsPage() {
             void handleProbe();
           }}
         />
+
+        <VerificationSettingsSection form={form} onField={handleField} />
 
         <RunTimeoutSettingsSection
           form={form}

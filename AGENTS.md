@@ -21,6 +21,7 @@ Use this file as the first pass before editing code. Long-form contracts live in
 | 4 | [docs/API-HTTP.md](docs/API-HTTP.md) | REST + `/repo`: routes, bodies, errors, metrics. |
 | 5 | [docs/API-SSE.md](docs/API-SSE.md) | `GET /events` and dev SSE env. |
 | — | [docs/EXECUTION-CYCLES.md](docs/EXECUTION-CYCLES.md) | `task_cycles` / `task_cycle_phases` substrate, dual-write invariant, state machine, where reads go. |
+| — | [docs/CHECKLIST.md](docs/CHECKLIST.md) | Done criteria, verification guardrail, evidence fields, edit locks, checklist HTTP routes. |
 | — | [docs/AGENT-WORKER.md](docs/AGENT-WORKER.md) | V1 in-process Cursor CLI worker contract: lifecycle, runner abstraction, security model, audit shape, orphan sweep, deferrals. Configured live via the SPA Settings page; see `docs/SETTINGS.md`. |
 | — | [docs/SETTINGS.md](docs/SETTINGS.md) | UI-driven config: singleton `app_settings` row, SPA Settings page, `GET/PATCH /settings`, env-var migration table. |
 | 6 | [docs/RUNTIME-ENV.md](docs/RUNTIME-ENV.md) | Env vars, startup, shutdown, timeouts. |

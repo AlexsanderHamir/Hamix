@@ -168,6 +168,8 @@ The agent worker (`pkgs/agents/worker/meta.go::buildCycleMeta`) writes a stable 
 
 The API layer exposes the same keys under a typed projection (`cycle_meta`) on `/tasks/{id}/cycles[/{cycleId}]` so the SPA never has to re-parse the raw JSON. See [API-HTTP.md](./API-HTTP.md).
 
+**V1.1 agent worker:** `diagnose` is still skipped on every run. When `app_settings.verify_enabled` is true and the task has checklist criteria, the worker writes a real **`verify`** phase row after execute (see [CHECKLIST.md](./CHECKLIST.md)). `persist` remains deferred — cycle success still flows through `TerminateCycle(succeeded)` after execute/verify pass.
+
 **Invariants**
 
 - Keys are additive only. A future runner may include additional keys; consumers MUST ignore unknown keys.

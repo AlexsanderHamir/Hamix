@@ -51,7 +51,12 @@ type Patch struct {
 	// config map. When non-nil, it replaces the entire runner_configs
 	// column. The handler is responsible for merging deltas before
 	// passing the blob here.
-	RunnerConfigs *json.RawMessage
+	RunnerConfigs              *json.RawMessage
+	VerifyEnabled              *bool
+	VerifyMaxRetries           *int
+	VerifyRunnerName           *string
+	VerifyRunnerModel          *string
+	CheckCommandTimeoutSeconds *int
 }
 
 // IsEmpty reports whether the patch has nothing to apply. Used by the
@@ -77,7 +82,12 @@ func (p Patch) IsEmpty() bool {
 		p.GoalGateNotifySmsEnabled == nil &&
 		p.StepGateNotifyEmailEnabled == nil &&
 		p.StepGateNotifySmsEnabled == nil &&
-		p.RunnerConfigs == nil
+		p.RunnerConfigs == nil &&
+		p.VerifyEnabled == nil &&
+		p.VerifyMaxRetries == nil &&
+		p.VerifyRunnerName == nil &&
+		p.VerifyRunnerModel == nil &&
+		p.CheckCommandTimeoutSeconds == nil
 }
 
 // Get returns the singleton app_settings row, creating it with
@@ -224,6 +234,21 @@ func validatePatch(patch Patch) error {
 			}
 		}
 	}
+	if patch.VerifyMaxRetries != nil {
+		v := *patch.VerifyMaxRetries
+		if v < 0 || v > domain.MaxVerifyMaxRetries {
+			return fmt.Errorf("%w: verify_max_retries must be between 0 and %d", domain.ErrInvalidInput, domain.MaxVerifyMaxRetries)
+		}
+	}
+	if patch.CheckCommandTimeoutSeconds != nil {
+		v := *patch.CheckCommandTimeoutSeconds
+		if v < domain.MinCheckCommandTimeoutSeconds || v > domain.MaxCheckCommandTimeoutSeconds {
+			return fmt.Errorf("%w: check_command_timeout_seconds must be between %d and %d", domain.ErrInvalidInput, domain.MinCheckCommandTimeoutSeconds, domain.MaxCheckCommandTimeoutSeconds)
+		}
+	}
+	if patch.VerifyRunnerModel != nil && len(strings.TrimSpace(*patch.VerifyRunnerModel)) > 256 {
+		return fmt.Errorf("%w: verify_runner_model too long (max 256)", domain.ErrInvalidInput)
+	}
 	return nil
 }
 
@@ -286,6 +311,21 @@ func applyPatch(row *domain.AppSettings, patch Patch) {
 	}
 	if patch.RunnerConfigs != nil {
 		row.RunnerConfigs = datatypes.JSON(*patch.RunnerConfigs)
+	}
+	if patch.VerifyEnabled != nil {
+		row.VerifyEnabled = *patch.VerifyEnabled
+	}
+	if patch.VerifyMaxRetries != nil {
+		row.VerifyMaxRetries = *patch.VerifyMaxRetries
+	}
+	if patch.VerifyRunnerName != nil {
+		row.VerifyRunnerName = strings.TrimSpace(*patch.VerifyRunnerName)
+	}
+	if patch.VerifyRunnerModel != nil {
+		row.VerifyRunnerModel = strings.TrimSpace(*patch.VerifyRunnerModel)
+	}
+	if patch.CheckCommandTimeoutSeconds != nil {
+		row.CheckCommandTimeoutSeconds = *patch.CheckCommandTimeoutSeconds
 	}
 
 	dualWriteCursorToRunnerConfigs(row)

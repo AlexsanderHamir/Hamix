@@ -28,6 +28,7 @@ These describe behavior that code and tests should keep in sync.
 | Settings | [SETTINGS.md](./SETTINGS.md) |
 | Project context | [PROJECT-CONTEXT.md](./PROJECT-CONTEXT.md) |
 | Execution attempts | [EXECUTION-CYCLES.md](./EXECUTION-CYCLES.md) |
+| Checklist / verification | [CHECKLIST.md](./CHECKLIST.md) |
 | Agent queue | [AGENT-QUEUE.md](./AGENT-QUEUE.md) |
 | Agent worker | [AGENT-WORKER.md](./AGENT-WORKER.md) |
 | Web SPA | [WEB.md](./WEB.md) |
@@ -72,6 +73,7 @@ These are not current runtime contracts.
 | Database model or migration behavior | [PERSISTENCE.md](./PERSISTENCE.md), plus [DESIGN.md](./DESIGN.md) if limitations change. |
 | Settings UI or settings API | [SETTINGS.md](./SETTINGS.md), [API-HTTP.md](./API-HTTP.md), and [WEB.md](./WEB.md) if the SPA changes. |
 | Agent queue or worker lifecycle | [AGENT-QUEUE.md](./AGENT-QUEUE.md), [AGENT-WORKER.md](./AGENT-WORKER.md), and [EXECUTION-CYCLES.md](./EXECUTION-CYCLES.md) when cycle semantics change. |
+| Checklist criteria or verification | [CHECKLIST.md](./CHECKLIST.md), [API-HTTP.md](./API-HTTP.md), [AGENT-WORKER.md](./AGENT-WORKER.md), [SETTINGS.md](./SETTINGS.md) when verify settings change. |
 | Web-only UI behavior | [WEB.md](./WEB.md). |
 | Observability behavior or scripts | [OBSERVABILITY.md](./OBSERVABILITY.md); use [runbooks/](./runbooks/) only for operator procedures. |
 | Future designs | [proposals/](./proposals/) first; promote to a focused contract doc only when implementation starts. |

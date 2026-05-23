@@ -33,6 +33,11 @@ All fields live in [`pkgs/tasks/domain/app_settings.go`](../pkgs/tasks/domain/ap
 | `display_timezone` | string | `""` | IANA timezone used by the SPA to render operator-facing timestamps. Empty means auto-detect from the browser. Non-empty values are validated with `time.LoadLocation`. |
 | `optimistic_mutations_enabled` | bool | `true` | Compatibility field retained on the wire and in the DB. Optimistic mutations are always enabled for new rows and no longer configurable in Settings. |
 | `sse_replay_enabled` | bool | `true` | Compatibility field retained on the wire and in the DB. Lossless SSE replay is always active in `/events`; older rows are migrated to true on read. |
+| `verify_enabled` | bool | `true` | When `true`, the worker runs the execute → criteria report → deterministic checks → verify phase guardrail before marking checklist items done (see [CHECKLIST.md](./CHECKLIST.md)). When `false`, successful execute cycles fall back to legacy bulk completion. |
+| `verify_max_retries` | int (`0`–`10`) | `2` | Maximum execute→verify retry loops per cycle when verification fails. `0` means no retries after the first failure. |
+| `verify_runner_name` | string | `""` | Optional runner identifier for the verify phase. Empty means reuse the execute runner (`app_settings.runner`). |
+| `verify_runner_model` | string | `""` | Optional model for the verify runner. Empty means omit the model flag. |
+| `check_command_timeout_seconds` | int (`1`–`600`) | `120` | Wall-clock cap for each deterministic `check` shell command during verification. |
 | `updated_at` | RFC3339 string (response only) | server clock | Stamp of the last successful upsert. The SPA renders "last changed N ago" off this field; not accepted on `PATCH`. |
 
 ## HTTP surface
@@ -79,6 +84,8 @@ The supervisor's `Reload` re-reads the row, decides whether to spawn / drain the
 - `runner` is set to a non-empty string that is not registered in `pkgs/agents/runner/registry`.
 - `max_run_duration_seconds` is negative.
 - `project_step_gate_grace_seconds` or `project_goal_gate_grace_seconds` is outside `0..604800`.
+- `verify_max_retries` is outside `0..10` (`domain.MaxVerifyMaxRetries`).
+- `check_command_timeout_seconds` is outside `1..600` (`domain.MinCheckCommandTimeoutSeconds`..`domain.MaxCheckCommandTimeoutSeconds`).
 - `repo_root` is set to a path that contains a NUL byte.
 
 The DB CHECK constraints enforce the singleton id and the non-negative timeout; AutoMigrate keeps the schema aligned across SQLite (tests) and Postgres (production).

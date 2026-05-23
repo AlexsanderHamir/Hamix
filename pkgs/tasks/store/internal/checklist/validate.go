@@ -1,8 +1,10 @@
 package checklist
 
 import (
+	"errors"
 	"fmt"
 	"log/slog"
+	"strings"
 
 	"github.com/AlexsanderHamir/T2A/pkgs/tasks/domain"
 	"gorm.io/gorm"
@@ -39,14 +41,19 @@ func validateChecklistCompleteInTx(tx *gorm.DB, subjectTaskID string) error {
 		return nil
 	}
 	for _, it := range items {
-		var n int64
-		if err := tx.Model(&domain.TaskChecklistCompletion{}).
-			Where("task_id = ? AND item_id = ?", subjectTaskID, it.ID).
-			Count(&n).Error; err != nil {
+		var comp domain.TaskChecklistCompletion
+		err := tx.Where("task_id = ? AND item_id = ?", subjectTaskID, it.ID).First(&comp).Error
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			return fmt.Errorf("%w: all checklist items must be done before marking this task done", domain.ErrInvalidInput)
+		}
+		if err != nil {
 			return fmt.Errorf("checklist completion: %w", err)
 		}
-		if n == 0 {
-			return fmt.Errorf("%w: all checklist items must be done before marking this task done", domain.ErrInvalidInput)
+		if !domain.ValidVerifierKind(comp.VerifiedBy) {
+			return fmt.Errorf("%w: checklist completion missing verified_by", domain.ErrInvalidInput)
+		}
+		if comp.VerifiedBy != domain.VerifierLegacy && strings.TrimSpace(comp.Evidence) == "" {
+			return fmt.Errorf("%w: checklist completion missing evidence", domain.ErrInvalidInput)
 		}
 	}
 	return nil

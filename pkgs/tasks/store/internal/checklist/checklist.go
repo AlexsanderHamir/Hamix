@@ -22,10 +22,15 @@ const logCmd = "taskapi"
 // Re-aliased by the store facade as store.ChecklistItemView so the
 // JSON field tags stay stable on the wire.
 type ItemView struct {
-	ID        string `json:"id"`
-	SortOrder int    `json:"sort_order"`
-	Text      string `json:"text"`
-	Done      bool   `json:"done"`
+	ID                string `json:"id"`
+	SortOrder         int    `json:"sort_order"`
+	Text              string `json:"text"`
+	Check             string `json:"check,omitempty"`
+	Done              bool   `json:"done"`
+	Evidence          string `json:"evidence,omitempty"`
+	VerifiedBy        string `json:"verified_by,omitempty"`
+	VerifierReasoning string `json:"verifier_reasoning,omitempty"`
+	CycleID           string `json:"cycle_id,omitempty"`
 }
 
 // DefinitionSourceTaskID returns the task id that owns checklist item
@@ -107,18 +112,26 @@ func List(ctx context.Context, db *gorm.DB, taskID string) ([]ItemView, error) {
 		if err := tx.Where("task_id = ? AND item_id IN ?", taskID, ids).Find(&doneRows).Error; err != nil {
 			return fmt.Errorf("list checklist completions: %w", err)
 		}
-		doneSet := make(map[string]bool, len(doneRows))
+		doneByItem := make(map[string]domain.TaskChecklistCompletion, len(doneRows))
 		for _, d := range doneRows {
-			doneSet[d.ItemID] = true
+			doneByItem[d.ItemID] = d
 		}
 		out = make([]ItemView, 0, len(items))
 		for _, it := range items {
-			out = append(out, ItemView{
+			v := ItemView{
 				ID:        it.ID,
 				SortOrder: it.SortOrder,
 				Text:      it.Text,
-				Done:      doneSet[it.ID],
-			})
+				Check:     it.Check,
+			}
+			if d, ok := doneByItem[it.ID]; ok {
+				v.Done = true
+				v.Evidence = d.Evidence
+				v.VerifiedBy = string(d.VerifiedBy)
+				v.VerifierReasoning = d.VerifierReasoning
+				v.CycleID = d.CycleID
+			}
+			out = append(out, v)
 		}
 		return nil
 	})
@@ -130,7 +143,7 @@ func List(ctx context.Context, db *gorm.DB, taskID string) ([]ItemView, error) {
 
 // Add appends a definition row; the task must exist and not use
 // ChecklistInherit. Appends EventChecklistItemAdded in the same TX.
-func Add(ctx context.Context, db *gorm.DB, taskID, text string, by domain.Actor) (*domain.TaskChecklistItem, error) {
+func Add(ctx context.Context, db *gorm.DB, taskID, text, check string, by domain.Actor) (*domain.TaskChecklistItem, error) {
 	defer kernel.DeferLatency(kernel.OpAddChecklistItem)()
 	slog.Debug("trace", "cmd", logCmd, "operation", "tasks.store.checklist.Add")
 	if err := kernel.ValidateActor(by); err != nil {
@@ -163,6 +176,7 @@ func Add(ctx context.Context, db *gorm.DB, taskID, text string, by domain.Actor)
 			TaskID:    taskID,
 			SortOrder: maxOrder + 1,
 			Text:      text,
+			Check:     strings.TrimSpace(check),
 		}
 		if err := tx.Create(it).Error; err != nil {
 			return fmt.Errorf("insert checklist item: %w", err)
@@ -329,6 +343,59 @@ func UpdateText(ctx context.Context, db *gorm.DB, taskID, itemID, text string, b
 	})
 }
 
+// UpdateCheck updates the optional deterministic check command for an
+// item owned by taskID. Same edit locks as UpdateText.
+func UpdateCheck(ctx context.Context, db *gorm.DB, taskID, itemID, check string, by domain.Actor) error {
+	defer kernel.DeferLatency(kernel.OpUpdateChecklistItemText)()
+	slog.Debug("trace", "cmd", logCmd, "operation", "tasks.store.checklist.UpdateCheck")
+	if err := kernel.ValidateActor(by); err != nil {
+		return err
+	}
+	taskID = strings.TrimSpace(taskID)
+	itemID = strings.TrimSpace(itemID)
+	check = strings.TrimSpace(check)
+	if taskID == "" || itemID == "" {
+		return fmt.Errorf("%w: id", domain.ErrInvalidInput)
+	}
+	return db.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
+		t, err := kernel.LoadTask(tx, taskID)
+		if err != nil {
+			return err
+		}
+		if t.ChecklistInherit {
+			return fmt.Errorf("%w: cannot update inherited checklist definitions from this task", domain.ErrInvalidInput)
+		}
+		var it domain.TaskChecklistItem
+		if err := tx.Where("id = ? AND task_id = ?", itemID, taskID).First(&it).Error; err != nil {
+			if errors.Is(err, gorm.ErrRecordNotFound) {
+				return domain.ErrNotFound
+			}
+			return fmt.Errorf("load checklist item: %w", err)
+		}
+		var doneCount int64
+		if err := tx.Model(&domain.TaskChecklistCompletion{}).
+			Where("item_id = ?", itemID).
+			Count(&doneCount).Error; err != nil {
+			return fmt.Errorf("count completions: %w", err)
+		}
+		if doneCount > 0 {
+			return fmt.Errorf("%w: cannot edit a criterion that has already been marked done", domain.ErrInvalidInput)
+		}
+		if it.Check == check {
+			return nil
+		}
+		if err := tx.Model(&it).Update("check", check).Error; err != nil {
+			return fmt.Errorf("update checklist check: %w", err)
+		}
+		seq, err := kernel.NextEventSeq(tx, taskID)
+		if err != nil {
+			return err
+		}
+		b, _ := json.Marshal(map[string]any{"item_id": itemID, "check": check})
+		return kernel.AppendEvent(tx, taskID, seq, domain.EventChecklistItemUpdated, by, b)
+	})
+}
+
 // SetDone sets or clears completion for subjectTaskID on an item
 // resolved through DefinitionSourceTaskIDInTx. Only domain.ActorAgent
 // may change completion; the human user records criteria via Add but
@@ -392,14 +459,15 @@ func SetDone(ctx context.Context, db *gorm.DB, subjectTaskID, itemID string, don
 		}
 		if done {
 			row := domain.TaskChecklistCompletion{
-				TaskID: subjectTaskID,
-				ItemID: itemID,
-				At:     time.Now().UTC(),
-				By:     by,
+				TaskID:     subjectTaskID,
+				ItemID:     itemID,
+				At:         time.Now().UTC(),
+				By:         by,
+				VerifiedBy: domain.VerifierLegacy,
 			}
 			if err := tx.Clauses(clause.OnConflict{
 				Columns:   []clause.Column{{Name: "task_id"}, {Name: "item_id"}},
-				DoUpdates: clause.AssignmentColumns([]string{"at", "done_by"}),
+				DoUpdates: clause.AssignmentColumns([]string{"at", "done_by", "verified_by"}),
 			}).Create(&row).Error; err != nil {
 				return fmt.Errorf("save completion: %w", err)
 			}

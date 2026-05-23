@@ -39,6 +39,11 @@ type settingsResponse struct {
 	GoalGateNotifySmsEnabled    bool   `json:"goal_gate_notify_sms_enabled"`
 	StepGateNotifyEmailEnabled  bool   `json:"step_gate_notify_email_enabled"`
 	StepGateNotifySmsEnabled    bool   `json:"step_gate_notify_sms_enabled"`
+	VerifyEnabled               bool   `json:"verify_enabled"`
+	VerifyMaxRetries            int    `json:"verify_max_retries"`
+	VerifyRunnerName            string `json:"verify_runner_name"`
+	VerifyRunnerModel           string `json:"verify_runner_model"`
+	CheckCommandTimeoutSeconds  int    `json:"check_command_timeout_seconds"`
 	UpdatedAt                   string `json:"updated_at,omitempty"`
 }
 
@@ -66,6 +71,11 @@ type settingsPatchBody struct {
 	GoalGateNotifySmsEnabled    *bool   `json:"goal_gate_notify_sms_enabled,omitempty"`
 	StepGateNotifyEmailEnabled  *bool   `json:"step_gate_notify_email_enabled,omitempty"`
 	StepGateNotifySmsEnabled    *bool   `json:"step_gate_notify_sms_enabled,omitempty"`
+	VerifyEnabled               *bool   `json:"verify_enabled,omitempty"`
+	VerifyMaxRetries            *int    `json:"verify_max_retries,omitempty"`
+	VerifyRunnerName            *string `json:"verify_runner_name,omitempty"`
+	VerifyRunnerModel           *string `json:"verify_runner_model,omitempty"`
+	CheckCommandTimeoutSeconds  *int    `json:"check_command_timeout_seconds,omitempty"`
 }
 
 // probeRequest is the JSON body for POST /settings/probe-cursor. Both
@@ -168,6 +178,11 @@ func (h *Handler) patchSettings(w http.ResponseWriter, r *http.Request) {
 		GoalGateNotifySmsEnabled:    body.GoalGateNotifySmsEnabled,
 		StepGateNotifyEmailEnabled:  body.StepGateNotifyEmailEnabled,
 		StepGateNotifySmsEnabled:    body.StepGateNotifySmsEnabled,
+		VerifyEnabled:               body.VerifyEnabled,
+		VerifyMaxRetries:            body.VerifyMaxRetries,
+		VerifyRunnerName:            body.VerifyRunnerName,
+		VerifyRunnerModel:           body.VerifyRunnerModel,
+		CheckCommandTimeoutSeconds:  body.CheckCommandTimeoutSeconds,
 		// optimistic_mutations_enabled / sse_replay_enabled are not
 		// user-configurable; ignore if present in the JSON body.
 	}
@@ -342,6 +357,11 @@ func settingsResponseFrom(cfg store.AppSettings) settingsResponse {
 		GoalGateNotifySmsEnabled:    cfg.GoalGateNotifySmsEnabled,
 		StepGateNotifyEmailEnabled:  cfg.StepGateNotifyEmailEnabled,
 		StepGateNotifySmsEnabled:    cfg.StepGateNotifySmsEnabled,
+		VerifyEnabled:               cfg.VerifyEnabled,
+		VerifyMaxRetries:            cfg.VerifyMaxRetries,
+		VerifyRunnerName:            cfg.VerifyRunnerName,
+		VerifyRunnerModel:           cfg.VerifyRunnerModel,
+		CheckCommandTimeoutSeconds:  cfg.CheckCommandTimeoutSeconds,
 	}
 	if !cfg.UpdatedAt.IsZero() {
 		resp.UpdatedAt = cfg.UpdatedAt.UTC().Format(time.RFC3339)

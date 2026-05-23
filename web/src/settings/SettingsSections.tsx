@@ -9,6 +9,11 @@ import {
   type SettingsFormState,
   type SettingsStatus,
 } from "./settingsForm";
+import {
+  MAX_CHECK_COMMAND_TIMEOUT_SECONDS,
+  MAX_VERIFY_MAX_RETRIES,
+  MIN_CHECK_COMMAND_TIMEOUT_SECONDS,
+} from "@/types/task";
 
 type HandleField = <K extends keyof SettingsFormState>(
   key: K,
@@ -357,6 +362,71 @@ export function CursorAgentSettingsSection({
           {probePending ? "Testing…" : "Test cursor binary"}
         </button>
       </div>
+    </fieldset>
+  );
+}
+
+export function VerificationSettingsSection({
+  form,
+  onField,
+}: {
+  form: SettingsFormState;
+  onField: HandleField;
+}) {
+  return (
+    <fieldset className="settings-fieldset" id="verification">
+      <legend className="settings-fieldset-legend">Verification</legend>
+      <p className="settings-section-subtitle">
+        Execute → verify guardrail for done criteria. Disable to fall back to
+        legacy bulk completion on successful runs.
+      </p>
+      <label className="settings-field settings-field--checkbox">
+        <input
+          type="checkbox"
+          checked={form.verifyEnabled}
+          onChange={(e) => onField("verifyEnabled", e.target.checked)}
+        />
+        <span>Enable criteria verification</span>
+      </label>
+      <label className="settings-field">
+        <span className="settings-field-label">Max verify retries</span>
+        <input
+          type="number"
+          min={0}
+          max={MAX_VERIFY_MAX_RETRIES}
+          step={1}
+          value={form.verifyMaxRetries}
+          onChange={(e) => onField("verifyMaxRetries", e.target.value)}
+        />
+      </label>
+      <label className="settings-field">
+        <span className="settings-field-label">Verify runner name (optional)</span>
+        <input
+          type="text"
+          value={form.verifyRunnerName}
+          onChange={(e) => onField("verifyRunnerName", e.target.value)}
+          placeholder="Same as execute runner when empty"
+        />
+      </label>
+      <label className="settings-field">
+        <span className="settings-field-label">Verify runner model (optional)</span>
+        <input
+          type="text"
+          value={form.verifyRunnerModel}
+          onChange={(e) => onField("verifyRunnerModel", e.target.value)}
+        />
+      </label>
+      <label className="settings-field">
+        <span className="settings-field-label">Check command timeout (seconds)</span>
+        <input
+          type="number"
+          min={MIN_CHECK_COMMAND_TIMEOUT_SECONDS}
+          max={MAX_CHECK_COMMAND_TIMEOUT_SECONDS}
+          step={1}
+          value={form.checkCommandTimeoutSeconds}
+          onChange={(e) => onField("checkCommandTimeoutSeconds", e.target.value)}
+        />
+      </label>
     </fieldset>
   );
 }

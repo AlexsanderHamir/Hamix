@@ -151,6 +151,9 @@ func storeErrorClientMessage(err error) string {
 	case errors.Is(err, domain.ErrProjectGoalHasDependents):
 		return "goal has dependents"
 	case errors.Is(err, domain.ErrConflict):
+		if d := conflictDetail(err); d != "" {
+			return d
+		}
 		return "task id already exists"
 	case errors.Is(err, domain.ErrInvalidInput):
 		if d := invalidInputDetail(err); d != "" {
@@ -166,6 +169,16 @@ func invalidInputDetail(err error) string {
 	slog.Debug("trace", "cmd", calltrace.LogCmd, "operation", "handler.invalidInputDetail")
 	s := err.Error()
 	const mark = "tasks: invalid input: "
+	if i := strings.Index(s, mark); i >= 0 {
+		return strings.TrimSpace(s[i+len(mark):])
+	}
+	return ""
+}
+
+func conflictDetail(err error) string {
+	slog.Debug("trace", "cmd", calltrace.LogCmd, "operation", "handler.conflictDetail")
+	s := err.Error()
+	const mark = "tasks: conflict: "
 	if i := strings.Index(s, mark); i >= 0 {
 		return strings.TrimSpace(s[i+len(mark):])
 	}

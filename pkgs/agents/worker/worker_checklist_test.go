@@ -9,6 +9,7 @@ import (
 	"github.com/AlexsanderHamir/T2A/pkgs/agents/runner/runnerfake"
 	"github.com/AlexsanderHamir/T2A/pkgs/agents/worker"
 	"github.com/AlexsanderHamir/T2A/pkgs/tasks/domain"
+	"github.com/AlexsanderHamir/T2A/pkgs/tasks/store"
 )
 
 // TestWorker_HappyPath_marksAllChecklistItemsDone pins the contract
@@ -16,9 +17,8 @@ import (
 // stuck in `running` after a successful run because the worker never
 // recorded checklist completions and ValidateCanMarkDoneInTx then
 // rejected the StatusDone transition. The fix lives in
-// process.go::completeChecklistOnSuccess; this test fails (task stays
-// running, items stay open) if that helper is removed or stops being
-// invoked on the success path.
+// completeChecklistLegacy when verify_enabled=false; this test fails
+// (task stays running, items stay open) if that path is removed.
 func TestWorker_HappyPath_marksAllChecklistItemsDone(t *testing.T) {
 	t.Parallel()
 	h := newHarness(t)
@@ -27,12 +27,17 @@ func TestWorker_HappyPath_marksAllChecklistItemsDone(t *testing.T) {
 
 	tsk := h.createReadyTask(ctx, "criteria-task")
 
+	verifyOff := false
+	if _, err := h.store.UpdateSettings(ctx, store.SettingsPatch{VerifyEnabled: &verifyOff}); err != nil {
+		t.Fatalf("disable verify for legacy checklist test: %v", err)
+	}
+
 	// Two user-defined criteria the agent must satisfy. Done flags
 	// start false; the worker must flip both to true on a clean run.
-	if _, err := h.store.AddChecklistItem(ctx, tsk.ID, "criterion one", domain.ActorUser); err != nil {
+	if _, err := h.store.AddChecklistItem(ctx, tsk.ID, "criterion one", "", domain.ActorUser); err != nil {
 		t.Fatalf("add checklist item one: %v", err)
 	}
-	if _, err := h.store.AddChecklistItem(ctx, tsk.ID, "criterion two", domain.ActorUser); err != nil {
+	if _, err := h.store.AddChecklistItem(ctx, tsk.ID, "criterion two", "", domain.ActorUser); err != nil {
 		t.Fatalf("add checklist item two: %v", err)
 	}
 

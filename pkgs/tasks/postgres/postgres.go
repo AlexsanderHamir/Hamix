@@ -94,6 +94,26 @@ func Migrate(ctx context.Context, db *gorm.DB) error {
 	if err := db.WithContext(ctx).Clauses(clause.OnConflict{DoNothing: true}).Create(&defaultProject).Error; err != nil {
 		return fmt.Errorf("seed default project: %w", err)
 	}
+	if err := backfillLegacyChecklistCompletions(ctx, db); err != nil {
+		return fmt.Errorf("backfill checklist completions: %w", err)
+	}
+	return nil
+}
+
+// backfillLegacyChecklistCompletions marks pre-V1.1 completion rows so
+// ValidateCanMarkDoneInTx continues to accept them after evidence columns ship.
+func backfillLegacyChecklistCompletions(ctx context.Context, db *gorm.DB) error {
+	slog.Debug("trace", "operation", "postgres.backfillLegacyChecklistCompletions")
+	res := db.WithContext(ctx).Exec(`
+UPDATE task_checklist_completions
+   SET verified_by = ?
+ WHERE (verified_by IS NULL OR verified_by = '')
+   AND (evidence IS NULL OR evidence = '')`,
+		string(domain.VerifierLegacy),
+	)
+	if res.Error != nil {
+		return res.Error
+	}
 	return nil
 }
 

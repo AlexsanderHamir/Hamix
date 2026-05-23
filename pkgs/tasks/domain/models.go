@@ -164,6 +164,9 @@ type TaskChecklistItem struct {
 	TaskID    string `json:"task_id" gorm:"not null;index"`
 	SortOrder int    `json:"sort_order" gorm:"not null"`
 	Text      string `json:"text" gorm:"not null;type:text"`
+	// Check is an optional shell command the worker runs after execute;
+	// exit 0 satisfies the criterion without verify-agent judgement.
+	Check string `json:"check" gorm:"not null;default:'';type:text"`
 }
 
 // TableName returns the GORM table name. Skip-listed in
@@ -173,10 +176,14 @@ func (TaskChecklistItem) TableName() string { return "task_checklist_items" }
 
 // TaskChecklistCompletion records that subject TaskID satisfied checklist item ItemID.
 type TaskChecklistCompletion struct {
-	TaskID string    `json:"task_id" gorm:"primaryKey"`
-	ItemID string    `json:"item_id" gorm:"primaryKey"`
-	At     time.Time `json:"at" gorm:"not null"`
-	By     Actor     `json:"by" gorm:"column:done_by;not null"`
+	TaskID            string       `json:"task_id" gorm:"primaryKey"`
+	ItemID            string       `json:"item_id" gorm:"primaryKey"`
+	At                time.Time    `json:"at" gorm:"not null"`
+	By                Actor        `json:"by" gorm:"column:done_by;not null"`
+	Evidence          string       `json:"evidence" gorm:"not null;default:'';type:text"`
+	VerifiedBy        VerifierKind `json:"verified_by" gorm:"not null;default:''"`
+	VerifierReasoning string       `json:"verifier_reasoning" gorm:"not null;default:'';type:text"`
+	CycleID           string       `json:"cycle_id" gorm:"not null;default:''"`
 }
 
 // TableName: see TaskChecklistItem.TableName for skip-list rationale.

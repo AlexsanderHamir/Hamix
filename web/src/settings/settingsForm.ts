@@ -17,6 +17,11 @@ export type SettingsFormState = {
   stepGateNotifyEmailEnabled: boolean;
   stepGateNotifySmsEnabled: boolean;
   displayTimezone: string;
+  verifyEnabled: boolean;
+  verifyMaxRetries: string;
+  verifyRunnerName: string;
+  verifyRunnerModel: string;
+  checkCommandTimeoutSeconds: string;
 };
 
 export type SettingsStatus =
@@ -43,6 +48,11 @@ export function toFormState(s: AppSettings): SettingsFormState {
     stepGateNotifyEmailEnabled: s.step_gate_notify_email_enabled,
     stepGateNotifySmsEnabled: s.step_gate_notify_sms_enabled,
     displayTimezone: s.display_timezone,
+    verifyEnabled: s.verify_enabled,
+    verifyMaxRetries: String(s.verify_max_retries),
+    verifyRunnerName: s.verify_runner_name,
+    verifyRunnerModel: s.verify_runner_model,
+    checkCommandTimeoutSeconds: String(s.check_command_timeout_seconds),
   };
 }
 
@@ -115,6 +125,34 @@ export function diffPatch(
   const tzTrimmed = form.displayTimezone.trim();
   if (tzTrimmed !== initial.display_timezone) {
     out.display_timezone = tzTrimmed;
+  }
+  if (form.verifyEnabled !== initial.verify_enabled) {
+    out.verify_enabled = form.verifyEnabled;
+  }
+  const parsedRetries = Number.parseInt(form.verifyMaxRetries.trim() || "0", 10);
+  if (
+    Number.isFinite(parsedRetries) &&
+    parsedRetries !== initial.verify_max_retries
+  ) {
+    out.verify_max_retries = parsedRetries;
+  }
+  const verifyName = form.verifyRunnerName.trim();
+  if (verifyName !== initial.verify_runner_name) {
+    out.verify_runner_name = verifyName;
+  }
+  const verifyModel = form.verifyRunnerModel.trim();
+  if (verifyModel !== initial.verify_runner_model) {
+    out.verify_runner_model = verifyModel;
+  }
+  const parsedCheckTimeout = Number.parseInt(
+    form.checkCommandTimeoutSeconds.trim() || "0",
+    10,
+  );
+  if (
+    Number.isFinite(parsedCheckTimeout) &&
+    parsedCheckTimeout !== initial.check_command_timeout_seconds
+  ) {
+    out.check_command_timeout_seconds = parsedCheckTimeout;
   }
   return out;
 }

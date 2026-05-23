@@ -431,7 +431,16 @@ export function parseTaskChecklistResponse(value: unknown): TaskChecklistRespons
       id: parseNonEmptyString(row.id, "id"),
       sort_order: parseFiniteNumber(row.sort_order, "sort_order"),
       text: parseString(row.text, "text"),
+      check: typeof row.check === "string" ? row.check : undefined,
       done: row.done === true,
+      evidence: typeof row.evidence === "string" ? row.evidence : undefined,
+      verified_by:
+        typeof row.verified_by === "string" ? row.verified_by : undefined,
+      verifier_reasoning:
+        typeof row.verifier_reasoning === "string"
+          ? row.verifier_reasoning
+          : undefined,
+      cycle_id: typeof row.cycle_id === "string" ? row.cycle_id : undefined,
     };
   });
   return { items };

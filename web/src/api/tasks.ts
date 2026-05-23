@@ -498,7 +498,7 @@ export async function listChecklist(
 export async function addChecklistItem(
   taskId: string,
   text: string,
-  options?: { actor?: "user" | "agent" },
+  options?: { actor?: "user" | "agent"; check?: string },
 ): Promise<void> {
   const headers: Record<string, string> = { ...jsonHeaders };
   if (options?.actor === "agent") {
@@ -509,7 +509,10 @@ export async function addChecklistItem(
     {
       method: "POST",
       headers,
-      body: JSON.stringify({ text }),
+      body: JSON.stringify({
+        text,
+        ...(options?.check !== undefined ? { check: options.check } : {}),
+      }),
     },
   );
   if (!res.ok) throw new Error(await readError(res));

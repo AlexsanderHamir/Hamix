@@ -27,6 +27,9 @@ type processState struct {
 	cycleStarted    bool
 	runningPhase    domain.Phase
 	runningPhaseSeq int64
+	verifySnap      verificationSnapshot
+	verifyAttempt   int
+	verifyFeedback  string
 	// startedAt is captured at processOne entry so every TerminateCycle
 	// path (happy / panic / shutdown / best-effort) observes the same
 	// wall-clock duration into the metrics histogram.
@@ -81,99 +84,105 @@ func (w *Worker) processOne(parentCtx context.Context, task domain.Task) {
 		return
 	}
 
-	execPhase, ok := w.startExecutePhase(parentCtx, cycle, &state)
-	if !ok {
-		w.bestEffortTerminate(parentCtx, &state, task.ID, domain.CycleStatusFailed, "execute_phase_start_failed")
-		return
-	}
+	state.verifySnap, _ = w.loadVerificationSnapshot(parentCtx, task.ID)
 
-	result, runErr := w.invokeRunner(parentCtx, fresh, cycle, execPhase)
-	operatorCancelled := w.consumeOperatorCancel()
-
-	if parentCtx.Err() != nil {
-		w.handleShutdownAfterRun(&state, task.ID)
-		return
-	}
-
-	phaseStatus, cycleStatus, taskStatus, reason := classifyRunOutcome(runErr)
-	if operatorCancelled {
-		// The runner observed a cancelled ctx and surfaced an
-		// ErrTimeout-shaped error. Override the classifier so the
-		// audit trail records why the cycle ended (the operator hit
-		// "Cancel current run") rather than implying a per-run
-		// timeout fired or the runner produced bad output.
-		reason = CancelledByOperatorReason
-		if result.Summary == "" || strings.HasPrefix(result.Summary, "cursor: timeout") {
-			result.Summary = "cancelled by operator"
+	for {
+		execPhase, ok := w.startExecutePhase(parentCtx, cycle, &state)
+		if !ok {
+			w.bestEffortTerminate(parentCtx, &state, task.ID, domain.CycleStatusFailed, "execute_phase_start_failed")
+			return
 		}
-	}
-	// On a successful run, mark the task's checklist criteria as
-	// done before closing the phase so the subsequent
-	// transitionTask(StatusDone) passes ValidateCanMarkDoneInTx
-	// (which requires a completion row for every inherited item).
-	// Without this the task would be silently stuck in `running` for
-	// any task that has done-criteria, even though the runner
-	// succeeded — see process.go::transitionTask, which only logs a
-	// warning and returns false on the validation reject. If the
-	// completion writes themselves fail we degrade the whole run to
-	// failed so the cycle / task end up consistent rather than half
-	// transitioned.
-	if runErr == nil && !operatorCancelled {
-		if err := w.completeChecklistOnSuccess(parentCtx, task.ID); err != nil {
-			slog.Warn("agent worker checklist completion failed",
-				"cmd", workerLogCmd,
-				"operation", "agent.worker.Worker.processOne.checklist_err",
-				"task_id", task.ID, "err", err)
+		_ = scrubCycleArtifacts(w.options.WorkingDir, cycle.ID)
+		prompt := injectCriteria(fresh.InitialPrompt, state.verifySnap.criteria, cycle.ID)
+		prompt = appendVerifyFeedback(prompt, state.verifyFeedback)
+		freshExec := *fresh
+		freshExec.InitialPrompt = prompt
+
+		result, runErr := w.invokeRunnerWithTask(parentCtx, &freshExec, cycle, execPhase)
+		operatorCancelled := w.consumeOperatorCancel()
+
+		if parentCtx.Err() != nil {
+			w.handleShutdownAfterRun(&state, task.ID)
+			return
+		}
+
+		phaseStatus, cycleStatus, taskStatus, reason := classifyRunOutcome(runErr)
+		if operatorCancelled {
+			reason = CancelledByOperatorReason
+			if result.Summary == "" || strings.HasPrefix(result.Summary, "cursor: timeout") {
+				result.Summary = "cancelled by operator"
+			}
+		}
+
+		var verdicts []criterionVerdict
+		if runErr == nil && !operatorCancelled {
+			if state.verifySnap.enabled {
+				var verifyErr error
+				var feedback string
+				verdicts, feedback, verifyErr = w.runVerificationPipeline(parentCtx, fresh, cycle, state.verifySnap, state.verifyFeedback)
+				if verifyErr != nil && feedback != "" {
+					state.verifyFeedback = feedback
+				}
+				if verifyErr != nil {
+					if state.verifyAttempt < state.verifySnap.maxRetries {
+						state.verifyAttempt++
+						_ = w.completeExecutePhase(parentCtx, &state, cycle, execPhase, domain.PhaseStatusFailed, result)
+						continue
+					}
+					phaseStatus = domain.PhaseStatusFailed
+					cycleStatus = domain.CycleStatusFailed
+					taskStatus = domain.StatusFailed
+					reason = verificationFailedReason
+				}
+			} else if err := w.completeChecklistLegacy(parentCtx, task.ID); err != nil {
+				slog.Warn("agent worker checklist completion failed",
+					"cmd", workerLogCmd,
+					"operation", "agent.worker.Worker.processOne.checklist_err",
+					"task_id", task.ID, "err", err)
+				phaseStatus = domain.PhaseStatusFailed
+				cycleStatus = domain.CycleStatusFailed
+				taskStatus = domain.StatusFailed
+				reason = checklistCompletionFailedReason
+			}
+		}
+		if runErr != nil || operatorCancelled || reason == verificationFailedReason {
+			if !w.completeExecutePhase(parentCtx, &state, cycle, execPhase, phaseStatus, result) {
+				w.bestEffortTerminate(parentCtx, &state, task.ID, domain.CycleStatusFailed, completePhaseFailedReason)
+				return
+			}
+			if !w.terminateCycle(parentCtx, &state, cycle.TaskID, cycleStatus, reason) {
+				return
+			}
+			if taskStatus == domain.StatusFailed {
+				_ = w.transitionTask(parentCtx, task.ID, taskStatus, "final_task_transition")
+			}
+			return
+		}
+		if err := w.applyVerifiedCompletions(parentCtx, task.ID, cycle.ID, verdicts); err != nil {
 			phaseStatus = domain.PhaseStatusFailed
 			cycleStatus = domain.CycleStatusFailed
 			taskStatus = domain.StatusFailed
 			reason = checklistCompletionFailedReason
 		}
-	}
-	if !w.completeExecutePhase(parentCtx, &state, cycle, execPhase, phaseStatus, result) {
-		// CompletePhase failed (phase row indeterminate). The cycle
-		// row is still ours to close — without this terminate the
-		// cycle/task rows are orphaned in `running` until the next
-		// process restart triggers SweepOrphanRunningCycles. We force
-		// the cycle to `failed` regardless of the runner's outcome:
-		// even a successful run is a write failure from the audit
-		// trail's perspective if we could not persist the phase
-		// terminal status.
-		w.bestEffortTerminate(parentCtx, &state, task.ID, domain.CycleStatusFailed, completePhaseFailedReason)
+		if !w.completeExecutePhase(parentCtx, &state, cycle, execPhase, phaseStatus, result) {
+			w.bestEffortTerminate(parentCtx, &state, task.ID, domain.CycleStatusFailed, completePhaseFailedReason)
+			return
+		}
+		if !w.terminateCycle(parentCtx, &state, cycle.TaskID, cycleStatus, reason) {
+			return
+		}
+		if !w.transitionTask(parentCtx, task.ID, taskStatus, "final_task_transition") {
+			return
+		}
+		w.publish(task.ID, cycle.ID)
+		slog.Info("agent worker run complete", "cmd", workerLogCmd,
+			"operation", "agent.worker.Worker.processOne.summary",
+			"task_id", task.ID, "cycle_id", cycle.ID, "attempt_seq", cycle.AttemptSeq,
+			"terminal_cycle_status", string(cycleStatus), "task_status", string(taskStatus),
+			"runner", w.runner.Name(), "runner_version", w.runner.Version(),
+			"duration_ms", w.options.Clock().Sub(startedAt).Milliseconds())
 		return
 	}
-	if !w.terminateCycle(parentCtx, &state, cycle.TaskID, cycleStatus, reason) {
-		return
-	}
-	if !w.transitionTask(parentCtx, task.ID, taskStatus, "final_task_transition") {
-		return
-	}
-	// Re-publish the cycle frame *after* the final task status row has
-	// been written. terminateCycle (above) already emitted one publish,
-	// but the order is: cycle row writes -> SSE publish -> task row
-	// status transitions. The SPA's invalidation handler refetches the
-	// task on the publish, races the in-flight transitionTask, and
-	// usually wins — leaving the open task page stuck on `running` even
-	// though the work is done. There are no further SSE frames after
-	// the transition (transitionTask doesn't publish, and the worker
-	// goes idle), so the stale row sticks until the user refreshes.
-	//
-	// One extra publish here is the cheap fix: the frontend coalesces
-	// both publishes into a single flush (SSE_INVALIDATE_WINDOW_MS in
-	// useTaskEventStream is 900ms; the gap between terminateCycle and
-	// transitionTask is well under that), so the user sees one
-	// invalidation that fetches the post-transition row. The cycle ID
-	// is reused intentionally — the frame is identifying *which* task
-	// changed, not the cycle's own state, and the SPA only cares about
-	// the task scope for invalidation.
-	w.publish(task.ID, cycle.ID)
-
-	slog.Info("agent worker run complete", "cmd", workerLogCmd,
-		"operation", "agent.worker.Worker.processOne.summary",
-		"task_id", task.ID, "cycle_id", cycle.ID, "attempt_seq", cycle.AttemptSeq,
-		"terminal_cycle_status", string(cycleStatus), "task_status", string(taskStatus),
-		"runner", w.runner.Name(), "runner_version", w.runner.Version(),
-		"duration_ms", w.options.Clock().Sub(startedAt).Milliseconds())
 }
 
 // reloadTask fetches the freshest task row from the store. ok==false
@@ -314,6 +323,10 @@ func (w *Worker) startExecutePhase(ctx context.Context, cycle *domain.TaskCycle,
 	state.runningPhaseSeq = exec.PhaseSeq
 	w.publish(cycle.TaskID, cycle.ID)
 	return exec, true
+}
+
+func (w *Worker) invokeRunnerWithTask(parentCtx context.Context, task *domain.Task, cycle *domain.TaskCycle, exec *domain.TaskCyclePhase) (runner.Result, error) {
+	return w.invokeRunner(parentCtx, task, cycle, exec)
 }
 
 // invokeRunner builds the Request, applies the per-run timeout (if any),
@@ -473,34 +486,6 @@ func (w *Worker) terminateCycle(ctx context.Context, state *processState, taskID
 	w.publish(taskID, state.cycleID)
 	w.recordRun(string(status), w.runner.Name(), state.effectiveModel, state.startedAt)
 	return true
-}
-
-// completeChecklistOnSuccess marks every still-open checklist item on
-// taskID as done. The agent is the only actor permitted to toggle
-// completion (store/internal/checklist.SetDone), and a successful run
-// is the implicit signal that the criteria the user attached to the
-// task have been satisfied. Items already done are skipped so the call
-// is idempotent across re-runs (a future retry path can call this
-// without producing duplicate audit events).
-//
-// Tasks with no checklist items short-circuit to nil — the e2e happy
-// path tests in worker_test.go exercise this case and must not regress.
-func (w *Worker) completeChecklistOnSuccess(ctx context.Context, taskID string) error {
-	slog.Debug("trace", "cmd", workerLogCmd, "operation", "agent.worker.Worker.completeChecklistOnSuccess",
-		"task_id", taskID)
-	items, err := w.store.ListChecklistForSubject(ctx, taskID)
-	if err != nil {
-		return err
-	}
-	for _, it := range items {
-		if it.Done {
-			continue
-		}
-		if err := w.store.SetChecklistItemDone(ctx, taskID, it.ID, true, domain.ActorAgent); err != nil {
-			return err
-		}
-	}
-	return nil
 }
 
 // classifyRunOutcome maps runner.Run's (Result, error) tuple to the

@@ -42,7 +42,7 @@ func TestHTTP_postChecklistItem_201ResponseShape(t *testing.T) {
 	if err := json.Unmarshal(raw, &top); err != nil {
 		t.Fatalf("decode: %v body=%s", err, raw)
 	}
-	wantKeys := map[string]struct{}{"id": {}, "task_id": {}, "sort_order": {}, "text": {}}
+	wantKeys := map[string]struct{}{"id": {}, "task_id": {}, "sort_order": {}, "text": {}, "check": {}}
 	for k := range wantKeys {
 		if _, ok := top[k]; !ok {
 			t.Errorf("POST checklist 201 missing key %q (docs/API-HTTP.md): %s", k, raw)
@@ -152,14 +152,14 @@ func TestHTTP_patchChecklistItem_doneAgentReturnsItemsView(t *testing.T) {
 	srv, st := newTaskTestServerWithStore(t)
 	defer srv.Close()
 	taskID := mustCreateChecklistTask(t, srv, "chk-done")
-	it, err := st.AddChecklistItem(context.Background(), taskID, "review", domain.ActorUser)
+	it, err := st.AddChecklistItem(context.Background(), taskID, "review", "", domain.ActorUser)
 	if err != nil {
 		t.Fatal(err)
 	}
 
 	req, err := http.NewRequest(http.MethodPatch,
 		srv.URL+"/tasks/"+taskID+"/checklist/items/"+it.ID,
-		strings.NewReader(`{"done":true}`))
+		strings.NewReader(`{"done":true,"evidence":"reviewed in test","verified_by":"agent_self"}`))
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -184,10 +184,12 @@ func TestHTTP_patchChecklistItem_doneAgentReturnsItemsView(t *testing.T) {
 	}
 	var out struct {
 		Items []struct {
-			ID        string `json:"id"`
-			SortOrder int    `json:"sort_order"`
-			Text      string `json:"text"`
-			Done      bool   `json:"done"`
+			ID         string `json:"id"`
+			SortOrder  int    `json:"sort_order"`
+			Text       string `json:"text"`
+			Done       bool   `json:"done"`
+			Evidence   string `json:"evidence"`
+			VerifiedBy string `json:"verified_by"`
 		} `json:"items"`
 	}
 	if err := json.Unmarshal(raw, &out); err != nil {
@@ -208,7 +210,7 @@ func TestHTTP_deleteChecklistItem_204ThenGone(t *testing.T) {
 	srv, st := newTaskTestServerWithStore(t)
 	defer srv.Close()
 	taskID := mustCreateChecklistTask(t, srv, "chk-del")
-	it, err := st.AddChecklistItem(context.Background(), taskID, "remove me", domain.ActorUser)
+	it, err := st.AddChecklistItem(context.Background(), taskID, "remove me", "", domain.ActorUser)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -260,7 +262,7 @@ func TestHTTP_deleteChecklistItem_rejectsInheritedChild(t *testing.T) {
 	srv, st := newTaskTestServerWithStore(t)
 	defer srv.Close()
 	parentID := mustCreateChecklistTask(t, srv, "chk-par")
-	it, err := st.AddChecklistItem(context.Background(), parentID, "owned by parent", domain.ActorUser)
+	it, err := st.AddChecklistItem(context.Background(), parentID, "owned by parent", "", domain.ActorUser)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -485,13 +487,13 @@ func TestHTTP_patchChecklistItem_textBranch400Strings(t *testing.T) {
 		{
 			name: "noFields", taskID: parentID, itemID: def.ID,
 			body:             `{}`,
-			want:             "send exactly one of text or done",
+			want:             "send exactly one of text, check, or done",
 			commentaryReason: "shared one-of-choice phrase that gates BOTH text and done branches (handler_checklist.go:95); the existing errorPathsNeverPublish test only checks status code, so the bare phrase needs its own pin",
 		},
 		{
 			name: "bothFields", taskID: parentID, itemID: def.ID,
 			body:             `{"text":"x","done":true}`,
-			want:             "send exactly one of text or done",
+			want:             "send exactly one of text, check, or done",
 			commentaryReason: "same one-of phrase from the opposite direction (sending both fields); proves the textSet == doneSet branch covers the symmetric case the doc bullet `or neither field was provided for the one-of choice` only covers the empty side of",
 		},
 		{
@@ -526,7 +528,7 @@ func TestHTTP_patchChecklistItem_publishesTaskUpdated(t *testing.T) {
 	srv, st, hub := newSSETriggerServer(t)
 	defer srv.Close()
 	taskID := mustCreateChecklistTask(t, srv, "chk-sse-patch")
-	it, err := st.AddChecklistItem(context.Background(), taskID, "review", domain.ActorUser)
+	it, err := st.AddChecklistItem(context.Background(), taskID, "review", "", domain.ActorUser)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -536,7 +538,7 @@ func TestHTTP_patchChecklistItem_publishesTaskUpdated(t *testing.T) {
 
 	req, err := http.NewRequest(http.MethodPatch,
 		srv.URL+"/tasks/"+taskID+"/checklist/items/"+it.ID,
-		strings.NewReader(`{"done":true}`))
+		strings.NewReader(`{"done":true,"evidence":"sse test","verified_by":"agent_self"}`))
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -563,7 +565,7 @@ func TestHTTP_patchChecklistItem_errorPathsNeverPublish(t *testing.T) {
 	srv, st, hub := newSSETriggerServer(t)
 	defer srv.Close()
 	taskID := mustCreateChecklistTask(t, srv, "chk-sse-patch-neg")
-	it, err := st.AddChecklistItem(context.Background(), taskID, "neg", domain.ActorUser)
+	it, err := st.AddChecklistItem(context.Background(), taskID, "neg", "", domain.ActorUser)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -612,7 +614,7 @@ func TestHTTP_deleteChecklistItem_publishesTaskUpdated(t *testing.T) {
 	srv, st, hub := newSSETriggerServer(t)
 	defer srv.Close()
 	taskID := mustCreateChecklistTask(t, srv, "chk-sse-del")
-	it, err := st.AddChecklistItem(context.Background(), taskID, "remove", domain.ActorUser)
+	it, err := st.AddChecklistItem(context.Background(), taskID, "remove", "", domain.ActorUser)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -646,7 +648,7 @@ func TestHTTP_deleteChecklistItem_errorPathsNeverPublish(t *testing.T) {
 	srv, st, hub := newSSETriggerServer(t)
 	defer srv.Close()
 	parentID := mustCreateChecklistTask(t, srv, "chk-sse-del-par")
-	it, err := st.AddChecklistItem(context.Background(), parentID, "owned", domain.ActorUser)
+	it, err := st.AddChecklistItem(context.Background(), parentID, "owned", "", domain.ActorUser)
 	if err != nil {
 		t.Fatal(err)
 	}

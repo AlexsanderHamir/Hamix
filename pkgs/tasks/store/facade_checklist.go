@@ -13,6 +13,9 @@ import (
 // JSON field tags stable on the wire.
 type ChecklistItemView = checklist.ItemView
 
+// ChecklistVerifyItem is a criterion row for worker verification.
+type ChecklistVerifyItem = checklist.VerifyItem
+
 // DefinitionSourceTaskID returns the task id that owns checklist item
 // definitions for the given task; see internal/checklist for the
 // inheritance walk.
@@ -30,9 +33,34 @@ func (s *Store) ListChecklistForSubject(ctx context.Context, taskID string) ([]C
 
 // AddChecklistItem appends a definition row; the task must exist and
 // not use checklist_inherit.
-func (s *Store) AddChecklistItem(ctx context.Context, taskID, text string, by domain.Actor) (*domain.TaskChecklistItem, error) {
+func (s *Store) AddChecklistItem(ctx context.Context, taskID, text, check string, by domain.Actor) (*domain.TaskChecklistItem, error) {
 	slog.Debug("trace", "cmd", storeLogCmd, "operation", "tasks.store.AddChecklistItem")
-	return checklist.Add(ctx, s.db, taskID, text, by)
+	return checklist.Add(ctx, s.db, taskID, text, check, by)
+}
+
+// ListChecklistForVerify returns criteria rows for worker verification.
+func (s *Store) ListChecklistForVerify(ctx context.Context, taskID string) ([]ChecklistVerifyItem, error) {
+	slog.Debug("trace", "cmd", storeLogCmd, "operation", "tasks.store.ListChecklistForVerify")
+	return checklist.ListForVerify(ctx, s.db, taskID)
+}
+
+// IsTaskCycleRunning reports whether the task or an inherit ancestor has a running cycle.
+func (s *Store) IsTaskCycleRunning(ctx context.Context, taskID string) (bool, error) {
+	slog.Debug("trace", "cmd", storeLogCmd, "operation", "tasks.store.IsTaskCycleRunning")
+	return checklist.IsTaskCycleRunning(ctx, s.db, taskID)
+}
+
+// SetChecklistItemDoneWithEvidence records agent completion with proof metadata.
+func (s *Store) SetChecklistItemDoneWithEvidence(
+	ctx context.Context,
+	subjectTaskID, itemID string,
+	evidence string,
+	verifier domain.VerifierKind,
+	reasoning, cycleID string,
+	by domain.Actor,
+) error {
+	slog.Debug("trace", "cmd", storeLogCmd, "operation", "tasks.store.SetChecklistItemDoneWithEvidence")
+	return checklist.SetDoneWithEvidence(ctx, s.db, subjectTaskID, itemID, evidence, verifier, reasoning, cycleID, by)
 }
 
 // DeleteChecklistItem removes a definition row owned by taskID.
@@ -46,6 +74,12 @@ func (s *Store) DeleteChecklistItem(ctx context.Context, taskID, itemID string, 
 func (s *Store) UpdateChecklistItemText(ctx context.Context, taskID, itemID, text string, by domain.Actor) error {
 	slog.Debug("trace", "cmd", storeLogCmd, "operation", "tasks.store.UpdateChecklistItemText")
 	return checklist.UpdateText(ctx, s.db, taskID, itemID, text, by)
+}
+
+// UpdateChecklistItemCheck updates the optional shell check for an item.
+func (s *Store) UpdateChecklistItemCheck(ctx context.Context, taskID, itemID, check string, by domain.Actor) error {
+	slog.Debug("trace", "cmd", storeLogCmd, "operation", "tasks.store.UpdateChecklistItemCheck")
+	return checklist.UpdateCheck(ctx, s.db, taskID, itemID, check, by)
 }
 
 // SetChecklistItemDone sets or clears completion for subjectTaskID on

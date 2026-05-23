@@ -1,4 +1,8 @@
 import { fetchWithTimeout, jsonHeaders, readError } from "./shared";
+import {
+  DEFAULT_CHECK_COMMAND_TIMEOUT_SECONDS,
+  DEFAULT_VERIFY_MAX_RETRIES,
+} from "@/types/task";
 
 /**
  * On-the-wire shape returned by GET /settings and PATCH /settings.
@@ -66,6 +70,11 @@ export type AppSettings = {
    * Stored for API compatibility; lossless SSE replay is always on server-side.
    */
   sse_replay_enabled: boolean;
+  verify_enabled: boolean;
+  verify_max_retries: number;
+  verify_runner_name: string;
+  verify_runner_model: string;
+  check_command_timeout_seconds: number;
   updated_at?: string;
 };
 
@@ -100,6 +109,11 @@ export type AppSettingsPatch = Partial<{
   goal_gate_notify_sms_enabled: boolean;
   step_gate_notify_email_enabled: boolean;
   step_gate_notify_sms_enabled: boolean;
+  verify_enabled: boolean;
+  verify_max_retries: number;
+  verify_runner_name: string;
+  verify_runner_model: string;
+  check_command_timeout_seconds: number;
 }>;
 
 export type ProbeCursorResult = {
@@ -188,6 +202,20 @@ function assertSettings(raw: unknown): AppSettings {
   const sseReplay = typeof o.sse_replay_enabled === "boolean"
     ? o.sse_replay_enabled
     : true;
+  const verifyEnabled =
+    typeof o.verify_enabled === "boolean" ? o.verify_enabled : true;
+  const verifyMaxRetries =
+    typeof o.verify_max_retries === "number"
+      ? o.verify_max_retries
+      : DEFAULT_VERIFY_MAX_RETRIES;
+  const verifyRunnerName =
+    typeof o.verify_runner_name === "string" ? o.verify_runner_name : "";
+  const verifyRunnerModel =
+    typeof o.verify_runner_model === "string" ? o.verify_runner_model : "";
+  const checkTimeout =
+    typeof o.check_command_timeout_seconds === "number"
+      ? o.check_command_timeout_seconds
+      : DEFAULT_CHECK_COMMAND_TIMEOUT_SECONDS;
   if (
     typeof worker !== "boolean" ||
     typeof runner !== "string" ||
@@ -217,6 +245,11 @@ function assertSettings(raw: unknown): AppSettings {
     display_timezone: tz,
     optimistic_mutations_enabled: optimistic,
     sse_replay_enabled: sseReplay,
+    verify_enabled: verifyEnabled,
+    verify_max_retries: verifyMaxRetries,
+    verify_runner_name: verifyRunnerName,
+    verify_runner_model: verifyRunnerModel,
+    check_command_timeout_seconds: checkTimeout,
   };
   if (typeof o.updated_at === "string") {
     out.updated_at = o.updated_at;

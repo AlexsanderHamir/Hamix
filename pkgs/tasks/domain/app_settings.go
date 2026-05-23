@@ -2,6 +2,8 @@ package domain
 
 import (
 	"time"
+
+	"gorm.io/datatypes"
 )
 
 // AppSettings is the singleton row (id=1) holding all UI-configurable
@@ -68,25 +70,30 @@ import (
 //     SSE replay is always active in the `/events` handler; this column
 //     is migrated to true on read for older databases.
 type AppSettings struct {
-	ID                          uint      `gorm:"primaryKey;autoIncrement:false;check:chk_app_settings_singleton,id = 1"`
-	WorkerEnabled               bool      `gorm:"not null;default:true"`
-	AgentPaused                 bool      `gorm:"not null;default:false"`
-	Runner                      string    `gorm:"not null;default:'cursor'"`
-	RepoRoot                    string    `gorm:"not null;default:''"`
-	CursorBin                   string    `gorm:"not null;default:''"`
-	CursorModel                 string    `gorm:"not null;default:''"`
-	MaxRunDurationSeconds       int       `gorm:"not null;default:0;check:chk_app_settings_max_run_duration_seconds,max_run_duration_seconds >= 0"`
-	AgentPickupDelaySeconds     int       `gorm:"not null;default:5;check:chk_app_settings_agent_pickup_delay_seconds,agent_pickup_delay_seconds >= 0"`
-	ProjectStepGateGraceSeconds int       `gorm:"column:project_step_gate_grace_seconds;not null;default:300;check:chk_app_settings_project_step_gate_grace_seconds,project_step_gate_grace_seconds >= 0 AND project_step_gate_grace_seconds <= 604800"`
-	ProjectGoalGateGraceSeconds int       `gorm:"column:project_goal_gate_grace_seconds;not null;default:300;check:chk_app_settings_project_goal_gate_grace_seconds,project_goal_gate_grace_seconds >= 0 AND project_goal_gate_grace_seconds <= 604800"`
-	GoalGateNotifyEmailEnabled  bool      `gorm:"column:goal_gate_notify_email_enabled;not null;default:false"`
-	GoalGateNotifySmsEnabled    bool      `gorm:"column:goal_gate_notify_sms_enabled;not null;default:false"`
-	StepGateNotifyEmailEnabled  bool      `gorm:"column:step_gate_notify_email_enabled;not null;default:false"`
-	StepGateNotifySmsEnabled    bool      `gorm:"column:step_gate_notify_sms_enabled;not null;default:false"`
-	DisplayTimezone             string    `gorm:"not null;default:''"`
-	OptimisticMutationsEnabled  bool      `gorm:"not null;default:true"`
-	SSEReplayEnabled            bool      `gorm:"not null;default:true"`
-	UpdatedAt                   time.Time `gorm:"not null"`
+	ID                          uint   `gorm:"primaryKey;autoIncrement:false;check:chk_app_settings_singleton,id = 1"`
+	WorkerEnabled               bool   `gorm:"not null;default:true"`
+	AgentPaused                 bool   `gorm:"not null;default:false"`
+	Runner                      string `gorm:"not null;default:'cursor'"`
+	RepoRoot                    string `gorm:"not null;default:''"`
+	CursorBin                   string `gorm:"not null;default:''"`
+	CursorModel                 string `gorm:"not null;default:''"`
+	MaxRunDurationSeconds       int    `gorm:"not null;default:0;check:chk_app_settings_max_run_duration_seconds,max_run_duration_seconds >= 0"`
+	AgentPickupDelaySeconds     int    `gorm:"not null;default:5;check:chk_app_settings_agent_pickup_delay_seconds,agent_pickup_delay_seconds >= 0"`
+	ProjectStepGateGraceSeconds int    `gorm:"column:project_step_gate_grace_seconds;not null;default:300;check:chk_app_settings_project_step_gate_grace_seconds,project_step_gate_grace_seconds >= 0 AND project_step_gate_grace_seconds <= 604800"`
+	ProjectGoalGateGraceSeconds int    `gorm:"column:project_goal_gate_grace_seconds;not null;default:300;check:chk_app_settings_project_goal_gate_grace_seconds,project_goal_gate_grace_seconds >= 0 AND project_goal_gate_grace_seconds <= 604800"`
+	GoalGateNotifyEmailEnabled  bool   `gorm:"column:goal_gate_notify_email_enabled;not null;default:false"`
+	GoalGateNotifySmsEnabled    bool   `gorm:"column:goal_gate_notify_sms_enabled;not null;default:false"`
+	StepGateNotifyEmailEnabled  bool   `gorm:"column:step_gate_notify_email_enabled;not null;default:false"`
+	StepGateNotifySmsEnabled    bool   `gorm:"column:step_gate_notify_sms_enabled;not null;default:false"`
+	DisplayTimezone             string `gorm:"not null;default:''"`
+	OptimisticMutationsEnabled  bool   `gorm:"not null;default:true"`
+	SSEReplayEnabled            bool   `gorm:"not null;default:true"`
+	// RunnerConfigs stores per-runner config blobs keyed by runner ID.
+	// Example: {"cursor":{"binary_path":"...","default_model":"opus"}}.
+	// Dual-written alongside the legacy CursorBin/CursorModel columns
+	// during the migration to pluggable runners.
+	RunnerConfigs datatypes.JSON `gorm:"column:runner_configs;type:jsonb;not null;default:'{}'"`
+	UpdatedAt     time.Time      `gorm:"not null"`
 }
 
 // AppSettingsRowID is the singleton primary key. Every read/write of

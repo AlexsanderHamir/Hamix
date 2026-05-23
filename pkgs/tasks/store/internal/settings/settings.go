@@ -2,6 +2,7 @@ package settings
 
 import (
 	"context"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"log/slog"
@@ -10,6 +11,7 @@ import (
 
 	"github.com/AlexsanderHamir/T2A/pkgs/tasks/domain"
 	"github.com/AlexsanderHamir/T2A/pkgs/tasks/store/internal/kernel"
+	"gorm.io/datatypes"
 	"gorm.io/gorm"
 	"gorm.io/gorm/clause"
 )
@@ -45,6 +47,11 @@ type Patch struct {
 	GoalGateNotifySmsEnabled    *bool
 	StepGateNotifyEmailEnabled  *bool
 	StepGateNotifySmsEnabled    *bool
+	// RunnerConfigs is the full replacement blob for the per-runner
+	// config map. When non-nil, it replaces the entire runner_configs
+	// column. The handler is responsible for merging deltas before
+	// passing the blob here.
+	RunnerConfigs *json.RawMessage
 }
 
 // IsEmpty reports whether the patch has nothing to apply. Used by the
@@ -69,7 +76,8 @@ func (p Patch) IsEmpty() bool {
 		p.GoalGateNotifyEmailEnabled == nil &&
 		p.GoalGateNotifySmsEnabled == nil &&
 		p.StepGateNotifyEmailEnabled == nil &&
-		p.StepGateNotifySmsEnabled == nil
+		p.StepGateNotifySmsEnabled == nil &&
+		p.RunnerConfigs == nil
 }
 
 // Get returns the singleton app_settings row, creating it with
@@ -276,4 +284,44 @@ func applyPatch(row *domain.AppSettings, patch Patch) {
 	if patch.StepGateNotifySmsEnabled != nil {
 		row.StepGateNotifySmsEnabled = *patch.StepGateNotifySmsEnabled
 	}
+	if patch.RunnerConfigs != nil {
+		row.RunnerConfigs = datatypes.JSON(*patch.RunnerConfigs)
+	}
+
+	dualWriteCursorToRunnerConfigs(row)
+}
+
+// dualWriteCursorToRunnerConfigs mirrors the legacy CursorBin and
+// CursorModel typed fields into RunnerConfigs["cursor"] so the new
+// generic path can read them. Called at the end of applyPatch so any
+// CursorBin/CursorModel changes are captured.
+func dualWriteCursorToRunnerConfigs(row *domain.AppSettings) {
+	slog.Debug("trace", "cmd", logCmd, "operation", "tasks.store.settings.dualWriteCursorToRunnerConfigs")
+	var configs map[string]json.RawMessage
+	if len(row.RunnerConfigs) > 0 {
+		_ = json.Unmarshal([]byte(row.RunnerConfigs), &configs)
+	}
+	if configs == nil {
+		configs = make(map[string]json.RawMessage)
+	}
+	cursorCfg := map[string]string{
+		"binary_path":   row.CursorBin,
+		"default_model": row.CursorModel,
+	}
+	raw, err := json.Marshal(cursorCfg)
+	if err != nil {
+		slog.Warn("dual-write cursor config marshal failed",
+			"cmd", logCmd, "operation", "tasks.store.settings.dualWriteCursorToRunnerConfigs",
+			"err", err)
+		return
+	}
+	configs["cursor"] = raw
+	merged, err := json.Marshal(configs)
+	if err != nil {
+		slog.Warn("dual-write runner configs marshal failed",
+			"cmd", logCmd, "operation", "tasks.store.settings.dualWriteCursorToRunnerConfigs",
+			"err", err)
+		return
+	}
+	row.RunnerConfigs = datatypes.JSON(merged)
 }

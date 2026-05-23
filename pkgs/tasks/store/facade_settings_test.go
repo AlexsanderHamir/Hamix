@@ -2,6 +2,7 @@ package store
 
 import (
 	"context"
+	"encoding/json"
 	"errors"
 	"sync"
 	"testing"
@@ -339,5 +340,79 @@ func TestSettingsPatch_IsEmpty(t *testing.T) {
 	}
 	if (SettingsPatch{RepoRoot: ptrString("")}).IsEmpty() {
 		t.Error("patch with one explicit field should report IsEmpty() == false")
+	}
+}
+
+// TestStore_UpdateSettings_dualWriteCursorToRunnerConfigs verifies that
+// patching CursorBin or CursorModel also updates the runner_configs
+// column with the corresponding cursor config blob.
+func TestStore_UpdateSettings_dualWriteCursorToRunnerConfigs(t *testing.T) {
+	s, ctx := newSettingsStore(t)
+	if _, err := s.GetSettings(ctx); err != nil {
+		t.Fatalf("seed: %v", err)
+	}
+
+	updated, err := s.UpdateSettings(ctx, SettingsPatch{
+		CursorBin:   ptrString("/usr/local/bin/cursor-agent"),
+		CursorModel: ptrString("opus-4.1"),
+	})
+	if err != nil {
+		t.Fatalf("update: %v", err)
+	}
+
+	var configs map[string]json.RawMessage
+	if err := json.Unmarshal([]byte(updated.RunnerConfigs), &configs); err != nil {
+		t.Fatalf("unmarshal runner_configs: %v (raw=%s)", err, updated.RunnerConfigs)
+	}
+	cursorRaw, ok := configs["cursor"]
+	if !ok {
+		t.Fatal("runner_configs missing 'cursor' key")
+	}
+	var cursorCfg map[string]string
+	if err := json.Unmarshal(cursorRaw, &cursorCfg); err != nil {
+		t.Fatalf("unmarshal cursor config: %v (raw=%s)", err, cursorRaw)
+	}
+	if cursorCfg["binary_path"] != "/usr/local/bin/cursor-agent" {
+		t.Errorf("binary_path = %q, want /usr/local/bin/cursor-agent", cursorCfg["binary_path"])
+	}
+	if cursorCfg["default_model"] != "opus-4.1" {
+		t.Errorf("default_model = %q, want opus-4.1", cursorCfg["default_model"])
+	}
+
+	persisted, err := s.GetSettings(ctx)
+	if err != nil {
+		t.Fatalf("re-get: %v", err)
+	}
+	var persistedConfigs map[string]json.RawMessage
+	if err := json.Unmarshal([]byte(persisted.RunnerConfigs), &persistedConfigs); err != nil {
+		t.Fatalf("unmarshal persisted runner_configs: %v", err)
+	}
+	if _, ok := persistedConfigs["cursor"]; !ok {
+		t.Error("persisted runner_configs missing 'cursor' key after re-read")
+	}
+}
+
+// TestStore_UpdateSettings_dualWriteRunnerConfigsPatchField verifies that
+// setting RunnerConfigs via the Patch field persists the blob.
+func TestStore_UpdateSettings_dualWriteRunnerConfigsPatchField(t *testing.T) {
+	s, ctx := newSettingsStore(t)
+	if _, err := s.GetSettings(ctx); err != nil {
+		t.Fatalf("seed: %v", err)
+	}
+
+	blob := json.RawMessage(`{"cursor":{"binary_path":"custom","default_model":"test"}}`)
+	updated, err := s.UpdateSettings(ctx, SettingsPatch{
+		RunnerConfigs: &blob,
+	})
+	if err != nil {
+		t.Fatalf("update: %v", err)
+	}
+
+	var configs map[string]json.RawMessage
+	if err := json.Unmarshal([]byte(updated.RunnerConfigs), &configs); err != nil {
+		t.Fatalf("unmarshal: %v", err)
+	}
+	if _, ok := configs["cursor"]; !ok {
+		t.Error("runner_configs missing 'cursor' key")
 	}
 }

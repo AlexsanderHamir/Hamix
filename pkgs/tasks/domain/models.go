@@ -27,6 +27,10 @@ type Task struct {
 	// CursorModel is forwarded to cursor-agent as --model when non-empty;
 	// empty means omit the flag for this task (same semantics as app settings).
 	CursorModel string `json:"cursor_model" gorm:"not null;default:''"`
+	// RunnerConfig stores per-task runner config overrides as a JSON blob.
+	// When non-empty, the worker merges this with the global runner config
+	// from app_settings.runner_configs for the matching runner ID.
+	RunnerConfig datatypes.JSON `json:"runner_config,omitempty" gorm:"column:runner_config;type:jsonb;not null;default:'{}'"`
 	// PickupNotBefore defers agent dequeue until this instant (UTC). NULL means
 	// eligible as soon as status is ready (legacy rows and zero-delay creates).
 	PickupNotBefore *time.Time `json:"pickup_not_before,omitempty" gorm:"index"`
@@ -85,7 +89,7 @@ type ProjectStep struct {
 	CreatedAt                 time.Time              `json:"created_at" gorm:"not null;index"`
 	UpdatedAt                 time.Time              `json:"updated_at" gorm:"not null;index"`
 
-	Project *Project    `json:"-" gorm:"foreignKey:ProjectID;references:ID;constraint:OnDelete:CASCADE"`
+	Project *Project     `json:"-" gorm:"foreignKey:ProjectID;references:ID;constraint:OnDelete:CASCADE"`
 	Goal    *ProjectGoal `json:"-" gorm:"foreignKey:GoalID;references:ID;constraint:OnDelete:SET NULL"`
 }
 

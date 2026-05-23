@@ -13,6 +13,7 @@ export function TaskHome({ app }: Props) {
   useDocumentTitle(undefined);
   const [searchParams, setSearchParams] = useSearchParams();
   const projects = useProjects({ includeArchived: false, limit: 100 });
+  const { openCreateModal, createModalOpen } = app;
 
   const createIntent = searchParams.get("create");
   const projectIntent = searchParams.get("project")?.trim() ?? "";
@@ -20,13 +21,13 @@ export function TaskHome({ app }: Props) {
 
   useEffect(() => {
     if (createIntent !== "1" || !projectIntent) return;
-    app.openCreateModal(
+    openCreateModal(
       stepIntent
         ? { projectID: projectIntent, projectStepID: stepIntent }
         : { projectID: projectIntent },
     );
     setSearchParams({}, { replace: true });
-  }, [app.openCreateModal, createIntent, projectIntent, stepIntent, setSearchParams]);
+  }, [openCreateModal, createIntent, projectIntent, stepIntent, setSearchParams]);
 
   /** Row-level busy state for the list only; excludes create/evaluate so modal typing does not re-render the table. */
   const listSaving = app.patchPending || app.deletePending;
@@ -78,13 +79,13 @@ export function TaskHome({ app }: Props) {
       <button
         type="button"
         className="task-home-new-task-btn"
-        onClick={() => app.openCreateModal()}
-        disabled={app.createModalOpen}
+        onClick={() => openCreateModal()}
+        disabled={createModalOpen}
       >
         New task
       </button>
     ),
-    [app.openCreateModal, app.createModalOpen],
+    [openCreateModal, createModalOpen],
   );
 
   return (

@@ -7,20 +7,14 @@ import { describe, expect, it, vi } from "vitest";
 import type { AppSettings, ListCursorModelsResult } from "@/api/settings";
 import { settingsQueryKeys } from "@/tasks/task-query/queryKeys";
 import { TASK_TEST_DEFAULTS } from "@/test/taskDefaults";
+import { APP_SETTINGS_DEFAULTS } from "@/test/settingsDefaults";
 import { TaskCreateModal } from "./TaskCreateModal";
 
 const testAppSettings: AppSettings = {
-  worker_enabled: false,
-  agent_paused: false,
-  repo_root: "",
-  cursor_bin: "",
+  ...APP_SETTINGS_DEFAULTS,
   ...TASK_TEST_DEFAULTS,
-  max_run_duration_seconds: 0,
-  agent_pickup_delay_seconds: 5,
-  project_step_gate_grace_seconds: 300,
-  display_timezone: "UTC",
+  worker_enabled: false,
   optimistic_mutations_enabled: false,
-  sse_replay_enabled: false,
 };
 
 const testCursorModelsEmpty: ListCursorModelsResult = {

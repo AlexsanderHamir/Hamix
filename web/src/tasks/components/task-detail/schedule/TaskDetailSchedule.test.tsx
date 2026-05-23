@@ -7,22 +7,18 @@ import type { AppSettings, ListCursorModelsResult } from "@/api/settings";
 import { settingsQueryKeys } from "@/tasks/task-query/queryKeys";
 import type { Status } from "@/types";
 import { TASK_TEST_DEFAULTS } from "@/test/taskDefaults";
+import { APP_SETTINGS_DEFAULTS } from "@/test/settingsDefaults";
 import { TaskDetailSchedule } from "./TaskDetailSchedule";
 
 type FetchInput = Parameters<typeof fetch>[0];
 
 const NY_SETTINGS: AppSettings = {
-  worker_enabled: false,
-  agent_paused: false,
-  repo_root: "",
-  cursor_bin: "",
+  ...APP_SETTINGS_DEFAULTS,
   ...TASK_TEST_DEFAULTS,
-  max_run_duration_seconds: 0,
+  worker_enabled: false,
   agent_pickup_delay_seconds: 0,
-  project_step_gate_grace_seconds: 300,
   display_timezone: "America/New_York",
   optimistic_mutations_enabled: false,
-  sse_replay_enabled: false,
 };
 
 const EMPTY_MODELS: ListCursorModelsResult = {

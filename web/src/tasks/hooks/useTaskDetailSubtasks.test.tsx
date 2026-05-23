@@ -6,6 +6,7 @@ import type { Task } from "@/types";
 import { ToastProvider } from "@/shared/toast";
 import { settingsQueryKeys, taskQueryKeys } from "../task-query";
 import type { AppSettings } from "@/api";
+import { APP_SETTINGS_DEFAULTS } from "@/test/settingsDefaults";
 import {
   __resetOptimisticVersionsForTests,
   shouldSuppressSSEFor,
@@ -58,18 +59,7 @@ function makeTask(overrides: Partial<Task> = {}): Task {
 
 function makeAppSettings(overrides: Partial<AppSettings> = {}): AppSettings {
   return {
-    worker_enabled: true,
-    agent_paused: false,
-    runner: "cursor",
-    repo_root: "",
-    cursor_bin: "",
-    cursor_model: "",
-    max_run_duration_seconds: 0,
-    agent_pickup_delay_seconds: 5,
-    project_step_gate_grace_seconds: 300,
-    display_timezone: "UTC",
-    optimistic_mutations_enabled: true,
-    sse_replay_enabled: false,
+    ...APP_SETTINGS_DEFAULTS,
     ...overrides,
   };
 }

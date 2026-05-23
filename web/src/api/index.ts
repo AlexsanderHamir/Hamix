@@ -5,5 +5,6 @@ export * from "./tasks";
 export * from "./cycles";
 export * from "./projects";
 export * from "./settings";
+export * from "./runners";
 export * from "./rum";
 export * from "./taskGraphMock";

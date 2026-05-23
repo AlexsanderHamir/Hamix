@@ -9,6 +9,7 @@ import { __resetOptimisticVersionsForTests, shouldSuppressSSEFor } from "./optim
 import { settingsQueryKeys } from "../task-query";
 import type { AppSettings } from "@/api/settings";
 import type { Task, TaskListResponse } from "@/types";
+import { APP_SETTINGS_DEFAULTS } from "@/test/settingsDefaults";
 
 vi.mock("../../api", () => ({
   patchTask: vi.fn(),
@@ -20,21 +21,7 @@ const mockedPatch = vi.mocked(patchTask);
 
 function makeAppSettings(overrides: Partial<AppSettings> = {}): AppSettings {
   return {
-    worker_enabled: true,
-    agent_paused: false,
-    runner: "cursor",
-    repo_root: "",
-    cursor_bin: "",
-    cursor_model: "",
-    max_run_duration_seconds: 0,
-    agent_pickup_delay_seconds: 5,
-    project_step_gate_grace_seconds: 300,
-    display_timezone: "UTC",
-    // Default ON in these tests because the tests describe the
-    // optimistic code path; when testing pessimistic behavior pass
-    // `{ optimistic_mutations_enabled: false }` explicitly.
-    optimistic_mutations_enabled: true,
-    sse_replay_enabled: false,
+    ...APP_SETTINGS_DEFAULTS,
     ...overrides,
   };
 }

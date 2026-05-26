@@ -40,13 +40,7 @@ type Patch struct {
 	// OptimisticMutationsEnabled / SSEReplayEnabled are realtime rollout flags.
 	// See domain.AppSettings for the per-flag semantics.
 	OptimisticMutationsEnabled  *bool
-	SSEReplayEnabled            *bool
-	ProjectStepGateGraceSeconds *int
-	ProjectGoalGateGraceSeconds *int
-	GoalGateNotifyEmailEnabled  *bool
-	GoalGateNotifySmsEnabled    *bool
-	StepGateNotifyEmailEnabled  *bool
-	StepGateNotifySmsEnabled    *bool
+	SSEReplayEnabled *bool
 	// RunnerConfigs is the full replacement blob for the per-runner
 	// config map. When non-nil, it replaces the entire runner_configs
 	// column. The handler is responsible for merging deltas before
@@ -76,12 +70,6 @@ func (p Patch) IsEmpty() bool {
 		p.DisplayTimezone == nil &&
 		p.OptimisticMutationsEnabled == nil &&
 		p.SSEReplayEnabled == nil &&
-		p.ProjectStepGateGraceSeconds == nil &&
-		p.ProjectGoalGateGraceSeconds == nil &&
-		p.GoalGateNotifyEmailEnabled == nil &&
-		p.GoalGateNotifySmsEnabled == nil &&
-		p.StepGateNotifyEmailEnabled == nil &&
-		p.StepGateNotifySmsEnabled == nil &&
 		p.RunnerConfigs == nil &&
 		p.VerifyEnabled == nil &&
 		p.VerifyMaxRetries == nil &&
@@ -206,18 +194,6 @@ func validatePatch(patch Patch) error {
 			return fmt.Errorf("%w: agent_pickup_delay_seconds must be between 0 and 604800", domain.ErrInvalidInput)
 		}
 	}
-	if patch.ProjectStepGateGraceSeconds != nil {
-		v := *patch.ProjectStepGateGraceSeconds
-		if v < 0 || v > 604800 {
-			return fmt.Errorf("%w: project_step_gate_grace_seconds must be between 0 and 604800", domain.ErrInvalidInput)
-		}
-	}
-	if patch.ProjectGoalGateGraceSeconds != nil {
-		v := *patch.ProjectGoalGateGraceSeconds
-		if v < 0 || v > 604800 {
-			return fmt.Errorf("%w: project_goal_gate_grace_seconds must be between 0 and 604800", domain.ErrInvalidInput)
-		}
-	}
 	if patch.CursorModel != nil && len(strings.TrimSpace(*patch.CursorModel)) > 256 {
 		return fmt.Errorf("%w: cursor_model too long (max 256)", domain.ErrInvalidInput)
 	}
@@ -290,24 +266,6 @@ func applyPatch(row *domain.AppSettings, patch Patch) {
 	}
 	if patch.SSEReplayEnabled != nil {
 		row.SSEReplayEnabled = *patch.SSEReplayEnabled
-	}
-	if patch.ProjectStepGateGraceSeconds != nil {
-		row.ProjectStepGateGraceSeconds = *patch.ProjectStepGateGraceSeconds
-	}
-	if patch.ProjectGoalGateGraceSeconds != nil {
-		row.ProjectGoalGateGraceSeconds = *patch.ProjectGoalGateGraceSeconds
-	}
-	if patch.GoalGateNotifyEmailEnabled != nil {
-		row.GoalGateNotifyEmailEnabled = *patch.GoalGateNotifyEmailEnabled
-	}
-	if patch.GoalGateNotifySmsEnabled != nil {
-		row.GoalGateNotifySmsEnabled = *patch.GoalGateNotifySmsEnabled
-	}
-	if patch.StepGateNotifyEmailEnabled != nil {
-		row.StepGateNotifyEmailEnabled = *patch.StepGateNotifyEmailEnabled
-	}
-	if patch.StepGateNotifySmsEnabled != nil {
-		row.StepGateNotifySmsEnabled = *patch.StepGateNotifySmsEnabled
 	}
 	if patch.RunnerConfigs != nil {
 		row.RunnerConfigs = datatypes.JSON(*patch.RunnerConfigs)

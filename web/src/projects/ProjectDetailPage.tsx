@@ -10,7 +10,6 @@ import { ProjectDeleteConfirmDialog } from "./ProjectDeleteConfirmDialog";
 import { ProjectSettingsPanel } from "./ProjectSettingsPanel";
 import { ProjectTasksPanel } from "./ProjectTasksPanel";
 import { ProjectContextEntryCard } from "./ProjectContextEntryCard";
-import { ProjectGoalsEntryCard } from "./ProjectGoalsEntryCard";
 import { projectQueryKeys } from "./queryKeys";
 
 export function ProjectDetailPage() {
@@ -114,8 +113,6 @@ export function ProjectDetailPage() {
           <ProjectSettingsPanel project={project.data} />
 
           <ProjectContextEntryCard projectId={projectId} />
-
-          <ProjectGoalsEntryCard projectId={projectId} />
 
           <ProjectTasksPanel projectId={projectId} />
         </div>

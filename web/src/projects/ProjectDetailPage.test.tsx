@@ -65,9 +65,6 @@ describe("ProjectDetailPage", () => {
       if (/\/projects\/[^/]+\/context\?/.test(u) || /\/projects\/[^/]+\/context$/.test(u)) {
         return jsonResponse({ items: [], edges: [], limit: 100 });
       }
-      if (/\/projects\/[^/]+\/goals(\?|$)/.test(u)) {
-        return jsonResponse({ goals: [] });
-      }
       return new Response(`unexpected fetch ${u}`, { status: 500 });
     });
   });
@@ -76,7 +73,7 @@ describe("ProjectDetailPage", () => {
     vi.restoreAllMocks();
   });
 
-  it("presents settings, context, goals, and linked work as distinct sections", async () => {
+  it("presents settings, context, and linked work as distinct sections", async () => {
     renderPage();
 
     expect(screen.getByRole("heading", { name: "Default project" })).toBeInTheDocument();
@@ -89,11 +86,8 @@ describe("ProjectDetailPage", () => {
       "href",
       "/projects/project-1/context",
     );
-    expect(screen.getByRole("link", { name: "Goals" })).toHaveAttribute(
-      "href",
-      "/projects/project-1/goals",
-    );
     expect(screen.getByRole("heading", { name: /Linked tasks/ })).toBeInTheDocument();
+    expect(screen.queryByRole("link", { name: "Goals" })).not.toBeInTheDocument();
     expect(screen.queryByRole("link", { name: "Steps" })).not.toBeInTheDocument();
   });
 

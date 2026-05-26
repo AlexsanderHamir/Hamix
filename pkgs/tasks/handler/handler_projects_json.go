@@ -1,9 +1,6 @@
 package handler
 
 import (
-	"log/slog"
-
-	"github.com/AlexsanderHamir/T2A/pkgs/tasks/calltrace"
 	"github.com/AlexsanderHamir/T2A/pkgs/tasks/domain"
 )
 
@@ -74,55 +71,4 @@ type projectContextEdgePatchJSON struct {
 
 func (p projectContextEdgePatchJSON) isEmpty() bool {
 	return p.Relation == nil && p.Strength == nil && p.Note == nil
-}
-
-type projectStepCreateJSON struct {
-	ID          string                        `json:"id"`
-	GoalID      string                        `json:"goal_id"`
-	Title       string                        `json:"title"`
-	Description string                        `json:"description"`
-	SortOrder   *int                          `json:"sort_order"`
-	Criteria    []domain.ProjectStepCriterion `json:"criteria"`
-}
-
-type projectGoalCreateJSON struct {
-	ID               string                        `json:"id"`
-	Title            string                        `json:"title"`
-	Description      string                        `json:"description"`
-	DependsOnGoalIDs []string                      `json:"depends_on_goal_ids"`
-	Criteria         []domain.ProjectGoalCriterion `json:"criteria"`
-}
-
-type projectGoalPatchJSON struct {
-	Title            *string                        `json:"title"`
-	Description      *string                        `json:"description"`
-	DependsOnGoalIDs *[]string                      `json:"depends_on_goal_ids"`
-	GateAction       *string                        `json:"gate_action"`
-	Criteria         *[]domain.ProjectGoalCriterion `json:"criteria"`
-}
-
-func (p projectGoalPatchJSON) isEmpty() bool {
-	slog.Debug("trace", "cmd", calltrace.LogCmd, "operation", "handler.projectGoalPatchJSON.isEmpty")
-	return p.Title == nil && p.Description == nil && p.DependsOnGoalIDs == nil && p.GateAction == nil && p.Criteria == nil
-}
-
-type projectGoalsListResponse struct {
-	Goals []domain.ProjectGoal `json:"goals"`
-}
-
-type projectStepPatchJSON struct {
-	Title       *string                        `json:"title"`
-	Description *string                        `json:"description"`
-	SortOrder   *int                           `json:"sort_order"`
-	GateAction  *string                        `json:"gate_action"`
-	Criteria    *[]domain.ProjectStepCriterion `json:"criteria"`
-}
-
-func (p projectStepPatchJSON) isEmpty() bool {
-	slog.Debug("trace", "cmd", calltrace.LogCmd, "operation", "handler.projectStepPatchJSON.isEmpty")
-	return p.Title == nil && p.Description == nil && p.SortOrder == nil && p.GateAction == nil && p.Criteria == nil
-}
-
-type projectStepsListResponse struct {
-	Steps []domain.ProjectStep `json:"steps"`
 }

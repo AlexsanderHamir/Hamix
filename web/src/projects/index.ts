@@ -1,9 +1,5 @@
 export { ProjectContextEntryCard } from "./ProjectContextEntryCard";
 export { ProjectDetailPage } from "./ProjectDetailPage";
-export { ProjectGoalsEntryCard } from "./ProjectGoalsEntryCard";
-export { ProjectGoalsPage } from "./ProjectGoalsPage";
-export { ProjectStepsPage } from "./ProjectStepsPage";
-export { ProjectStepSelect } from "./ProjectStepSelect";
 export { ProjectContextPage } from "./ProjectContextPage";
 export { ProjectListPage } from "./ProjectListPage";
 export { ProjectSelect } from "./ProjectSelect";
@@ -23,8 +19,6 @@ export { projectQueryKeys } from "./queryKeys";
 export {
   useProject,
   useProjectContext,
-  useProjectGoals,
-  useProjectSteps,
   useProjects,
 } from "./hooks";
 export {

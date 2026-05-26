@@ -19,11 +19,8 @@ import {
   ProjectDetailPage,
   ProjectContextPage,
   ProjectContextPicker,
-  ProjectGoalsPage,
   ProjectListPage,
   ProjectSelect,
-  ProjectStepSelect,
-  ProjectStepsPage,
   useProjectContextPromptBinding,
   useProjects,
 } from "@/projects";
@@ -179,16 +176,8 @@ function AppShell({ app }: { app: ReturnType<typeof useTasksApp> }) {
                     disabled={app.saving}
                     onChange={(projectId) => {
                       app.setEditProjectID(projectId);
-                      app.setEditProjectStepID("");
                       app.setEditProjectContextItemIDs([]);
                     }}
-                  />
-                  <ProjectStepSelect
-                    id="task-edit-project-step"
-                    projectId={app.editProjectID}
-                    value={app.editProjectStepID}
-                    disabled={app.saving}
-                    onChange={app.setEditProjectStepID}
                   />
                   <ProjectContextPicker
                     projectId={app.editProjectID}
@@ -243,8 +232,6 @@ export default function App() {
         <Route index element={<TaskHome app={app} />} />
         <Route path="drafts" element={<TaskDraftsPage app={app} />} />
         <Route path="projects" element={<ProjectListPage />} />
-        <Route path="projects/:projectId/goals" element={<ProjectGoalsPage />} />
-        <Route path="projects/:projectId/steps" element={<ProjectStepsPage app={app} />} />
         <Route path="projects/:projectId/context" element={<ProjectContextPage />} />
         <Route path="projects/:projectId" element={<ProjectDetailPage />} />
         <Route path="settings" element={<SettingsPage />} />

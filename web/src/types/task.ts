@@ -6,6 +6,9 @@ export type Status =
   | "done"
   | "failed";
 
+export type { GateCriterion, ProjectStepGateStatus, TaskGate } from "./gate";
+import type { TaskGate } from "./gate";
+
 export type Priority = "low" | "medium" | "high" | "critical";
 export type TaskType =
   | "general"
@@ -47,6 +50,10 @@ export type Task = {
   parent_id?: string;
   /** When true, checklist definitions come from the nearest ancestor that does not inherit. */
   checklist_inherit: boolean;
+  tags?: string[];
+  milestone?: string | null;
+  depends_on?: string[];
+  gate?: TaskGate | null;
   /** Nested subtasks from GET /tasks or GET /tasks/{id} (tree). */
   children?: Task[];
 };

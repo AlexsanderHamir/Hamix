@@ -63,17 +63,24 @@ describe("parseTaskChangeFrame", () => {
     expect(
       parseTaskChangeFrame('{"type":"task_deleted","id":"task-3"}'),
     ).toEqual({ kind: "task", taskId: "task-3" });
+    expect(
+      parseTaskChangeFrame('{"type":"task_gate_changed","id":"task-4"}'),
+    ).toEqual({ kind: "task", taskId: "task-4" });
+    expect(
+      parseTaskChangeFrame('{"type":"task_dependency_changed","id":"task-5"}'),
+    ).toEqual({ kind: "task", taskId: "task-5" });
+  });
+
+  it("collects task ids from gate and dependency SSE events", () => {
+    const s = new Set<string>();
+    collectTaskIdFromSSEData('{"type":"task_gate_changed","id":"g-1"}', s);
+    collectTaskIdFromSSEData('{"type":"task_dependency_changed","id":"d-1"}', s);
+    expect([...s].sort()).toEqual(["d-1", "g-1"]);
   });
 
   it("returns project frames for project and context changes", () => {
     expect(
       parseTaskChangeFrame('{"type":"project_updated","id":"project-1"}'),
-    ).toEqual({ kind: "project", projectId: "project-1" });
-    expect(
-      parseTaskChangeFrame('{"type":"project_step_updated","id":"project-1"}'),
-    ).toEqual({ kind: "project", projectId: "project-1" });
-    expect(
-      parseTaskChangeFrame('{"type":"project_goal_updated","id":"project-1"}'),
     ).toEqual({ kind: "project", projectId: "project-1" });
     expect(
       parseTaskChangeFrame(

@@ -23,6 +23,8 @@
     "mock:graph:use:500k": "node ./scripts/use-graph-mock.mjs --size=500k"
   },
   "dependencies": {
+    "@emnapi/core": "^1.10.0",
+    "@emnapi/runtime": "^1.10.0",
     "@floating-ui/dom": "^1.7.6",
     "@tanstack/react-query": "^5.100.5",
     "@tiptap/extension-placeholder": "^3.23.1",

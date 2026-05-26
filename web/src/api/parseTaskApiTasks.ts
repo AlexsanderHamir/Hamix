@@ -32,6 +32,7 @@ import {
   parseString,
   parseTaskType,
 } from "./parseTaskApiCore";
+import { parseTaskGate } from "./parseGate";
 
 /** Validates JSON from GET /tasks before the UI relies on it. */
 export function parseTaskListResponse(value: unknown): TaskListResponse {
@@ -397,6 +398,25 @@ function parseTaskAtDepth(value: unknown, depth: number): Task {
   const pid = parseOptionalParentId(value.parent_id, "parent_id");
   if (pid !== undefined) {
     base.parent_id = pid;
+  }
+  if (Array.isArray(value.tags)) {
+    base.tags = value.tags.map((raw, i) => parseNonEmptyString(raw, `tags[${i}]`));
+  } else if (value.tags === undefined) {
+    base.tags = [];
+  }
+  if (value.milestone !== undefined && value.milestone !== null) {
+    const m = parseString(value.milestone, "milestone").trim();
+    base.milestone = m === "" ? null : m;
+  }
+  if (Array.isArray(value.depends_on)) {
+    base.depends_on = value.depends_on.map((raw, i) =>
+      parseNonEmptyString(raw, `depends_on[${i}]`),
+    );
+  } else if (value.depends_on === undefined) {
+    base.depends_on = [];
+  }
+  if (value.gate !== undefined && value.gate !== null) {
+    base.gate = parseTaskGate(value.gate);
   }
   const rawChildren = value.children;
   if (rawChildren !== undefined) {

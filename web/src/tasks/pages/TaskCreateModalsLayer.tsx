@@ -1,7 +1,6 @@
 import {
   ProjectContextPicker,
   ProjectSelect,
-  ProjectStepSelect,
   useProjectContextPromptBinding,
   useProjects,
 } from "@/projects";
@@ -99,16 +98,8 @@ export function TaskCreateModalsLayer({ app }: Props) {
                 disabled={assignmentControlsDisabled}
                 onChange={(projectId) => {
                   app.setNewProjectID(projectId);
-                  app.setNewProjectStepID("");
                   app.setNewProjectContextItemIDs([]);
                 }}
-              />
-              <ProjectStepSelect
-                id="task-create-project-step"
-                projectId={app.newProjectID}
-                value={app.newProjectStepID}
-                disabled={assignmentControlsDisabled}
-                onChange={app.setNewProjectStepID}
               />
               <ProjectContextPicker
                 projectId={app.newProjectID}
@@ -121,6 +112,12 @@ export function TaskCreateModalsLayer({ app }: Props) {
           promptProjectContext={newPromptProjectContext ?? undefined}
           schedule={app.newSchedule}
           onScheduleChange={app.setNewSchedule}
+          tagsCsv={app.newTagsCsv}
+          milestone={app.newMilestone}
+          dependsOnCsv={app.newDependsOnCsv}
+          onTagsCsvChange={app.setNewTagsCsv}
+          onMilestoneChange={app.setNewMilestone}
+          onDependsOnCsvChange={app.setNewDependsOnCsv}
           appTimezone={appTimezone}
           onSaveDraft={() => void app.saveDraftNow()}
           onEvaluate={() => void app.evaluateDraftBeforeCreate()}

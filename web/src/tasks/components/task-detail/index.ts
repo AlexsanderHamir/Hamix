@@ -11,5 +11,7 @@ export * from "./updates/TaskDetailUpdatesSection";
 export * from "./edit/TaskEditForm";
 export * from "./edit/TaskChangeModelModal";
 export * from "./schedule/TaskDetailSchedule";
+export * from "./scheduling/TaskDependenciesPanel";
+export * from "./scheduling/TaskGatePanel";
 export * from "./updates/TaskUpdatesTimeline";
 export * from "./updates/TaskUpdatesTimelineEventList";

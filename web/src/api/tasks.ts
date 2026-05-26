@@ -16,7 +16,9 @@ import {
   type TaskListResponse,
   type TaskStatsResponse,
   type CycleFailuresListResponse,
+  type TaskGate,
 } from "@/types";
+import { parseNonEmptyString } from "./parseTaskApiCore";
 import {
   parseTask,
   parseTaskDraftDetail,
@@ -246,6 +248,10 @@ export async function createTask(input: {
    * See docs/SCHEDULING.md.
    */
   pickup_not_before?: string;
+  tags?: string[];
+  milestone?: string;
+  gate?: TaskGate;
+  depends_on?: string[];
 }): Promise<Task> {
   const body: Record<string, unknown> = {
     title: input.title,
@@ -288,6 +294,18 @@ export async function createTask(input: {
   }
   if (input.pickup_not_before !== undefined) {
     body.pickup_not_before = input.pickup_not_before;
+  }
+  if (input.tags !== undefined) {
+    body.tags = input.tags;
+  }
+  if (input.milestone !== undefined) {
+    body.milestone = input.milestone;
+  }
+  if (input.gate !== undefined) {
+    body.gate = input.gate;
+  }
+  if (input.depends_on !== undefined) {
+    body.depends_on = input.depends_on;
   }
   const res = await fetchWithTimeout("/tasks", {
     method: "POST",
@@ -421,6 +439,10 @@ export async function patchTask(
     pickup_not_before?: string | null;
     /** Per-task Cursor CLI model; empty string clears stored override. */
     cursor_model?: string;
+    tags?: string[];
+    milestone?: string | null;
+    gate?: TaskGate | null;
+    depends_on?: string[];
   },
 ): Promise<Task> {
   const tid = assertTaskPathId(id);
@@ -460,10 +482,89 @@ export async function patchTask(
   if (patch.cursor_model !== undefined) {
     body.cursor_model = patch.cursor_model;
   }
+  if (patch.tags !== undefined) {
+    body.tags = patch.tags;
+  }
+  if (patch.milestone !== undefined) {
+    body.milestone = patch.milestone;
+  }
+  if (patch.gate !== undefined) {
+    body.gate = patch.gate;
+  }
+  if (patch.depends_on !== undefined) {
+    body.depends_on = patch.depends_on;
+  }
   const res = await fetchWithTimeout(`/tasks/${encodeURIComponent(tid)}`, {
     method: "PATCH",
     headers: jsonHeaders,
     body: JSON.stringify(body),
+  });
+  if (!res.ok) throw new Error(await readError(res));
+  const raw: unknown = await res.json();
+  return parseTask(raw);
+}
+
+export async function listTaskDependencies(
+  taskId: string,
+  options?: { signal?: AbortSignal },
+): Promise<string[]> {
+  const tid = assertTaskPathId(taskId);
+  const res = await fetchWithTimeout(
+    `/tasks/${encodeURIComponent(tid)}/dependencies`,
+    { headers: { Accept: "application/json" }, signal: options?.signal },
+  );
+  if (!res.ok) throw new Error(await readError(res));
+  const raw = (await res.json()) as { depends_on?: unknown };
+  if (!Array.isArray(raw.depends_on)) {
+    return [];
+  }
+  return raw.depends_on.map((id, i) => parseNonEmptyString(id, `depends_on[${i}]`));
+}
+
+export async function addTaskDependency(
+  taskId: string,
+  dependsOnTaskId: string,
+): Promise<string[]> {
+  const tid = assertTaskPathId(taskId);
+  const dep = assertTaskPathId(dependsOnTaskId, "depends_on_task_id");
+  const res = await fetchWithTimeout(
+    `/tasks/${encodeURIComponent(tid)}/dependencies`,
+    {
+      method: "POST",
+      headers: jsonHeaders,
+      body: JSON.stringify({ depends_on_task_id: dep }),
+    },
+  );
+  if (!res.ok) throw new Error(await readError(res));
+  const raw = (await res.json()) as { depends_on?: unknown };
+  if (!Array.isArray(raw.depends_on)) {
+    return [];
+  }
+  return raw.depends_on.map((id, i) => parseNonEmptyString(id, `depends_on[${i}]`));
+}
+
+export async function removeTaskDependency(
+  taskId: string,
+  dependsOnTaskId: string,
+): Promise<void> {
+  const tid = assertTaskPathId(taskId);
+  const dep = assertTaskPathId(dependsOnTaskId, "depends_on_task_id");
+  const res = await fetchWithTimeout(
+    `/tasks/${encodeURIComponent(tid)}/dependencies/${encodeURIComponent(dep)}`,
+    { method: "DELETE" },
+  );
+  if (!res.ok) throw new Error(await readError(res));
+}
+
+export async function patchTaskGate(
+  taskId: string,
+  action: "release" | "hold" | "clear_hold",
+): Promise<Task> {
+  const tid = assertTaskPathId(taskId);
+  const res = await fetchWithTimeout(`/tasks/${encodeURIComponent(tid)}/gate`, {
+    method: "PATCH",
+    headers: jsonHeaders,
+    body: JSON.stringify({ action }),
   });
   if (!res.ok) throw new Error(await readError(res));
   const raw: unknown = await res.json();

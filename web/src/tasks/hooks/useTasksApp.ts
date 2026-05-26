@@ -44,7 +44,6 @@ export function useTasksApp({ sseLive }: UseTasksAppOptions) {
   const [editStatus, setEditStatus] = useState<Status>(DEFAULT_NEW_TASK_STATUS);
   const [editChecklistInherit, setEditChecklistInherit] = useState(false);
   const [editProjectID, setEditProjectID] = useState(DEFAULT_PROJECT_ID);
-  const [editProjectStepID, setEditProjectStepID] = useState("");
   const [editProjectContextItemIDs, setEditProjectContextItemIDs] = useState<string[]>([]);
   const [editCursorModel, setEditCursorModel] = useState("");
   /** Quick-edit modal for `cursor_model` only (e.g. task detail model configuration row). */
@@ -182,7 +181,6 @@ export function useTasksApp({ sseLive }: UseTasksAppOptions) {
     setEditStatus(t.status);
     setEditChecklistInherit(t.checklist_inherit === true);
     setEditProjectID(t.project_id || DEFAULT_PROJECT_ID);
-    setEditProjectStepID(t.project_step_id?.trim() ?? "");
     setEditProjectContextItemIDs(t.project_context_item_ids ?? []);
     setEditCursorModel(t.cursor_model ?? "");
     setEditTitleRequiredError(null);
@@ -230,16 +228,6 @@ export function useTasksApp({ sseLive }: UseTasksAppOptions) {
       return;
     }
     setEditTitleRequiredError(null);
-    const nextStep = editProjectStepID.trim();
-    const prevStep = editing.project_step_id?.trim() ?? "";
-    let project_step_id: string | null | undefined;
-    if (nextStep === prevStep) {
-      project_step_id = undefined;
-    } else if (nextStep === "") {
-      project_step_id = prevStep === "" ? undefined : null;
-    } else {
-      project_step_id = nextStep;
-    }
     runPatch({
       id: editing.id,
       title: editTitle.trim(),
@@ -249,7 +237,6 @@ export function useTasksApp({ sseLive }: UseTasksAppOptions) {
       task_type: editTaskType,
       checklist_inherit: editChecklistInherit,
       project_id: editProjectID.trim() || null,
-      project_step_id,
       project_context_item_ids: editProjectContextItemIDs,
       cursor_model: editCursorModel.trim(),
     });
@@ -300,8 +287,6 @@ export function useTasksApp({ sseLive }: UseTasksAppOptions) {
     setEditChecklistInherit,
     editProjectID,
     setEditProjectID,
-    editProjectStepID,
-    setEditProjectStepID,
     editProjectContextItemIDs,
     setEditProjectContextItemIDs,
     editCursorModel,

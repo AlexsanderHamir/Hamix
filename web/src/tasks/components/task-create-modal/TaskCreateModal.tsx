@@ -13,6 +13,7 @@ import { TaskCreateModalNestedSubtaskModal } from "./nested/TaskCreateModalNeste
 import { useTaskCreateModalNestedDraft } from "./nested/useTaskCreateModalNestedDraft";
 import { TaskCreateModalFooterActions } from "./fields/TaskCreateModalFooterActions";
 import { TaskCreateModalAgentSection } from "./fields/TaskCreateModalAgentSection";
+import { TaskCreateModalSchedulingFields } from "./fields/TaskCreateModalSchedulingFields";
 import { SchedulePicker } from "@/shared/time/SchedulePicker";
 import {
   TaskCreateModalEvaluationSummary,
@@ -75,6 +76,12 @@ type Props = {
    */
   schedule: string | null;
   onScheduleChange: (next: string | null) => void;
+  tagsCsv: string;
+  milestone: string;
+  dependsOnCsv: string;
+  onTagsCsvChange: (value: string) => void;
+  onMilestoneChange: (value: string) => void;
+  onDependsOnCsvChange: (value: string) => void;
   /**
    * IANA timezone the picker should render its wall-clock literal
    * + caption in. Forwarded as a prop (rather than read from a hook
@@ -152,6 +159,12 @@ export function TaskCreateModal({
   promptProjectContext,
   schedule,
   onScheduleChange,
+  tagsCsv,
+  milestone,
+  dependsOnCsv,
+  onTagsCsvChange,
+  onMilestoneChange,
+  onDependsOnCsvChange,
   appTimezone,
   onSaveDraft,
   onEvaluate,
@@ -291,6 +304,16 @@ export function TaskCreateModal({
                 onRemovePendingSubtask={onRemovePendingSubtask}
               />
             ) : null}
+
+            <TaskCreateModalSchedulingFields
+              disabled={disabled}
+              tagsCsv={tagsCsv}
+              milestone={milestone}
+              dependsOnCsv={dependsOnCsv}
+              onTagsCsvChange={onTagsCsvChange}
+              onMilestoneChange={onMilestoneChange}
+              onDependsOnCsvChange={onDependsOnCsvChange}
+            />
 
             <SchedulePicker
               value={schedule}

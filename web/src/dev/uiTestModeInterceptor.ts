@@ -2,10 +2,8 @@ import { isUiTestMode } from "./uiTestMode";
 import {
   demoContextWire,
   demoCycleFailuresWire,
-  demoGoalsWire,
   demoProjectWire,
   demoProjectsListWire,
-  demoStepsWire,
   demoTaskChecklistWire,
   demoTaskCyclesListWire,
   demoTaskDraftsWire,
@@ -70,20 +68,6 @@ export function interceptUiTestModeFetch(
     const id = decodeURIComponent(ctx[1] ?? "");
     if (!isDemoProjectId(id)) return null;
     return jsonResponse(demoContextWire(id));
-  }
-
-  const goals = path.match(/^\/projects\/([^/]+)\/goals$/);
-  if (goals) {
-    const id = decodeURIComponent(goals[1] ?? "");
-    if (!isDemoProjectId(id)) return null;
-    return jsonResponse(demoGoalsWire(id));
-  }
-
-  const steps = path.match(/^\/projects\/([^/]+)\/steps$/);
-  if (steps) {
-    const id = decodeURIComponent(steps[1] ?? "");
-    if (!isDemoProjectId(id)) return null;
-    return jsonResponse(demoStepsWire(id));
   }
 
   if (path === "/tasks/stats") {

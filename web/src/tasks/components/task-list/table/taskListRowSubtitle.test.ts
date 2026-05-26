@@ -2,23 +2,11 @@ import { describe, expect, it } from "vitest";
 import { statusListLabel, taskListRowSubtitle } from "./taskListRowSubtitle";
 
 describe("taskListRowSubtitle", () => {
-  it("uses step hint when project is shown in its own column", () => {
-    expect(
-      taskListRowSubtitle({
-        depth: 0,
-        hasProject: true,
-        projectStepId: "step-1",
-        promptPreview: "ignored",
-      }),
-    ).toBe("Step");
-  });
-
   it("omits subtitle when project column carries context", () => {
     expect(
       taskListRowSubtitle({
         depth: 0,
         hasProject: true,
-        projectStepId: undefined,
         promptPreview: "Some prompt",
       }),
     ).toBeUndefined();
@@ -29,7 +17,6 @@ describe("taskListRowSubtitle", () => {
       taskListRowSubtitle({
         depth: 1,
         hasProject: true,
-        projectStepId: undefined,
         promptPreview: "",
       }),
     ).toBe("Subtask");
@@ -40,7 +27,6 @@ describe("taskListRowSubtitle", () => {
       taskListRowSubtitle({
         depth: 1,
         hasProject: false,
-        projectStepId: undefined,
         promptPreview: "  Do the thing  ",
       }),
     ).toBe("Subtask · Do the thing");
@@ -51,7 +37,6 @@ describe("taskListRowSubtitle", () => {
       taskListRowSubtitle({
         depth: 0,
         hasProject: false,
-        projectStepId: undefined,
         promptPreview: "   ",
       }),
     ).toBeUndefined();

@@ -282,7 +282,6 @@ export function TaskListDataTable({
               const titleSubtitle = taskListRowSubtitle({
                 depth: t.depth,
                 hasProject,
-                projectStepId: t.project_step_id,
                 promptPreview,
               });
               const rowSelected =

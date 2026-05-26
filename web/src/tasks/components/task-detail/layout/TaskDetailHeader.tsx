@@ -9,7 +9,7 @@ import {
 
 type TaskDetailHeaderTask = Pick<
   Task,
-  "title" | "status" | "priority" | "runner" | "cursor_model"
+  "title" | "status" | "priority" | "runner" | "cursor_model" | "tags" | "milestone"
 >;
 
 type Props = {
@@ -74,6 +74,23 @@ export function TaskDetailHeader({ task }: Props) {
           >
             {formatTaskRuntime(task)}
           </span>
+          {(task.milestone ?? "").trim() !== "" ? (
+            <span
+              className="cell-pill task-detail-milestone-chip"
+              data-testid="task-detail-milestone"
+            >
+              {task.milestone}
+            </span>
+          ) : null}
+          {(task.tags ?? []).map((tag) => (
+            <span
+              key={tag}
+              className="cell-pill task-detail-tag-chip"
+              data-testid="task-detail-tag"
+            >
+              {tag}
+            </span>
+          ))}
         </div>
       </header>
     </>

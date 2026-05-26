@@ -270,14 +270,12 @@ describe("useTaskCreateFlow", () => {
     act(() => {
       result.current.openCreateModal({
         projectID: "project-locked",
-        projectStepID: "step-locked",
         lockProjectAssignment: true,
       });
     });
 
     expect(result.current.createModalOpen).toBe(true);
     expect(result.current.newProjectID).toBe("project-locked");
-    expect(result.current.newProjectStepID).toBe("step-locked");
     expect(result.current.createModalAssignmentLocked).toBe(true);
   });
 });

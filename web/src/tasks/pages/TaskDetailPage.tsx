@@ -1,4 +1,5 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { useMemo } from "react";
 import { Link, useNavigate, useParams } from "react-router-dom";
 import { getTask, listChecklist, patchTask } from "@/api";
 import { useDocumentTitle } from "@/shared/useDocumentTitle";
@@ -25,8 +26,10 @@ import {
   TaskDetailHeader,
   TaskDetailPromptSection,
   TaskDetailSchedule,
+  TaskDependenciesPanel,
   TaskDetailSubtasksHead,
   TaskDetailUpdatesSection,
+  TaskGatePanel,
 } from "../components/task-detail";
 import { sanitizePromptHtml } from "../task-prompt";
 import { taskDescendantCount, userAttention } from "../task-display";
@@ -35,8 +38,9 @@ import { useTaskDetailChecklist } from "../hooks/useTaskDetailChecklist";
 import { useTaskDetailDeleteNavigate } from "../hooks/useTaskDetailDeleteNavigate";
 import { useTaskDetailEvents } from "../hooks/useTaskDetailEvents";
 import { useTaskDetailSubtasks } from "../hooks/useTaskDetailSubtasks";
-import { taskQueryKeys } from "../task-query";
+import { resolveTaskDependencySummaries, taskQueryKeys } from "../task-query";
 import { useTasksApp } from "../hooks/useTasksApp";
+import { useTaskDetailScheduling } from "../hooks/useTaskDetailScheduling";
 
 type Props = {
   app: ReturnType<typeof useTasksApp>;
@@ -114,6 +118,7 @@ export function TaskDetailPage({ app }: Props) {
   });
 
   const toast = useOptionalToast();
+  const scheduling = useTaskDetailScheduling(taskId);
   const { optimisticMutationsEnabled } = useRolloutFlags();
   const requeueMutation = useMutation<
     unknown,
@@ -178,6 +183,15 @@ export function TaskDetailPage({ app }: Props) {
       ? taskQuery.data.title.trim() || "Untitled task"
       : null;
   useDocumentTitle(taskDocTitle);
+
+  const dependencySummaries = useMemo(
+    () =>
+      resolveTaskDependencySummaries(
+        queryClient,
+        taskQuery.data?.depends_on ?? [],
+      ),
+    [queryClient, taskQuery.data?.depends_on],
+  );
 
   if (!taskId) {
     return (
@@ -259,6 +273,35 @@ export function TaskDetailPage({ app }: Props) {
       ) : null}
 
       <TaskDetailSchedule task={task} />
+
+      <TaskDependenciesPanel
+        taskId={task.id}
+        dependencies={dependencySummaries}
+        editable
+        addValue={scheduling.depAddValue}
+        onAddValueChange={scheduling.setDepAddValue}
+        onAdd={() => scheduling.addDepMutation.mutate()}
+        onRemove={(depId) => scheduling.removeDepMutation.mutate(depId)}
+        addPending={scheduling.addDepMutation.isPending}
+        removePendingId={
+          scheduling.removeDepMutation.isPending
+            ? scheduling.removeDepMutation.variables ?? null
+            : null
+        }
+        error={
+          scheduling.addDepMutation.error || scheduling.removeDepMutation.error
+            ? scheduling.schedulingError
+            : null
+        }
+      />
+
+      <TaskGatePanel
+        gate={task.gate}
+        editable
+        onAction={(action) => scheduling.gateMutation.mutate(action)}
+        actionPending={scheduling.gateMutation.isPending}
+        error={scheduling.gateMutation.error ? scheduling.schedulingError : null}
+      />
 
       <div className="task-detail-section" id="task-detail-subtasks">
         <TaskDetailSubtasksHead

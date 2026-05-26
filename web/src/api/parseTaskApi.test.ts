@@ -26,6 +26,8 @@ const validTask = {
   priority: "medium",
   task_type: "general",
   checklist_inherit: false,
+  tags: [] as string[],
+  depends_on: [] as string[],
   ...TASK_TEST_DEFAULTS,
 };
 
@@ -76,6 +78,55 @@ describe("parseTask", () => {
     expect(parseTask(deepTask(maxTaskParseDepth))).toBeDefined();
   });
 
+  it("parses tags, milestone, depends_on, and gate", () => {
+    const parsed = parseTask({
+      ...validTask,
+      tags: ["backend", "api"],
+      milestone: "M1",
+      depends_on: ["dep-1"],
+      gate: {
+        kind: "manual_approval",
+        status: "pending_release",
+        hold: false,
+        criteria: [
+          { id: "c1", text: "Review", done: false, sort_order: 0 },
+        ],
+      },
+    });
+    expect(parsed.tags).toEqual(["backend", "api"]);
+    expect(parsed.milestone).toBe("M1");
+    expect(parsed.depends_on).toEqual(["dep-1"]);
+    expect(parsed.gate).toEqual({
+      kind: "manual_approval",
+      status: "pending_release",
+      hold: false,
+      criteria: [
+        { id: "c1", text: "Review", done: false, sort_order: 0 },
+      ],
+    });
+  });
+
+  it("defaults tags and depends_on to empty arrays when omitted", () => {
+    const parsed = parseTask(validTask);
+    expect(parsed.tags).toEqual([]);
+    expect(parsed.depends_on).toEqual([]);
+    expect(parsed.gate).toBeUndefined();
+    expect(parsed.milestone).toBeUndefined();
+  });
+
+  it("rejects invalid gate status", () => {
+    expect(() =>
+      parseTask({
+        ...validTask,
+        gate: {
+          kind: "manual_approval",
+          status: "nope",
+          hold: false,
+        },
+      }),
+    ).toThrow(/gate status/);
+  });
+
   it("parses nested children and checklist_inherit", () => {
     expect(
       parseTask({
@@ -101,25 +152,19 @@ describe("parseTask", () => {
         ],
       }),
     ).toEqual({
+      ...validTask,
       id: "root",
       title: "R",
-      initial_prompt: "",
-      status: "ready",
-      priority: "medium",
-      task_type: "general",
-      checklist_inherit: false,
-      ...TASK_TEST_DEFAULTS,
       children: [
         {
+          ...validTask,
           id: "c1",
           title: "C",
-          initial_prompt: "",
           status: "running",
           priority: "low",
           task_type: "bug_fix",
           checklist_inherit: true,
           parent_id: "root",
-          ...TASK_TEST_DEFAULTS,
         },
       ],
     });

@@ -17,17 +17,12 @@ export function TaskHome({ app }: Props) {
 
   const createIntent = searchParams.get("create");
   const projectIntent = searchParams.get("project")?.trim() ?? "";
-  const stepIntent = searchParams.get("step")?.trim() ?? "";
 
   useEffect(() => {
     if (createIntent !== "1" || !projectIntent) return;
-    openCreateModal(
-      stepIntent
-        ? { projectID: projectIntent, projectStepID: stepIntent }
-        : { projectID: projectIntent },
-    );
+    openCreateModal({ projectID: projectIntent });
     setSearchParams({}, { replace: true });
-  }, [openCreateModal, createIntent, projectIntent, stepIntent, setSearchParams]);
+  }, [openCreateModal, createIntent, projectIntent, setSearchParams]);
 
   /** Row-level busy state for the list only; excludes create/evaluate so modal typing does not re-render the table. */
   const listSaving = app.patchPending || app.deletePending;

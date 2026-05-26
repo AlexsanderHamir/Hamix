@@ -75,6 +75,7 @@ func Migrate(ctx context.Context, db *gorm.DB) error {
 		&domain.ProjectGoal{},
 		&domain.ProjectStep{},
 		&domain.Task{},
+		&domain.TaskDependency{},
 		&domain.TaskEvent{},
 		&domain.TaskChecklistItem{},
 		&domain.TaskChecklistCompletion{},

@@ -14,12 +14,17 @@ type Task struct {
 	Priority      Priority `json:"priority" gorm:"not null;check:chk_tasks_priority,priority IN ('low','medium','high','critical')"`
 	TaskType      TaskType `json:"task_type" gorm:"not null;default:general;check:chk_tasks_task_type,task_type IN ('general','bug_fix','feature','refactor','docs')"`
 	ProjectID     *string  `json:"project_id,omitempty" gorm:"index"`
-	// ProjectStepID optionally binds the task to a project step (same project as ProjectID).
-	ProjectStepID *string `json:"project_step_id,omitempty" gorm:"index"`
+	// ProjectStepID is a legacy column retained until project_steps is dropped.
+	ProjectStepID *string `json:"-" gorm:"index"`
 	// ProjectContextItemIDs is the user-selected subset of project context to pass to agent runs.
 	ProjectContextItemIDs []string `json:"project_context_item_ids,omitempty" gorm:"column:project_context_item_ids;serializer:json;type:jsonb;not null;default:'[]'"`
 	ParentID              *string  `json:"parent_id,omitempty" gorm:"index"`
+	Tags                  []string `json:"tags,omitempty" gorm:"column:tags;serializer:json;type:jsonb;not null;default:'[]'"`
+	Milestone             *string  `json:"milestone,omitempty" gorm:"index"`
+	Gate                  *TaskGate `json:"gate,omitempty" gorm:"column:gate;serializer:json;type:jsonb"`
 	ChecklistInherit      bool     `json:"checklist_inherit" gorm:"not null;default:false"`
+	// DependsOn is hydrated from task_dependencies on read; not a GORM column.
+	DependsOn []string `json:"depends_on,omitempty" gorm:"-"`
 	// Runner is the agent runner id for this task (e.g. "cursor"). Set at
 	// create time from the request or app defaults; must match the worker's
 	// configured runner when the task runs.
@@ -63,7 +68,7 @@ type ProjectGoal struct {
 	GateStatus                ProjectStepGateStatus  `json:"gate_status" gorm:"not null;index;default:'locked';check:chk_project_goals_gate_status,gate_status IN ('locked','active','pending_release','released')"`
 	GateHold                  bool                   `json:"gate_hold" gorm:"not null;default:false"`
 	PendingReleaseDeadlineUTC *time.Time             `json:"pending_release_deadline,omitempty" gorm:"column:pending_release_deadline_utc;index"`
-	Criteria                  []ProjectGoalCriterion `json:"criteria" gorm:"serializer:json;type:jsonb;not null;default:'[]'"`
+	Criteria                  []GateCriterion `json:"criteria" gorm:"serializer:json;type:jsonb;not null;default:'[]'"`
 	CreatedAt                 time.Time              `json:"created_at" gorm:"not null;index"`
 	UpdatedAt                 time.Time              `json:"updated_at" gorm:"not null;index"`
 
@@ -85,7 +90,7 @@ type ProjectStep struct {
 	GateStatus                ProjectStepGateStatus  `json:"gate_status" gorm:"not null;index;default:'locked';check:chk_project_steps_gate_status,gate_status IN ('locked','active','pending_release','released')"`
 	GateHold                  bool                   `json:"gate_hold" gorm:"not null;default:false"`
 	PendingReleaseDeadlineUTC *time.Time             `json:"pending_release_deadline,omitempty" gorm:"column:pending_release_deadline_utc;index"`
-	Criteria                  []ProjectStepCriterion `json:"criteria" gorm:"serializer:json;type:jsonb;not null;default:'[]'"`
+	Criteria                  []GateCriterion `json:"criteria" gorm:"serializer:json;type:jsonb;not null;default:'[]'"`
 	CreatedAt                 time.Time              `json:"created_at" gorm:"not null;index"`
 	UpdatedAt                 time.Time              `json:"updated_at" gorm:"not null;index"`
 
@@ -157,6 +162,18 @@ type TaskContextSnapshot struct {
 
 // TableName: see TaskChecklistItem.TableName for skip-list rationale.
 func (TaskContextSnapshot) TableName() string { return "task_context_snapshots" }
+
+// TaskDependency is a directed edge: task_id depends on depends_on_task_id completing first.
+type TaskDependency struct {
+	TaskID          string    `json:"task_id" gorm:"primaryKey"`
+	DependsOnTaskID string    `json:"depends_on_task_id" gorm:"primaryKey;index"`
+	CreatedAt       time.Time `json:"created_at" gorm:"not null;index"`
+
+	Task          *Task `json:"-" gorm:"foreignKey:TaskID;references:ID;constraint:OnDelete:CASCADE"`
+	DependsOnTask *Task `json:"-" gorm:"foreignKey:DependsOnTaskID;references:ID;constraint:OnDelete:CASCADE"`
+}
+
+func (TaskDependency) TableName() string { return "task_dependencies" }
 
 // TaskChecklistItem is a definition row owned by a task that does not use checklist_inherit.
 type TaskChecklistItem struct {

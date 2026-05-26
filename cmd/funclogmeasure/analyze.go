@@ -174,8 +174,7 @@ var skipSlogRequirement = map[string]struct{}{
 	"github.com/AlexsanderHamir/T2A/pkgs/tasks/domain\tTerminalCycleStatus":   {},
 	"github.com/AlexsanderHamir/T2A/pkgs/tasks/domain\tTerminalPhaseStatus":   {},
 	"github.com/AlexsanderHamir/T2A/pkgs/tasks/domain\tDefaultAppSettings":    {},
-	"github.com/AlexsanderHamir/T2A/pkgs/tasks/domain\tStepCriteriaAllDone":   {},
-	"github.com/AlexsanderHamir/T2A/pkgs/tasks/domain\tGoalCriteriaAllDone":   {},
+	"github.com/AlexsanderHamir/T2A/pkgs/tasks/domain\tGateCriteriaAllDone": {},
 	"github.com/AlexsanderHamir/T2A/pkgs/tasks/domain\tProjectGoal.TableName": {},
 
 	// pkgs/tasks/calltrace: thin orchestration / pure-context helpers that
@@ -331,6 +330,7 @@ var skipSlogRequirement = map[string]struct{}{
 	"github.com/AlexsanderHamir/T2A/pkgs/tasks/domain\tProjectStep.TableName":                        {},
 	"github.com/AlexsanderHamir/T2A/pkgs/tasks/domain\tProjectContextEdge.TableName":                 {},
 	"github.com/AlexsanderHamir/T2A/pkgs/tasks/domain\tTaskContextSnapshot.TableName":                {},
+	"github.com/AlexsanderHamir/T2A/pkgs/tasks/domain\tTaskDependency.TableName":                    {},
 	"github.com/AlexsanderHamir/T2A/pkgs/tasks/domain\tDefaultProject":                               {},
 	"github.com/AlexsanderHamir/T2A/pkgs/tasks/store/internal/projects\tvalidateContextEdgeFields":   {},
 	"github.com/AlexsanderHamir/T2A/pkgs/tasks/store/internal/projects\tvalidateContextEdgePatch":    {},

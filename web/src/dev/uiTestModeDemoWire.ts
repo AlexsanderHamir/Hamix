@@ -32,15 +32,17 @@ function task(
     runner: "cursor",
     cursor_model: "",
     checklist_inherit: true,
+    tags: [],
+    depends_on: [],
     ...opt,
   };
 }
 
-const S_DISC = "a0000001-0000-4000-8000-000000000001";
-const S_JWT = "a0000002-0000-4000-8000-000000000002";
-const S_SESS = "a0000003-0000-4000-8000-000000000003";
-const S_TEST = "a0000004-0000-4000-8000-000000000004";
-const S_REL = "a0000005-0000-4000-8000-000000000005";
+const M_JWT = "JWT rollout";
+const M_SESS = "Session hardening";
+const M_DISC = "Discovery";
+const M_TEST = "Load testing";
+const M_REL = "Release";
 
 const C1 = "c1111111-1111-4111-8111-111111111111";
 const C2 = "c2222222-2222-4222-8222-222222222222";
@@ -61,30 +63,32 @@ function reg(id: string) {
 const ROOT_TASKS: Record<string, unknown>[] = [
   task(reg("f0000001-0000-4000-8000-000000000001"), "Auth refactor rollout", "running", "high", {
     project_id: DEFAULT_PROJECT_ID,
-    project_step_id: S_JWT,
+    milestone: M_JWT,
+    tags: ["auth"],
   }),
   task(reg("f0000002-0000-4000-8000-000000000002"), "Session invalidation sweep", "ready", "medium", {
     project_id: DEFAULT_PROJECT_ID,
-    project_step_id: S_SESS,
+    milestone: M_SESS,
+    tags: ["auth"],
   }),
   task(reg("f0000003-0000-4000-8000-000000000003"), "OAuth consent copy review", "blocked", "low", {
     project_id: DEFAULT_PROJECT_ID,
-    project_step_id: S_DISC,
+    milestone: M_DISC,
   }),
   task(reg("f0000004-0000-4000-8000-000000000004"), "Load-test harness for login", "review", "critical", {
     project_id: DEFAULT_PROJECT_ID,
-    project_step_id: S_TEST,
+    milestone: M_TEST,
   }),
   task(reg("f0000005-0000-4000-8000-000000000005"), "Release checklist: AuthV2", "done", "medium", {
     project_id: DEFAULT_PROJECT_ID,
-    project_step_id: S_REL,
+    milestone: M_REL,
   }),
   task(reg("f0000006-0000-4000-8000-000000000006"), "Backfill audit logs", "ready", "medium", {
     project_id: DEFAULT_PROJECT_ID,
   }),
   task(reg("f0000007-0000-4000-8000-000000000007"), "Customer migration dry run", "failed", "high", {
     project_id: DEFAULT_PROJECT_ID,
-    project_step_id: S_TEST,
+    milestone: M_TEST,
   }),
   task(reg("f0000008-0000-4000-8000-000000000008"), "Billing webhook resilience", "running", "critical", {
     project_id: DEMO_SECOND_PROJECT_ID,
@@ -100,7 +104,7 @@ const ROOT_TASKS: Record<string, unknown>[] = [
     "medium",
     {
       project_id: DEFAULT_PROJECT_ID,
-      project_step_id: S_DISC,
+      milestone: M_DISC,
       children: [
         task(reg("f000000c-0000-4000-8000-00000000000c"), "Child: empty state illustrations", "done", "low", {
           parent_id: "f000000b-0000-4000-8000-00000000000b",
@@ -132,7 +136,7 @@ EXTRA_BACKLOG_IDS.forEach((id, i) => {
     task(reg(id), `Synthetic backlog item ${i + 1}`, i % 5 === 0 ? "done" : i % 4 === 0 ? "blocked" : "ready", "medium", {
       project_id:
         i % 3 === 0 ? DEFAULT_PROJECT_ID : i % 3 === 1 ? DEMO_SECOND_PROJECT_ID : undefined,
-      project_step_id: i % 2 === 0 ? S_JWT : undefined,
+      milestone: i % 2 === 0 ? M_JWT : undefined,
     }),
   );
 });

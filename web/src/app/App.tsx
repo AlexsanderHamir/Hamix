@@ -189,6 +189,10 @@ function AppShell({ app }: { app: ReturnType<typeof useTasksApp> }) {
               }
               promptProjectContext={editPromptProjectContext ?? undefined}
               canInheritChecklist={Boolean(app.editing.parent_id)}
+              tagsCsv={app.editTagsCsv}
+              milestone={app.editMilestone}
+              onTagsCsvChange={app.setEditTagsCsv}
+              onMilestoneChange={app.setEditMilestone}
               saving={app.saving}
               patchPending={app.patchPending}
               error={app.patchError}

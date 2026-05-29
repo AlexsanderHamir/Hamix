@@ -1,6 +1,6 @@
-import type { ProjectStepGateStatus } from "@/types";
+import type { GateStatus } from "@/types";
 
-export function taskGateStatusLabel(status: ProjectStepGateStatus): string {
+export function taskGateStatusLabel(status: GateStatus): string {
   switch (status) {
     case "locked":
       return "Locked";

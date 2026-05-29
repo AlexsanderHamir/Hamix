@@ -73,4 +73,4 @@ Values are snapshotted into `task_cycles.meta_json` at cycle start (`criteria_sn
 
 ## Related
 
-- Project step/goal criteria (`project_steps.criteria`) are a **separate** JSON model gating project gates, not this checklist.
+- Task checklist items (`task_checklist_items`) gate **task completion** via `ValidateCanMarkDoneInTx`. Per-task release gates use the separate `gate` JSON on `tasks` (see [TASK-MODEL.md](./TASK-MODEL.md)).

@@ -4,7 +4,7 @@ Backend design for `taskapi`: data flow, tradeoffs, and links to **focused contr
 
 **Product angle:** T2A is a control plane for agent-heavy workflows—as execution shifts to agents, orchestration moves out of the IDE into a shared API and persistent store. See [docs/PRODUCT.md](./PRODUCT.md) and the root [README](../README.md).
 
-**In flight:** flattening the work hierarchy to Project → Task (DAG, gates, tags) — [proposals/FLAT-TASK-HIERARCHY.md](./proposals/FLAT-TASK-HIERARCHY.md).
+**Shipped:** flat task hierarchy (Project → Task with DAG, gates, tags) — [adr/ADR-0002-flatten-task-hierarchy.md](./adr/ADR-0002-flatten-task-hierarchy.md).
 
 ## Contract docs (taskapi)
 

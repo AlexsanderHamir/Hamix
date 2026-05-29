@@ -40,7 +40,7 @@ func TestHTTP_createTask_tagsMilestoneDependsOn(t *testing.T) {
 	if len(node.DependsOn) != 1 || node.DependsOn[0] != dep {
 		t.Fatalf("depends_on=%v", node.DependsOn)
 	}
-	if node.Gate == nil || node.Gate.Status != domain.ProjectStepGateActive {
+	if node.Gate == nil || node.Gate.Status != domain.GateStatusActive {
 		t.Fatalf("gate=%+v", node.Gate)
 	}
 }
@@ -124,7 +124,7 @@ func TestHTTP_patchTaskGate_release(t *testing.T) {
 	if err := json.Unmarshal(raw, &node); err != nil {
 		t.Fatal(err)
 	}
-	if node.Gate == nil || node.Gate.Status != domain.ProjectStepGateReleased {
+	if node.Gate == nil || node.Gate.Status != domain.GateStatusReleased {
 		t.Fatalf("gate=%+v", node.Gate)
 	}
 }

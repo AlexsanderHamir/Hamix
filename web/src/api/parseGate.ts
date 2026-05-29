@@ -1,4 +1,4 @@
-import type { GateCriterion, ProjectStepGateStatus } from "@/types";
+import type { GateCriterion, GateStatus } from "@/types";
 import {
   isRecord,
   parseBooleanField,
@@ -8,19 +8,19 @@ import {
   parseString,
 } from "./parseTaskApiCore";
 
-const GATE_STATUSES: readonly ProjectStepGateStatus[] = [
+const GATE_STATUSES: readonly GateStatus[] = [
   "locked",
   "active",
   "pending_release",
   "released",
 ];
 
-function parseGateStatus(value: unknown): ProjectStepGateStatus {
+function parseGateStatus(value: unknown): GateStatus {
   const s = parseString(value, "status");
   if (!(GATE_STATUSES as readonly string[]).includes(s)) {
     throw new Error(`Invalid API response: gate status ${JSON.stringify(s)}`);
   }
-  return s as ProjectStepGateStatus;
+  return s as GateStatus;
 }
 
 export function parseGateCriterion(value: unknown, index: number): GateCriterion {

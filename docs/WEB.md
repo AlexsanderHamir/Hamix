@@ -110,7 +110,7 @@ sequenceDiagram
 | `tasks/task-query/sseInvalidate.ts` | Parses SSE `data` lines into task/cycle invalidation frames, id-less settings/resync frames, and live `agent_run_progress` frames. |
 | `types/` | Shared task domain types (`task.ts`, barrel `index.ts`); imported as `@/types`. |
 | `tasks/` | Task feature: `hooks/`, `components/`, `pages/`, `extensions/`, plus small modules grouped under `task-query/` (keys + SSE invalidation), `task-tree/` (flatten + pending subtask draft type), `task-prompt/` (HTML prompt helpers), `task-display/` (pills, status “needs user”, attention copy), `task-events/` (audit labels + needs-user + thread helpers), `task-graph/` (layout px for `TaskGraphPage`), `task-paging/` (page sizes). `TaskHome`, `TaskDetailPage`, `TaskEventDetailPage`, `TaskCycleDetailPage`, `TaskUpdatesTimeline`, drafts/create-modal pipeline as before. |
-| `projects/` | Project feature: query keys/hooks, list/detail, **Goals** (`ProjectGoalsPage`, `ProjectGoalsEntryCard`), and **Steps** (`ProjectStepsPage` with goal-scoped query params). Context CRUD lives alongside these routes. |
+| `projects/` | Project feature: query keys/hooks, list/detail pages, and project context CRUD alongside these routes. |
 | `shared/` | Cross-feature components and helpers (e.g. `ErrorBanner`). |
 | `api/` | HTTP + JSON parsing: `index.ts` re-exports `projects.ts`, `tasks.ts`, `repo.ts`, `parseTaskApi.ts`, `shared.ts`. |
 | `test/` | Vitest setup, `EventSource` stub, `requestUrl`. |

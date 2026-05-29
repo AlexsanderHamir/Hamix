@@ -12,7 +12,7 @@ Authoritative semantics for **Project → Task** work items. Wire shapes live in
 | `depends_on` | `string[]` | Hydrated from `task_dependencies`. Directed acyclic graph. |
 | `gate` | object \| null | Per-task dequeue pause. `null` = no gate. |
 
-Legacy `project_step_id` remains until goal/step removal (see [proposals/FLAT-TASK-HIERARCHY.md](./proposals/FLAT-TASK-HIERARCHY.md)).
+See [adr/ADR-0002-flatten-task-hierarchy.md](./adr/ADR-0002-flatten-task-hierarchy.md) for the migration decision.
 
 ## Dependencies (`depends_on`)
 

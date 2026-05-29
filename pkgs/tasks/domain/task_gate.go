@@ -13,7 +13,7 @@ const (
 // means no gate — the worker applies only status, pickup, and depends_on rules.
 type TaskGate struct {
 	Kind                      GateKind              `json:"kind"`
-	Status                    ProjectStepGateStatus `json:"status"`
+	Status                    GateStatus `json:"status"`
 	Hold                      bool                  `json:"hold"`
 	PendingReleaseDeadlineUTC *time.Time            `json:"pending_release_deadline,omitempty"`
 	Criteria                  []GateCriterion       `json:"criteria,omitempty"`
@@ -25,5 +25,5 @@ func (g *TaskGate) GateBlocksWorker() bool {
 	if g == nil {
 		return false
 	}
-	return g.Status != ProjectStepGateReleased
+	return g.Status != GateStatusReleased
 }

@@ -9,6 +9,7 @@ import {
   type RichPromptEditorProjectContextProps,
 } from "../../rich-prompt";
 import { TaskCreateModalAgentSection } from "../../task-create-modal/fields/TaskCreateModalAgentSection";
+import { TaskCreateModalSchedulingFields } from "../../task-create-modal/fields/TaskCreateModalSchedulingFields";
 
 type Props = {
   taskId: string;
@@ -30,6 +31,10 @@ type Props = {
   promptProjectContext?: RichPromptEditorProjectContextProps;
   /** When false, the inherit checkbox is disabled (task has no parent). */
   canInheritChecklist: boolean;
+  tagsCsv: string;
+  milestone: string;
+  onTagsCsvChange: (v: string) => void;
+  onMilestoneChange: (v: string) => void;
   saving: boolean;
   patchPending: boolean;
   /**
@@ -69,6 +74,10 @@ export function TaskEditForm({
   projectAssignment,
   promptProjectContext,
   canInheritChecklist,
+  tagsCsv,
+  milestone,
+  onTagsCsvChange,
+  onMilestoneChange,
   saving,
   patchPending,
   error = null,
@@ -181,6 +190,16 @@ export function TaskEditForm({
             onCursorModelChange={onCursorModelChange}
           />
           {projectAssignment}
+          <TaskCreateModalSchedulingFields
+            disabled={saving}
+            tagsCsv={tagsCsv}
+            milestone={milestone}
+            dependsOnCsv=""
+            showDependsOn={false}
+            onTagsCsvChange={onTagsCsvChange}
+            onMilestoneChange={onMilestoneChange}
+            onDependsOnCsvChange={() => {}}
+          />
           <div className="field grow stack-tight prompt-field-full">
             <FieldLabel
               id="task-edit-prompt-label"

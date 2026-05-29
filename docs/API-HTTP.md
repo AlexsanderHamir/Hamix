@@ -105,7 +105,7 @@ Pinned by `pkgs/tasks/handler/handler_http_system_health_contract_test.go` (enve
 
 ## Project resource (`/projects`)
 
-Projects are long-lived shared context containers. They do not replace task hierarchy: tasks still use `parent_id` for subtasks and may independently use `project_id` for shared context membership. Organization within a project uses task-level `tags` and `milestone` (see [TASK-MODEL.md](./TASK-MODEL.md)); legacy `project_goals` / `project_steps` tables remain in the database until a later migration but are no longer exposed on the HTTP API.
+Projects are long-lived shared context containers. They do not replace task hierarchy: tasks still use `parent_id` for subtasks and may independently use `project_id` for shared context membership. Organization within a project uses task-level `tags` and `milestone` (see [TASK-MODEL.md](./TASK-MODEL.md)).
 
 | Capability | Method / path | Notes |
 | --- | --- | --- |

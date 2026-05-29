@@ -63,7 +63,7 @@ These are not current runtime contracts.
 | --- | --- |
 | [AGENTIC-LAYER-PLAN.md](./AGENTIC-LAYER-PLAN.md) | Long-term V2–V4 worker roadmap. |
 | [proposals/](./proposals/) | Designs that have not shipped. |
-| [proposals/FLAT-TASK-HIERARCHY.md](./proposals/FLAT-TASK-HIERARCHY.md) | In-flight: Project → Task with DAG, gates, tags (replaces goals/steps). |
+| [adr/ADR-0002-flatten-task-hierarchy.md](./adr/ADR-0002-flatten-task-hierarchy.md) | Accepted: Project → Task with DAG, gates, tags (replaces goals/steps). |
 
 ## Where To Update
 

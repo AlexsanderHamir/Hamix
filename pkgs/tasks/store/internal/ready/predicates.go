@@ -12,7 +12,7 @@ func applyDequeuableTaskPredicates(q *gorm.DB, db *gorm.DB) *gorm.DB {
 		WHERE td.task_id = tasks.id AND dep.status <> ?
 	)`, domain.StatusDone)
 	if UseSQLiteEventRowID(db) {
-		return q.Where("(tasks.gate IS NULL OR json_extract(tasks.gate, '$.status') = ?)", string(domain.ProjectStepGateReleased))
+		return q.Where("(tasks.gate IS NULL OR json_extract(tasks.gate, '$.status') = ?)", string(domain.GateStatusReleased))
 	}
-	return q.Where("(tasks.gate IS NULL OR tasks.gate->>'status' = ?)", string(domain.ProjectStepGateReleased))
+	return q.Where("(tasks.gate IS NULL OR tasks.gate->>'status' = ?)", string(domain.GateStatusReleased))
 }

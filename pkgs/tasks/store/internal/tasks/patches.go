@@ -128,7 +128,6 @@ func applyProjectPatch(tx *gorm.DB, cur *domain.Task, project *ProjectFieldPatch
 	}
 	if project.Clear {
 		cur.ProjectID = nil
-		cur.ProjectStepID = nil
 		cur.ProjectContextItemIDs = nil
 		return nil
 	}
@@ -144,7 +143,6 @@ func applyProjectPatch(tx *gorm.DB, cur *domain.Task, project *ProjectFieldPatch
 		return fmt.Errorf("%w: project not found", domain.ErrInvalidInput)
 	}
 	cur.ProjectID = &pid
-	cur.ProjectStepID = nil
 	cur.ProjectContextItemIDs = nil
 	return nil
 }

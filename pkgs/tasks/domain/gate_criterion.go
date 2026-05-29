@@ -18,8 +18,3 @@ func GateCriteriaAllDone(criteria []GateCriterion) bool {
 	}
 	return true
 }
-
-// ProjectGoalCriterion and ProjectStepCriterion are legacy shapes for
-// project_goals/project_steps JSON columns until those tables are dropped.
-type ProjectGoalCriterion = GateCriterion
-type ProjectStepCriterion = GateCriterion

@@ -45,6 +45,8 @@ export function useTasksApp({ sseLive }: UseTasksAppOptions) {
   const [editChecklistInherit, setEditChecklistInherit] = useState(false);
   const [editProjectID, setEditProjectID] = useState(DEFAULT_PROJECT_ID);
   const [editProjectContextItemIDs, setEditProjectContextItemIDs] = useState<string[]>([]);
+  const [editTagsCsv, setEditTagsCsv] = useState("");
+  const [editMilestone, setEditMilestone] = useState("");
   const [editCursorModel, setEditCursorModel] = useState("");
   /** Quick-edit modal for `cursor_model` only (e.g. task detail model configuration row). */
   const [changeModelTask, setChangeModelTask] = useState<Task | null>(null);
@@ -182,6 +184,8 @@ export function useTasksApp({ sseLive }: UseTasksAppOptions) {
     setEditChecklistInherit(t.checklist_inherit === true);
     setEditProjectID(t.project_id || DEFAULT_PROJECT_ID);
     setEditProjectContextItemIDs(t.project_context_item_ids ?? []);
+    setEditTagsCsv((t.tags ?? []).join(", "));
+    setEditMilestone(t.milestone ?? "");
     setEditCursorModel(t.cursor_model ?? "");
     setEditTitleRequiredError(null);
   }
@@ -238,6 +242,11 @@ export function useTasksApp({ sseLive }: UseTasksAppOptions) {
       checklist_inherit: editChecklistInherit,
       project_id: editProjectID.trim() || null,
       project_context_item_ids: editProjectContextItemIDs,
+      tags: editTagsCsv
+        .split(/[,;\n]+/)
+        .map((t) => t.trim())
+        .filter(Boolean),
+      milestone: editMilestone.trim() || null,
       cursor_model: editCursorModel.trim(),
     });
   }
@@ -289,6 +298,10 @@ export function useTasksApp({ sseLive }: UseTasksAppOptions) {
     setEditProjectID,
     editProjectContextItemIDs,
     setEditProjectContextItemIDs,
+    editTagsCsv,
+    setEditTagsCsv,
+    editMilestone,
+    setEditMilestone,
     editCursorModel,
     setEditCursorModel,
     changeModelTask,

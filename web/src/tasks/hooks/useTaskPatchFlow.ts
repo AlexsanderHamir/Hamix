@@ -26,8 +26,9 @@ export type TaskPatchInput = {
   task_type: TaskType;
   checklist_inherit: boolean;
   project_id?: string | null;
-  project_step_id?: string | null;
   project_context_item_ids?: string[];
+  tags?: string[];
+  milestone?: string | null;
   /** Per-task `cursor-agent --model` override; empty string clears override. */
   cursor_model: string;
 };
@@ -86,14 +87,13 @@ function patchTaskInList(
             patch.project_id === undefined
               ? t.project_id
               : patch.project_id ?? undefined,
-          project_step_id:
-            patch.project_step_id === undefined
-              ? t.project_step_id
-              : patch.project_step_id ?? undefined,
           project_context_item_ids:
             patch.project_context_item_ids === undefined
               ? t.project_context_item_ids
               : patch.project_context_item_ids,
+          tags: patch.tags === undefined ? t.tags : patch.tags,
+          milestone:
+            patch.milestone === undefined ? t.milestone : patch.milestone ?? undefined,
           cursor_model: patch.cursor_model,
         };
       }
@@ -142,8 +142,9 @@ export function useTaskPatchFlow(opts: {
         task_type: input.task_type,
         checklist_inherit: input.checklist_inherit,
         project_id: input.project_id,
-        project_step_id: input.project_step_id,
         project_context_item_ids: input.project_context_item_ids,
+        tags: input.tags,
+        milestone: input.milestone,
         cursor_model: input.cursor_model,
       }),
     onMutate: async (input) => {
@@ -179,14 +180,15 @@ export function useTaskPatchFlow(opts: {
             input.project_id === undefined
               ? detailPrev.project_id
               : input.project_id ?? undefined,
-          project_step_id:
-            input.project_step_id === undefined
-              ? detailPrev.project_step_id
-              : input.project_step_id ?? undefined,
           project_context_item_ids:
             input.project_context_item_ids === undefined
               ? detailPrev.project_context_item_ids
               : input.project_context_item_ids,
+          tags: input.tags === undefined ? detailPrev.tags : input.tags,
+          milestone:
+            input.milestone === undefined
+              ? detailPrev.milestone
+              : input.milestone ?? undefined,
           cursor_model: input.cursor_model,
         });
       }

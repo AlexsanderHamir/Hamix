@@ -33,18 +33,18 @@ func ApplyTaskGateAction(ctx context.Context, db *gorm.DB, taskID, action string
 	now := time.Now().UTC()
 	switch action {
 	case gateActionRelease:
-		g.Status = domain.ProjectStepGateReleased
+		g.Status = domain.GateStatusReleased
 		g.Hold = false
 	case gateActionHold:
-		if g.Status != domain.ProjectStepGatePendingRelease {
+		if g.Status != domain.GateStatusPendingRelease {
 			return nil, fmt.Errorf("%w: hold only applies while gate is pending_release", domain.ErrInvalidInput)
 		}
 		g.Hold = true
 	case gateActionClearHold:
 		g.Hold = false
-		if g.Status == domain.ProjectStepGatePendingRelease &&
+		if g.Status == domain.GateStatusPendingRelease &&
 			g.PendingReleaseDeadlineUTC != nil && !now.Before(*g.PendingReleaseDeadlineUTC) {
-			g.Status = domain.ProjectStepGateReleased
+			g.Status = domain.GateStatusReleased
 		}
 	default:
 		return nil, fmt.Errorf("%w: invalid gate action", domain.ErrInvalidInput)

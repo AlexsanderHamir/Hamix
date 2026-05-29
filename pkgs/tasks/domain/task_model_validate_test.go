@@ -48,10 +48,10 @@ func TestValidateTaskMilestone(t *testing.T) {
 
 func TestTaskGate_GateBlocksWorker(t *testing.T) {
 	t.Parallel()
-	if (&TaskGate{Status: ProjectStepGateReleased}).GateBlocksWorker() {
+	if (&TaskGate{Status: GateStatusReleased}).GateBlocksWorker() {
 		t.Fatal("released should not block")
 	}
-	if !(&TaskGate{Status: ProjectStepGateActive}).GateBlocksWorker() {
+	if !(&TaskGate{Status: GateStatusActive}).GateBlocksWorker() {
 		t.Fatal("active should block")
 	}
 	var nilGate *TaskGate

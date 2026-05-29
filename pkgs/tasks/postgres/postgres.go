@@ -72,8 +72,6 @@ func Migrate(ctx context.Context, db *gorm.DB) error {
 	}
 	if err := db.WithContext(ctx).AutoMigrate(
 		&domain.Project{},
-		&domain.ProjectGoal{},
-		&domain.ProjectStep{},
 		&domain.Task{},
 		&domain.TaskDependency{},
 		&domain.TaskEvent{},
@@ -97,6 +95,34 @@ func Migrate(ctx context.Context, db *gorm.DB) error {
 	}
 	if err := backfillLegacyChecklistCompletions(ctx, db); err != nil {
 		return fmt.Errorf("backfill checklist completions: %w", err)
+	}
+	if err := dropLegacyGoalStepTables(ctx, db); err != nil {
+		return fmt.Errorf("drop legacy goal/step tables: %w", err)
+	}
+	return nil
+}
+
+// dropLegacyGoalStepTables removes project_goals and project_steps after the
+// flat task hierarchy migration. Idempotent — safe on fresh and upgraded DBs.
+func dropLegacyGoalStepTables(ctx context.Context, db *gorm.DB) error {
+	slog.Debug("trace", "operation", "postgres.dropLegacyGoalStepTables")
+	if db.Dialector != nil && db.Dialector.Name() == "postgres" {
+		if err := db.WithContext(ctx).Exec(`DROP TABLE IF EXISTS project_steps CASCADE`).Error; err != nil {
+			return fmt.Errorf("drop project_steps: %w", err)
+		}
+		if err := db.WithContext(ctx).Exec(`DROP TABLE IF EXISTS project_goals CASCADE`).Error; err != nil {
+			return fmt.Errorf("drop project_goals: %w", err)
+		}
+		if err := db.WithContext(ctx).Exec(`ALTER TABLE tasks DROP COLUMN IF EXISTS project_step_id`).Error; err != nil {
+			return fmt.Errorf("drop tasks.project_step_id: %w", err)
+		}
+		return nil
+	}
+	if err := db.WithContext(ctx).Exec(`DROP TABLE IF EXISTS project_steps`).Error; err != nil {
+		return fmt.Errorf("drop project_steps: %w", err)
+	}
+	if err := db.WithContext(ctx).Exec(`DROP TABLE IF EXISTS project_goals`).Error; err != nil {
+		return fmt.Errorf("drop project_goals: %w", err)
 	}
 	return nil
 }

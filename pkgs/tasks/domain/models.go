@@ -14,15 +14,13 @@ type Task struct {
 	Priority      Priority `json:"priority" gorm:"not null;check:chk_tasks_priority,priority IN ('low','medium','high','critical')"`
 	TaskType      TaskType `json:"task_type" gorm:"not null;default:general;check:chk_tasks_task_type,task_type IN ('general','bug_fix','feature','refactor','docs')"`
 	ProjectID     *string  `json:"project_id,omitempty" gorm:"index"`
-	// ProjectStepID is a legacy column retained until project_steps is dropped.
-	ProjectStepID *string `json:"-" gorm:"index"`
 	// ProjectContextItemIDs is the user-selected subset of project context to pass to agent runs.
-	ProjectContextItemIDs []string `json:"project_context_item_ids,omitempty" gorm:"column:project_context_item_ids;serializer:json;type:jsonb;not null;default:'[]'"`
-	ParentID              *string  `json:"parent_id,omitempty" gorm:"index"`
-	Tags                  []string `json:"tags,omitempty" gorm:"column:tags;serializer:json;type:jsonb;not null;default:'[]'"`
-	Milestone             *string  `json:"milestone,omitempty" gorm:"index"`
+	ProjectContextItemIDs []string  `json:"project_context_item_ids,omitempty" gorm:"column:project_context_item_ids;serializer:json;type:jsonb;not null;default:'[]'"`
+	ParentID              *string   `json:"parent_id,omitempty" gorm:"index"`
+	Tags                  []string  `json:"tags,omitempty" gorm:"column:tags;serializer:json;type:jsonb;not null;default:'[]'"`
+	Milestone             *string   `json:"milestone,omitempty" gorm:"index"`
 	Gate                  *TaskGate `json:"gate,omitempty" gorm:"column:gate;serializer:json;type:jsonb"`
-	ChecklistInherit      bool     `json:"checklist_inherit" gorm:"not null;default:false"`
+	ChecklistInherit      bool      `json:"checklist_inherit" gorm:"not null;default:false"`
 	// DependsOn is hydrated from task_dependencies on read; not a GORM column.
 	DependsOn []string `json:"depends_on,omitempty" gorm:"-"`
 	// Runner is the agent runner id for this task (e.g. "cursor"). Set at
@@ -40,8 +38,7 @@ type Task struct {
 	// eligible as soon as status is ready (legacy rows and zero-delay creates).
 	PickupNotBefore *time.Time `json:"pickup_not_before,omitempty" gorm:"index"`
 
-	Project     *Project     `json:"-" gorm:"foreignKey:ProjectID;references:ID;constraint:OnDelete:SET NULL"`
-	ProjectStep *ProjectStep `json:"-" gorm:"foreignKey:ProjectStepID;references:ID;constraint:OnDelete:SET NULL"`
+	Project *Project `json:"-" gorm:"foreignKey:ProjectID;references:ID;constraint:OnDelete:SET NULL"`
 }
 
 // Project is shared context memory for a long-running body of work. Tasks can
@@ -55,50 +52,6 @@ type Project struct {
 	CreatedAt      time.Time     `json:"created_at" gorm:"not null;index"`
 	UpdatedAt      time.Time     `json:"updated_at" gorm:"not null;index"`
 }
-
-// ProjectGoal is an outcome within a project. Steps attach via ProjectStep.GoalID.
-// DependsOnGoalIDs is empty for independent goals; otherwise the goal stays locked
-// until every listed prerequisite goal is released.
-type ProjectGoal struct {
-	ID                        string                 `json:"id" gorm:"primaryKey"`
-	ProjectID                 string                 `json:"project_id" gorm:"not null;index"`
-	Title                     string                 `json:"title" gorm:"not null"`
-	Description               string                 `json:"description" gorm:"type:text;not null;default:''"`
-	DependsOnGoalIDs          []string               `json:"depends_on_goal_ids" gorm:"column:depends_on_goal_ids;serializer:json;type:jsonb;not null;default:'[]'"`
-	GateStatus                ProjectStepGateStatus  `json:"gate_status" gorm:"not null;index;default:'locked';check:chk_project_goals_gate_status,gate_status IN ('locked','active','pending_release','released')"`
-	GateHold                  bool                   `json:"gate_hold" gorm:"not null;default:false"`
-	PendingReleaseDeadlineUTC *time.Time             `json:"pending_release_deadline,omitempty" gorm:"column:pending_release_deadline_utc;index"`
-	Criteria                  []GateCriterion `json:"criteria" gorm:"serializer:json;type:jsonb;not null;default:'[]'"`
-	CreatedAt                 time.Time              `json:"created_at" gorm:"not null;index"`
-	UpdatedAt                 time.Time              `json:"updated_at" gorm:"not null;index"`
-
-	Project *Project `json:"-" gorm:"foreignKey:ProjectID;references:ID;constraint:OnDelete:CASCADE"`
-}
-
-func (ProjectGoal) TableName() string { return "project_goals" }
-
-// ProjectStep is one ordered stage of work within a project goal. Tasks may reference
-// a step via Task.ProjectStepID while remaining members of the project via Task.ProjectID.
-// Sort order is unique per (project_id, goal_id) bucket; legacy rows may have null goal_id.
-type ProjectStep struct {
-	ID                        string                 `json:"id" gorm:"primaryKey"`
-	ProjectID                 string                 `json:"project_id" gorm:"not null;index;uniqueIndex:idx_project_steps_project_goal_sort,priority:1"`
-	GoalID                    *string                `json:"goal_id,omitempty" gorm:"index;uniqueIndex:idx_project_steps_project_goal_sort,priority:2"`
-	Title                     string                 `json:"title" gorm:"not null"`
-	Description               string                 `json:"description" gorm:"type:text;not null;default:''"`
-	SortOrder                 int                    `json:"sort_order" gorm:"not null;uniqueIndex:idx_project_steps_project_goal_sort,priority:3"`
-	GateStatus                ProjectStepGateStatus  `json:"gate_status" gorm:"not null;index;default:'locked';check:chk_project_steps_gate_status,gate_status IN ('locked','active','pending_release','released')"`
-	GateHold                  bool                   `json:"gate_hold" gorm:"not null;default:false"`
-	PendingReleaseDeadlineUTC *time.Time             `json:"pending_release_deadline,omitempty" gorm:"column:pending_release_deadline_utc;index"`
-	Criteria                  []GateCriterion `json:"criteria" gorm:"serializer:json;type:jsonb;not null;default:'[]'"`
-	CreatedAt                 time.Time              `json:"created_at" gorm:"not null;index"`
-	UpdatedAt                 time.Time              `json:"updated_at" gorm:"not null;index"`
-
-	Project *Project     `json:"-" gorm:"foreignKey:ProjectID;references:ID;constraint:OnDelete:CASCADE"`
-	Goal    *ProjectGoal `json:"-" gorm:"foreignKey:GoalID;references:ID;constraint:OnDelete:SET NULL"`
-}
-
-func (ProjectStep) TableName() string { return "project_steps" }
 
 // ProjectContextItem is a human-inspectable memory item attached to a project.
 type ProjectContextItem struct {

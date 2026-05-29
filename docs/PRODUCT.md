@@ -19,4 +19,4 @@ Deferred on purpose: embeddings, vector databases, hidden memory pruning, autono
 
 Technical routes: [docs/API-HTTP.md](./API-HTTP.md) and [docs/API-SSE.md](./API-SSE.md). Env and startup: [docs/RUNTIME-ENV.md](./RUNTIME-ENV.md). Architecture and limits: [docs/DESIGN.md](./DESIGN.md). Project context: [docs/PROJECT-CONTEXT.md](./PROJECT-CONTEXT.md). Browser client: [docs/WEB.md](./WEB.md). Build and run: root [README](../README.md).
 
-**In flight:** work hierarchy is moving from Project → Goal → Step → Task to **Project → Task** with task-level dependencies, gates, tags, and milestones — see [proposals/FLAT-TASK-HIERARCHY.md](./proposals/FLAT-TASK-HIERARCHY.md).
+Work hierarchy is **Project → Task** with task-level dependencies, gates, tags, and milestones — see [adr/ADR-0002-flatten-task-hierarchy.md](./adr/ADR-0002-flatten-task-hierarchy.md) and [TASK-MODEL.md](./TASK-MODEL.md).

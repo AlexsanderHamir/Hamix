@@ -54,7 +54,7 @@ func TestListQueueCandidates_excludesHeldGate(t *testing.T) {
 
 	heldGate := &domain.TaskGate{
 		Kind:   domain.GateKindManualApproval,
-		Status: domain.ProjectStepGateActive,
+		Status: domain.GateStatusActive,
 	}
 	held, err := Create(ctx, db, CreateInput{
 		Title:    "held",
@@ -76,7 +76,7 @@ func TestListQueueCandidates_excludesHeldGate(t *testing.T) {
 
 	released := &domain.TaskGate{
 		Kind:   domain.GateKindManualApproval,
-		Status: domain.ProjectStepGateReleased,
+		Status: domain.GateStatusReleased,
 	}
 	gatePtr := released
 	if _, _, err := Update(ctx, db, held.ID, UpdateInput{Gate: &gatePtr}, domain.ActorUser); err != nil {

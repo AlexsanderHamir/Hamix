@@ -1,4 +1,4 @@
-export type ProjectStepGateStatus =
+export type GateStatus =
   | "locked"
   | "active"
   | "pending_release"
@@ -13,7 +13,7 @@ export type GateCriterion = {
 
 export type TaskGate = {
   kind: "manual_approval";
-  status: ProjectStepGateStatus;
+  status: GateStatus;
   hold: boolean;
   pending_release_deadline?: string;
   criteria?: GateCriterion[];

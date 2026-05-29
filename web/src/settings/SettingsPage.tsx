@@ -13,8 +13,6 @@ import {
   AgentWorkerSettingsSection,
   CursorAgentSettingsSection,
   DisplaySettingsSection,
-  ProjectGoalsGateSettingsSection,
-  ProjectStepsGateSettingsSection,
   RunTimeoutSettingsSection,
   VerificationSettingsSection,
   SettingsActions,
@@ -138,22 +136,6 @@ export function SettingsPage() {
       pickupParsed < 0 ||
       pickupParsed > 604800
     : false;
-  const stepGraceParsed = form
-    ? Number.parseInt(form.projectStepGateGraceSeconds.trim() || "0", 10)
-    : 0;
-  const stepGraceInvalid = form
-    ? !Number.isFinite(stepGraceParsed) ||
-      stepGraceParsed < 0 ||
-      stepGraceParsed > 604800
-    : false;
-  const goalGraceParsed = form
-    ? Number.parseInt(form.projectGoalGateGraceSeconds.trim() || "0", 10)
-    : 0;
-  const goalGraceInvalid = form
-    ? !Number.isFinite(goalGraceParsed) ||
-      goalGraceParsed < 0 ||
-      goalGraceParsed > 604800
-    : false;
 
   function handleField<K extends keyof SettingsFormState>(
     key: K,
@@ -174,9 +156,7 @@ export function SettingsPage() {
       !settings ||
       !form ||
       maxInvalid ||
-      pickupInvalid ||
-      stepGraceInvalid ||
-      goalGraceInvalid
+      pickupInvalid
     ) {
       return;
     }
@@ -230,28 +210,6 @@ export function SettingsPage() {
           merged.agentPickupDelaySeconds = String(
             next.agent_pickup_delay_seconds,
           );
-        }
-        if (cur.projectStepGateGraceSeconds === formAtSubmit.projectStepGateGraceSeconds) {
-          merged.projectStepGateGraceSeconds = String(
-            next.project_step_gate_grace_seconds,
-          );
-        }
-        if (cur.projectGoalGateGraceSeconds === formAtSubmit.projectGoalGateGraceSeconds) {
-          merged.projectGoalGateGraceSeconds = String(
-            next.project_goal_gate_grace_seconds,
-          );
-        }
-        if (cur.goalGateNotifyEmailEnabled === formAtSubmit.goalGateNotifyEmailEnabled) {
-          merged.goalGateNotifyEmailEnabled = next.goal_gate_notify_email_enabled;
-        }
-        if (cur.goalGateNotifySmsEnabled === formAtSubmit.goalGateNotifySmsEnabled) {
-          merged.goalGateNotifySmsEnabled = next.goal_gate_notify_sms_enabled;
-        }
-        if (cur.stepGateNotifyEmailEnabled === formAtSubmit.stepGateNotifyEmailEnabled) {
-          merged.stepGateNotifyEmailEnabled = next.step_gate_notify_email_enabled;
-        }
-        if (cur.stepGateNotifySmsEnabled === formAtSubmit.stepGateNotifySmsEnabled) {
-          merged.stepGateNotifySmsEnabled = next.step_gate_notify_sms_enabled;
         }
         if (cur.displayTimezone === formAtSubmit.displayTimezone) {
           merged.displayTimezone = next.display_timezone;
@@ -392,24 +350,10 @@ export function SettingsPage() {
           onField={handleField}
         />
 
-        <ProjectGoalsGateSettingsSection
-          form={form}
-          goalGraceInvalid={goalGraceInvalid}
-          onField={handleField}
-        />
-
-        <ProjectStepsGateSettingsSection
-          form={form}
-          stepGraceInvalid={stepGraceInvalid}
-          onField={handleField}
-        />
-
         <SettingsActions
           isDirty={isDirty}
           maxInvalid={maxInvalid}
           pickupInvalid={pickupInvalid}
-          stepGraceInvalid={stepGraceInvalid}
-          goalGraceInvalid={goalGraceInvalid}
           patchPending={patch.isPending}
           onDiscard={() => setForm(toFormState(settings))}
         />

@@ -8,6 +8,8 @@ type Props = {
   onTagsCsvChange: (value: string) => void;
   onMilestoneChange: (value: string) => void;
   onDependsOnCsvChange: (value: string) => void;
+  /** When false, hides the depends-on field (detail page owns dependency edits). */
+  showDependsOn?: boolean;
 };
 
 export function TaskCreateModalSchedulingFields({
@@ -18,6 +20,7 @@ export function TaskCreateModalSchedulingFields({
   onTagsCsvChange,
   onMilestoneChange,
   onDependsOnCsvChange,
+  showDependsOn = true,
 }: Props) {
   return (
     <fieldset className="task-create-scheduling" disabled={disabled}>
@@ -43,6 +46,7 @@ export function TaskCreateModalSchedulingFields({
           placeholder="e.g. M1 — auth"
         />
       </div>
+      {showDependsOn ? (
       <div className="task-create-scheduling__field">
         <FieldLabel htmlFor="create-deps">Depends on (task ids)</FieldLabel>
         <input
@@ -53,6 +57,7 @@ export function TaskCreateModalSchedulingFields({
           placeholder="Comma-separated upstream task ids"
         />
       </div>
+      ) : null}
     </fieldset>
   );
 }

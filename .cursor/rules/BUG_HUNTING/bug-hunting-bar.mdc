@@ -76,11 +76,11 @@ State invariants are properties that must hold at every observable moment. They 
 
 ### Repo-specific invariants you must protect
 
-(Cross-reference `docs/EXECUTION-CYCLES.md` and `docs/DESIGN.md` before editing.)
+(Cross-reference `docs/data-model.md` and `docs/architecture.md` before editing.)
 
 - **Cycle/phase dual-write atomicity**: a write to `task_cycles` or `task_cycle_phases` MUST occur in the same SQL transaction as the corresponding `task_events` insert. A fix that splits these is a defect, not a feature.
 - **Phase status transitions**: must pass `domain.ValidPhaseTransition`. A handler that calls a store write without first checking the transition (or relying on the store to check) is a P1 candidate.
-- **JSON contract honesty**: handler response field names and status codes match `docs/API-HTTP.md` and `docs/API-SSE.md`. Drift is a P5 defect; if the doc is wrong, fix the doc in the same session as the code.
+- **JSON contract honesty**: handler response field names and status codes match `docs/api.md`. Drift is a P5 defect; if the doc is wrong, fix the doc in the same session as the code.
 - **Web `parseTaskApi` chokepoint**: web treats API responses as `unknown` until parsed. A `web/src/` component reading `response.field` without going through a parser is a P5 defect (and a typing lie that hides P1 corruption).
 - **SSE event subscription symmetry**: every subscribe (Go hub-side or Web `EventSource`-side) has a matched cleanup on every termination path. Asymmetry is a P2 leak.
 - **Context propagation**: handlers and store calls on a request path use `r.Context()`, never `context.Background()`. Background-context usage outside startup/shutdown/test setup is a P2 candidate.

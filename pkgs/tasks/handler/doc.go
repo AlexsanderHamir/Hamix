@@ -4,22 +4,22 @@
 //
 // Wiring: handler.go (mux + security header helpers). Task routes span handler_task_*.go, handler_checklist.go, handler_task_events.go—see README.md.
 // GET /repo/*: repo_handlers.go. GET /events: sse.go. Prometheus HTTP metrics: metrics_http.go (WithHTTPMetrics; GET /metrics is mounted on the outer mux in cmd/taskapi).
-// Per-IP rate limiting: rate_limit.go (WithRateLimit; T2A_RATE_LIMIT_PER_MIN in docs/RUNTIME-ENV.md).
-// Idempotency: idempotency.go (WithIdempotency; optional Idempotency-Key on POST/PATCH/DELETE; T2A_IDEMPOTENCY_TTL in docs/RUNTIME-ENV.md).
-// Max request body: max_body.go (WithMaxRequestBody; optional T2A_MAX_REQUEST_BODY_BYTES in docs/RUNTIME-ENV.md).
-// Ready-task agent queue: store.SetReadyTaskNotifier (taskapi always; docs/AGENT-QUEUE.md, docs/RUNTIME-ENV.md, pkgs/agents). Queue consumers must AckAfterRecv or Receive so reconcile matches the buffer.
-// Request timeout: request_timeout.go (WithRequestTimeout; optional T2A_HTTP_REQUEST_TIMEOUT in docs/RUNTIME-ENV.md; GET /events exempt).
+// Per-IP rate limiting: rate_limit.go (WithRateLimit; T2A_RATE_LIMIT_PER_MIN in docs/configuration.md).
+// Idempotency: idempotency.go (WithIdempotency; optional Idempotency-Key on POST/PATCH/DELETE; T2A_IDEMPOTENCY_TTL in docs/configuration.md).
+// Max request body: max_body.go (WithMaxRequestBody; optional T2A_MAX_REQUEST_BODY_BYTES in docs/configuration.md).
+// Ready-task agent queue: store.SetReadyTaskNotifier (taskapi always; docs/architecture.md, docs/configuration.md, pkgs/agents). Queue consumers must AckAfterRecv or Receive so reconcile matches the buffer.
+// Request timeout: request_timeout.go (WithRequestTimeout; optional T2A_HTTP_REQUEST_TIMEOUT in docs/configuration.md; GET /events exempt).
 // Request/response IO summaries (Debug): httplog_io.go.
 // Nested call stack for logs (call_path, helper.io): pkgs/tasks/calltrace — use calltrace.WithRequestRoot on each handler, calltrace.Push inside helpers; calltrace.RunObserved for explicit helper in/out pairs.
 // JSONL order: pkgs/tasks/logctx.WrapSlogHandlerWithLogSequence (taskapi outer) + logctx.ContextWithLogSeq in access middleware → log_seq, log_seq_scope.
 //
 // Mutating routes should follow: decode and validate the request, call the store, map errors
 // to HTTP status, then call notifyChange after a successful write. Keep domain rules in
-// store/domain, not in HTTP adapters (see docs/EXTENSIBILITY.md).
+// store/domain, not in HTTP adapters (see docs/contributing.md).
 //
 // # Routes (Go 1.22 patterns on the returned mux)
 //
-// Path parameters {id} and {itemId} are trimmed and rejected when longer than 128 bytes (see docs/API-HTTP.md).
+// Path parameters {id} and {itemId} are trimmed and rejected when longer than 128 bytes (see docs/api.md).
 //
 //   - GET    /events          — Server-Sent Events stream (text/event-stream); JSON lines with
 //     type task_created | task_updated | task_deleted and id (UUID)
@@ -41,13 +41,13 @@
 //   - GET    /repo/validate-range — optional; JSON ok/warning (path, start, end); 503 if unset
 //
 // Dev-only: when taskapi sets T2A_SSE_TEST=1, pkgs/tasks/devsim runs a background ticker (store.ListFlat + AppendTaskEvent,
-// rotates all EventType, ActorAgent) per task then notifies the SSE hub (see docs/API-SSE.md). No extra HTTP routes.
+// rotates all EventType, ActorAgent) per task then notifies the SSE hub (see docs/api.md). No extra HTTP routes.
 //
 // Header X-Actor: "user" (default) or "agent"; passed to the store for audit events.
 //
 // Optional header Idempotency-Key (non-empty, max 128 bytes after trim; longer values are rejected with 400): mutating requests with the same
 // method, path, key, and (for POST/PATCH) request body replay the first successful 200/201/204 response
-// for the configured TTL (in-process cache; see docs/API-HTTP.md).
+// for the configured TTL (in-process cache; see docs/api.md).
 //
 // JSON bodies disallow unknown fields; trailing data after the top-level value is rejected.
 //

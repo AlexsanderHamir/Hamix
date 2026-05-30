@@ -28,7 +28,7 @@ import (
 //
 // Configuration source: pkgs/tasks/store.AppSettings (the singleton
 // row managed via the SPA settings page). Env vars are no longer
-// consulted — see docs/SETTINGS.md.
+// consulted — see docs/configuration.md.
 
 // shutdownGraceAfterRunTimeout is the headroom added to the configured
 // per-run cap when waiting for Worker.Run to drain during shutdown.
@@ -513,7 +513,7 @@ func (s *agentWorkerSupervisor) publishSettingsChanged() {
 // `decideIdle` (and therefore does NOT prevent the worker from
 // spawning) because the schedule horizon could expire on the next
 // reconcile tick and the worker must already be live to pick the
-// task up — see docs/SCHEDULING.md "the two queues" section. The
+// task up — see docs/data-model.md "the two queues" section. The
 // supervisor surfaces this as `IdleReason` on `effectiveSettingsLog`
 // alongside `Idle=false` so operators reading logs and the
 // observability page see the same explanation for "0 ready, 12
@@ -706,8 +706,8 @@ func assertWorkingDirExists(dir string) error {
 
 // cycleChangeSSEAdapter implements worker.CycleChangeNotifier on top
 // of the existing handler.SSEHub. The TaskCycleChanged event type and
-// the SPA cache invalidation hook are pinned by docs/API-SSE.md and
-// docs/EXECUTION-CYCLES.md.
+// the SPA cache invalidation hook are pinned by docs/api.md and
+// docs/data-model.md.
 type cycleChangeSSEAdapter struct {
 	hub *handler.SSEHub
 }

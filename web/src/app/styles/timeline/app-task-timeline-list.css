@@ -186,7 +186,7 @@ a.task-timeline-item-hit {
   border-color: var(--border-soft);
 }
 
-/* Execution-cycle audit mirrors — same allow-list as TASK_EVENT_TYPES / domain (see docs/EXECUTION-CYCLES.md).
+/* Execution-cycle audit mirrors — same allow-list as TASK_EVENT_TYPES / domain (see docs/data-model.md).
    These were missing initially, so pills fell through to the base <code> look and looked undifferentiated. */
 .task-timeline-type-pill[data-event-type="cycle_started"] {
   background: color-mix(in srgb, var(--info-soft) 68%, var(--bg-elevated));

@@ -290,7 +290,7 @@ The test pins the wire format. If a future change breaks the contract, this test
 ```go
 // Regression for: PATCH /tasks/{id}/cycles/{cycleId}/phases/{seq} renamed
 // "phaseStatus" → "status" in code without updating the doc, breaking the web client.
-// Test pins the documented shape per docs/API-HTTP.md.
+// Test pins the documented shape per docs/api.md.
 func TestContract_PatchPhase_response_shape(t *testing.T) {
     h, _ := newHandlerWithSQLiteAndSeededCycle(t)
     req := httptest.NewRequest(http.MethodPatch, "/tasks/1/cycles/1/phases/1",

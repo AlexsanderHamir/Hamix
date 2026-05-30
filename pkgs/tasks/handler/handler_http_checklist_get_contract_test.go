@@ -37,7 +37,7 @@ func TestHTTP_getChecklist_envelopeShape(t *testing.T) {
 		t.Fatalf("decode: %v body=%s", err, raw)
 	}
 	if _, ok := top["items"]; !ok || len(top) != 1 {
-		t.Fatalf("GET checklist 200 must return only `items` (docs/API-HTTP.md); got keys=%v body=%s", keysOf(top), raw)
+		t.Fatalf("GET checklist 200 must return only `items` (docs/api.md); got keys=%v body=%s", keysOf(top), raw)
 	}
 
 	var items []map[string]json.RawMessage
@@ -50,12 +50,12 @@ func TestHTTP_getChecklist_envelopeShape(t *testing.T) {
 	wantKeys := map[string]struct{}{"id": {}, "sort_order": {}, "text": {}, "done": {}}
 	for k := range wantKeys {
 		if _, ok := items[0][k]; !ok {
-			t.Errorf("item missing key %q (docs/API-HTTP.md): %s", k, items[0])
+			t.Errorf("item missing key %q (docs/api.md): %s", k, items[0])
 		}
 	}
 	for k := range items[0] {
 		if _, ok := wantKeys[k]; !ok {
-			t.Errorf("item has unexpected key %q (docs/API-HTTP.md): %s", k, items[0])
+			t.Errorf("item has unexpected key %q (docs/api.md): %s", k, items[0])
 		}
 	}
 

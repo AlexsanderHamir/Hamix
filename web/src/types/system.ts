@@ -3,7 +3,7 @@
  * snapshot). Mirrors the Go envelope in
  * `internal/systemhealth/snapshot.go` field-for-field. Maps are
  * always present (zero-valued on a freshly-booted process) per the
- * docs/API-HTTP.md "System health" contract, so callers do not need
+ * docs/api.md "System health" contract, so callers do not need
  * to branch on missing keys.
  */
 

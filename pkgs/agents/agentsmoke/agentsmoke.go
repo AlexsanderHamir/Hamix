@@ -16,7 +16,7 @@ const agentsmokeLogCmd = "taskapi"
 // targetFilename is the canonical filename Cursor must create inside
 // Fixture.WorkingDir. Pinned so the prompt and the assertion logic
 // stay in lockstep across every layer of the real-cursor smoke (see
-// docs/AGENT-WORKER.md "Smoke run").
+// docs/architecture.md "Smoke run").
 const targetFilename = "agent-smoke-output.txt"
 
 // expectedContents is the exact byte sequence Cursor must write into
@@ -85,7 +85,7 @@ the only state that matters is the file on disk.`, target)
 
 // WorkingDir is the per-test tempdir. Pass it as
 // runner.Request.WorkingDir (Stage 2) or via app_settings.repo_root
-// on the worker process (Stage 3 — see docs/SETTINGS.md).
+// on the worker process (Stage 3 — see docs/configuration.md).
 func (f *Fixture) WorkingDir() string {
 	slog.Debug("trace", "cmd", agentsmokeLogCmd, "operation", "agentsmoke.Fixture.WorkingDir")
 	return f.workingDir

@@ -33,7 +33,7 @@ const (
 	// SettingsChanged fires after PATCH /settings persists or the
 	// agent worker supervisor restarts as a result of a settings change.
 	// The event has no ID/CycleID; consumers refetch GET /settings to
-	// pick up the new values. Documented in docs/API-SSE.md.
+	// pick up the new values. Documented in docs/api.md.
 	SettingsChanged TaskChangeType = "settings_changed"
 	// AgentRunCancelled fires after POST /settings/cancel-current-run
 	// successfully cancels an in-flight runner.Run. Listeners use it
@@ -44,7 +44,7 @@ const (
 	// reconnect cursor is outside the ring buffer (or it was forcibly
 	// disconnected as a slow consumer) and it should drop all caches
 	// and refetch from the REST API. Wire payload: `{"type":"resync"}`
-	// with no id/cycle_id. Documented in docs/API-SSE.md.
+	// with no id/cycle_id. Documented in docs/api.md.
 	Resync TaskChangeType = "resync"
 )
 

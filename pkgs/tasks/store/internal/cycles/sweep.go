@@ -13,7 +13,7 @@ import (
 // ListRunning returns every task_cycles row with status='running'
 // across all tasks. Ordered by created_at ASC for deterministic
 // startup-sweep behaviour. Used by the agent worker's startup orphan
-// sweep (docs/AGENT-WORKER.md "Process restart and the orphan
+// sweep (docs/architecture.md "Process restart and the orphan
 // sweep"); unbounded by design — V1 expects very few orphan rows and
 // an explicit cap would silently drop rows that need cleanup.
 func ListRunning(ctx context.Context, db *gorm.DB) ([]domain.TaskCycle, error) {

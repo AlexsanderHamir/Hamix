@@ -4,11 +4,11 @@ Standard **outer** HTTP middleware for `taskapi`: recovery, metrics, access log,
 
 **Dependencies:** only [`pkgs/tasks/apijson`](../apijson/) and [`pkgs/tasks/logctx`](../logctx/) — **no** import of [`pkgs/tasks/handler`](../handler/) (avoids cycles). Production wiring is **`internal/taskapi.NewHTTPHandler`** → `Stack(handler.NewHandler(...), calltrace.Path)`.
 
-**Contracts and env overview:** [docs/DESIGN.md](../../docs/DESIGN.md), [docs/RUNTIME-ENV.md](../../docs/RUNTIME-ENV.md). REST/SSE behavior lives in [`pkgs/tasks/handler/README.md`](../handler/README.md).
+**Contracts and env overview:** [docs/architecture.md](../../docs/architecture.md), [docs/configuration.md](../../docs/configuration.md). REST/SSE behavior lives in [`pkgs/tasks/handler/README.md`](../handler/README.md).
 
 ## `Stack` order (outer → inner)
 
-Defined in **`stack.go`**. When changing order or adding a layer, update this README, [`stack.go`](stack.go), and [docs/OBSERVABILITY.md](../../docs/OBSERVABILITY.md) if logs or metrics change.
+Defined in **`stack.go`**. When changing order or adding a layer, update this README and [`stack.go`](stack.go).
 
 | Layer | Role |
 |-------|------|

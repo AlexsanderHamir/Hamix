@@ -244,7 +244,7 @@ export async function createTask(input: {
    * Omit (or pass `undefined`) to keep the existing global-delay
    * behaviour. The server rejects empty strings on create — to "no
    * schedule" the task, just omit the field.
-   * See docs/SCHEDULING.md.
+   * See docs/data-model.md.
    */
   pickup_not_before?: string;
   tags?: string[];
@@ -422,7 +422,7 @@ export async function patchTask(
     parent_id?: string | null;
     checklist_inherit?: boolean;
     /**
-     * Schedule wire encoding (see docs/SCHEDULING.md):
+     * Schedule wire encoding (see docs/data-model.md):
      *  - omit/undefined: do not touch the column on PATCH.
      *  - `null`: clear the schedule (server treats `null` and the
      *    explicit empty string symmetrically).

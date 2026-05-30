@@ -7,7 +7,7 @@ import { taskDescendantCount } from "../task-display";
  * total (children + grandchildren …) at the time of flattening; it is
  * preserved here even though `children` itself is stripped, so consumers
  * like the delete-confirm dialog can still warn the user that a single
- * `DELETE /tasks/{id}` will cascade (docs/API-HTTP.md cascade contract).
+ * `DELETE /tasks/{id}` will cascade (docs/api.md cascade contract).
  *
  * `descendantCount` is optional so legacy fixtures and call-sites that
  * pre-date the cascade warning can construct a row by hand without it

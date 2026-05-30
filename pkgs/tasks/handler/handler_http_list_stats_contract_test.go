@@ -165,7 +165,7 @@ func TestHTTP_listTasks_limitCoercedEcho(t *testing.T) {
 				t.Fatal(err)
 			}
 			if got.Limit != tc.wantLimit {
-				t.Fatalf("limit=%d want %d (docs/API-HTTP.md echo-after-coercion)", got.Limit, tc.wantLimit)
+				t.Fatalf("limit=%d want %d (docs/api.md echo-after-coercion)", got.Limit, tc.wantLimit)
 			}
 		})
 	}
@@ -192,7 +192,7 @@ func TestHTTP_listTasks_keysetClampsOffsetToZero(t *testing.T) {
 		t.Fatal(err)
 	}
 	if got.Offset != 0 {
-		t.Fatalf("offset=%d want 0 when after_id is set (docs/API-HTTP.md)", got.Offset)
+		t.Fatalf("offset=%d want 0 when after_id is set (docs/api.md)", got.Offset)
 	}
 	if got.Limit != 2 {
 		t.Fatalf("limit=%d want 2 (echoed)", got.Limit)
@@ -200,7 +200,7 @@ func TestHTTP_listTasks_keysetClampsOffsetToZero(t *testing.T) {
 }
 
 // TestHTTP_listTasks_limitRejectsOverMax pins the existing 400 surface from
-// docs/API-HTTP.md (`limit must be integer 0..200`) for the `?limit=201`
+// docs/api.md (`limit must be integer 0..200`) for the `?limit=201`
 // boundary, since handler_http_validation_test.go covers `?limit=999` but not
 // the +1-over-max edge.
 func TestHTTP_listTasks_limitRejectsOverMax(t *testing.T) {
@@ -308,14 +308,14 @@ func TestHTTP_statsArithmeticInvariant(t *testing.T) {
 	}
 	scopeSum := got.ByScope["parent"] + got.ByScope["subtask"]
 	if scopeSum != got.Total {
-		t.Fatalf("parent(%d)+subtask(%d)=%d != total(%d) (docs/API-HTTP.md invariant)",
+		t.Fatalf("parent(%d)+subtask(%d)=%d != total(%d) (docs/api.md invariant)",
 			got.ByScope["parent"], got.ByScope["subtask"], scopeSum, got.Total)
 	}
 	if sum := sumIntMap(got.ByStatus); sum != got.Total {
-		t.Fatalf("sum(by_status)=%d != total(%d) (docs/API-HTTP.md invariant): %+v", sum, got.Total, got.ByStatus)
+		t.Fatalf("sum(by_status)=%d != total(%d) (docs/api.md invariant): %+v", sum, got.Total, got.ByStatus)
 	}
 	if sum := sumIntMap(got.ByPriority); sum != got.Total {
-		t.Fatalf("sum(by_priority)=%d != total(%d) (docs/API-HTTP.md invariant): %+v", sum, got.Total, got.ByPriority)
+		t.Fatalf("sum(by_priority)=%d != total(%d) (docs/api.md invariant): %+v", sum, got.Total, got.ByPriority)
 	}
 	if got.Ready != got.ByStatus["ready"] {
 		t.Fatalf("ready convenience=%d != by_status[ready]=%d", got.Ready, got.ByStatus["ready"])
@@ -362,12 +362,12 @@ func assertListEnvelopeKeys(t *testing.T, raw []byte) {
 	want := map[string]struct{}{"tasks": {}, "limit": {}, "offset": {}, "has_more": {}}
 	for k := range want {
 		if _, ok := top[k]; !ok {
-			t.Errorf("GET /tasks 200 missing key %q (docs/API-HTTP.md): %s", k, raw)
+			t.Errorf("GET /tasks 200 missing key %q (docs/api.md): %s", k, raw)
 		}
 	}
 	for k := range top {
 		if _, ok := want[k]; !ok {
-			t.Errorf("GET /tasks 200 unexpected key %q (docs/API-HTTP.md): %s", k, raw)
+			t.Errorf("GET /tasks 200 unexpected key %q (docs/api.md): %s", k, raw)
 		}
 	}
 }
@@ -385,12 +385,12 @@ func assertStatsEnvelopeKeys(t *testing.T, raw []byte) {
 	}
 	for k := range want {
 		if _, ok := top[k]; !ok {
-			t.Errorf("GET /tasks/stats 200 missing key %q (docs/API-HTTP.md): %s", k, raw)
+			t.Errorf("GET /tasks/stats 200 missing key %q (docs/api.md): %s", k, raw)
 		}
 	}
 	for k := range top {
 		if _, ok := want[k]; !ok {
-			t.Errorf("GET /tasks/stats 200 unexpected key %q (docs/API-HTTP.md): %s", k, raw)
+			t.Errorf("GET /tasks/stats 200 unexpected key %q (docs/api.md): %s", k, raw)
 		}
 	}
 }
@@ -398,7 +398,7 @@ func assertStatsEnvelopeKeys(t *testing.T, raw []byte) {
 func assertByScopeKeys(t *testing.T, byScope map[string]int64, wantParent, wantSubtask int64) {
 	t.Helper()
 	if byScope == nil {
-		t.Fatalf("by_scope is null; want two-key object even on empty DB (docs/API-HTTP.md)")
+		t.Fatalf("by_scope is null; want two-key object even on empty DB (docs/api.md)")
 	}
 	if len(byScope) != 2 {
 		t.Fatalf("by_scope has %d keys (%v) want exactly 2 (parent, subtask)", len(byScope), byScope)
@@ -432,10 +432,10 @@ func assertCyclesEmpty(t *testing.T, raw []byte, got statsResponseRaw) {
 		// cycles); the structural check below is the precise one.
 	}
 	if got.Cycles.ByStatus == nil {
-		t.Fatalf("cycles.by_status is null; want {} on empty DB (docs/API-HTTP.md): %s", raw)
+		t.Fatalf("cycles.by_status is null; want {} on empty DB (docs/api.md): %s", raw)
 	}
 	if got.Cycles.ByTriggeredBy == nil {
-		t.Fatalf("cycles.by_triggered_by is null; want {} on empty DB (docs/API-HTTP.md): %s", raw)
+		t.Fatalf("cycles.by_triggered_by is null; want {} on empty DB (docs/api.md): %s", raw)
 	}
 	if len(got.Cycles.ByStatus) != 0 {
 		t.Fatalf("cycles.by_status=%v want {} on empty DB", got.Cycles.ByStatus)
@@ -453,13 +453,13 @@ func assertCyclesEmpty(t *testing.T, raw []byte, got statsResponseRaw) {
 func assertPhasesAllZeroEnumKeys(t *testing.T, raw []byte, got statsResponseRaw) {
 	t.Helper()
 	if got.Phases.ByPhaseStatus == nil {
-		t.Fatalf("phases.by_phase_status is null; want {} on empty DB (docs/API-HTTP.md): %s", raw)
+		t.Fatalf("phases.by_phase_status is null; want {} on empty DB (docs/api.md): %s", raw)
 	}
 	wantPhases := []string{"diagnose", "execute", "verify", "persist"}
 	for _, p := range wantPhases {
 		inner, ok := got.Phases.ByPhaseStatus[p]
 		if !ok {
-			t.Errorf("phases.by_phase_status missing key %q; the 4-key heatmap shape is mandatory (docs/API-HTTP.md): %s",
+			t.Errorf("phases.by_phase_status missing key %q; the 4-key heatmap shape is mandatory (docs/api.md): %s",
 				p, raw)
 			continue
 		}
@@ -479,13 +479,13 @@ func assertPhasesAllZeroEnumKeys(t *testing.T, raw []byte, got statsResponseRaw)
 func assertRunnerEmpty(t *testing.T, raw []byte, got statsResponseRaw) {
 	t.Helper()
 	if got.Runner.ByRunner == nil {
-		t.Fatalf("runner.by_runner is null; want {} on empty DB (docs/API-HTTP.md): %s", raw)
+		t.Fatalf("runner.by_runner is null; want {} on empty DB (docs/api.md): %s", raw)
 	}
 	if got.Runner.ByModel == nil {
-		t.Fatalf("runner.by_model is null; want {} on empty DB (docs/API-HTTP.md): %s", raw)
+		t.Fatalf("runner.by_model is null; want {} on empty DB (docs/api.md): %s", raw)
 	}
 	if got.Runner.ByRunnerModel == nil {
-		t.Fatalf("runner.by_runner_model is null; want {} on empty DB (docs/API-HTTP.md): %s", raw)
+		t.Fatalf("runner.by_runner_model is null; want {} on empty DB (docs/api.md): %s", raw)
 	}
 	if len(got.Runner.ByRunner) != 0 || len(got.Runner.ByModel) != 0 || len(got.Runner.ByRunnerModel) != 0 {
 		t.Fatalf("runner block non-empty on empty DB: %+v", got.Runner)
@@ -502,7 +502,7 @@ func assertRecentFailuresEmptyArray(t *testing.T, raw []byte, got statsResponseR
 		t.Errorf("empty DB must serialize \"recent_failures\":[] verbatim, got %s", raw)
 	}
 	if got.RecentFailures == nil {
-		t.Fatalf("recent_failures is null; want [] on empty DB (docs/API-HTTP.md)")
+		t.Fatalf("recent_failures is null; want [] on empty DB (docs/api.md)")
 	}
 	if len(got.RecentFailures) != 0 {
 		t.Fatalf("recent_failures=%v want [] on empty DB", got.RecentFailures)

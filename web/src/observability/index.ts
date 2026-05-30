@@ -24,7 +24,7 @@ export { formatDurationSeconds } from "./systemHealthViewModel";
 
 // RUM (Real-User-Monitoring) beacon. Use these helpers from feature
 // hooks (mutations, SSE handlers) to feed the SLOs documented in
-// docs/SLOs.md; the server-side counters in
+// docs/architecture.md; the server-side counters in
 // pkgs/tasks/middleware/metrics_http.go consume what we ship.
 export {
   installRUM,

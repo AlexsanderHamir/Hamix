@@ -159,6 +159,6 @@ func assertMentionErrorContains(t *testing.T, raw []byte, substr string) {
 		t.Fatalf("decode: %v body=%s", err, raw)
 	}
 	if !strings.Contains(errBody.Error, substr) {
-		t.Fatalf("error=%q missing substring %q (docs/API-HTTP.md says messages include the offending @mention)", errBody.Error, substr)
+		t.Fatalf("error=%q missing substring %q (docs/api.md says messages include the offending @mention)", errBody.Error, substr)
 	}
 }

@@ -85,7 +85,7 @@ Sometimes the chain bottoms out at: "no test would have caught this." The action
 - Symptom: handler returned wrong status for one edge.
 - Root cause (missing test): no contract test pins the status-code-per-condition matrix for this handler.
 - Narrowed fix: add the regression test for this exact case.
-- Followup: queue `add contract test matrix for cycles handler covering all (input, expected status) pairs from docs/API-HTTP.md`.
+- Followup: queue `add contract test matrix for cycles handler covering all (input, expected status) pairs from docs/api.md`.
 
 ---
 

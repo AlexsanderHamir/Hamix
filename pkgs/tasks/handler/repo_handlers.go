@@ -45,7 +45,7 @@ const maxRepoLineQueryParamBytes = 32
 // repoUnavailableErrorBody is the JSON envelope the SPA expects when
 // a /repo/* call can't reach a workspace. The reason field lets the
 // SPA disambiguate "not configured" (link to Settings) vs "open
-// failed" (show the OpenRoot error). Pinned by docs/SETTINGS.md.
+// failed" (show the OpenRoot error). Pinned by docs/configuration.md.
 type repoUnavailableErrorBody struct {
 	Error  string `json:"error"`
 	Reason string `json:"reason"`

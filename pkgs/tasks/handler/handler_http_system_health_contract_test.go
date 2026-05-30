@@ -18,7 +18,7 @@ import (
 // envelope. The shape is checked here (not inside the systemhealth
 // package) so a future field rename in
 // internal/systemhealth.Snapshot fails this test in the same PR as
-// the docs/API-HTTP.md update.
+// the docs/api.md update.
 type systemHealthRaw struct {
 	Build         systemHealthBuildRaw  `json:"build"`
 	UptimeSeconds float64               `json:"uptime_seconds"`
@@ -81,7 +81,7 @@ func newSystemHealthTestServer(t *testing.T, g systemhealth.Gather) *httptest.Se
 // top-level keys of GET /system/health (build, uptime_seconds, now,
 // http, sse, db_pool, agent — note `now` is wall clock, not an
 // uptime alias). Adding or renaming a key fails this test in the
-// same PR as docs/API-HTTP.md.
+// same PR as docs/api.md.
 func TestHTTP_systemHealth_envelopeShape(t *testing.T) {
 	srv := newSystemHealthTestServer(t, prometheus.NewPedanticRegistry())
 	defer srv.Close()
@@ -260,12 +260,12 @@ func assertSystemHealthEnvelopeKeys(t *testing.T, raw []byte) {
 	}
 	for k := range want {
 		if _, ok := top[k]; !ok {
-			t.Errorf("GET /system/health 200 missing key %q (docs/API-HTTP.md): %s", k, raw)
+			t.Errorf("GET /system/health 200 missing key %q (docs/api.md): %s", k, raw)
 		}
 	}
 	for k := range top {
 		if _, ok := want[k]; !ok {
-			t.Errorf("GET /system/health 200 unexpected key %q (docs/API-HTTP.md): %s", k, raw)
+			t.Errorf("GET /system/health 200 unexpected key %q (docs/api.md): %s", k, raw)
 		}
 	}
 }

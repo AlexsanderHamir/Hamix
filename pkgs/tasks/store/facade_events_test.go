@@ -376,7 +376,7 @@ func TestStore_AppendTaskEvent_appends_row_and_not_found(t *testing.T) {
 
 // TestStore_AppendTaskEvent_normalizes_data_json pins the on-disk
 // invariant for task_events.data_json: the column is documented in
-// docs/API-HTTP.md (`GET /tasks/{id}/events`) as "always a JSON object,
+// docs/api.md (`GET /tasks/{id}/events`) as "always a JSON object,
 // defaults to {}". The kernel.AppendEvent chokepoint must collapse nil,
 // empty, whitespace-only, and the literal "null" to "{}" so a future
 // caller that forwards a json.RawMessage(nil) (typed-nil pointer
@@ -431,7 +431,7 @@ func TestStore_AppendTaskEvent_normalizes_data_json(t *testing.T) {
 				t.Fatal(err)
 			}
 			if got := string(ev.Data); got != "{}" {
-				t.Fatalf("data_json = %q, want %q (docs/API-HTTP.md events invariant: always a JSON object)", got, "{}")
+				t.Fatalf("data_json = %q, want %q (docs/api.md events invariant: always a JSON object)", got, "{}")
 			}
 		})
 	}

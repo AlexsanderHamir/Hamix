@@ -16,7 +16,7 @@ import (
 // filter excludes any task whose pickup_not_before is still in the
 // future. Without this gate, a brand-new ready task with an explicit
 // future pickup time would race the reconcile loop and be picked up
-// immediately by the worker — see docs/SCHEDULING.md ("the two queues").
+// immediately by the worker — see docs/data-model.md ("the two queues").
 //
 // `now` is injected so tests can pin the comparison; production callers
 // pass time.Now().UTC().
@@ -52,7 +52,7 @@ type ProjectFieldPatch = tasks.ProjectFieldPatch
 
 // PickupNotBeforePatch is the public re-export of the
 // pickup_not_before patch helper used by UpdateTaskInput.PickupNotBefore.
-// See docs/SCHEDULING.md.
+// See docs/data-model.md.
 type PickupNotBeforePatch = tasks.PickupNotBeforePatch
 
 // TaskNode is a task row plus nested children for API tree
@@ -100,7 +100,7 @@ func (s *Store) Create(ctx context.Context, in CreateTaskInput, by domain.Actor)
 // operator cleared the schedule or pulled it into the past) — the
 // in-memory queue would otherwise stay empty until the next periodic
 // reconcile tick. See tasks.Update for the per-field rules and
-// docs/SCHEDULING.md for the two-queues invariant.
+// docs/data-model.md for the two-queues invariant.
 func (s *Store) Update(ctx context.Context, id string, in UpdateTaskInput, by domain.Actor) (*domain.Task, error) {
 	slog.Debug("trace", "cmd", storeLogCmd, "operation", "tasks.store.Update")
 	updated, prev, err := tasks.Update(ctx, s.db, id, in, by)

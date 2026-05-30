@@ -2,8 +2,8 @@
 //
 // One Runner.Run call corresponds to exactly one execution-cycle phase
 // (diagnose / execute / verify / persist as defined in moat.md and
-// docs/EXECUTION-CYCLES.md). The worker in pkgs/agents/worker (contract:
-// docs/AGENT-WORKER.md) drives the lifecycle (start cycle, start phase,
+// docs/data-model.md). The worker in pkgs/agents/worker (contract:
+// docs/architecture.md) drives the lifecycle (start cycle, start phase,
 // patch phase) and asks a Runner to actually do the per-phase work.
 //
 // # Multi-runner roadmap
@@ -31,7 +31,7 @@
 // it passed to the underlying tool. The runner package itself only enforces
 // byte caps (see NewResult); it does not look at content.
 //
-// The repo-wide rule from docs/OBSERVABILITY.md applies: never persist or
+// The repo-wide rule from docs/architecture.md applies: never persist or
 // log passwords, tokens, full Authorization headers, or DATABASE_URL.
 //
 // # Determinism for tests

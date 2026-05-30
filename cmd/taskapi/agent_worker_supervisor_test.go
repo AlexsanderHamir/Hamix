@@ -497,7 +497,7 @@ func ptrTime(v time.Time) *time.Time { return &v }
 // (queue non-empty, no scheduled rows, both empty) returns "" so the
 // supervisor's effective-config log line stays uncluttered. This is
 // the operator-visible "0 ready, N scheduled" vs "0 ready, 0
-// scheduled" distinction promised in docs/SCHEDULING.md.
+// scheduled" distinction promised in docs/data-model.md.
 func TestDecideSchedulingIdleHint_unitTable(t *testing.T) {
 	t.Parallel()
 	cases := []struct {

@@ -58,7 +58,7 @@ type Props = {
    * Receives the table row plus the pre-computed `subtaskCount` carried by
    * `TaskWithDepth.descendantCount`. Forwarded to `useTaskDeleteFlow` so the
    * confirm dialog can warn the user about the cascade documented in
-   * docs/API-HTTP.md "DELETE /tasks/{id}".
+   * docs/api.md "DELETE /tasks/{id}".
    */
   onRequestDelete: (t: DeleteTargetInput) => void;
   /**

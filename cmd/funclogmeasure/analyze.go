@@ -52,7 +52,7 @@ const defaultToolImportPath = "github.com/AlexsanderHamir/T2A/cmd/funclogmeasure
 //
 // Entries are grouped below by category; each block begins with a short
 // comment naming the category and the per-package rationale. See
-// docs/OBSERVABILITY.md for the broader trace-line contract.
+// docs/architecture.md for the broader trace-line contract.
 var skipSlogRequirement = map[string]struct{}{
 	"github.com/AlexsanderHamir/T2A/internal/version\tString":                    {},
 	"github.com/AlexsanderHamir/T2A/internal/version\tPrometheusBuildInfoLabels": {},

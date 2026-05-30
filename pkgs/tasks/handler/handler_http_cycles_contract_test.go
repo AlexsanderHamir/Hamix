@@ -26,7 +26,7 @@ func mustStartCycle(t *testing.T, baseURL, taskID string) string {
 
 // TestHTTP_postTaskCycle_400ErrorStrings pins every documented 400 string
 // for POST /tasks/{id}/cycles. Drift in any of these phrases breaks the test
-// in lockstep with docs/API-HTTP.md (Stage 6 commits the doc rows).
+// in lockstep with docs/api.md (Stage 6 commits the doc rows).
 func TestHTTP_postTaskCycle_400ErrorStrings(t *testing.T) {
 	srv := newTaskTestServer(t)
 	defer srv.Close()

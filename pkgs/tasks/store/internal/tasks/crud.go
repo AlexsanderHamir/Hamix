@@ -123,7 +123,7 @@ func Update(ctx context.Context, db *gorm.DB, id string, in UpdateInput, by doma
 // Delete removes the task at id and every descendant in one
 // transaction. The cascade is BFS from the requested root, so a single
 // HTTP DELETE always takes the entire subtree with it; this matches
-// the documented contract in docs/API-HTTP.md ("DELETE cascades to all
+// the documented contract in docs/api.md ("DELETE cascades to all
 // descendants").
 //
 // Returns:

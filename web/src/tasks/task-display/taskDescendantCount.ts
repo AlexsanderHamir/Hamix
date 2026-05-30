@@ -3,7 +3,7 @@ import type { Task } from "@/types/task";
 /**
  * Total descendant count for a task tree (children + grandchildren …).
  * Excludes the root itself, mirrors the BFS contract documented for
- * `DELETE /tasks/{id}` in docs/API-HTTP.md: the server-side cascade
+ * `DELETE /tasks/{id}` in docs/api.md: the server-side cascade
  * removes one row per id returned here when this root is deleted.
  *
  * Returns 0 for leaf rows and for inputs whose `children` array is

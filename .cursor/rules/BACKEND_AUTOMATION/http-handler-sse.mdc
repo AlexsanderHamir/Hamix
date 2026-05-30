@@ -2,7 +2,7 @@
 description: >-
   HTTP + SSE handler patterns for taskapi: httptest, status codes, JSON decode
   strictness, middleware, and write-path → notify semantics. Companion to
-  docs/API-HTTP.md and docs/API-SSE.md.
+  docs/api.md.
 globs:
   - "**/*.go"
 alwaysApply: false
@@ -10,7 +10,7 @@ alwaysApply: false
 
 # HTTP and SSE handler patterns
 
-Authoritative routes, bodies, and query parameters live in **`docs/API-HTTP.md`** (REST) and **`docs/API-SSE.md`** (SSE). **`pkgs/tasks/handler/README.md`** maps `*.go` files to routes vs middleware. The **`With*`** assembly order for `taskapi` is **`pkgs/tasks/middleware.Stack`** (called from **`internal/taskapi.NewHTTPHandler`** with **`calltrace.Path`**). This file is the **implementation checklist** when editing **`pkgs/tasks/handler/`** or **`pkgs/tasks/middleware/`**.
+Authoritative routes, bodies, and query parameters live in **`docs/api.md`** (with `pkgs/tasks/handler/` godoc as the source of truth for exhaustive behavior). **`pkgs/tasks/handler/README.md`** maps `*.go` files to routes vs middleware. The **`With*`** assembly order for `taskapi` is **`pkgs/tasks/middleware.Stack`** (called from **`internal/taskapi.NewHTTPHandler`** with **`calltrace.Path`**). This file is the **implementation checklist** when editing **`pkgs/tasks/handler/`** or **`pkgs/tasks/middleware/`**.
 
 ---
 
@@ -57,5 +57,5 @@ Authoritative routes, bodies, and query parameters live in **`docs/API-HTTP.md`*
 ## Checklist before merging handler changes
 
 1. `go test ./pkgs/tasks/handler/... -count=1` (and broader `./...` if shared types changed)
-2. `docs/API-HTTP.md` / `docs/API-SSE.md` (and `docs/DESIGN.md` hub if limitations change) updated if any observable HTTP or SSE behavior changed
+2. `docs/api.md` (and `docs/architecture.md` if limitations change) updated if any observable HTTP or SSE behavior changed
 3. New failure modes have **structured logs** at appropriate level (not noisy on hot paths)

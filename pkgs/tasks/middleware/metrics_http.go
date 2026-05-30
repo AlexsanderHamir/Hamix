@@ -14,7 +14,7 @@ import (
 // httpRequestDurationSecondsBuckets are upper bounds (seconds) for
 // taskapi_http_request_duration_seconds. They prioritize resolution between
 // ~10ms and 1s for REST SLI work (p50/p95), with a tail to 10s for slow store
-// paths. Documented in docs/API-HTTP.md and docs/OBSERVABILITY.md.
+// paths. Documented in docs/api.md and docs/architecture.md.
 var httpRequestDurationSecondsBuckets = []float64{
 	0.01, 0.025, 0.05, 0.1, 0.15, 0.25, 0.35, 0.5, 0.75, 1,
 	1.5, 2.5, 5, 10,
@@ -101,7 +101,7 @@ var (
 	})
 	// taskapiSSEPublishTotal counts every successful Publish() call on the
 	// SSE hub — the denominator for the `slo_sse_resync_rate` SLO. Per
-	// docs/SLOs.md the resync-rate SLI is
+	// docs/architecture.md the resync-rate SLI is
 	// `sse_resync_emitted_total / sse_publish_total`, so this counter
 	// MUST be incremented once per Publish regardless of how many
 	// subscribers fanout to.
@@ -124,7 +124,7 @@ var (
 	})
 
 	// rumLatencyBuckets are tuned for the click-to-confirmed SLO
-	// `slo_click_to_confirmed_p95_ms ≤ 100` documented in docs/SLOs.md.
+	// `slo_click_to_confirmed_p95_ms ≤ 100` documented in docs/architecture.md.
 	// Concentrated below 250 ms so p95 has resolution where the SLI
 	// lives, with a tail to 30s for pathological optimistic-applied
 	// renders or settled latencies behind a slow store.

@@ -202,7 +202,7 @@ type TaskDraft struct {
 // gives a stable monotonic ordering of attempts. A cycle's lifecycle is enforced
 // at the store boundary: at most one Running cycle per task at any time, and
 // terminal statuses (Succeeded / Failed / Aborted) are immutable. See
-// docs/EXECUTION-CYCLES.md.
+// docs/data-model.md.
 type TaskCycle struct {
 	ID            string      `gorm:"primaryKey"`
 	TaskID        string      `gorm:"not null;index;index:task_cycles_task_id_attempt,unique,priority:1"`

@@ -126,7 +126,7 @@ func NewHandler(s *store.Store, hub *SSEHub, rep *repo.Root, opts ...HandlerOpti
 	m.Handle("POST /runners/{id}/list-models", http.HandlerFunc(h.listRunnerModels))
 	m.Handle("POST /runners/{id}/validate-config", http.HandlerFunc(h.validateRunnerConfig))
 	// /v1/rum is the SPA-side Real User Monitoring beacon. Documented
-	// in docs/SLOs.md; the browser ships batches via
+	// in docs/architecture.md; the browser ships batches via
 	// `navigator.sendBeacon` so the server returns 204 with no body.
 	// Rate-limited via the global per-IP middleware (WithRateLimit),
 	// not separately, so a misbehaving SPA cannot amplify a load

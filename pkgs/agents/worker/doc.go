@@ -6,9 +6,9 @@
 // closed as PhaseStatusSkipped to satisfy the
 // domain.ValidPhaseTransition "first phase must be diagnose" rule, and
 // an execute row that wraps the actual runner.Runner invocation. See
-// docs/AGENT-WORKER.md for the contract and the rationale.
+// docs/architecture.md for the contract and the rationale.
 //
-// Lifecycle per task (full contract in docs/AGENT-WORKER.md):
+// Lifecycle per task (full contract in docs/architecture.md):
 //
 //  1. Receive(ctx) blocks on the MemoryQueue.
 //  2. Reload the task; if it is no longer StatusReady, log warn and ack.
@@ -41,9 +41,9 @@
 //     tiny adapter; tests pass nil and the calls become no-ops.
 //
 // Out of scope for V1 (deferred to V2-V4 of
-// docs/AGENTIC-LAYER-PLAN.md): retries, concurrency, leases,
+// docs/architecture.md): retries, concurrency, leases,
 // dead-letter, runner selection, per-phase decomposition. The startup
 // orphan-cycle sweep that complements this worker is wired in
-// cmd/taskapi (see docs/AGENT-WORKER.md "Process restart and the
+// cmd/taskapi (see docs/architecture.md "Process restart and the
 // orphan sweep").
 package worker

@@ -239,7 +239,7 @@ func wrapMentionMsg(label, reason string) error {
 // mentionLabel formats the human-readable "mention @<path>" or
 // "mention @<path>(<start>-<end>)" prefix used in error messages so range
 // failures still pinpoint the offending line span (the substring clients in
-// docs/API-HTTP.md are documented to rely on for form UI highlighting).
+// docs/api.md are documented to rely on for form UI highlighting).
 func (m Mention) mentionLabel() string {
 	slog.Debug("trace", "operation", "repo.Mention.mentionLabel")
 	if m.HasRange {

@@ -22,7 +22,7 @@ type Props = {
  *     for when both the snapshot is missing and SSE is down. Sourced
  *     from `useSystemHealth`, which polls
  *     every 10s; intentionally NOT SSE because /system/health is a
- *     pull endpoint (see docs/API-HTTP.md "System health" — publishing
+ *     pull endpoint (see docs/api.md "System health" — publishing
  *     SSE here would loop forever).
  *
  *   - **Dot color** reflects the SSE connection (live = success-bright

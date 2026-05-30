@@ -55,7 +55,7 @@ func TestHTTP_saveDraft_201Envelope(t *testing.T) {
 	sort.Strings(gotKeys)
 	sort.Strings(wantKeys)
 	if !equalStringSlices(gotKeys, wantKeys) {
-		t.Fatalf("envelope keys=%v want %v (docs/API-HTTP.md POST /task-drafts row pins {id,name,created_at,updated_at} with no payload echo)", gotKeys, wantKeys)
+		t.Fatalf("envelope keys=%v want %v (docs/api.md POST /task-drafts row pins {id,name,created_at,updated_at} with no payload echo)", gotKeys, wantKeys)
 	}
 
 	var sum struct {
@@ -98,7 +98,7 @@ func TestHTTP_saveDraft_serverAssignsID(t *testing.T) {
 				t.Fatalf("decode: %v body=%s", err, raw)
 			}
 			if strings.TrimSpace(sum.ID) == "" {
-				t.Fatalf("server-assigned id=%q want non-empty (docs/API-HTTP.md POST /task-drafts: omitted/empty/whitespace id → server UUID)", sum.ID)
+				t.Fatalf("server-assigned id=%q want non-empty (docs/api.md POST /task-drafts: omitted/empty/whitespace id → server UUID)", sum.ID)
 			}
 		})
 	}
@@ -201,7 +201,7 @@ func TestHTTP_saveDraft_400ErrorStrings(t *testing.T) {
 				t.Fatalf("decode: %v body=%s", err, raw)
 			}
 			if errBody.Error != tc.want {
-				t.Fatalf("error=%q want %q (docs/API-HTTP.md /task-drafts/* 400 strings)", errBody.Error, tc.want)
+				t.Fatalf("error=%q want %q (docs/api.md /task-drafts/* 400 strings)", errBody.Error, tc.want)
 			}
 		})
 	}

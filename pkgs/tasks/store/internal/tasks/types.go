@@ -43,7 +43,7 @@ type ParentFieldPatch struct {
 // PickupNotBeforePatch updates pickup_not_before when non-nil. Clear
 // true means set the column to NULL (the task is no longer
 // scheduled). Re-aliased by the public store facade as
-// store.PickupNotBeforePatch. See docs/SCHEDULING.md.
+// store.PickupNotBeforePatch. See docs/data-model.md.
 type PickupNotBeforePatch struct {
 	Clear bool
 	At    time.Time

@@ -29,7 +29,7 @@ type TaskStats struct {
 	// future via `pickup_not_before > now`. Surfaces the
 	// "intentionally deferred" state in stats consumers so
 	// "0 ready, 12 scheduled" reads differently from "0 ready, 0
-	// scheduled" — see docs/SCHEDULING.md "the two queues" section.
+	// scheduled" — see docs/data-model.md "the two queues" section.
 	Scheduled  int64
 	ByStatus   map[domain.Status]int64
 	ByPriority map[domain.Priority]int64

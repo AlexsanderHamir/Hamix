@@ -23,7 +23,7 @@ const (
 )
 
 // TestAgentWorkerE2E_readyTaskRunsThroughReconcileAndWorker is the
-// V1 worker integration sweep (contract: docs/AGENT-WORKER.md): real
+// V1 worker integration sweep (contract: docs/architecture.md): real
 // SQLite store + bounded MemoryQueue + reconcile loop + worker +
 // scripted fake runner. It enqueues a single ready task that the
 // reconcile loop must surface (the test deliberately bypasses

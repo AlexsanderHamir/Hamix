@@ -1,6 +1,6 @@
 # `pkgs/tasks/store`
 
-GORM-backed persistence for tasks, audit events, checklists, drafts, draft evaluations, cycles/phases, the ready-task queue, dev-mirror, and DB health probes. **Product docs:** [docs/PERSISTENCE.md](../../docs/PERSISTENCE.md), [docs/EXTENSIBILITY.md](../../docs/EXTENSIBILITY.md). **Ready-queue hooks:** [docs/AGENT-QUEUE.md](../../docs/AGENT-QUEUE.md). API contracts: [docs/API-HTTP.md](../../docs/API-HTTP.md).
+GORM-backed persistence for tasks, audit events, checklists, drafts, draft evaluations, cycles/phases, the ready-task queue, dev-mirror, and DB health probes. **Architecture and dual-write invariant:** [docs/architecture.md](../../docs/architecture.md), [docs/data-model.md](../../docs/data-model.md). **How to extend:** [docs/contributing.md](../../docs/contributing.md). API contracts: [docs/api.md](../../docs/api.md).
 
 Package overview and conventions: `go doc -all .` (starts in [doc.go](./doc.go)).
 

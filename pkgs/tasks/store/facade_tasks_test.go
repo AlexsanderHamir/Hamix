@@ -253,7 +253,7 @@ func TestStore_Delete_rejects_empty_id(t *testing.T) {
 // TestStore_Delete_cascadesSubtree pins the documented contract that
 // a single Delete on a parent removes the parent and every descendant
 // in BFS order. Replaces the prior `delete subtasks first` rejection
-// (see docs/API-HTTP.md DELETE /tasks/{id}) so users no longer have
+// (see docs/api.md DELETE /tasks/{id}) so users no longer have
 // to descend the tree manually from the SPA.
 func TestStore_Delete_cascadesSubtree(t *testing.T) {
 	db := tasktestdb.OpenSQLite(t)
@@ -394,7 +394,7 @@ func findEventsByType(evs []domain.TaskEvent, want domain.EventType) []domain.Ta
 }
 
 // TestStore_Update_setParent_emits_subtaskAdded_on_new_parent_with_correct_payload
-// pins the audit contract documented in docs/API-HTTP.md (line 205): the
+// pins the audit contract documented in docs/api.md (line 205): the
 // `subtask_added` event is emitted on the **parent** task with payload
 // `{child_task_id, title}` whenever a child becomes its subtask. The Create
 // flow already follows this contract (see
@@ -451,7 +451,7 @@ func TestStore_Update_setParent_emits_subtaskAdded_on_new_parent_with_correct_pa
 // other half of the reparent audit contract: clearing parent_id (PATCH
 // `parent_id:null`) must emit `subtask_removed` on the **old parent**, not
 // `subtask_added` on the child. This is the symmetric companion to
-// docs/API-HTTP.md line 205 ("`subtask_removed` on the parent when that child
+// docs/api.md line 205 ("`subtask_removed` on the parent when that child
 // is deleted") — orphaning via PATCH is logically equivalent to removing the
 // child from the parent's subtree.
 func TestStore_Update_clearParent_emits_subtaskRemoved_on_old_parent(t *testing.T) {
@@ -953,7 +953,7 @@ func TestSetReadyTaskNotifier_UpdateTransitionToReady(t *testing.T) {
 }
 
 // TestStore_Create_doesNotNotifyWhenPickupInFuture pins the Stage 0
-// invariant from docs/SCHEDULING.md: a freshly-created ready task
+// invariant from docs/data-model.md: a freshly-created ready task
 // whose pickup_not_before is in the future MUST NOT be pushed onto
 // the in-memory ready queue. The reconcile loop, which honours the
 // SQL filter, picks it up later when the time has passed. Without

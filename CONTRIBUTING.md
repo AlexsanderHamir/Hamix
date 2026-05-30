@@ -9,9 +9,8 @@ For **undisclosed vulnerabilities**, use [SECURITY.md](SECURITY.md) (private adv
 ## Before you start
 
 1. Read [AGENTS.md](AGENTS.md) (repo map, commands, pitfalls).
-2. Copy [.env.example](.env.example) to `.env` and set `DATABASE_URL`. The workspace repo path, agent worker switches, cursor binary, and per-run timeout now live in the SPA Settings page (gear icon in the header → `/settings`); see [docs/SETTINGS.md](docs/SETTINGS.md). Never commit `.env`.
-3. Authoritative HTTP/SSE/JSON behavior: [docs/API-HTTP.md](docs/API-HTTP.md), [docs/API-SSE.md](docs/API-SSE.md), [docs/RUNTIME-ENV.md](docs/RUNTIME-ENV.md); architecture and limitations: [docs/DESIGN.md](docs/DESIGN.md) · optional UI client: [docs/WEB.md](docs/WEB.md).
-4. For who T2A is for and how we choose scope (large features or roadmap debates), see [docs/PRODUCT.md](docs/PRODUCT.md).
+2. Copy [.env.example](.env.example) to `.env` and set `DATABASE_URL`. The workspace repo path, agent worker switches, cursor binary, and per-run timeout live in the SPA Settings page (gear icon in the header → `/settings`); see [docs/configuration.md](docs/configuration.md). Never commit `.env`.
+3. Authoritative HTTP/SSE/JSON behavior: [docs/api.md](docs/api.md); architecture and limitations: [docs/architecture.md](docs/architecture.md); env + app settings: [docs/configuration.md](docs/configuration.md); optional UI client: [docs/web.md](docs/web.md).
 
 ## Local setup
 
@@ -31,26 +30,24 @@ From the repo root, run the full bar from [AGENTS.md](AGENTS.md#commands-to-run-
 
 Windows: `.\scripts\check.ps1` (install `web/` deps with `npm ci` in `web/` when needed). Go-only quick path: `CHECK_SKIP_WEB=1 ./scripts/check.sh`.
 
-**Tests:** Prefer **test-first** for bugs and new behavior (failing test → fix → green); details live in `.cursor/rules/BACKEND_AUTOMATION/go-testing-recipes.mdc` (Go) and `.cursor/rules/UI_AUTOMATION/testing-recipes.mdc` (`web/`). For **`pkgs/tasks/middleware`**, put exported-API-only tests in **`internal/middlewaretest/`** and keep whitebox tests next to the implementation (see `pkgs/tasks/middleware/README.md` § Tests). For **`pkgs/tasks/handler`** growth and where to put new tests vs extractions, see **`docs/HANDLER-SCALE.md`**.
+**Tests:** Prefer **test-first** for bugs and new behavior (failing test → fix → green); details live in `.cursor/rules/BACKEND_AUTOMATION/go-testing-recipes.mdc` (Go) and `.cursor/rules/UI_AUTOMATION/testing-recipes.mdc` (`web/`). For **`pkgs/tasks/middleware`**, put exported-API-only tests in **`internal/middlewaretest/`** and keep whitebox tests next to the implementation (see `pkgs/tasks/middleware/README.md` § Tests). For **`pkgs/tasks/handler`** growth and where to put new tests vs extractions, see [docs/contributing.md](docs/contributing.md).
 
-**Observability:** When you change HTTP middleware, correlation, or logging shape, follow [docs/OBSERVABILITY.md](docs/OBSERVABILITY.md). Run `./scripts/measure-func-slog.sh` (or `.\scripts\measure-func-slog.ps1`) for the per-function `slog` audit, and `./scripts/measure-observability.sh` (or `.\scripts\measure-observability.ps1`) if you need test coverage numbers.
+**Observability:** Run `./scripts/measure-func-slog.sh` (or `.\scripts\measure-func-slog.ps1`) for the per-function `slog` audit, and `./scripts/measure-observability.sh` (or `.\scripts\measure-observability.ps1`) if you need test coverage numbers.
 
 ## Changing APIs or JSON
 
 When you change REST paths, query params, response shapes, SSE payload types, or audit event types:
 
-- Update the relevant contract doc (`docs/API-HTTP.md`, `docs/API-SSE.md`, and/or `docs/RUNTIME-ENV.md`) plus `docs/DESIGN.md` when limitations or hub links change (`README.md` / `docs/WEB.md` if user-facing commands or Vite env change).
-- Reorder or add `With*` middleware for `taskapi`: edit `pkgs/tasks/middleware.Stack` (used by `internal/taskapi.NewHTTPHandler` with `calltrace.Path`) and extend [docs/OBSERVABILITY.md](docs/OBSERVABILITY.md) if log fields or metrics change.
+- Update [docs/api.md](docs/api.md) and [docs/architecture.md](docs/architecture.md) when limitations change. Update [docs/configuration.md](docs/configuration.md) when env vars or app settings change.
+- Reorder or add `With*` middleware for `taskapi`: edit `pkgs/tasks/middleware.Stack` (used by `internal/taskapi.NewHTTPHandler` with `calltrace.Path`).
 - Update `web/src/api/parseTaskApi.ts` (and `web/src/types/` if needed) and tests.
 - Update Go handler/store tests so defaults still pass without real Postgres or network.
 
-See `docs/API-HTTP.md` / `docs/API-SSE.md` and `docs/README.md` (“Where to put updates”) when changing contracts.
-
 ## Adding features (layering)
 
-Prefer a vertical slice: `domain` types and validation → `store` use-case methods → `handler` decode/map errors/`notifyChange` → optional `web/src/api` + UI. Human summary and checklist: `docs/EXTENSIBILITY.md`.
+Prefer a vertical slice: `domain` types and validation → `store` use-case methods → `handler` decode/map errors/`notifyChange` → optional `web/src/api` + UI. Human summary and checklist: [docs/contributing.md](docs/contributing.md).
 
-For **task UI** under `web/src/tasks/`, keep new pieces in the right family folder and import through its `index.ts` barrel where one exists; conventions are summarized under **`tasks/components/` layout** in [docs/WEB.md](docs/WEB.md).
+For **task UI** under `web/src/tasks/`, keep new pieces in the right family folder and import through its `index.ts` barrel where one exists; conventions are summarized under **`tasks/components/` layout** in [docs/web.md](docs/web.md).
 
 ## Cursor / AI rules
 
@@ -62,4 +59,4 @@ Rules under `.cursor/rules/` cover shared structure (`CODE_STANDARDS.mdc`, `code
 
 ## Stuck?
 
-See [docs/TROUBLESHOOTING.md](docs/TROUBLESHOOTING.md) for common dev issues (Vite proxy, SSE dev mode, refreshes).
+See [docs/contributing.md](docs/contributing.md#troubleshooting) for common dev issues (Vite proxy, SSE dev mode, refreshes).

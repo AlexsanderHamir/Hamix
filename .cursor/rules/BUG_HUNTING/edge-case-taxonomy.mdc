@@ -208,8 +208,8 @@ For any cross-component or cross-stack interaction, ask: do both sides agree on 
 
 Based on `AGENTS.md` and `docs/` map. Re-check these on every CLEAN-STATE session before declaring clean.
 
-- `pkgs/tasks/store/store_cycle_phases.go` and `store_cycles.go` — dual-write atomicity (see `docs/EXECUTION-CYCLES.md`)
-- `pkgs/tasks/handler/handler_cycles.go` (+ `handler_cycles_json.go`) — status code mapping, JSON shape vs `docs/API-HTTP.md`
+- `pkgs/tasks/store/store_cycle_phases.go` and `store_cycles.go` — dual-write atomicity (see `docs/data-model.md`)
+- `pkgs/tasks/handler/handler_cycles.go` (+ `handler_cycles_json.go`) — status code mapping, JSON shape vs `docs/api.md`
 - `pkgs/tasks/middleware/Stack` ordering — middleware order changes have outsized blast radius
 - `pkgs/tasks/handler/` SSE hub subscriber lifecycle — leak-class hot spot
 - `pkgs/agents/` ready-task queue cap and reconcile — boundary edges (cap full, reconcile mid-flight)

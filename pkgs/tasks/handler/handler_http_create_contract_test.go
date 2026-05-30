@@ -29,7 +29,7 @@ func postCreate(t *testing.T, baseURL, jsonBody string) (*http.Response, []byte)
 }
 
 // TestHTTP_createTask_400ErrorStrings pins every documented POST /tasks 400
-// string from docs/API-HTTP.md against the live handler. Each subtest drives a
+// string from docs/api.md against the live handler. Each subtest drives a
 // distinct rejection path so a future refactor that changes the store/handler
 // wording breaks loudly here, in lockstep with the doc.
 func TestHTTP_createTask_400ErrorStrings(t *testing.T) {
@@ -63,7 +63,7 @@ func TestHTTP_createTask_400ErrorStrings(t *testing.T) {
 				t.Fatalf("decode: %v body=%s", err, raw)
 			}
 			if errBody.Error != tc.want {
-				t.Fatalf("error=%q want %q (docs/API-HTTP.md)", errBody.Error, tc.want)
+				t.Fatalf("error=%q want %q (docs/api.md)", errBody.Error, tc.want)
 			}
 		})
 	}
@@ -94,7 +94,7 @@ func TestHTTP_createTask_409DuplicateID(t *testing.T) {
 		t.Fatalf("decode: %v body=%s", err, raw2)
 	}
 	if errBody.Error != "task id already exists" {
-		t.Fatalf("error=%q want %q (docs/API-HTTP.md)", errBody.Error, "task id already exists")
+		t.Fatalf("error=%q want %q (docs/api.md)", errBody.Error, "task id already exists")
 	}
 }
 
@@ -116,7 +116,7 @@ func TestHTTP_createTask_defaults(t *testing.T) {
 			t.Fatal(err)
 		}
 		if got.Status != domain.StatusReady {
-			t.Fatalf("status=%q want %q (docs/API-HTTP.md default)", got.Status, domain.StatusReady)
+			t.Fatalf("status=%q want %q (docs/api.md default)", got.Status, domain.StatusReady)
 		}
 	})
 
@@ -130,7 +130,7 @@ func TestHTTP_createTask_defaults(t *testing.T) {
 			t.Fatal(err)
 		}
 		if got.TaskType != domain.TaskTypeGeneral {
-			t.Fatalf("task_type=%q want %q (docs/API-HTTP.md default)", got.TaskType, domain.TaskTypeGeneral)
+			t.Fatalf("task_type=%q want %q (docs/api.md default)", got.TaskType, domain.TaskTypeGeneral)
 		}
 	})
 
@@ -337,7 +337,7 @@ func TestHTTP_createTask_acceptsPickupNotBefore_overrideGlobalDelay(t *testing.T
 // TestHTTP_createTask_rejectsBadPickupNotBefore pins the per-stage 400 strings
 // for malformed scheduling input on POST. Each subtest drives a distinct
 // rejection path so a future refactor breaks loudly here, in lockstep with
-// docs/SCHEDULING.md.
+// docs/data-model.md.
 func TestHTTP_createTask_rejectsBadPickupNotBefore(t *testing.T) {
 	srv := newTaskTestServer(t)
 	defer srv.Close()

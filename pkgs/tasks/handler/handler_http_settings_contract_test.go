@@ -209,7 +209,7 @@ func TestHTTP_PatchSettings_agentPausedRoundtrip(t *testing.T) {
 // no-op valid request). 400 with the documented bare phrase
 // `patch body must include at least one field` lets the SPA surface
 // the error inline next to the Save button — and pins the exact wire
-// phrase from docs/API-HTTP.md §App settings PATCH so a refactor that
+// phrase from docs/api.md §App settings PATCH so a refactor that
 // shortened it to "at least one field required" or moved it into the
 // store layer would fail loudly here. Asserting the full envelope key
 // set ({error, request_id?}) catches an accidental field rename like
@@ -235,7 +235,7 @@ func TestHTTP_PatchSettings_validationError(t *testing.T) {
 // "agent control unavailable" branch: writes are blocked when no
 // supervisor is wired, so we never persist a row the worker won't
 // pick up. Pins the exact 503 wire phrase
-// `agent worker control unavailable` from docs/API-HTTP.md §App
+// `agent worker control unavailable` from docs/api.md §App
 // settings PATCH so a refactor that shortened it (e.g. "supervisor
 // not wired") would fail loudly here. The same phrase is shared
 // across PATCH /settings, POST /settings/probe-cursor, and POST
@@ -253,7 +253,7 @@ func TestHTTP_PatchSettings_503WithoutAgent(t *testing.T) {
 // sees an error so they know the live worker is out of sync and can
 // retry. Silent success here would mask divergence between settings
 // and worker state. Pins the exact 500 wire phrase
-// `settings saved but worker reload failed` from docs/API-HTTP.md
+// `settings saved but worker reload failed` from docs/api.md
 // §App settings PATCH — the phrase is what the SPA shows in its
 // "Save failed" toast, so a refactor that changed it to a generic
 // "internal error" or that leaked the underlying reload error
@@ -459,7 +459,7 @@ func TestHTTP_CancelCurrentRun_noopReturnsFalseAndNoSSE(t *testing.T) {
 // TestHTTP_CancelCurrentRun_503WithoutAgent matches the PATCH branch:
 // no supervisor wired = endpoint disabled, never silently returns
 // "cancelled=false" (which would lie to the operator). Pins the same
-// `agent worker control unavailable` phrase from docs/API-HTTP.md
+// `agent worker control unavailable` phrase from docs/api.md
 // §App settings POST /settings/cancel-current-run so a future
 // divergence (e.g. emitting `cancel unavailable` here while leaving
 // PATCH /settings on the documented phrase) is caught at this route
@@ -472,7 +472,7 @@ func TestHTTP_CancelCurrentRun_503WithoutAgent(t *testing.T) {
 }
 
 // TestHTTP_ProbeCursor_503WithoutAgent closes the third documented
-// 503 branch in docs/API-HTTP.md §App settings POST
+// 503 branch in docs/api.md §App settings POST
 // /settings/probe-cursor (the route says **503 JSON** —
 // `agent worker control unavailable`). The PATCH /settings and
 // POST /settings/cancel-current-run 503 paths each have their own
@@ -541,7 +541,7 @@ func mustSettingsHTTP(t *testing.T, method, url, body string, want int) []byte {
 // (mustSettingsHTTP fatals on mismatch); this helper confirms the
 // JSON body decodes into the canonical jsonErrorBody shape AND that
 // the `error` field equals the exact wire phrase from
-// docs/API-HTTP.md §App settings (no substring tolerance — substring
+// docs/api.md §App settings (no substring tolerance — substring
 // matches let a future refactor like
 // "patch body must include at least one field; pointer fields only"
 // silently change the message under a still-passing test).
@@ -564,7 +564,7 @@ func assertSettingsBareError(t *testing.T, raw []byte, wantError string) {
 		t.Fatalf("decode error envelope: %v body=%s", err, raw)
 	}
 	if body.Error != wantError {
-		t.Fatalf("error=%q want %q (docs/API-HTTP.md §App settings wire phrase)", body.Error, wantError)
+		t.Fatalf("error=%q want %q (docs/api.md §App settings wire phrase)", body.Error, wantError)
 	}
 }
 

@@ -12,4 +12,4 @@ Per-request **call stack** for structured logs (`call_path`, `helper.io`): `Push
 | `stack.go` | `Push`, `Path`, `WithRequestRoot`. |
 | `observe.go` | `RunObserved`, `HelperIOIn`, `HelperIOOut`, internal helper.io emitters. |
 
-See `handler/doc.go` and [docs/OBSERVABILITY.md](../../docs/OBSERVABILITY.md) for usage conventions.
+See `handler/doc.go` for usage conventions.

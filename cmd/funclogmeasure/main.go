@@ -1,5 +1,5 @@
 // Command funclogmeasure reports which named functions and methods in the module
-// have no type-resolved call to log/slog in the function body (see docs/OBSERVABILITY.md).
+// have no type-resolved call to log/slog in the function body (see docs/architecture.md).
 package main
 
 import (

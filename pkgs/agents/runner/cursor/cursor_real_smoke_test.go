@@ -4,7 +4,7 @@
 // binary. It is excluded from default builds by the cursor_real
 // build tag and additionally gated by the T2A_TEST_REAL_CURSOR=1
 // env var so even with the tag set the test no-ops unless the
-// operator opted in. See docs/AGENT-WORKER.md "Smoke run" for the
+// operator opted in. See docs/architecture.md "Smoke run" for the
 // operator runbook and pkgs/agents/agentsmoke/doc.go for the
 // prompt + assertion rationale.
 //

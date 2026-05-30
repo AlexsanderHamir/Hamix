@@ -1,6 +1,5 @@
 // Package eval owns the per-draft scoring rubric and the
-// task_draft_evaluations persistence (table column conventions in
-// docs/DRAFTS.md).
+// task_draft_evaluations persistence.
 //
 // # Responsibilities
 //

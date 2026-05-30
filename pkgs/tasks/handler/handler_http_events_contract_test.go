@@ -13,7 +13,7 @@ import (
 )
 
 // TestHTTP_taskEvents_fullListShape pins the documented full-list response
-// shape (no paging params) from docs/API-HTTP.md: ascending seq, no
+// shape (no paging params) from docs/api.md: ascending seq, no
 // `limit`/`total`/`range_*` keys (omitempty pointers stay omitted), but
 // `has_more_newer`/`has_more_older` are present and false, and
 // `approval_pending` is always present. Each row carries `seq`, `at`,
@@ -45,7 +45,7 @@ func TestHTTP_taskEvents_fullListShape(t *testing.T) {
 	wantKeys := []string{"task_id", "events", "has_more_newer", "has_more_older", "approval_pending"}
 	for _, k := range wantKeys {
 		if _, ok := raw[k]; !ok {
-			t.Errorf("missing key %q in full-list response (docs/API-HTTP.md): %s", k, body)
+			t.Errorf("missing key %q in full-list response (docs/api.md): %s", k, body)
 		}
 	}
 	for _, k := range []string{"limit", "total", "range_start", "range_end"} {
@@ -206,7 +206,7 @@ func TestHTTP_taskEvents_orderingFullVsCursor(t *testing.T) {
 
 // TestHTTP_taskEvents_validation400s pins every documented 400 string for
 // the events endpoints. If the wording or set of triggers drifts, this
-// test fails so docs/API-HTTP.md is updated in the same PR.
+// test fails so docs/api.md is updated in the same PR.
 func TestHTTP_taskEvents_validation400s(t *testing.T) {
 	srv, _ := newTaskTestServerWithStore(t)
 	defer srv.Close()
@@ -238,7 +238,7 @@ func TestHTTP_taskEvents_validation400s(t *testing.T) {
 				t.Fatalf("status %d (want 400) body=%s", res.StatusCode, body)
 			}
 			if !strings.Contains(string(body), tc.wantSubstr) {
-				t.Fatalf("error body must contain %q (docs/API-HTTP.md), got %s", tc.wantSubstr, body)
+				t.Fatalf("error body must contain %q (docs/api.md), got %s", tc.wantSubstr, body)
 			}
 		})
 	}

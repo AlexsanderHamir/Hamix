@@ -112,7 +112,7 @@ If you reach the end of P5 with no actionable findings: **CLEAN-STATE EXIT**.
 > *"It runs, but produces wrong or inconsistent state."*
 
 **How to scan:**
-1. Go store layer: search `pkgs/tasks/store/` for write paths missing transactional boundaries (`db.Transaction(` vs raw `db.Create`/`db.Save`); the dual-write invariant for cycles/phases (see `docs/EXECUTION-CYCLES.md`) is a known hot spot
+1. Go store layer: search `pkgs/tasks/store/` for write paths missing transactional boundaries (`db.Transaction(` vs raw `db.Create`/`db.Save`); the dual-write invariant for cycles/phases (see `docs/data-model.md`) is a known hot spot
 2. Go: `rg -n "// TODO.*invariant|// HACK|// XXX" pkgs/ internal/` — comments admitting broken invariants
 3. Go: handlers that mutate domain state without status-machine validation (compare against `domain.ValidPhaseTransition` and similar)
 4. Web: React Query mutations without `onError` rollback for optimistic updates (`rg -n "optimistic|setQueryData" web/src/`)
@@ -188,10 +188,10 @@ For the chosen target, write a **failing** test that asserts correct behavior on
 > *"Each side works in isolation; they disagree at the boundary."*
 
 **How to scan:**
-1. Re-read the relevant section(s) of `docs/API-HTTP.md` and `docs/API-SSE.md` for any handler touched in the last 3 sessions; compare exact JSON field names, status codes, query params
+1. Re-read the relevant section(s) of `docs/api.md` for any handler touched in the last 3 sessions; compare exact JSON field names, status codes, query params (handler godoc is authoritative for exhaustive behavior)
 2. Web `web/src/api/` parsers (`parseTaskApi` family): are they tolerant where they should be strict, or strict where they should be tolerant?
 3. SSE event shapes in `web/src/types/` vs what `pkgs/tasks/handler` actually emits
-4. Env-var driven behavior: `T2A_*` vars referenced in code but not in `docs/RUNTIME-ENV.md`, or vice versa (`rg -n "os\.Getenv\(\"T2A_" pkgs/ internal/ cmd/` cross-checked against the doc)
+4. Env-var driven behavior: `T2A_*` vars referenced in code but not in `docs/configuration.md`, or vice versa (`rg -n "os\.Getenv\(\"T2A_" pkgs/ internal/ cmd/` cross-checked against the doc)
 5. Time/timezone assumptions across the boundary (server UTC vs client local)
 
 **Before fixing, read:**
@@ -239,7 +239,7 @@ Apply the fix. The reproducer from PHASE 3 is now your acceptance gate.
 
 **Standing rules — apply on every fix:**
 - Go: `gofmt`/`go fmt` touched files.
-- Go: if you change error mapping at a handler boundary, check the relevant doc (`docs/API-HTTP.md` / `docs/API-SSE.md`) for honesty; update the doc in the same session if the documented behavior was wrong.
+- Go: if you change error mapping at a handler boundary, check `docs/api.md` for honesty; update the doc in the same session if the documented behavior was wrong.
 - Web: keep `parseTaskApi` (or its sibling parsers) the only place that turns `unknown` into typed responses for the touched endpoint.
 - Cross: never weaken or delete an existing test to make a fix easier. If an existing test was wrong, fix the test AND the code, and explain in the log.
 

@@ -14,7 +14,7 @@ import (
 // agentRunDurationBuckets are tuned for one Cursor CLI execute attempt:
 // the supervisor honours app_settings.max_run_duration_seconds (0 =
 // no limit; operators typically cap at <= 30 minutes via the SPA
-// Settings page — see docs/SETTINGS.md), so the buckets need sub-
+// Settings page — see docs/configuration.md), so the buckets need sub-
 // second granularity for fast failures (timeout-before-startup,
 // immediate non-zero exit) and 1m–30m granularity for normal runs. Mirrors the pattern in pkgs/tasks/store/internal/kernel/metrics.go:
 // a fixed []float64 declared next to the registration with a comment

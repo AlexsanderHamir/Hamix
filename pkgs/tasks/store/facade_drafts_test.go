@@ -49,7 +49,7 @@ func TestStore_DraftCRUD_roundtrip(t *testing.T) {
 }
 
 // TestStore_SaveDraft_payload_normalizes_null pins the documented invariant
-// for `task_drafts.payload_json` (docs/API-HTTP.md POST /task-drafts: "a
+// for `task_drafts.payload_json` (docs/api.md POST /task-drafts: "a
 // missing or null payload is silently coerced to {} so a follow-up GET always
 // returns a JSON object"). The store must collapse the JSON literal "null"
 // (and whitespace-only payloads) to canonical "{}" rather than persisting the

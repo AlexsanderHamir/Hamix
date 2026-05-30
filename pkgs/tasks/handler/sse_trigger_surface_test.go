@@ -85,7 +85,7 @@ func summarize(events []TaskChangeEvent) []string {
 func mustEqualEvents(t *testing.T, route string, got, want []string) {
 	t.Helper()
 	if len(got) != len(want) {
-		t.Fatalf("%s: got %d events %v, want %d %v (docs/API-SSE.md trigger table)",
+		t.Fatalf("%s: got %d events %v, want %d %v (docs/api.md trigger table)",
 			route, len(got), got, len(want), want)
 	}
 	for i := range got {
@@ -96,9 +96,9 @@ func mustEqualEvents(t *testing.T, route string, got, want []string) {
 }
 
 // TestHTTP_SSE_triggerSurface pins the SSE trigger table documented in
-// docs/API-SSE.md. Each subtest exercises one HTTP write and asserts the exact
+// docs/api.md. Each subtest exercises one HTTP write and asserts the exact
 // set of {type,id} events published on the hub. If a future change adds or
-// removes a publish, this test fails so docs/API-SSE.md is updated in the same
+// removes a publish, this test fails so docs/api.md is updated in the same
 // PR.
 func TestHTTP_SSE_triggerSurface(t *testing.T) {
 	t.Run("POST /tasks (no parent) emits task_created", func(t *testing.T) {
@@ -307,7 +307,7 @@ func TestHTTP_SSE_triggerSurface(t *testing.T) {
 		// trigger surface guarantee that catches a global middleware
 		// regression that would route PATCH /settings around the publish.
 		// Both settings_changed and agent_run_cancelled are id-less per
-		// docs/API-SSE.md "id-less notifications" — summarize formats them
+		// docs/api.md "id-less notifications" — summarize formats them
 		// as "type:" with an empty ID portion (the same format the
 		// per-route settings test uses on the want-side).
 		srv, _, hub, _ := settingsTestServer(t)
@@ -343,8 +343,8 @@ func TestHTTP_SSE_triggerSurface(t *testing.T) {
 
 	t.Run("non-publishing write routes", func(t *testing.T) {
 		// Cross-route pin for the four documented "write but never
-		// publish" routes. docs/API-SSE.md trigger table omits these by
-		// design (the trailing prose at the bottom of API-SSE.md spells
+		// publish" routes. docs/api.md trigger table omits these by
+		// design (the trailing prose at the bottom of docs/api.md spells
 		// it out for /task-drafts/* and POST /tasks/evaluate; this
 		// session adds POST /settings/probe-cursor to the same prose so
 		// docs and code agree). Per-route SSE pins exist for each in

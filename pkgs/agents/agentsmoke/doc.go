@@ -1,5 +1,5 @@
 // Package agentsmoke provides shared test fixtures for the operator-run
-// real-cursor smoke (see docs/AGENT-WORKER.md "Smoke run"). It exposes
+// real-cursor smoke (see docs/architecture.md "Smoke run"). It exposes
 // a Fixture that owns a per-test tempdir, a canonical Cursor prompt
 // requesting a single deterministic filesystem mutation, and
 // post-condition assertions over the resulting workspace.

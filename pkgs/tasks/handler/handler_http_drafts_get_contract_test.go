@@ -53,7 +53,7 @@ func TestHTTP_getDraft_envelope(t *testing.T) {
 	sort.Strings(gotKeys)
 	sort.Strings(wantKeys)
 	if !equalStringSlices(gotKeys, wantKeys) {
-		t.Fatalf("envelope keys=%v want %v (docs/API-HTTP.md GET /task-drafts/{id} pins {id,name,payload,created_at,updated_at})", gotKeys, wantKeys)
+		t.Fatalf("envelope keys=%v want %v (docs/api.md GET /task-drafts/{id} pins {id,name,payload,created_at,updated_at})", gotKeys, wantKeys)
 	}
 	if string(top["payload"]) == "" || string(top["payload"]) == "null" {
 		t.Fatalf("payload=%q want non-empty JSON value (docs claim payload is always present)", top["payload"])

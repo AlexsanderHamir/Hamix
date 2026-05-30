@@ -27,7 +27,7 @@ type RepoProvider interface {
 // Sentinel reason strings returned by RepoProvider.Repo. The wire
 // values are pinned because the SPA renders different banners /
 // error messages keyed off them and the values are documented in
-// docs/SETTINGS.md.
+// docs/configuration.md.
 const (
 	// RepoReasonNotConfigured: AppSettings.RepoRoot is empty. Handlers
 	// reply 409 repo_root_not_configured so the SPA can show a "Pick

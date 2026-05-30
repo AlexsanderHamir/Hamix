@@ -1,7 +1,7 @@
 /**
  * Web-side types for the execution cycles substrate. Mirrors the JSON shapes
- * pinned in `docs/EXECUTION-CYCLES.md`, `docs/API-HTTP.md` (Task execution
- * cycles) and `docs/API-SSE.md` (`task_cycle_changed`). Field names stay
+ * pinned in `docs/data-model.md`, `docs/api.md` (Task execution
+ * cycles) and `docs/api.md` (`task_cycle_changed`). Field names stay
  * snake_case to match the wire format and the parser invariant.
  */
 

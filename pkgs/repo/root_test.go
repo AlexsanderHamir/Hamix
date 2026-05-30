@@ -302,7 +302,7 @@ func TestValidatePromptMentions(t *testing.T) {
 // validateRangeWithLineCount rejections) produced
 // "tasks: invalid input: mention @<path>: tasks: invalid input: <reason>"
 // — a doubled prefix the docs explicitly called out as an "implementation
-// detail" caveat (docs/API-HTTP.md POST /tasks repo-mention validation
+// detail" caveat (docs/api.md POST /tasks repo-mention validation
 // section). The wrapMention helper strips the inner prefix so the wire phrase
 // always carries it exactly once. errors.Is(err, domain.ErrInvalidInput)
 // must still hold for the 400 mapping in
@@ -359,7 +359,7 @@ func TestValidatePromptMentions_singlePrefix(t *testing.T) {
 				t.Fatalf("error=%q must still satisfy errors.Is(domain.ErrInvalidInput) so handler 400 mapping fires", msg)
 			}
 			if !strings.Contains(msg, "@") {
-				t.Fatalf("error=%q must include the offending @<path> mention substring (docs/API-HTTP.md contract)", msg)
+				t.Fatalf("error=%q must include the offending @<path> mention substring (docs/api.md contract)", msg)
 			}
 		})
 	}

@@ -5,7 +5,7 @@
 // excluded from default builds by the cursor_real build tag and
 // additionally gated by T2A_TEST_REAL_CURSOR=1 so even with the tag
 // set the test no-ops unless the operator opted in. See
-// docs/AGENT-WORKER.md "Smoke run" for the operator runbook and
+// docs/architecture.md "Smoke run" for the operator runbook and
 // pkgs/agents/agentsmoke/doc.go for the prompt + assertion rationale.
 //
 // Run it locally as:
@@ -112,7 +112,7 @@ func (n *hubCycleNotifier) PublishCycleChange(taskID, cycleID string) {
 }
 
 // TestAgentE2E_RealCursor_taskFromHTTPReachesDoneWithFileWritten is
-// the full-stack real-cursor smoke (see docs/AGENT-WORKER.md "Smoke
+// the full-stack real-cursor smoke (see docs/architecture.md "Smoke
 // run"): a real Cursor binary, driven through the same wiring
 // cmd/taskapi builds (handler + SSE hub + notifier + reconcile +
 // worker + cursor adapter + Prometheus adapter), turns a single

@@ -223,7 +223,7 @@ export function useTaskEventStream(): boolean {
           // Cancel any pending debounced flush and do a *full*
           // refetch so the cache catches up to whatever we missed.
           // This is the loss-prevention escape hatch documented in
-          // docs/API-SSE.md (Phase 2 of the realtime smoothness
+          // docs/api.md (Phase 2 of the realtime smoothness
           // plan): better to over-refetch once than silently miss
           // an SSE frame and let the UI go stale.
           rumSSEResyncReceived();
@@ -261,7 +261,7 @@ export function useTaskEventStream(): boolean {
           // falls through to the broad ["tasks"] fallback in
           // flushStreamInvalidation and silently refetches every active
           // task query SSE_INVALIDATE_WINDOW_MS later — exactly what the
-          // documented contract in docs/API-SSE.md forbids. This is also
+          // documented contract in docs/api.md forbids. This is also
           // why settings/cancel frames live BEFORE the timer scheduling
           // rather than alongside task/cycle accumulation.
           void queryClient.invalidateQueries({

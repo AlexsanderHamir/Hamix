@@ -45,12 +45,12 @@ func TestHTTP_postChecklistItem_201ResponseShape(t *testing.T) {
 	wantKeys := map[string]struct{}{"id": {}, "task_id": {}, "sort_order": {}, "text": {}, "check": {}}
 	for k := range wantKeys {
 		if _, ok := top[k]; !ok {
-			t.Errorf("POST checklist 201 missing key %q (docs/API-HTTP.md): %s", k, raw)
+			t.Errorf("POST checklist 201 missing key %q (docs/api.md): %s", k, raw)
 		}
 	}
 	for k := range top {
 		if _, ok := wantKeys[k]; !ok {
-			t.Errorf("POST checklist 201 unexpected key %q (docs/API-HTTP.md): %s", k, raw)
+			t.Errorf("POST checklist 201 unexpected key %q (docs/api.md): %s", k, raw)
 		}
 	}
 
@@ -109,7 +109,7 @@ func TestHTTP_postChecklistItem_textRequired(t *testing.T) {
 				t.Fatalf("decode: %v body=%s", err, raw)
 			}
 			if errBody.Error != "checklist text required" {
-				t.Fatalf("error=%q want %q (docs/API-HTTP.md)", errBody.Error, "checklist text required")
+				t.Fatalf("error=%q want %q (docs/api.md)", errBody.Error, "checklist text required")
 			}
 		})
 	}
@@ -139,7 +139,7 @@ func TestHTTP_postChecklistItem_rejectsInheritedChild(t *testing.T) {
 		t.Fatalf("decode: %v body=%s", err, raw)
 	}
 	if errBody.Error != "cannot add checklist items while checklist_inherit is true" {
-		t.Fatalf("error=%q want %q (docs/API-HTTP.md)", errBody.Error,
+		t.Fatalf("error=%q want %q (docs/api.md)", errBody.Error,
 			"cannot add checklist items while checklist_inherit is true")
 	}
 }
@@ -287,7 +287,7 @@ func TestHTTP_deleteChecklistItem_rejectsInheritedChild(t *testing.T) {
 		t.Fatal(err)
 	}
 	if errBody.Error != "cannot delete inherited checklist definitions from this task" {
-		t.Fatalf("error=%q want %q (docs/API-HTTP.md)", errBody.Error,
+		t.Fatalf("error=%q want %q (docs/api.md)", errBody.Error,
 			"cannot delete inherited checklist definitions from this task")
 	}
 }
@@ -411,7 +411,7 @@ func TestHTTP_postChecklistItem_errorPathsNeverPublish(t *testing.T) {
 
 // TestHTTP_patchChecklistItem_textBranch400Strings pins the bare wire
 // phrases for every PATCH text-update branch validation 400 documented in
-// docs/API-HTTP.md. The done-branch wire phrases (`only the agent may mark
+// docs/api.md. The done-branch wire phrases (`only the agent may mark
 // checklist items done or undone`, `done` value typing) are pinned by the
 // existing happy-path file (handler_http_checklist_test.go); this test
 // closes the analogous gap for the text branch (`text required`,
@@ -515,7 +515,7 @@ func TestHTTP_patchChecklistItem_textBranch400Strings(t *testing.T) {
 				t.Fatalf("decode: %v body=%s", err, raw)
 			}
 			if errBody.Error != tc.want {
-				t.Fatalf("error=%q want %q (docs/API-HTTP.md PATCH /tasks/{id}/checklist/items/{itemId} 400 strings) — case rationale: %s", errBody.Error, tc.want, tc.commentaryReason)
+				t.Fatalf("error=%q want %q (docs/api.md PATCH /tasks/{id}/checklist/items/{itemId} 400 strings) — case rationale: %s", errBody.Error, tc.want, tc.commentaryReason)
 			}
 		})
 	}

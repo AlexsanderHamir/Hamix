@@ -19,7 +19,7 @@ const cmdLog = "taskapi"
 // rep is the legacy static workspace; pass nil in production wiring
 // to delegate to the settings-backed RepoProvider built inside
 // (which makes /repo/* + prompt mention validation follow
-// AppSettings.RepoRoot live, as required by docs/SETTINGS.md).
+// AppSettings.RepoRoot live, as required by docs/configuration.md).
 // Tests that need a fixed tmpdir can still pass a non-nil rep.
 //
 // Pass a nil agent control to opt out of the supervisor-aware

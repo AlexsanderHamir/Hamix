@@ -86,7 +86,7 @@ func TestHTTP_patchEvent_successEnvelope(t *testing.T) {
 	sort.Strings(gotKeys)
 	sort.Strings(wantKeys)
 	if !equalStringSlices(gotKeys, wantKeys) {
-		t.Fatalf("envelope keys=%v want %v (docs/API-HTTP.md PATCH /tasks/{id}/events/{seq}: all three of user_response/user_response_at/response_thread must be populated after a successful PATCH)", gotKeys, wantKeys)
+		t.Fatalf("envelope keys=%v want %v (docs/api.md PATCH /tasks/{id}/events/{seq}: all three of user_response/user_response_at/response_thread must be populated after a successful PATCH)", gotKeys, wantKeys)
 	}
 
 	if string(top["data"]) == "" || string(top["data"]) == "null" {
@@ -143,7 +143,7 @@ func TestHTTP_patchEvent_pathSegmentGuard(t *testing.T) {
 				t.Fatalf("decode: %v body=%s", err, raw)
 			}
 			if errBody.Error != tc.want {
-				t.Fatalf("error=%q want %q (docs/API-HTTP.md PATCH /tasks/{id}/events/{seq} 400 strings)", errBody.Error, tc.want)
+				t.Fatalf("error=%q want %q (docs/api.md PATCH /tasks/{id}/events/{seq} 400 strings)", errBody.Error, tc.want)
 			}
 		})
 	}
@@ -184,7 +184,7 @@ func TestHTTP_patchEvent_bodyValidation400Strings(t *testing.T) {
 				t.Fatalf("decode: %v body=%s", err, raw)
 			}
 			if errBody.Error != tc.want {
-				t.Fatalf("error=%q want %q (docs/API-HTTP.md PATCH body-validation 400 subsection)", errBody.Error, tc.want)
+				t.Fatalf("error=%q want %q (docs/api.md PATCH body-validation 400 subsection)", errBody.Error, tc.want)
 			}
 		})
 	}
@@ -332,7 +332,7 @@ func TestHTTP_patchEvent_errorPathsNeverPublish(t *testing.T) {
 			t.Fatalf("%s: decode error body: %v raw=%s", tc.name, err, raw)
 		}
 		if errBody.Error != tc.wantError {
-			t.Fatalf("%s: error=%q want %q (docs/API-HTTP.md PATCH /tasks/{id}/events/{seq}) body=%s", tc.name, errBody.Error, tc.wantError, raw)
+			t.Fatalf("%s: error=%q want %q (docs/api.md PATCH /tasks/{id}/events/{seq}) body=%s", tc.name, errBody.Error, tc.wantError, raw)
 		}
 	}
 

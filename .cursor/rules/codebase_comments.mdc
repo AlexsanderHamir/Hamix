@@ -125,7 +125,7 @@ func parseFilters(r *http.Request) (Filters, error) { ... }
 
 // GOOD — only when there is something non-obvious to say
 // parseFilters treats a missing status param as "all statuses" rather
-// than returning an error. This matches the API contract in docs/API-HTTP.md
+// than returning an error. This matches the API contract in docs/api.md
 // section 3.2 where omitting a filter means no restriction.
 func parseFilters(r *http.Request) (Filters, error) { ... }
 ```
@@ -199,7 +199,7 @@ Use structured markers. Never leave a bare TODO without context.
 
 // FIXME(username): This silently drops events when the channel is full.
 // Under load, subscribers may miss updates. Needs backpressure design.
-// See docs/DESIGN.md for the intended approach.
+// See docs/architecture.md for the intended approach.
 ```
 
 Format: TODO(owner): what needs doing and why it is not done now.
@@ -353,7 +353,7 @@ browser-specific workarounds always need a comment.
 
 .dropdown {
   /* z-index 200 places this above cards (z: 1) and modals (z: 100) but
-     below the command palette (z: 300). See docs/DESIGN.md z-index scale
+     below the command palette (z: 300). See docs/architecture.md z-index scale
      for the full layer map. */
   z-index: 200;
 }

@@ -72,7 +72,7 @@ type ProgressEvent struct {
 // pinned by runner_test.go; see package doc for the wire-format contract.
 //
 // Env should contain ONLY entries the adapter is willing to forward to the
-// underlying tool. Cursor adapter convention (see docs/AGENT-WORKER.md
+// underlying tool. Cursor adapter convention (see docs/architecture.md
 // "Security model") is to pass through PATH and HOME and nothing else
 // by default; everything else must be explicitly allowlisted by the
 // caller.

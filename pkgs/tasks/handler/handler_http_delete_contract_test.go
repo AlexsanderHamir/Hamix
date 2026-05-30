@@ -80,7 +80,7 @@ func TestHTTP_deleteTask_pathSegmentGuard(t *testing.T) {
 				t.Fatalf("decode: %v body=%s", err, raw)
 			}
 			if errBody.Error != tc.want {
-				t.Fatalf("error=%q want %q (docs/API-HTTP.md DELETE /tasks/{id} 400 strings)", errBody.Error, tc.want)
+				t.Fatalf("error=%q want %q (docs/api.md DELETE /tasks/{id} 400 strings)", errBody.Error, tc.want)
 			}
 		})
 	}
@@ -116,7 +116,7 @@ func TestHTTP_deleteTask_missingPathSegmentIs404(t *testing.T) {
 	}
 }
 
-// TestHTTP_deleteTask_unknownIDIs404 pins the docs/API-HTTP.md store-error
+// TestHTTP_deleteTask_unknownIDIs404 pins the docs/api.md store-error
 // mapping row: `domain.ErrNotFound` → 404 with the bare wire phrase
 // `not found`. The supplied id is a syntactically valid UUID that has never
 // been created, so parseTaskPathID accepts it and the store returns
@@ -134,7 +134,7 @@ func TestHTTP_deleteTask_unknownIDIs404(t *testing.T) {
 		t.Fatalf("decode: %v body=%s", err, raw)
 	}
 	if errBody.Error != "not found" {
-		t.Fatalf("error=%q want %q (docs/API-HTTP.md store-error mapping)", errBody.Error, "not found")
+		t.Fatalf("error=%q want %q (docs/api.md store-error mapping)", errBody.Error, "not found")
 	}
 }
 
@@ -147,7 +147,7 @@ func TestHTTP_deleteTask_unknownIDIs404(t *testing.T) {
 // This replaces the prior `delete subtasks first` 400 rejection: the
 // store-side guard was removed in favour of a recursive cascade so
 // users no longer have to descend the tree by hand from the SPA. See
-// docs/API-HTTP.md "DELETE /tasks/{id}" for the wire-level note.
+// docs/api.md "DELETE /tasks/{id}" for the wire-level note.
 func TestHTTP_deleteTask_cascadesToSubtasks(t *testing.T) {
 	srv := newTaskTestServer(t)
 	defer srv.Close()
@@ -174,7 +174,7 @@ func TestHTTP_deleteTask_cascadesToSubtasks(t *testing.T) {
 }
 
 // TestHTTP_deleteTask_publishesTaskDeleted pins the row-level SSE cross
-// reference for the DELETE row in docs/API-HTTP.md. Session 4's trigger
+// reference for the DELETE row in docs/api.md. Session 4's trigger
 // surface (sse_trigger_surface_test.go) covers this in the table-driven
 // pass; this sibling subtest restates the contract next to the 400/404
 // strings so a reader of the DELETE contract suite finds the SSE invariant

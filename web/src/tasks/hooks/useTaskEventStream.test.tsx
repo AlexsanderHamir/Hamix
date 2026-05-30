@@ -355,7 +355,7 @@ describe("useTaskEventStream", () => {
   });
 
   it("settings_changed invalidates only the settings cache and never the task tree", () => {
-    // Documented in docs/API-SSE.md: settings/cancel frames must "invalidate
+    // Documented in docs/api.md: settings/cancel frames must "invalidate
     // only the settings cache slot ... without disturbing task caches; they
     // bypass the debounce batch". Regression: previously the trailing
     // debounce was armed for *every* frame, so settings/cancel frames
@@ -394,7 +394,7 @@ describe("useTaskEventStream", () => {
 
   it("agent_run_cancelled invalidates only the settings cache and never the task tree", () => {
     // Same contract as settings_changed: id-less notification, must not
-    // disturb task caches. See docs/API-SSE.md.
+    // disturb task caches. See docs/api.md.
     const qc = new QueryClient({ defaultOptions: { queries: { retry: false } } });
     const inv = vi.spyOn(qc, "invalidateQueries");
 

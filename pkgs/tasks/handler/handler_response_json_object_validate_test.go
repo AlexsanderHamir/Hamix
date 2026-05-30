@@ -8,7 +8,7 @@ import (
 	"github.com/AlexsanderHamir/T2A/pkgs/tasks/domain"
 )
 
-// docs/API-HTTP.md pins the response invariant for cycle / phase / event
+// docs/api.md pins the response invariant for cycle / phase / event
 // JSON columns: meta, details, and data are ALWAYS a JSON object (never
 // null, never a string/number/array/bool, never the literal "null"). The
 // store-side chokepoint (normalizeJSONObject) was tightened in earlier
@@ -47,7 +47,7 @@ func assertObjectMessage(t *testing.T, label string, raw json.RawMessage) {
 		t.Fatalf("%s: empty json.RawMessage (want a JSON object literal like {})", label)
 	}
 	if string(raw) == "null" {
-		t.Fatalf("%s: emitted JSON null (docs/API-HTTP.md cycle/phase/event invariant: always a JSON object)", label)
+		t.Fatalf("%s: emitted JSON null (docs/api.md cycle/phase/event invariant: always a JSON object)", label)
 	}
 	var probe any
 	if err := json.Unmarshal(raw, &probe); err != nil {

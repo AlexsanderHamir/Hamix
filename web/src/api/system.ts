@@ -5,7 +5,7 @@ import { fetchWithTimeout, readError } from "./shared";
 /**
  * Operator-facing snapshot of the running taskapi process. Aggregated
  * from the in-process Prometheus default registry; see
- * docs/API-HTTP.md "System health" for the wire shape and invariants.
+ * docs/api.md "System health" for the wire shape and invariants.
  */
 export async function getSystemHealth(
   options?: { signal?: AbortSignal },

@@ -26,7 +26,7 @@ var jsonObjectMessageEmpty = json.RawMessage(`{}`)
 // legacy rows from before that chokepoint — or any out-of-band write path
 // (raw SQL, migrations, future bug) — can still carry nil / empty /
 // whitespace / "null" / scalars / arrays / malformed bytes in meta_json,
-// details_json, or data_json. Per docs/API-HTTP.md these columns must
+// details_json, or data_json. Per docs/api.md these columns must
 // surface as a JSON object on every response, never as a JSON null or
 // scalar (the SPA crashes on `Object.entries(null)`). Rather than 500
 // for legacy data, the response builder defensively coerces anything
@@ -475,7 +475,7 @@ func parseCycleStreamLimit(ctx context.Context, q url.Values) (int, error) {
 // taskCycleResponseFromDomain copies a TaskCycle GORM row into the JSON
 // response shape. Meta is normalized to "{}" if the column came back as
 // nil / empty / whitespace / null / a scalar / an array / malformed JSON,
-// matching the docs/API-HTTP.md "always a JSON object" invariant.
+// matching the docs/api.md "always a JSON object" invariant.
 func taskCycleResponseFromDomain(c *domain.TaskCycle) taskCycleResponse {
 	slog.Debug("trace", "cmd", calltrace.LogCmd, "operation", "handler.taskCycleResponseFromDomain")
 	meta := normalizeJSONObjectForResponse(c.MetaJSON)

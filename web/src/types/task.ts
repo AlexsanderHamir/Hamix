@@ -60,7 +60,7 @@ export type TaskListResponse = {
   tasks: Task[];
   limit: number;
   offset: number;
-  /** True when the server may have more root tasks (see GET /tasks in docs/API-HTTP.md). */
+  /** True when the server may have more root tasks (see GET /tasks in docs/api.md). */
   has_more: boolean;
 };
 
@@ -258,7 +258,7 @@ export const TASK_EVENT_TYPES = [
   // Execution-cycle audit mirrors. The backend writes these in the same
   // SQL transaction as task_cycles / task_cycle_phases rows so GET
   // /tasks/{id}/events is a complete witness of cycle activity (see
-  // pkgs/tasks/domain/enums.go and docs/EXECUTION-CYCLES.md). They land
+  // pkgs/tasks/domain/enums.go and docs/data-model.md). They land
   // on the timeline as soon as the agent worker dispatches a real task,
   // so omitting them from this allow-list makes parseTaskApi reject the
   // entire /events response with "event type must be a known value" and
@@ -336,7 +336,7 @@ export type TaskChecklistResponse = {
   items: TaskChecklistItemView[];
 };
 
-/** UI display cap for evidence text (backend store cap is 16 KB). See docs/CHECKLIST.md. */
+/** UI display cap for evidence text (backend store cap is 16 KB). See docs/data-model.md. */
 export const CHECKLIST_EVIDENCE_DISPLAY_CAP = 12 * 1024;
 
 /** Defaults aligned with pkgs/tasks/domain/app_settings.go. */

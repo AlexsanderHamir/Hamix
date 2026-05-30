@@ -59,7 +59,7 @@ func TestHTTP_getTask_leafRootEnvelope(t *testing.T) {
 	sort.Strings(gotKeys)
 	sort.Strings(wantKeys)
 	if !equalStringSlices(gotKeys, wantKeys) {
-		t.Fatalf("leaf-root envelope keys=%v want %v (docs/API-HTTP.md GET /tasks/{id}: parent_id and children must be omitempty for a leaf root row, never serialized as null/[])", gotKeys, wantKeys)
+		t.Fatalf("leaf-root envelope keys=%v want %v (docs/api.md GET /tasks/{id}: parent_id and children must be omitempty for a leaf root row, never serialized as null/[])", gotKeys, wantKeys)
 	}
 
 	// Defensive raw-bytes guard: a future drift to "parent_id":null or
@@ -169,7 +169,7 @@ func TestHTTP_getTask_pathSegmentGuard(t *testing.T) {
 				t.Fatalf("decode: %v body=%s", err, raw)
 			}
 			if errBody.Error != tc.want {
-				t.Fatalf("error=%q want %q (docs/API-HTTP.md GET /tasks/{id} 400 strings)", errBody.Error, tc.want)
+				t.Fatalf("error=%q want %q (docs/api.md GET /tasks/{id} 400 strings)", errBody.Error, tc.want)
 			}
 		})
 	}
@@ -227,10 +227,10 @@ func TestHTTP_getTask_trailingSlashIsMux404(t *testing.T) {
 }
 
 // TestHTTP_getTask_neverPublishesOnSSE pins the read-only-no-publish
-// invariant from docs/API-SSE.md ("Read-only `GET` routes never publish")
+// invariant from docs/api.md ("Read-only `GET` routes never publish")
 // for this specific route. Mirrors Session 15's per-route SSE pin for
 // /task-drafts/* — colocates the invariant with the GET row's other
-// contracts so a reader does not need to cross-reference API-SSE.md to
+// contracts so a reader does not need to cross-reference docs/api.md to
 // learn that GET /tasks/{id} cannot publish.
 func TestHTTP_getTask_neverPublishesOnSSE(t *testing.T) {
 	srv, _, hub := newSSETriggerServer(t)
@@ -255,7 +255,7 @@ func TestHTTP_getTask_neverPublishesOnSSE(t *testing.T) {
 		t.Fatalf("decode unknown-task error: %v body=%s", err, raw404)
 	}
 	if unkErr.Error != "not found" {
-		t.Fatalf("unknown-task error=%q want %q (docs/API-HTTP.md GET /tasks/{id})", unkErr.Error, "not found")
+		t.Fatalf("unknown-task error=%q want %q (docs/api.md GET /tasks/{id})", unkErr.Error, "not found")
 	}
 
 	res400, raw400 := getTask(t, srv.URL, "%20")
@@ -267,7 +267,7 @@ func TestHTTP_getTask_neverPublishesOnSSE(t *testing.T) {
 		t.Fatalf("decode bad-id error: %v body=%s", err, raw400)
 	}
 	if idErr.Error != "id" {
-		t.Fatalf("bad-id error=%q want %q (path-segment guard; docs/API-HTTP.md GET /tasks/{id})", idErr.Error, "id")
+		t.Fatalf("bad-id error=%q want %q (path-segment guard; docs/api.md GET /tasks/{id})", idErr.Error, "id")
 	}
 
 	got := summarize(drainSSE(t, ch, 0, 200*time.Millisecond))

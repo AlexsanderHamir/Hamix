@@ -32,7 +32,7 @@ const logCmd = "taskapi"
 // Summary is the listing-row shape returned by List and Save. Field
 // tags are part of the HTTP contract (handler writes the value
 // directly via writeJSON); do not rename without updating
-// docs/API-HTTP.md and the web client.
+// docs/api.md and the web client.
 type Summary struct {
 	ID        string    `json:"id"`
 	Name      string    `json:"name"`

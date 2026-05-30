@@ -26,7 +26,7 @@ type taskCreateJSON struct {
 	CursorModel           *string         `json:"cursor_model"`
 	// PickupNotBefore is an optional RFC3339 instant. When provided,
 	// the worker will not pick up the task until this time has passed
-	// (see docs/SCHEDULING.md). Omitted/null = no schedule = pick up
+	// (see docs/data-model.md). Omitted/null = no schedule = pick up
 	// as soon as the global agent_pickup_delay_seconds elapses. The
 	// pre-2000 sentinel is rejected to guard against accidental
 	// zero-value timestamps.

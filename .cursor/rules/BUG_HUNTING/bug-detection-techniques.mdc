@@ -213,15 +213,15 @@ For component edges: Vitest + Testing Library `render` + `screen.findBy*`. For h
 ### Cross-doc checks
 
 ```bash
-# 1. Every T2A_* env var in code vs every T2A_* env var in docs/RUNTIME-ENV.md
+# 1. Every T2A_* env var in code vs every T2A_* env var in docs/configuration.md
 rg -no "T2A_[A-Z_]+" pkgs/ internal/ cmd/ --type go | sort -u > /tmp/code-envs.txt
-rg -no "T2A_[A-Z_]+" docs/RUNTIME-ENV.md | sort -u > /tmp/doc-envs.txt
+rg -no "T2A_[A-Z_]+" docs/configuration.md | sort -u > /tmp/doc-envs.txt
 diff /tmp/code-envs.txt /tmp/doc-envs.txt
 # Lines only in code → undocumented env. Lines only in docs → stale doc.
 
-# 2. Every handler route in code vs every route in docs/API-HTTP.md
+# 2. Every handler route in code vs every route in docs/api.md
 rg -no '("(GET|POST|PATCH|DELETE|PUT)\s+/[a-zA-Z0-9/{}_]+")' pkgs/tasks/handler/ --type go | sort -u
-rg -no '`(GET|POST|PATCH|DELETE|PUT)\s+/[a-zA-Z0-9/{}_]+`' docs/API-HTTP.md | sort -u
+rg -no '`(GET|POST|PATCH|DELETE|PUT)\s+/[a-zA-Z0-9/{}_]+`' docs/api.md | sort -u
 
 # 3. SSE event names: Go emit sites vs Web subscribe sites
 rg -n 'event:\s*["`][a-z_]+["`]|EventName.*=.*"[a-z_]+"' pkgs/tasks/handler/ --type go
@@ -249,7 +249,7 @@ rg -n "fetch\(" web/src/ --type ts --type tsx -g '!**/api/**'
 rg -n "WriteHeader\(http\.Status|WriteJSONError" pkgs/tasks/handler/ --type go
 ```
 
-For each, manually verify: does `docs/API-HTTP.md` say this route returns this code on this condition? If not, the doc OR the code is wrong — that's the defect.
+For each, manually verify: does `docs/api.md` (and `pkgs/tasks/handler/` godoc) say this route returns this code on this condition? If not, the doc OR the code is wrong — that's the defect.
 
 ### Time / timezone audit
 
@@ -291,7 +291,7 @@ If you can reproduce only by running the app, write a 5-line manual reproduction
 
 Knowing when a finding is **NOT** a defect saves a session:
 
-- The "weird input" produces an error response that's documented in `docs/API-HTTP.md` → not a defect, that's the contract.
+- The "weird input" produces an error response that's documented in `docs/api.md` → not a defect, that's the contract.
 - The "missing test" covers behavior that's already covered by another test (search by symbol/import) → not a defect.
 - The "race" can only happen if a single client sends two writes faster than physically possible (microsecond-level interleaving on a single connection) → not actionable.
 - The "leak" only manifests in a process designed to terminate (CLI tool, one-shot job) → not in scope unless it's `taskapi`.

@@ -19,13 +19,13 @@ import (
 // contract: when the production wiring runs without a configured
 // AppSettings.RepoRoot, the /repo/* endpoints must respond
 // 409 Conflict with the documented reason "repo_root_not_configured"
-// and error string "repo root is not configured" (docs/API-HTTP.md) so
+// and error string "repo root is not configured" (docs/api.md) so
 // the SPA can render a "Pick a workspace" banner with a link to
-// the Settings page (docs/SETTINGS.md). Reading the same store row
+// the Settings page (docs/configuration.md). Reading the same store row
 // is exercised across all three /repo/* handlers in one test to make
 // the contract regression-proof.
 func TestHTTP_repoRoutes_returnsConflictWhenNotConfigured(t *testing.T) {
-	const wantRepo409Error = "repo root is not configured" // docs/API-HTTP.md (409 /repo/* when repo_root empty)
+	const wantRepo409Error = "repo root is not configured" // docs/api.md (409 /repo/* when repo_root empty)
 
 	db := tasktestdb.OpenSQLite(t)
 	st := store.NewStore(db)
@@ -57,7 +57,7 @@ func TestHTTP_repoRoutes_returnsConflictWhenNotConfigured(t *testing.T) {
 				t.Fatalf("reason=%q want %q", body.Reason, RepoReasonNotConfigured)
 			}
 			if body.Error != wantRepo409Error {
-				t.Fatalf("error=%q want %q (see docs/API-HTTP.md repo 409 JSON)", body.Error, wantRepo409Error)
+				t.Fatalf("error=%q want %q (see docs/api.md repo 409 JSON)", body.Error, wantRepo409Error)
 			}
 		})
 	}

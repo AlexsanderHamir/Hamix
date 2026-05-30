@@ -108,7 +108,7 @@ func mustCreateTask(t *testing.T, baseURL, jsonBody string) string {
 }
 
 // TestHTTP_patchTask_400ErrorStrings pins every documented PATCH /tasks/{id}
-// 400 string from docs/API-HTTP.md against the live handler. Each subtest
+// 400 string from docs/api.md against the live handler. Each subtest
 // drives a distinct rejection path so a future refactor that changes the
 // store/handler wording breaks loudly here, in lockstep with the doc.
 func TestHTTP_patchTask_400ErrorStrings(t *testing.T) {
@@ -143,7 +143,7 @@ func TestHTTP_patchTask_400ErrorStrings(t *testing.T) {
 				t.Fatalf("decode: %v body=%s", err, raw)
 			}
 			if errBody.Error != tc.want {
-				t.Fatalf("error=%q want %q (docs/API-HTTP.md)", errBody.Error, tc.want)
+				t.Fatalf("error=%q want %q (docs/api.md)", errBody.Error, tc.want)
 			}
 		})
 	}
@@ -216,7 +216,7 @@ func TestHTTP_patchTask_parentCycle(t *testing.T) {
 		t.Fatal(err)
 	}
 	if errBody.Error != "parent would create a cycle" {
-		t.Fatalf("error=%q want %q (docs/API-HTTP.md)", errBody.Error, "parent would create a cycle")
+		t.Fatalf("error=%q want %q (docs/api.md)", errBody.Error, "parent would create a cycle")
 	}
 }
 
@@ -239,7 +239,7 @@ func TestHTTP_patchTask_checklistInheritRequiresParent(t *testing.T) {
 		t.Fatal(err)
 	}
 	if errBody.Error != "checklist_inherit requires parent_id" {
-		t.Fatalf("error=%q want %q (docs/API-HTTP.md)", errBody.Error, "checklist_inherit requires parent_id")
+		t.Fatalf("error=%q want %q (docs/api.md)", errBody.Error, "checklist_inherit requires parent_id")
 	}
 }
 
@@ -264,7 +264,7 @@ func TestHTTP_patchTask_doneBlockedByOpenSubtask(t *testing.T) {
 	}
 	const want = "all subtasks must be done before marking this task done"
 	if errBody.Error != want {
-		t.Fatalf("error=%q want %q (docs/API-HTTP.md)", errBody.Error, want)
+		t.Fatalf("error=%q want %q (docs/api.md)", errBody.Error, want)
 	}
 }
 
@@ -292,7 +292,7 @@ func TestHTTP_patchTask_doneBlockedByIncompleteChecklist(t *testing.T) {
 	}
 	const want = "all checklist items must be done before marking this task done"
 	if errBody.Error != want {
-		t.Fatalf("error=%q want %q (docs/API-HTTP.md)", errBody.Error, want)
+		t.Fatalf("error=%q want %q (docs/api.md)", errBody.Error, want)
 	}
 }
 

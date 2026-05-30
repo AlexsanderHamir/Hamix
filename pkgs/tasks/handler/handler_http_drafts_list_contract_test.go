@@ -140,7 +140,7 @@ func TestHTTP_listDrafts_400Limit(t *testing.T) {
 				t.Fatalf("decode: %v body=%s", err, raw)
 			}
 			if errBody.Error != tc.want {
-				t.Fatalf("error=%q want %q (docs/API-HTTP.md /task-drafts/* 400 strings)", errBody.Error, tc.want)
+				t.Fatalf("error=%q want %q (docs/api.md /task-drafts/* 400 strings)", errBody.Error, tc.want)
 			}
 		})
 	}

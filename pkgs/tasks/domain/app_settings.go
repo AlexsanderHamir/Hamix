@@ -78,7 +78,7 @@ type AppSettings struct {
 	// Dual-written alongside the legacy CursorBin/CursorModel columns
 	// during the migration to pluggable runners.
 	RunnerConfigs datatypes.JSON `gorm:"column:runner_configs;type:jsonb;not null;default:'{}'"`
-	// VerifyEnabled gates the execute→verify checklist guardrail (see docs/CHECKLIST.md).
+	// VerifyEnabled gates the execute→verify checklist guardrail (see docs/data-model.md).
 	VerifyEnabled bool `gorm:"not null;default:true"`
 	// VerifyMaxRetries is the corrective execute retries after verify failure (hard cap 10).
 	VerifyMaxRetries int `gorm:"not null;default:2;check:chk_app_settings_verify_max_retries,verify_max_retries >= 0 AND verify_max_retries <= 10"`

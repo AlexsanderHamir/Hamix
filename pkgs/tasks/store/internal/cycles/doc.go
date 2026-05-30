@@ -3,7 +3,7 @@
 // model also appends a mirrored audit row to task_events in the same
 // SQL transaction. The dual-write is the documented invariant for
 // /tasks/{id}/events to remain a complete witness of cycle activity
-// (docs/EXECUTION-CYCLES.md, asserted by
+// (docs/data-model.md, asserted by
 // store_cycles_dualwrite_test.go).
 //
 // The public store facade re-exports StartCycleInput and

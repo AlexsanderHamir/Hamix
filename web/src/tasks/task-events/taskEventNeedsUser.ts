@@ -17,7 +17,7 @@ import type { TaskEventType } from "@/types";
  * | approval_granted | no | Outcome of approval |
  * | task_completed | no | Terminal success |
  * | task_failed | **yes** | Failure should be reviewed (aligns with `failed` status) |
- * | cycle_started, cycle_completed | no | Audit mirror of task_cycles writes (see docs/EXECUTION-CYCLES.md); informational |
+ * | cycle_started, cycle_completed | no | Audit mirror of task_cycles writes (see docs/data-model.md); informational |
  * | cycle_failed | no | Cycle-level failure; the row-level `task_failed` event is what flags user attention |
  * | phase_started, phase_completed, phase_skipped | no | Audit mirror of task_cycle_phases writes; informational |
  * | phase_failed | no | Phase-level failure; surfaced via the cycle outcome / `task_failed` row |

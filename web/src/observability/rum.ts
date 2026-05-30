@@ -1,7 +1,7 @@
 /**
  * Real-User-Monitoring (RUM) beacon for the SPA.
  *
- * Why this lives here: docs/SLOs.md commits the product to four
+ * Why this lives here: docs/architecture.md commits the product to four
  * latency/error SLOs (click→confirmed p95, mutation error rate,
  * optimistic rollback rate, SSE subscriber lag). The server-side
  * Prometheus counters cover the wire layer; this module produces the

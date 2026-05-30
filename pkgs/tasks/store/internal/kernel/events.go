@@ -54,7 +54,7 @@ func NextEventSeq(tx *gorm.DB, taskID string) (int64, error) {
 //
 // data is normalized through NormalizeJSONObject so the on-disk shape of
 // task_events.data_json honours the documented "always a JSON object"
-// invariant (see docs/API-HTTP.md GET /tasks/{id}/events). nil, empty,
+// invariant (see docs/api.md GET /tasks/{id}/events). nil, empty,
 // whitespace-only, or the literal "null" all collapse to "{}" so downstream
 // consumers (handler readers, SSE fan-out, /events keyset paging) never
 // observe SQL NULL or a JSON null literal even if a future caller forgets

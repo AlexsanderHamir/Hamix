@@ -10,7 +10,7 @@
 //     definitions itself).
 //   - Completion writes: SetDone, restricted to
 //     domain.ActorAgent — the human user records criteria but does
-//     not toggle the done flag (per docs/CHECKLIST.md).
+//     not toggle the done flag (per docs/data-model.md).
 //   - Read-side resolution: List / DefinitionSourceTaskID walk the
 //     ParentID chain through ChecklistInherit-true ancestors so the
 //     subject task always shows the inherited criteria.

@@ -26,7 +26,7 @@ export type DeleteTargetInput = {
    * Optional total descendant count (children + grandchildren …) so the
    * confirm dialog can warn the user that DELETE cascades. Server-side
    * `DELETE /tasks/{id}` always cascades regardless of this hint
-   * (docs/API-HTTP.md "DELETE /tasks/{id}"); the field is presentation-only
+   * (docs/api.md "DELETE /tasks/{id}"); the field is presentation-only
    * and defaults to 0 when omitted (callers without a tree in hand stay
    * source-compatible, the dialog simply omits the cascade warning line).
    */

@@ -10,7 +10,7 @@ import (
 )
 
 // TestHTTP_evaluateDraft_envelopeShape pins the documented response envelope
-// from docs/API-HTTP.md: status 201, full top-level key set with no extras,
+// from docs/api.md: status 201, full top-level key set with no extras,
 // scores in 0..100, and the four `sections[]` entries (`title`,
 // `initial_prompt`, `priority`, `structure`) in that order, each shaped
 // `{key, label, score, summary, suggestions}`.
@@ -57,12 +57,12 @@ func TestHTTP_evaluateDraft_envelopeShape(t *testing.T) {
 	}
 	for k := range wantTopKeys {
 		if _, ok := top[k]; !ok {
-			t.Errorf("missing top-level key %q (docs/API-HTTP.md): %s", k, raw)
+			t.Errorf("missing top-level key %q (docs/api.md): %s", k, raw)
 		}
 	}
 	for k := range top {
 		if _, ok := wantTopKeys[k]; !ok {
-			t.Errorf("unexpected top-level key %q (docs/API-HTTP.md): %s", k, raw)
+			t.Errorf("unexpected top-level key %q (docs/api.md): %s", k, raw)
 		}
 	}
 
@@ -114,7 +114,7 @@ func TestHTTP_evaluateDraft_envelopeShape(t *testing.T) {
 	for i, want := range wantSectionKeys {
 		got := env.Sections[i]
 		if got.Key != want {
-			t.Errorf("sections[%d].key=%q want %q (fixed order docs/API-HTTP.md)", i, got.Key, want)
+			t.Errorf("sections[%d].key=%q want %q (fixed order docs/api.md)", i, got.Key, want)
 		}
 		if got.Label == "" {
 			t.Errorf("sections[%d].label empty", i)
@@ -185,7 +185,7 @@ func TestHTTP_evaluateDraft_invalidTaskTypeReturns400(t *testing.T) {
 }
 
 // TestHTTP_evaluateDraft_doesNotPublishSSE pins the SSE invariant called
-// out in docs/API-SSE.md: the draft scorer never publishes — `task_updated`
+// out in docs/api.md: the draft scorer never publishes — `task_updated`
 // only fires once `POST /tasks` actually creates the underlying row. This
 // guards against a future regression where evaluate accidentally calls
 // notifyChange.

@@ -609,8 +609,8 @@ func TestStore_TaskDelete_cascades_to_cycles_and_phases(t *testing.T) {
 // --- meta_json / details_json normalization (formerly *_meta_validate_test)
 
 // TestStore_StartCycle_meta_normalizes_null asserts the documented invariant
-// for task_cycles.meta_json (docs/EXECUTION-CYCLES.md §column conventions and
-// docs/API-HTTP.md POST /tasks/{id}/cycles): the column never carries a
+// for task_cycles.meta_json (docs/data-model.md §column conventions and
+// docs/api.md POST /tasks/{id}/cycles): the column never carries a
 // non-object JSON value. The store must normalize the JSON literal "null"
 // (semantically equivalent to "no meta provided") to the canonical "{}"
 // rather than persisting the literal "null", which the API doc promises

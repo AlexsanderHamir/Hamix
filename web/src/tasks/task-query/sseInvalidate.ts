@@ -1,4 +1,4 @@
-/** SSE `data:` payloads are JSON lines `{ "type": "...", "id": "<uuid>" }` (see docs/API-SSE.md). */
+/** SSE `data:` payloads are JSON lines `{ "type": "...", "id": "<uuid>" }` (see docs/api.md). */
 
 /**
  * Discriminated union for one parsed SSE frame from `GET /events`. Returned by
@@ -36,7 +36,7 @@ export type TaskChangeFrame =
    * fell out of the SSE ring buffer (or it was forcibly disconnected
    * as a slow consumer). Consumers MUST drop every cached query and
    * refetch from REST. Carries no id/cycle_id. Documented in
-   * docs/API-SSE.md (Phase 2 of the realtime smoothness plan).
+   * docs/api.md (Phase 2 of the realtime smoothness plan).
    */
   | { kind: "resync" };
 

@@ -152,7 +152,7 @@ func applyProjectPatch(tx *gorm.DB, cur *domain.Task, project *ProjectFieldPatch
 // pickup_not_before is operator-facing scheduling metadata, not part
 // of the task's audit narrative. The wire-level slog line on the
 // HTTP handler (handler_task_crud.go: patch) is the audit trail
-// (commit body documents this rationale; see docs/SCHEDULING.md
+// (commit body documents this rationale; see docs/data-model.md
 // Implementation decisions). The handler is responsible for
 // rejecting empty/invalid values on the way in; this layer trusts
 // that the time has already been validated and is UTC.
@@ -271,7 +271,7 @@ func applyParentPatch(tx *gorm.DB, taskID string, cur *domain.Task, parent *Pare
 		nextStr = pid
 	}
 	if prevStr != nextStr {
-		// Audit invariant (docs/API-HTTP.md line 205): subtask_added /
+		// Audit invariant (docs/api.md line 205): subtask_added /
 		// subtask_removed are emitted on the **parent** task, with payload
 		// `{child_task_id, title}` — mirroring the Create / Delete flows in
 		// crud.go so consumers that subscribe to a parent's events to track

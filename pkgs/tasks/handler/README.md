@@ -1,6 +1,6 @@
 # `pkgs/tasks/handler`
 
-HTTP surface for `taskapi`: REST + optional `/repo` + `GET /events` (SSE). **Contracts:** [docs/API-HTTP.md](../../docs/API-HTTP.md), [docs/API-SSE.md](../../docs/API-SSE.md). **How to extend:** [docs/EXTENSIBILITY.md](../../docs/EXTENSIBILITY.md).
+HTTP surface for `taskapi`: REST + optional `/repo` + `GET /events` (SSE). **Contracts:** [docs/api.md](../../docs/api.md). **How to extend:** [docs/contributing.md](../../docs/contributing.md).
 
 The returned `http.Handler` from `NewHandler` is the **inner mux** (routes only). `cmd/taskapi` mounts it behind **`middleware.Stack(..., calltrace.Path)`** from **`internal/taskapi.NewHTTPHandler`**. Wiring order and devsim live in **`cmd/taskapi/run.go`**. Taskapi-only env parsing lives in **`internal/taskapiconfig`**.
 
@@ -39,7 +39,7 @@ Implementations live in **[`pkgs/tasks/middleware`](../middleware/)** (no import
 | Projects + project context | `handler_projects.go` (DTOs in `handler_projects_json.go`) |
 | Checklist | `handler_checklist.go` |
 | Task audit / events | `handler_task_events.go` |
-| Execution cycles + phases | `handler_cycles.go` (DTOs in `handler_cycles_json.go`); see [`docs/EXECUTION-CYCLES.md`](../../docs/EXECUTION-CYCLES.md) |
+| Execution cycles + phases | `handler_cycles.go` (DTOs in `handler_cycles_json.go`); see [`docs/data-model.md`](../../docs/data-model.md) |
 | Draft evaluation (`POST /tasks/evaluate`) | `handler_task_evaluation.go` |
 | Saved task drafts (`/task-drafts`) | `handler_task_drafts.go` |
 | Workspace `/repo/*` | `repo_handlers.go` |
@@ -77,4 +77,4 @@ When adding a **new** route or middleware file, extend this README in the same P
 
 ## Scaling this package
 
-`handler` stays a **single package** (one directory in Go). To avoid an unmaintainable mix of routes and tests over time, follow **[`docs/HANDLER-SCALE.md`](../../docs/HANDLER-SCALE.md)** — what already lives in `middleware`, `calltrace`, and `internal/middlewaretest`, conventions for **whitebox vs black-box** tests, and **ordered next extractions** (e.g. task JSON types).
+`handler` stays a **single package** (one directory in Go). To avoid an unmaintainable mix of routes and tests over time, follow **[`docs/contributing.md`](../../docs/contributing.md#splitting-pkgstaskshandler)** — what already lives in `middleware`, `calltrace`, and `internal/middlewaretest`, conventions for **whitebox vs black-box** tests, and **ordered next extractions** (e.g. task JSON types).

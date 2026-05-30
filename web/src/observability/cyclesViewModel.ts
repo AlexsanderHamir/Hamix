@@ -106,7 +106,7 @@ export function runnerLabel(runnerName: string): string {
  * formatRunnerModel renders the combined "runner · model" chip copy
  * for the per-task UI (TaskDetailHeader, TaskCyclesPanel).
  *
- * Semantic contract matches docs/API-HTTP.md for cycle_meta:
+ * Semantic contract matches docs/api.md for cycle_meta:
  *  - empty runner  → "unknown runner"   (pre-feature cycles)
  *  - empty model   → "<runner> · default model"  (runner chose its own default)
  *  - both present  → "<runner> · <model>"

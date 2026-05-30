@@ -74,13 +74,14 @@ Line count limits in this document are upper bounds for alarm, not targets. The 
 │
 ├── web/                        # React/TypeScript frontend (see Part 4)
 │
-├── docs/                       # Architecture decision records and contracts
-│   ├── API-HTTP.md             # REST contract (authoritative)
-│   ├── API-SSE.md              # SSE contract (authoritative)
-│   ├── DESIGN.md               # Hub document — links all others
-│   ├── PERSISTENCE.md
-│   ├── RUNTIME-ENV.md
-│   ├── OBSERVABILITY.md
+├── docs/                       # Contributor reference (Microsoft-style)
+│   ├── README.md               # Index + read order
+│   ├── architecture.md         # System overview, components, persistence, worker, SSE
+│   ├── data-model.md           # Tasks, projects, cycles/phases, checklist, dependencies
+│   ├── api.md                  # REST + SSE endpoint surface
+│   ├── configuration.md        # Env vars + app_settings
+│   ├── web.md                  # SPA architecture
+│   ├── contributing.md         # Extensibility + handler-split + troubleshooting
 │   └── adr/                    # Architecture Decision Records (ADR-NNNN.md)
 │
 ├── scripts/                    # Build, check, and dev scripts
@@ -308,16 +309,15 @@ features/tasks/
 
 ```
 docs/
-├── DESIGN.md                   # Hub: one-paragraph description + link to every doc
-├── API-HTTP.md                 # Authoritative REST contract
-├── API-SSE.md                  # Authoritative SSE contract
-├── PERSISTENCE.md
-├── RUNTIME-ENV.md              # Every T2A_* env var: name, type, default, required
-├── OBSERVABILITY.md
-├── EXECUTION-CYCLES.md
-├── EXTENSIBILITY.md            # How to add a new resource end-to-end
+├── README.md                   # Index + read order
+├── architecture.md             # System overview: components, persistence, worker, SSE
+├── data-model.md               # Tasks, projects, cycles/phases, checklist, dependencies
+├── api.md                      # REST + SSE endpoint surface (handler godoc is authoritative)
+├── configuration.md            # Every T2A_* env var + app_settings DB row
+├── web.md                      # SPA architecture
+├── contributing.md             # Vertical-slice flow + handler-split + troubleshooting
 └── adr/
-    ├── ADR-0001-monorepo.md
+    ├── ADR-0001-...md
     └── ADR-NNNN-<slug>.md      # One file per decision
 ```
 
@@ -349,8 +349,8 @@ What was decided? State it precisely.
 
 ### Documentation Rules
 
-- Every public HTTP route must appear in `docs/API-HTTP.md` before the handler is merged.
-- Every `T2A_*` env variable used in code must appear in `docs/RUNTIME-ENV.md`.
+- Every public HTTP route must appear in `docs/api.md` before the handler is merged.
+- Every `T2A_*` env variable used in code must appear in `docs/configuration.md`.
 - Any change that alters observable behavior (status codes, JSON fields, SSE event names) requires a doc update in the same commit.
 - Write an ADR when: a structural decision affects more than one package, a technology is added or removed, or a team disagreed during review.
 
@@ -516,12 +516,12 @@ grep -rn "fetch(" web/src/ --include="*.ts" --include="*.tsx" \
 
 **Required:**
 - Audit all cross-feature imports. Any found must be resolved before adding feature 6.
-- Ensure every feature's `index.ts` exports are documented in `docs/DESIGN.md`.
+- Ensure every feature's `index.ts` exports are documented in `docs/web.md`.
 - Add a `CODEOWNERS` entry per feature directory.
 
 ### Milestone 4: API Surface > 20 Routes
 
-**Trigger:** `docs/API-HTTP.md` documents more than 20 distinct routes.
+**Trigger:** `docs/api.md` documents more than 20 distinct routes.
 
 **Required:**
 - No handler file may span more than one resource group.
@@ -579,8 +579,8 @@ When a file hits Red during review, complete this before splitting:
 - Do not use inconsistent casing conventions within a stack.
 
 **Documentation violations:**
-- Do not merge a new public route without updating `docs/API-HTTP.md`.
-- Do not add a `T2A_*` env variable without updating `docs/RUNTIME-ENV.md`.
+- Do not merge a new public route without updating `docs/api.md`.
+- Do not add a `T2A_*` env variable without updating `docs/configuration.md`.
 - Do not make a structural change affecting multiple packages without an ADR.
 
 ---
@@ -608,8 +608,8 @@ Schema migration path             → pkgs/tasks/postgres/ (GORM AutoMigrate)
 Go test helpers                   → internal/tasktestdb/ or *_test.go
 TS test factories                 → web/src/test/factories/
 TS MSW handlers                   → web/src/test/handlers/
-Env variable documentation        → docs/RUNTIME-ENV.md
-HTTP contract documentation       → docs/API-HTTP.md
+Env variable documentation        → docs/configuration.md
+HTTP contract documentation       → docs/api.md
 Architectural decisions           → docs/adr/ADR-NNNN-<slug>.md
 ──────────────────────────────────────────────────────────────────────
 ```

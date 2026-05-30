@@ -59,11 +59,11 @@ func TestHTTP_getEvent_envelopeMandatoryKeys(t *testing.T) {
 	sort.Strings(gotKeys)
 	sort.Strings(wantKeys)
 	if !equalStringSlices(gotKeys, wantKeys) {
-		t.Fatalf("envelope keys=%v want %v (docs/API-HTTP.md GET /tasks/{id}/events/{seq}: mandatory keys only when no user_response/response_thread is set)", gotKeys, wantKeys)
+		t.Fatalf("envelope keys=%v want %v (docs/api.md GET /tasks/{id}/events/{seq}: mandatory keys only when no user_response/response_thread is set)", gotKeys, wantKeys)
 	}
 
 	if string(top["data"]) != "{}" {
-		t.Fatalf(`data must be the literal "{}" on a fresh task_created event, got %q (docs/API-HTTP.md "defaulted to {} when empty")`, top["data"])
+		t.Fatalf(`data must be the literal "{}" on a fresh task_created event, got %q (docs/api.md "defaulted to {} when empty")`, top["data"])
 	}
 	var taskID string
 	if err := json.Unmarshal(top["task_id"], &taskID); err != nil || taskID != task.ID {
@@ -117,7 +117,7 @@ func TestHTTP_getEvent_envelopeOptionalFieldsWhenSet(t *testing.T) {
 	sort.Strings(gotKeys)
 	sort.Strings(wantKeys)
 	if !equalStringSlices(gotKeys, wantKeys) {
-		t.Fatalf("envelope keys=%v want %v (docs/API-HTTP.md GET /tasks/{id}/events/{seq}: optional fields surface after PATCH populates them)", gotKeys, wantKeys)
+		t.Fatalf("envelope keys=%v want %v (docs/api.md GET /tasks/{id}/events/{seq}: optional fields surface after PATCH populates them)", gotKeys, wantKeys)
 	}
 
 	var ur string
@@ -137,7 +137,7 @@ func TestHTTP_getEvent_envelopeOptionalFieldsWhenSet(t *testing.T) {
 }
 
 // TestHTTP_getEvent_dataNeverNullOnWire pins the cross-route invariant
-// `docs/API-HTTP.md` documents for every event row: `data` is always a JSON
+// `docs/api.md` documents for every event row: `data` is always a JSON
 // object literal, never the bare `null` token. The unit-level
 // `TestTaskEventDetailFromDomain_normalizes_non_object_data` table covers
 // the response builder's `normalizeJSONObjectForResponse` defense in
@@ -161,7 +161,7 @@ func TestHTTP_getEvent_dataNeverNullOnWire(t *testing.T) {
 	}
 	gotData := strings.TrimSpace(string(top["data"]))
 	if gotData == "" || gotData == "null" {
-		t.Fatalf("data=%q must be a JSON object literal (docs/API-HTTP.md GET /tasks/{id}/events/{seq}: data defaulted to {} when empty)", gotData)
+		t.Fatalf("data=%q must be a JSON object literal (docs/api.md GET /tasks/{id}/events/{seq}: data defaulted to {} when empty)", gotData)
 	}
 	if !strings.HasPrefix(gotData, "{") || !strings.HasSuffix(gotData, "}") {
 		t.Fatalf("data=%q must be a JSON object literal {...}", gotData)
@@ -229,7 +229,7 @@ func TestHTTP_getEvent_errorPathsNeverPublish(t *testing.T) {
 			t.Fatalf("%s: decode error body: %v raw=%s", tc.name, err, raw)
 		}
 		if errBody.Error != tc.wantError {
-			t.Fatalf("%s: error=%q want %q (docs/API-HTTP.md GET /tasks/{id}/events/{seq}) body=%s", tc.name, errBody.Error, tc.wantError, raw)
+			t.Fatalf("%s: error=%q want %q (docs/api.md GET /tasks/{id}/events/{seq}) body=%s", tc.name, errBody.Error, tc.wantError, raw)
 		}
 	}
 

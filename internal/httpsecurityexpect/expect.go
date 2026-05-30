@@ -1,5 +1,5 @@
 // Package httpsecurityexpect holds assertions for baseline browser-facing HTTP
-// response headers (see docs/API-HTTP.md). It must not import pkgs/tasks/handler
+// response headers (see docs/api.md). It must not import pkgs/tasks/handler
 // so handler tests and internal/handlertest can both depend on it without cycles.
 package httpsecurityexpect
 

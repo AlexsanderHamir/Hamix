@@ -67,7 +67,7 @@ type Props = {
    * Opens in-app delete confirmation (do not call `window.confirm` from the
    * table). The table forwards the row's pre-computed `descendantCount` via
    * `subtaskCount` so the confirm dialog can warn about the cascade — see
-   * docs/API-HTTP.md "DELETE /tasks/{id}".
+   * docs/api.md "DELETE /tasks/{id}".
    */
   onRequestDelete: (t: DeleteTargetInput) => void;
   /** Primary action when the server returned no tasks (e.g. open create modal). */

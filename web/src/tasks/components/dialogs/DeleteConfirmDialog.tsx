@@ -10,7 +10,7 @@ type Props = {
    * Total descendant count for the task being confirmed (children +
    * grandchildren …). When > 0 the dialog appends a cascade warning line so
    * the user knows the server-side `DELETE /tasks/{id}` will remove every
-   * descendant in one transaction (docs/API-HTTP.md "DELETE /tasks/{id}").
+   * descendant in one transaction (docs/api.md "DELETE /tasks/{id}").
    * Defaults to 0 when omitted so call-sites without a tree stay
    * source-compatible (no warning line rendered).
    */

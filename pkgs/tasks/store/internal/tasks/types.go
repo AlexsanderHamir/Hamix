@@ -27,9 +27,9 @@ type CreateInput struct {
 	// until the instant has passed (UTC).
 	PickupNotBefore *time.Time
 	Tags            []string
-	Milestone     *string
-	Gate          *domain.TaskGate
-	DependsOn     []string
+	Milestone       *string
+	Gate            *domain.TaskGate
+	DependsOn       []string
 }
 
 // ParentFieldPatch updates parent_id when non-nil. Clear true means

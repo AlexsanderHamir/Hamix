@@ -61,18 +61,18 @@ import (
 //     SSE replay is always active in the `/events` handler; this column
 //     is migrated to true on read for older databases.
 type AppSettings struct {
-	ID                          uint   `gorm:"primaryKey;autoIncrement:false;check:chk_app_settings_singleton,id = 1"`
-	WorkerEnabled               bool   `gorm:"not null;default:true"`
-	AgentPaused                 bool   `gorm:"not null;default:false"`
-	Runner                      string `gorm:"not null;default:'cursor'"`
-	RepoRoot                    string `gorm:"not null;default:''"`
-	CursorBin                   string `gorm:"not null;default:''"`
-	CursorModel                 string `gorm:"not null;default:''"`
-	MaxRunDurationSeconds       int    `gorm:"not null;default:0;check:chk_app_settings_max_run_duration_seconds,max_run_duration_seconds >= 0"`
-	AgentPickupDelaySeconds int    `gorm:"not null;default:5;check:chk_app_settings_agent_pickup_delay_seconds,agent_pickup_delay_seconds >= 0"`
-	DisplayTimezone         string `gorm:"not null;default:''"`
-	OptimisticMutationsEnabled  bool   `gorm:"not null;default:true"`
-	SSEReplayEnabled            bool   `gorm:"not null;default:true"`
+	ID                         uint   `gorm:"primaryKey;autoIncrement:false;check:chk_app_settings_singleton,id = 1"`
+	WorkerEnabled              bool   `gorm:"not null;default:true"`
+	AgentPaused                bool   `gorm:"not null;default:false"`
+	Runner                     string `gorm:"not null;default:'cursor'"`
+	RepoRoot                   string `gorm:"not null;default:''"`
+	CursorBin                  string `gorm:"not null;default:''"`
+	CursorModel                string `gorm:"not null;default:''"`
+	MaxRunDurationSeconds      int    `gorm:"not null;default:0;check:chk_app_settings_max_run_duration_seconds,max_run_duration_seconds >= 0"`
+	AgentPickupDelaySeconds    int    `gorm:"not null;default:5;check:chk_app_settings_agent_pickup_delay_seconds,agent_pickup_delay_seconds >= 0"`
+	DisplayTimezone            string `gorm:"not null;default:''"`
+	OptimisticMutationsEnabled bool   `gorm:"not null;default:true"`
+	SSEReplayEnabled           bool   `gorm:"not null;default:true"`
 	// RunnerConfigs stores per-runner config blobs keyed by runner ID.
 	// Example: {"cursor":{"binary_path":"...","default_model":"opus"}}.
 	// Dual-written alongside the legacy CursorBin/CursorModel columns
@@ -137,22 +137,22 @@ const DefaultDisplayTimezone = ""
 // store.GetAppSettings already logs the seed-on-first-read decision.
 func DefaultAppSettings() AppSettings {
 	return AppSettings{
-		ID:                          AppSettingsRowID,
-		WorkerEnabled:               true,
-		AgentPaused:                 false,
-		Runner:                      DefaultRunner,
-		RepoRoot:                    "",
-		CursorBin:                   "",
-		MaxRunDurationSeconds:       0,
-		AgentPickupDelaySeconds: DefaultAgentPickupDelaySeconds,
-		DisplayTimezone:         DefaultDisplayTimezone,
-		OptimisticMutationsEnabled:  true,
-		SSEReplayEnabled:            true,
-		VerifyEnabled:               true,
-		VerifyMaxRetries:            DefaultVerifyMaxRetries,
-		VerifyRunnerName:            "",
-		VerifyRunnerModel:           "",
-		CheckCommandTimeoutSeconds:  DefaultCheckCommandTimeoutSeconds,
+		ID:                         AppSettingsRowID,
+		WorkerEnabled:              true,
+		AgentPaused:                false,
+		Runner:                     DefaultRunner,
+		RepoRoot:                   "",
+		CursorBin:                  "",
+		MaxRunDurationSeconds:      0,
+		AgentPickupDelaySeconds:    DefaultAgentPickupDelaySeconds,
+		DisplayTimezone:            DefaultDisplayTimezone,
+		OptimisticMutationsEnabled: true,
+		SSEReplayEnabled:           true,
+		VerifyEnabled:              true,
+		VerifyMaxRetries:           DefaultVerifyMaxRetries,
+		VerifyRunnerName:           "",
+		VerifyRunnerModel:          "",
+		CheckCommandTimeoutSeconds: DefaultCheckCommandTimeoutSeconds,
 	}
 }
 

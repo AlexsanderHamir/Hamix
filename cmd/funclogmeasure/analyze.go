@@ -170,11 +170,11 @@ var skipSlogRequirement = map[string]struct{}{
 	// pkgs/tasks/domain: pure predicates / constructors with no I/O. Every
 	// caller (store.StartPhase, store.CompletePhase, store.GetAppSettings)
 	// already logs the surrounding decision with the relevant context.
-	"github.com/AlexsanderHamir/T2A/pkgs/tasks/domain\tValidPhaseTransition":  {},
-	"github.com/AlexsanderHamir/T2A/pkgs/tasks/domain\tTerminalCycleStatus":   {},
-	"github.com/AlexsanderHamir/T2A/pkgs/tasks/domain\tTerminalPhaseStatus":   {},
-	"github.com/AlexsanderHamir/T2A/pkgs/tasks/domain\tDefaultAppSettings":    {},
-	"github.com/AlexsanderHamir/T2A/pkgs/tasks/domain\tGateCriteriaAllDone": {},
+	"github.com/AlexsanderHamir/T2A/pkgs/tasks/domain\tValidPhaseTransition": {},
+	"github.com/AlexsanderHamir/T2A/pkgs/tasks/domain\tTerminalCycleStatus":  {},
+	"github.com/AlexsanderHamir/T2A/pkgs/tasks/domain\tTerminalPhaseStatus":  {},
+	"github.com/AlexsanderHamir/T2A/pkgs/tasks/domain\tDefaultAppSettings":   {},
+	"github.com/AlexsanderHamir/T2A/pkgs/tasks/domain\tGateCriteriaAllDone":  {},
 
 	// pkgs/tasks/calltrace: thin orchestration / pure-context helpers that
 	// either delegate to helperDebugIn/helperDebugOut (which DO log) or
@@ -328,7 +328,7 @@ var skipSlogRequirement = map[string]struct{}{
 	"github.com/AlexsanderHamir/T2A/pkgs/tasks/domain\tProjectContextItem.TableName":                 {},
 	"github.com/AlexsanderHamir/T2A/pkgs/tasks/domain\tProjectContextEdge.TableName":                 {},
 	"github.com/AlexsanderHamir/T2A/pkgs/tasks/domain\tTaskContextSnapshot.TableName":                {},
-	"github.com/AlexsanderHamir/T2A/pkgs/tasks/domain\tTaskDependency.TableName":                    {},
+	"github.com/AlexsanderHamir/T2A/pkgs/tasks/domain\tTaskDependency.TableName":                     {},
 	"github.com/AlexsanderHamir/T2A/pkgs/tasks/domain\tDefaultProject":                               {},
 	"github.com/AlexsanderHamir/T2A/pkgs/tasks/store/internal/projects\tvalidateContextEdgeFields":   {},
 	"github.com/AlexsanderHamir/T2A/pkgs/tasks/store/internal/projects\tvalidateContextEdgePatch":    {},
@@ -348,30 +348,30 @@ var skipSlogRequirement = map[string]struct{}{
 
 	// Flat task hierarchy: pure validation/patch helpers and SQL predicate
 	// builders; store CRUD and handler paths emit the operation trace.
-	"github.com/AlexsanderHamir/T2A/pkgs/tasks/domain\t*TaskGate.GateBlocksWorker":              {},
-	"github.com/AlexsanderHamir/T2A/pkgs/tasks/domain\tValidateTaskTag":                          {},
-	"github.com/AlexsanderHamir/T2A/pkgs/tasks/domain\tValidateTaskTags":                         {},
-	"github.com/AlexsanderHamir/T2A/pkgs/tasks/domain\tValidateTaskMilestone":                     {},
-	"github.com/AlexsanderHamir/T2A/pkgs/tasks/domain\tNormalizeTaskTags":                         {},
-	"github.com/AlexsanderHamir/T2A/pkgs/tasks/store/internal/ready\tapplyDequeuableTaskPredicates": {},
-	"github.com/AlexsanderHamir/T2A/pkgs/tasks/store/internal/tasks\thydrateDependsOn":            {},
-	"github.com/AlexsanderHamir/T2A/pkgs/tasks/store/internal/tasks\tensureTaskExists":             {},
-	"github.com/AlexsanderHamir/T2A/pkgs/tasks/store/internal/tasks\tvalidateParentIsRootTask":     {},
-	"github.com/AlexsanderHamir/T2A/pkgs/tasks/store/internal/tasks\tisUniqueViolation":           {},
-	"github.com/AlexsanderHamir/T2A/pkgs/tasks/store/internal/tasks\tapplyListFilter":              {},
-	"github.com/AlexsanderHamir/T2A/pkgs/tasks/store/internal/tasks\tApplyTaskGateAction":          {},
-	"github.com/AlexsanderHamir/T2A/pkgs/tasks/store/internal/tasks\tapplyTagsPatch":               {},
-	"github.com/AlexsanderHamir/T2A/pkgs/tasks/store/internal/tasks\tapplyMilestonePatch":          {},
-	"github.com/AlexsanderHamir/T2A/pkgs/tasks/store/internal/tasks\tapplyGatePatch":               {},
-	"github.com/AlexsanderHamir/T2A/pkgs/tasks/store/internal/tasks\tapplyDependsOnPatch":          {},
-	"github.com/AlexsanderHamir/T2A/pkgs/tasks/store/internal/tasks\tlistDependenciesInTx":         {},
+	"github.com/AlexsanderHamir/T2A/pkgs/tasks/domain\t*TaskGate.GateBlocksWorker":                   {},
+	"github.com/AlexsanderHamir/T2A/pkgs/tasks/domain\tValidateTaskTag":                              {},
+	"github.com/AlexsanderHamir/T2A/pkgs/tasks/domain\tValidateTaskTags":                             {},
+	"github.com/AlexsanderHamir/T2A/pkgs/tasks/domain\tValidateTaskMilestone":                        {},
+	"github.com/AlexsanderHamir/T2A/pkgs/tasks/domain\tNormalizeTaskTags":                            {},
+	"github.com/AlexsanderHamir/T2A/pkgs/tasks/store/internal/ready\tapplyDequeuableTaskPredicates":  {},
+	"github.com/AlexsanderHamir/T2A/pkgs/tasks/store/internal/tasks\thydrateDependsOn":               {},
+	"github.com/AlexsanderHamir/T2A/pkgs/tasks/store/internal/tasks\tensureTaskExists":               {},
+	"github.com/AlexsanderHamir/T2A/pkgs/tasks/store/internal/tasks\tvalidateParentIsRootTask":       {},
+	"github.com/AlexsanderHamir/T2A/pkgs/tasks/store/internal/tasks\tisUniqueViolation":              {},
+	"github.com/AlexsanderHamir/T2A/pkgs/tasks/store/internal/tasks\tapplyListFilter":                {},
+	"github.com/AlexsanderHamir/T2A/pkgs/tasks/store/internal/tasks\tApplyTaskGateAction":            {},
+	"github.com/AlexsanderHamir/T2A/pkgs/tasks/store/internal/tasks\tapplyTagsPatch":                 {},
+	"github.com/AlexsanderHamir/T2A/pkgs/tasks/store/internal/tasks\tapplyMilestonePatch":            {},
+	"github.com/AlexsanderHamir/T2A/pkgs/tasks/store/internal/tasks\tapplyGatePatch":                 {},
+	"github.com/AlexsanderHamir/T2A/pkgs/tasks/store/internal/tasks\tapplyDependsOnPatch":            {},
+	"github.com/AlexsanderHamir/T2A/pkgs/tasks/store/internal/tasks\tlistDependenciesInTx":           {},
 	"github.com/AlexsanderHamir/T2A/pkgs/tasks/store/internal/tasks\tnormalizeCreateTaskModelFields": {},
-	"github.com/AlexsanderHamir/T2A/pkgs/tasks/handler\tgateFieldPatchToStore":                    {},
+	"github.com/AlexsanderHamir/T2A/pkgs/tasks/handler\tgateFieldPatchToStore":                       {},
 
-	"github.com/AlexsanderHamir/T2A/pkgs/agents/worker\t*Worker.selectedProjectContext":              {},
-	"github.com/AlexsanderHamir/T2A/pkgs/agents/worker\trenderProjectContext":                        {},
-	"github.com/AlexsanderHamir/T2A/pkgs/agents/worker\testimateTokens":                              {},
-	"github.com/AlexsanderHamir/T2A/pkgs/agents/worker\tpromptWithProjectContext":                    {},
+	"github.com/AlexsanderHamir/T2A/pkgs/agents/worker\t*Worker.selectedProjectContext": {},
+	"github.com/AlexsanderHamir/T2A/pkgs/agents/worker\trenderProjectContext":           {},
+	"github.com/AlexsanderHamir/T2A/pkgs/agents/worker\testimateTokens":                 {},
+	"github.com/AlexsanderHamir/T2A/pkgs/agents/worker\tpromptWithProjectContext":       {},
 	// Criteria verification guardrail: pure helpers and thin wrappers; pipeline
 	// entry points (runVerificationPipeline, runVerifyPhase, applyVerifiedCompletions,
 	// completeChecklistLegacy) emit the canonical trace.

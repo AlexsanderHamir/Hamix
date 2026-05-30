@@ -7,7 +7,7 @@ import (
 )
 
 var (
-	taskTagPattern      = regexp.MustCompile(`^[a-z0-9][a-z0-9._-]{0,31}$`)
+	taskTagPattern       = regexp.MustCompile(`^[a-z0-9][a-z0-9._-]{0,31}$`)
 	taskMilestonePattern = regexp.MustCompile(`^[a-zA-Z0-9][a-zA-Z0-9 ._-]{0,63}$`)
 )
 

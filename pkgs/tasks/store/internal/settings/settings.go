@@ -39,8 +39,8 @@ type Patch struct {
 	DisplayTimezone *string
 	// OptimisticMutationsEnabled / SSEReplayEnabled are realtime rollout flags.
 	// See domain.AppSettings for the per-flag semantics.
-	OptimisticMutationsEnabled  *bool
-	SSEReplayEnabled *bool
+	OptimisticMutationsEnabled *bool
+	SSEReplayEnabled           *bool
 	// RunnerConfigs is the full replacement blob for the per-runner
 	// config map. When non-nil, it replaces the entire runner_configs
 	// column. The handler is responsible for merging deltas before

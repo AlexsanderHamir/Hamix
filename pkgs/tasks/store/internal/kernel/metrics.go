@@ -67,7 +67,7 @@ const (
 	OpUpdateProjectContext    = "update_project_context"
 	OpDeleteProjectContext    = "delete_project_context"
 	OpCreateContextSnapshot   = "create_context_snapshot"
-	OpGetContextSnapshot = "get_context_snapshot"
+	OpGetContextSnapshot      = "get_context_snapshot"
 )
 
 // opDurationBuckets favor sub-100ms resolution for SQL point reads and short tx.

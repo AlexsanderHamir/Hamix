@@ -12,11 +12,11 @@ const (
 // TaskGate pauses agent dequeue for a task until released. Nil gate on a task
 // means no gate — the worker applies only status, pickup, and depends_on rules.
 type TaskGate struct {
-	Kind                      GateKind              `json:"kind"`
-	Status                    GateStatus `json:"status"`
-	Hold                      bool                  `json:"hold"`
-	PendingReleaseDeadlineUTC *time.Time            `json:"pending_release_deadline,omitempty"`
-	Criteria                  []GateCriterion       `json:"criteria,omitempty"`
+	Kind                      GateKind        `json:"kind"`
+	Status                    GateStatus      `json:"status"`
+	Hold                      bool            `json:"hold"`
+	PendingReleaseDeadlineUTC *time.Time      `json:"pending_release_deadline,omitempty"`
+	Criteria                  []GateCriterion `json:"criteria,omitempty"`
 }
 
 // GateBlocksWorker reports whether the gate prevents the worker from dequeuing

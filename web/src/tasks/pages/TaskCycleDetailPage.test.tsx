@@ -156,7 +156,7 @@ describe("TaskCycleDetailPage", () => {
         progress: {
           kind: "tool_call",
           subtype: "started",
-          message: "Searching files *.go in worker",
+          message: "Searching for *.go in worker",
         },
       });
     });
@@ -165,7 +165,7 @@ describe("TaskCycleDetailPage", () => {
     ).toBeInTheDocument();
     expect(screen.getByText("Still working live")).toBeInTheDocument();
     expect(screen.getByText("Newest live update")).toBeInTheDocument();
-    expect(screen.getByText("Searching files *.go in worker")).toBeInTheDocument();
+    expect(screen.getByText("Searching for *.go in worker")).toBeInTheDocument();
     expect(screen.queryByText("tool_call")).toBeNull();
     expect(screen.getAllByLabelText(/received at/i)).toHaveLength(3);
     const liveList = screen.getByRole("list", { name: /recent live updates/i });
@@ -173,7 +173,7 @@ describe("TaskCycleDetailPage", () => {
     expect(liveItems[0]).toHaveTextContent(/waiting for the next update/i);
     expect(liveItems[0]).toHaveTextContent(/last just now/i);
     expect(liveItems[1]).toHaveTextContent("Tool");
-    expect(liveItems[1]).toHaveTextContent("Searching files *.go in worker");
+    expect(liveItems[1]).toHaveTextContent("Searching for *.go in worker");
     expect(liveItems[2]).toHaveTextContent("Newest live update");
     expect(liveItems[3]).toHaveTextContent("Still working live");
 

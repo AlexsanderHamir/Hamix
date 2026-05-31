@@ -237,11 +237,11 @@ func toolProgressMessage(tool, subtype string, input json.RawMessage) string {
 	}
 	switch subtype {
 	case cursorSubtypeStarted, cursorSubtypeStart:
-		return "Started " + label
+		return "Starting " + label
 	case cursorSubtypeCompleted, cursorSubtypeSuccess, cursorSubtypeDone:
-		return "Finished " + label
+		return "Finishing " + label
 	case cursorSubtypeFailed, cursorSubtypeError:
-		return "Failed " + label
+		return "Failing " + label
 	default:
 		return label
 	}
@@ -268,7 +268,7 @@ func toolInputSummary(tool string, input json.RawMessage) string {
 	case strings.Contains(name, "write"):
 		return pathActionSummary("Writing", fields)
 	case strings.Contains(name, "delete"):
-		return pathActionSummary("Delete", fields)
+		return pathActionSummary("Deleting", fields)
 	case strings.Contains(name, "shell") || strings.Contains(name, "terminal") || strings.Contains(name, "bash"):
 		return shellSummary(fields)
 	default:
@@ -277,31 +277,34 @@ func toolInputSummary(tool string, input json.RawMessage) string {
 }
 
 func readFileSummary(fields map[string]any) string {
-	p := pathLabel(firstNonEmpty(stringField(fields, "path"), stringField(fields, "file"), stringField(fields, "target_file")))
+	p := pathLabel(inputField(fields, "path", "file", "target_file", "targetFile"))
 	if p == "" {
 		return ""
 	}
 	if r := lineRange(fields); r != "" {
-		return clipProgressSummary("Read " + p + " " + r)
+		return clipProgressSummary("Reading " + p + " " + r)
 	}
-	return clipProgressSummary("Read " + p)
+	return clipProgressSummary("Reading " + p)
 }
 
 func searchFilesSummary(fields map[string]any) string {
-	pattern := firstNonEmpty(stringField(fields, "glob_pattern"), stringField(fields, "pattern"), stringField(fields, "query"), stringField(fields, "q"))
-	if pattern == "" {
-		pattern = "files"
+	pattern := inputField(fields, "glob_pattern", "globPattern", "pattern", "query", "q")
+	scope := scopeLabel(inputField(fields, "target_directory", "targetDirectory", "path", "directory", "dir"))
+	if pattern != "" && scope != "" {
+		return clipProgressSummary("Searching for " + pattern + " in " + scope)
 	}
-	scope := scopeLabel(firstNonEmpty(stringField(fields, "target_directory"), stringField(fields, "path"), stringField(fields, "directory"), stringField(fields, "dir")))
+	if pattern != "" {
+		return clipProgressSummary("Searching for " + pattern)
+	}
 	if scope != "" {
-		return clipProgressSummary("Searching files " + pattern + " in " + scope)
+		return clipProgressSummary("Searching files in " + scope)
 	}
-	return clipProgressSummary("Searching files " + pattern)
+	return clipProgressSummary("Searching files")
 }
 
 func ripgrepSummary(fields map[string]any) string {
-	pattern := firstNonEmpty(stringField(fields, "pattern"), stringField(fields, "query"), stringField(fields, "q"), stringField(fields, "glob"))
-	scope := scopeLabel(firstNonEmpty(stringField(fields, "path"), stringField(fields, "target_directory"), stringField(fields, "directory"), stringField(fields, "dir")))
+	pattern := inputField(fields, "pattern", "query", "q", "glob")
+	scope := scopeLabel(inputField(fields, "path", "target_directory", "targetDirectory", "directory", "dir"))
 	if pattern == "" {
 		pattern = "text"
 	}
@@ -312,7 +315,7 @@ func ripgrepSummary(fields map[string]any) string {
 }
 
 func editSummary(fields map[string]any) string {
-	p := pathLabel(firstNonEmpty(stringField(fields, "target_file"), stringField(fields, "path"), stringField(fields, "file")))
+	p := pathLabel(inputField(fields, "target_file", "targetFile", "path", "file"))
 	if p == "" {
 		return ""
 	}
@@ -320,7 +323,7 @@ func editSummary(fields map[string]any) string {
 }
 
 func pathActionSummary(action string, fields map[string]any) string {
-	p := pathLabel(firstNonEmpty(stringField(fields, "path"), stringField(fields, "target_file"), stringField(fields, "file")))
+	p := pathLabel(inputField(fields, "path", "target_file", "targetFile", "file"))
 	if p == "" {
 		return ""
 	}
@@ -340,17 +343,29 @@ func shellSummary(fields map[string]any) string {
 }
 
 func genericInputSummary(fields map[string]any) string {
-	if stringField(fields, "glob_pattern") != "" {
+	if inputField(fields, "glob_pattern", "globPattern") != "" {
 		return searchFilesSummary(fields)
 	}
-	if p := pathLabel(firstNonEmpty(stringField(fields, "path"), stringField(fields, "target_file"), stringField(fields, "file"))); p != "" {
+	if p := pathLabel(inputField(fields, "path", "target_file", "targetFile", "file")); p != "" {
 		if r := lineRange(fields); r != "" {
-			return clipProgressSummary("Read " + p + " " + r)
+			return clipProgressSummary("Reading " + p + " " + r)
 		}
 		return clipProgressSummary(p)
 	}
-	if query := firstNonEmpty(stringField(fields, "query"), stringField(fields, "pattern"), stringField(fields, "glob_pattern")); query != "" {
+	if query := inputField(fields, "query", "pattern", "glob_pattern", "globPattern"); query != "" {
 		return clipProgressSummary("Searching " + query)
+	}
+	return ""
+}
+
+// inputField returns the first non-empty string value for any of the given
+// keys. Cursor stream-json uses camelCase in nested tool_call args while
+// older flat input blobs use snake_case — accept both so summaries stay stable.
+func inputField(fields map[string]any, keys ...string) string {
+	for _, key := range keys {
+		if s := stringField(fields, key); s != "" {
+			return s
+		}
 	}
 	return ""
 }

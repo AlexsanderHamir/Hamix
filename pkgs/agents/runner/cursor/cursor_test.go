@@ -283,9 +283,9 @@ func TestRun_streamJSONSummarizesToolInputsForLiveProgress(t *testing.T) {
 		progress[3].Message,
 	}
 	want := []string{
-		"Searching files *.go in worker",
-		"Searching files *.go in runner",
-		"Read facade_projects.go L1-91",
+		"Searching for *.go in worker",
+		"Searching for *.go in runner",
+		"Reading facade_projects.go L1-91",
 		"Run cursor parser tests",
 	}
 	for i := range want {
@@ -328,7 +328,7 @@ func TestRun_streamJSONSummarizesNestedToolCallsForLiveProgress(t *testing.T) {
 		progress[3].Message,
 	}
 	want := []string{
-		"Read README.md",
+		"Reading README.md",
 		"Writing summary.txt",
 		"Editing improvements_01.md",
 		"Searching TODO in worker",

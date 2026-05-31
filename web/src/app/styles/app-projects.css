@@ -90,10 +90,6 @@
   box-shadow: var(--shadow-focus);
 }
 
-.pl__new-btn svg {
-  flex: 0 0 auto;
-}
-
 /* --- Create project dialog --- */
 
 .pl__create-dialog {

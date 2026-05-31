@@ -20,27 +20,14 @@ export function ProjectTasksPanel({ projectId }: Props) {
 
   return (
     <section className="pd__card" aria-labelledby="pd-tasks-title">
-      <div className="pd__card-head">
-        <div className="pd__icon pd__icon--green" aria-hidden="true">
-          <svg width="18" height="18" viewBox="0 0 18 18" fill="none">
-            <path d="M6.75 9l1.5 1.5 3-3" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
-            <rect x="2.25" y="2.25" width="13.5" height="13.5" rx="3" stroke="currentColor" strokeWidth="1.2" opacity="0.5" />
-          </svg>
-        </div>
-        <div>
-          <h2 id="pd-tasks-title" className="pd__card-title">
-            Linked tasks
-          </h2>
-          <p className="pd__card-desc">Recent work in this project</p>
-        </div>
-      </div>
+      <h2 id="pd-tasks-title" className="pd__card-eyebrow">
+        Linked tasks
+      </h2>
 
       {projectTasks.isLoading ? <TaskListSkeleton /> : null}
 
       {!projectTasks.isLoading && memberTasks.length === 0 ? (
-        <div className="pd__empty">
-          <p>No tasks linked to this project yet</p>
-        </div>
+        <p className="pd__empty">No tasks linked to this project yet</p>
       ) : null}
 
       {memberTasks.length > 0 ? (

@@ -47,9 +47,6 @@ export function ProjectDetailPage() {
 
   return (
     <section className="panel task-detail-panel pd">
-      {project.data ? (
-        <h1 className="visually-hidden">{project.data.name}</h1>
-      ) : null}
       <header className="pd__header">
         <Link to="/projects" className="pd__back project-context-back-link">
           <span aria-hidden="true">&#8249;</span>
@@ -77,6 +74,15 @@ export function ProjectDetailPage() {
         ) : null}
       </header>
 
+      {project.data ? (
+        <div className="pd__title-block">
+          <h1 className="pd__title">{project.data.name}</h1>
+          {project.data.description ? (
+            <p className="pd__subtitle">{project.data.description}</p>
+          ) : null}
+        </div>
+      ) : null}
+
       {deleteOpen && project.data && !isDefaultProject ? (
         <ProjectDeleteConfirmDialog
           projectName={project.data.name}
@@ -90,10 +96,6 @@ export function ProjectDetailPage() {
           }}
           onConfirm={() => void deleteProjectMutation.mutate()}
         />
-      ) : null}
-
-      {project.data?.description ? (
-        <p className="pd__subtitle">{project.data.description}</p>
       ) : null}
 
       {project.isLoading ? <ProjectDetailSkeleton /> : null}

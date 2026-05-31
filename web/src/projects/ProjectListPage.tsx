@@ -1,11 +1,12 @@
 import { useMutation, useQueryClient } from "@tanstack/react-query";
-import { useState, type FormEvent } from "react";
+import { useState } from "react";
 import { Link } from "react-router-dom";
 import { createProject } from "@/api";
 import { EmptyState } from "@/shared/EmptyState";
 import { useDocumentTitle } from "@/shared/useDocumentTitle";
 import type { Project } from "@/types";
 import { useProjects } from "./hooks";
+import { ProjectCreateDialog } from "./ProjectCreateDialog";
 import { projectQueryKeys } from "./queryKeys";
 
 export function ProjectListPage() {
@@ -15,21 +16,25 @@ export function ProjectListPage() {
   const projects = data?.projects ?? [];
   const activeCount = projects.filter((p) => p.status === "active").length;
   const archivedCount = projects.length - activeCount;
-  const [name, setName] = useState("");
+  const [createOpen, setCreateOpen] = useState(false);
 
   const createMutation = useMutation({
     mutationFn: createProject,
     onSuccess: async () => {
-      setName("");
+      setCreateOpen(false);
       await queryClient.invalidateQueries({ queryKey: projectQueryKeys.all });
     },
   });
 
-  function submitProject(event: FormEvent) {
-    event.preventDefault();
-    const trimmedName = name.trim();
-    if (!trimmedName) return;
-    createMutation.mutate({ name: trimmedName });
+  function openCreateDialog() {
+    createMutation.reset();
+    setCreateOpen(true);
+  }
+
+  function closeCreateDialog() {
+    if (createMutation.isPending) return;
+    createMutation.reset();
+    setCreateOpen(false);
   }
 
   return (
@@ -41,55 +46,54 @@ export function ProjectListPage() {
             Shared context and memory for tasks in each project.
           </p>
         </div>
-        <dl className="pl__stats" aria-label="Project summary">
-          <div className="pl__stat">
-            <dd>{projects.length}</dd>
-            <dt>total</dt>
-          </div>
-          <span className="pl__stat-sep" aria-hidden="true" />
-          <div className="pl__stat pl__stat--active">
-            <dd>{activeCount}</dd>
-            <dt>active</dt>
-          </div>
-          <span className="pl__stat-sep" aria-hidden="true" />
-          <div className="pl__stat">
-            <dd>{archivedCount}</dd>
-            <dt>archived</dt>
-          </div>
-        </dl>
+        <div className="pl__head-actions">
+          <dl className="pl__stats" aria-label="Project summary">
+            <div className="pl__stat">
+              <dd>{projects.length}</dd>
+              <dt>total</dt>
+            </div>
+            <span className="pl__stat-sep" aria-hidden="true" />
+            <div className="pl__stat pl__stat--active">
+              <dd>{activeCount}</dd>
+              <dt>active</dt>
+            </div>
+            <span className="pl__stat-sep" aria-hidden="true" />
+            <div className="pl__stat">
+              <dd>{archivedCount}</dd>
+              <dt>archived</dt>
+            </div>
+          </dl>
+          <button
+            type="button"
+            className="pl__new-btn"
+            onClick={openCreateDialog}
+          >
+            <svg
+              width="14"
+              height="14"
+              viewBox="0 0 16 16"
+              fill="none"
+              aria-hidden="true"
+            >
+              <path
+                d="M8 3v10M3 8h10"
+                stroke="currentColor"
+                strokeWidth="1.75"
+                strokeLinecap="round"
+              />
+            </svg>
+            New project
+          </button>
+        </div>
       </header>
 
-      <div className="pl__create-area">
-        <div className="pl__create-copy">
-          <p className="pl__create-label">Create project</p>
-          <p className="pl__create-help">
-            Start a context space for a repo, product area, or recurring
-            workflow.
-          </p>
-        </div>
-        <form className="pl__create" onSubmit={submitProject} aria-label="Create project">
-          <input
-            id="project-create-name"
-            className="pl__create-input"
-            value={name}
-            onChange={(e) => setName(e.target.value)}
-            placeholder="e.g. Billing platform"
-            required
-            aria-label="Project name"
-          />
-          <button
-            type="submit"
-            className="pl__create-btn"
-            disabled={createMutation.isPending || !name.trim()}
-          >
-            {createMutation.isPending ? "Creating..." : "Create"}
-          </button>
-        </form>
-      </div>
-      {createMutation.error ? (
-        <div className="pd__inline-error" role="alert">
-          {createMutation.error.message}
-        </div>
+      {createOpen ? (
+        <ProjectCreateDialog
+          saving={createMutation.isPending}
+          error={createMutation.error}
+          onCancel={closeCreateDialog}
+          onSubmit={(input) => createMutation.mutate(input)}
+        />
       ) : null}
 
       <div className="pl__list-section">

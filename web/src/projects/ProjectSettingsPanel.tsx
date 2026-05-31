@@ -35,6 +35,7 @@ export function ProjectSettingsPanel({ project }: Props) {
   const patchProjectMutation = useMutation({
     mutationFn: (input: {
       name?: string;
+      description?: string;
       status?: ProjectStatus;
     }) => patchProject(project.id, input),
     onSuccess: async () => {
@@ -51,25 +52,16 @@ export function ProjectSettingsPanel({ project }: Props) {
     const form = new FormData(event.currentTarget);
     patchProjectMutation.mutate({
       name: String(form.get("name") ?? "").trim(),
+      description: String(form.get("description") ?? "").trim(),
       status,
     });
   }
 
   return (
     <section className="pd__card" aria-labelledby="pd-settings-title">
-      <div className="pd__card-head">
-        <div className="pd__icon pd__icon--brand" aria-hidden="true">
-          <svg width="18" height="18" viewBox="0 0 18 18" fill="none">
-            <path d="M7.5 2.25h-3A2.25 2.25 0 002.25 4.5v3c0 1.243 1.007 2.25 2.25 2.25h3A2.25 2.25 0 009.75 7.5v-3A2.25 2.25 0 007.5 2.25z" fill="currentColor" opacity="0.9" />
-            <path d="M14.25 8.25h-1.5a2.25 2.25 0 00-2.25 2.25v3a2.25 2.25 0 002.25 2.25h1.5a2.25 2.25 0 002.25-2.25v-3a2.25 2.25 0 00-2.25-2.25z" fill="currentColor" opacity="0.45" />
-          </svg>
-        </div>
-        <div>
-          <h2 id="pd-settings-title" className="pd__card-title">
-            Project settings
-          </h2>
-        </div>
-      </div>
+      <h2 id="pd-settings-title" className="pd__card-eyebrow">
+        Project settings
+      </h2>
 
       {isDefaultProject ? (
         <p className="pd__note">
@@ -82,31 +74,52 @@ export function ProjectSettingsPanel({ project }: Props) {
         className="pd__settings-form"
         onSubmit={submitProject}
       >
-        <div className="field grow">
-          <label htmlFor="project-edit-name">Name</label>
-          <input
-            id="project-edit-name"
-            name="name"
-            defaultValue={project.name}
-            required
+        <div className="pd__settings-form-row">
+          <div className="field grow">
+            <label htmlFor="project-edit-name">Name</label>
+            <input
+              id="project-edit-name"
+              name="name"
+              defaultValue={project.name}
+              required
+              disabled={isDefaultProject}
+              autoComplete="off"
+            />
+          </div>
+          <CustomSelect
+            id="project-edit-status"
+            label="Status"
+            value={status}
+            options={statusOptions}
+            onChange={(v) => setStatus(v as ProjectStatus)}
+            compact
             disabled={isDefaultProject}
           />
         </div>
-        <CustomSelect
-          id="project-edit-status"
-          label="Status"
-          value={status}
-          options={statusOptions}
-          onChange={(v) => setStatus(v as ProjectStatus)}
-          compact
-          disabled={isDefaultProject}
-        />
-        <button
-          type="submit"
-          disabled={isDefaultProject || patchProjectMutation.isPending}
-        >
-          {patchProjectMutation.isPending ? "Saving..." : "Save"}
-        </button>
+
+        <div className="field">
+          <label htmlFor="project-edit-description">
+            Description{" "}
+            <span className="pd__settings-form-optional">— optional</span>
+          </label>
+          <textarea
+            id="project-edit-description"
+            name="description"
+            defaultValue={project.description ?? ""}
+            placeholder="One line of context that helps your team and agents understand what this project is for."
+            rows={3}
+            disabled={isDefaultProject}
+          />
+        </div>
+
+        <div className="pd__settings-form-actions">
+          <button
+            type="submit"
+            disabled={isDefaultProject || patchProjectMutation.isPending}
+          >
+            {patchProjectMutation.isPending ? "Saving…" : "Save changes"}
+          </button>
+        </div>
       </form>
 
       {patchProjectMutation.error ? (

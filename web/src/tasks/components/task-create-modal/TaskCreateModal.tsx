@@ -21,6 +21,7 @@ import {
 } from "./fields/TaskCreateModalEvaluationSummary";
 import { TestScenariosTrigger } from "./TestScenariosTrigger";
 import { TestScenariosPopover } from "./TestScenariosPopover";
+import { advancedSummaryLine } from "./advancedSummaryLine";
 
 type Props = {
   pending: boolean;
@@ -285,14 +286,6 @@ export function TaskCreateModal({
               projectContext={promptProjectContext}
             />
 
-            <TaskCreateModalAgentSection
-              disabled={disabled}
-              runner={taskRunner}
-              cursorModel={taskCursorModel}
-              onRunnerChange={onTaskRunnerChange}
-              onCursorModelChange={onTaskCursorModelChange}
-            />
-
             {projectAssignment}
 
             {!dmapMode ? (
@@ -305,23 +298,55 @@ export function TaskCreateModal({
               />
             ) : null}
 
-            <TaskCreateModalSchedulingFields
-              disabled={disabled}
-              tagsCsv={tagsCsv}
-              milestone={milestone}
-              dependsOnCsv={dependsOnCsv}
-              onTagsCsvChange={onTagsCsvChange}
-              onMilestoneChange={onMilestoneChange}
-              onDependsOnCsvChange={onDependsOnCsvChange}
-            />
+            <details className="task-create-advanced">
+              <summary
+                className="task-create-advanced__summary"
+                data-testid="task-create-more-options-toggle"
+              >
+                <span
+                  className="task-create-advanced__chevron"
+                  aria-hidden="true"
+                />
+                <span className="task-create-advanced__label">More options</span>
+                <span className="task-create-advanced__hint">
+                  {advancedSummaryLine({
+                    runner: taskRunner,
+                    cursorModel: taskCursorModel,
+                    schedule,
+                    tagsCsv,
+                    milestone,
+                    dependsOnCsv,
+                  })}
+                </span>
+              </summary>
+              <div className="task-create-advanced__body">
+                <TaskCreateModalAgentSection
+                  disabled={disabled}
+                  runner={taskRunner}
+                  cursorModel={taskCursorModel}
+                  onRunnerChange={onTaskRunnerChange}
+                  onCursorModelChange={onTaskCursorModelChange}
+                />
 
-            <SchedulePicker
-              value={schedule}
-              onChange={onScheduleChange}
-              appTimezone={appTimezone}
-              disabled={disabled}
-              idPrefix="task-create-modal"
-            />
+                <SchedulePicker
+                  value={schedule}
+                  onChange={onScheduleChange}
+                  appTimezone={appTimezone}
+                  disabled={disabled}
+                  idPrefix="task-create-modal"
+                />
+
+                <TaskCreateModalSchedulingFields
+                  disabled={disabled}
+                  tagsCsv={tagsCsv}
+                  milestone={milestone}
+                  dependsOnCsv={dependsOnCsv}
+                  onTagsCsvChange={onTagsCsvChange}
+                  onMilestoneChange={onMilestoneChange}
+                  onDependsOnCsvChange={onDependsOnCsvChange}
+                />
+              </div>
+            </details>
 
             <TaskCreateModalEvaluationSummary evaluation={evaluation} />
 

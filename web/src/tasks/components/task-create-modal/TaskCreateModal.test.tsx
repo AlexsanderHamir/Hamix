@@ -89,6 +89,12 @@ function renderModal(props?: Partial<ComponentProps<typeof TaskCreateModal>>) {
   );
 }
 
+/** Expand the "More options" disclosure so tests can interact with the
+ *  agent + schedule + metadata controls it collapses by default. */
+async function expandMoreOptions(user: ReturnType<typeof userEvent.setup>) {
+  await user.click(screen.getByTestId("task-create-more-options-toggle"));
+}
+
 describe("TaskCreateModal", () => {
   it("shows Evaluate action and calls onEvaluate", async () => {
     const user = userEvent.setup();
@@ -173,8 +179,10 @@ describe("TaskCreateModal", () => {
     ).toBeInTheDocument();
   });
 
-  it("renders a SchedulePicker with the immediate-pickup caption when no schedule is set", () => {
+  it("renders a SchedulePicker with the immediate-pickup caption when no schedule is set", async () => {
+    const user = userEvent.setup();
     renderModal();
+    await expandMoreOptions(user);
     expect(
       screen.getByText(/picks up immediately when the worker is free/i),
     ).toBeInTheDocument();
@@ -185,6 +193,7 @@ describe("TaskCreateModal", () => {
     const user = userEvent.setup();
     const onScheduleChange = vi.fn();
     renderModal({ onScheduleChange, appTimezone: "UTC" });
+    await expandMoreOptions(user);
     // The new picker funnels every preset through an anchored popover; open
     // it first, then click the +1 hour chip to verify the modal forwards the
     // emitted ISO upward unchanged.
@@ -196,11 +205,13 @@ describe("TaskCreateModal", () => {
     expect(v).toMatch(/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\.\d{3}Z$/);
   });
 
-  it("renders the picker caption in the chosen app timezone when a schedule is set", () => {
+  it("renders the picker caption in the chosen app timezone when a schedule is set", async () => {
+    const user = userEvent.setup();
     renderModal({
       schedule: "2026-04-19T13:00:00Z",
       appTimezone: "America/New_York",
     });
+    await expandMoreOptions(user);
     // 13:00Z = 09:00 EDT in April.
     expect(screen.getByText(/agent will pick up at/i)).toBeInTheDocument();
     expect(screen.getByText(/09:00/)).toBeInTheDocument();
@@ -261,8 +272,10 @@ describe("TaskCreateModal", () => {
     expect(screen.getByText(/saving draft/i)).toBeInTheDocument();
   });
 
-  it("shows Cursor model as a select with a Default option", () => {
+  it("shows Cursor model as a select with a Default option", async () => {
+    const user = userEvent.setup();
     renderModal();
+    await expandMoreOptions(user);
     const model = screen.getByTestId("task-create-cursor-model-select");
     expect(model.tagName).toBe("SELECT");
     expect(
@@ -292,6 +305,45 @@ describe("TaskCreateModal", () => {
     expect(
       screen.getByTestId("test-scenarios-trigger"),
     ).toBeInTheDocument();
+  });
+
+  it("collapses the agent, schedule, and metadata fields behind a 'More options' disclosure by default", () => {
+    renderModal();
+    const toggle = screen.getByTestId("task-create-more-options-toggle");
+    expect(toggle).toBeInTheDocument();
+    const details = toggle.closest("details");
+    expect(details).not.toBeNull();
+    // Closed by default — the essentials (Title, Prompt, Done criteria,
+    // Project) own the viewport on open; the advanced controls are one
+    // click away.
+    expect(details).not.toHaveAttribute("open");
+  });
+
+  it("toggles the 'open' attribute on the disclosure when the summary is activated", async () => {
+    // Browsers hide <details> body content via the UA stylesheet when
+    // [open] is absent, so flipping that attribute is the contract that
+    // gates whether the agent + schedule + metadata fields are visible
+    // to the operator. (JSDOM doesn't honour the UA stylesheet, so the
+    // DOM-presence assertion used elsewhere wouldn't catch this.)
+    const user = userEvent.setup();
+    renderModal();
+    const toggle = screen.getByTestId("task-create-more-options-toggle");
+    const details = toggle.closest("details");
+    expect(details).not.toHaveAttribute("open");
+    await user.click(toggle);
+    expect(details).toHaveAttribute("open");
+  });
+
+  it("summarises effective values next to the disclosure summary when fields are set", () => {
+    renderModal({
+      tagsCsv: "backend, api",
+      milestone: "M1",
+      schedule: "2026-04-19T13:00:00Z",
+    });
+    const toggle = screen.getByTestId("task-create-more-options-toggle");
+    expect(toggle).toHaveTextContent(/Scheduled/);
+    expect(toggle).toHaveTextContent(/2 tags/);
+    expect(toggle).toHaveTextContent(/Milestone/);
   });
 
   it("opens the test-scenarios popover and forwards the picked scenario", async () => {

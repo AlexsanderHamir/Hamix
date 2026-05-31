@@ -686,3 +686,144 @@
   border-top: 1px solid var(--border-hairline);
 }
 
+/* —— "More options" progressive disclosure ——
+   Collapses the agent runtime, schedule, and metadata (tags / milestone /
+   dependencies) behind a single toggle so the modal opens at the
+   essentials (Title, Prompt, Done criteria, Project) instead of dumping
+   ~600px of advanced controls into the operator's lap. Pattern: HTML
+   <details>/<summary> — accessible, keyboard-toggleable, no JS state. */
+
+.task-create-advanced {
+  margin: 0;
+  border-radius: var(--radius-md);
+  border: 1px solid var(--border-hairline);
+  background: var(--bg-elevated);
+  overflow: hidden;
+  transition: border-color var(--duration-normal) var(--ease-default),
+    box-shadow var(--duration-normal) var(--ease-default);
+}
+
+.task-create-advanced[open] {
+  border-color: color-mix(in srgb, var(--border-hairline) 80%, var(--brand) 20%);
+  box-shadow: var(--shadow-chrome-xs-soft);
+}
+
+.task-create-advanced__summary {
+  display: grid;
+  grid-template-columns: auto auto 1fr;
+  align-items: center;
+  gap: 0.6rem;
+  padding: 0.7rem 0.95rem;
+  cursor: pointer;
+  user-select: none;
+  list-style: none;
+  font-family: inherit;
+  font-size: var(--text-sm);
+  font-weight: 500;
+  letter-spacing: -0.005em;
+  color: var(--text-secondary);
+  transition: background var(--duration-normal) var(--ease-default),
+    color var(--duration-normal) var(--ease-default);
+}
+
+.task-create-advanced__summary::-webkit-details-marker {
+  display: none;
+}
+
+.task-create-advanced__summary:hover {
+  background: var(--neutral-fill-subtle);
+  color: var(--text-primary);
+}
+
+.task-create-advanced__summary:focus-visible {
+  outline: none;
+  box-shadow: var(--shadow-focus);
+  border-radius: var(--radius-md);
+}
+
+.task-create-advanced__chevron {
+  display: inline-block;
+  width: 0.45rem;
+  height: 0.45rem;
+  border-right: 1.5px solid currentColor;
+  border-bottom: 1.5px solid currentColor;
+  margin-left: 0.1rem;
+  transform: rotate(-45deg);
+  transition: transform var(--duration-normal) var(--ease-default);
+  color: var(--text-tertiary);
+}
+
+.task-create-advanced[open] .task-create-advanced__chevron {
+  transform: rotate(45deg);
+  color: var(--text-secondary);
+}
+
+.task-create-advanced__label {
+  font-weight: 500;
+  color: var(--text-primary);
+}
+
+.task-create-advanced__hint {
+  min-width: 0;
+  font-size: var(--text-xs);
+  color: var(--text-tertiary);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  text-align: right;
+}
+
+.task-create-advanced[open] .task-create-advanced__summary {
+  border-bottom: 1px solid color-mix(in srgb, var(--border-hairline) 70%, transparent);
+}
+
+.task-create-advanced__body {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-6);
+  padding: var(--space-5) var(--space-5) var(--space-5);
+}
+
+/* Inside the disclosure, the agent + project sections were drawing their
+   own top hairline + 1.25rem padding-top to act as section separators in
+   the old flat layout. The disclosure itself now provides that visual
+   demarcation, so suppress the duplicate chrome to avoid stacked borders. */
+.task-create-advanced__body .task-create-agent {
+  margin-top: 0;
+  padding-top: 0;
+}
+
+.task-create-advanced__body .task-create-agent::before {
+  display: none;
+}
+
+/* The scheduling <fieldset> uses default browser chrome (border + legend
+   floating on the border) which reads as crufty inside the disclosure.
+   Strip it to a flat group so it inherits the disclosure body's rhythm. */
+.task-create-advanced__body .task-create-scheduling {
+  margin: 0;
+  padding: 0;
+  border: 0;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+}
+
+.task-create-advanced__body .task-create-scheduling__legend {
+  padding: 0;
+  margin: 0 0 0.25rem;
+  font-size: var(--text-xs);
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--text-tertiary);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .task-create-advanced,
+  .task-create-advanced__summary,
+  .task-create-advanced__chevron {
+    transition: none;
+  }
+}
+

@@ -137,53 +137,55 @@ a.task-create-agent-lock-notice-link:hover {
   padding-top: 1.5rem;
 }
 
-/* Failed-run helper: scoped panel with a clear split between global and per-task. */
-.task-detail-model-config {
-  margin: 1.25rem 0 0;
-  padding: 1rem 0 0;
-  border-top: 1px solid var(--border-hairline);
+/* Model-configuration popup: opened from the Model configuration button in
+   the task-detail action row. Layout reuses modal-sheet chrome from
+   shared/Modal; only the body grid (Global / Per-task split) is scoped here. */
+.task-model-config-modal {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
 }
 
-.task-detail-model-config-inner {
-  max-width: 44rem;
-  padding: 1rem 1.25rem;
-  border: 1px solid var(--border-soft);
-  border-radius: var(--radius-lg);
-  background: var(--bg-elevated);
-  box-shadow: var(--shadow-sm);
-}
-
-.task-detail-model-config-title {
-  margin: 0 0 0.875rem;
-  padding-bottom: 0.75rem;
-  border-bottom: 1px solid var(--border-hairline);
-  font-size: var(--text-sm);
+.task-model-config-title {
+  margin: 0;
+  font-size: var(--text-md);
   font-weight: 600;
   letter-spacing: -0.015em;
   color: var(--text-primary);
 }
 
-.task-detail-model-config-body {
+.task-model-config-lede {
+  margin: 0;
+  font-size: var(--text-sm);
+  line-height: 1.5;
+  max-width: 40rem;
+}
+
+.task-model-config-body {
   display: flex;
   flex-direction: column;
   gap: 0;
+  padding: 0.75rem 0;
+  border-top: 1px solid var(--border-hairline);
+  border-bottom: 1px solid var(--border-hairline);
 }
 
-.task-detail-model-config-row {
+.task-model-config-row {
   display: grid;
   grid-template-columns: minmax(0, 1fr) auto;
   gap: 1rem 1.5rem;
   align-items: center;
+  padding: 0.75rem 0;
 }
 
-.task-detail-model-config-copy {
+.task-model-config-copy {
   display: flex;
   min-width: 0;
   flex-direction: column;
   gap: 0.2rem;
 }
 
-.task-detail-model-config-row-title {
+.task-model-config-row-title {
   font-size: var(--text-sm);
   font-weight: 600;
   letter-spacing: -0.01em;
@@ -191,14 +193,14 @@ a.task-create-agent-lock-notice-link:hover {
   line-height: 1.35;
 }
 
-.task-detail-model-config-row-hint {
+.task-model-config-row-hint {
   font-size: var(--text-xs);
   font-weight: 400;
-  line-height: 1.4;
+  line-height: 1.45;
   color: var(--text-secondary);
 }
 
-.task-detail-model-config-actions {
+.task-model-config-actions {
   display: flex;
   flex-shrink: 0;
   flex-wrap: wrap;
@@ -207,33 +209,66 @@ a.task-create-agent-lock-notice-link:hover {
   gap: 0.5rem;
 }
 
-.task-detail-model-config-actions .task-detail-agent-model-cta {
+.task-model-config-cta {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: var(--touch-target-min);
+  padding: 0.45rem 0.95rem;
+  border-radius: var(--radius-md);
+  font-size: var(--text-sm);
+  font-weight: 500;
+  color: var(--text-primary);
+  background: var(--bg-elevated);
+  border: 1px solid var(--border-soft);
+  text-decoration: none;
   white-space: nowrap;
+  cursor: pointer;
+  transition:
+    background var(--duration-normal) var(--ease-out),
+    border-color var(--duration-normal) var(--ease-out);
 }
 
-.task-detail-model-config-divider {
+.task-model-config-cta:not(:disabled):hover {
+  background: var(--bg-subtle);
+  border-color: var(--border-chrome-muted);
+}
+
+.task-model-config-cta:focus-visible {
+  outline: none;
+  border-color: var(--brand-border-focus);
+  box-shadow: 0 0 0 3px var(--brand-muted);
+}
+
+.task-model-config-cta:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+
+.task-model-config-divider {
   height: 0;
-  margin: 1rem 0;
+  margin: 0;
   border: 0;
   border-top: 1px solid var(--border-hairline);
 }
 
-@media (max-width: 520px) {
-  .task-detail-model-config-inner {
-    padding: 0.875rem 1rem;
-  }
+.task-model-config-footer {
+  margin: 0;
+  justify-content: flex-end;
+}
 
-  .task-detail-model-config-row {
+@media (max-width: 520px) {
+  .task-model-config-row {
     grid-template-columns: 1fr;
     align-items: start;
     gap: 0.65rem;
   }
 
-  .task-detail-model-config-actions {
+  .task-model-config-actions {
     justify-content: flex-start;
   }
 
-  .task-detail-model-config-actions .task-detail-agent-model-cta {
+  .task-model-config-cta {
     white-space: normal;
     text-align: center;
   }

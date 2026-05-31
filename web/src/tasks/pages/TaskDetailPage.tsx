@@ -1,5 +1,5 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { useMemo } from "react";
+import { useMemo, useState } from "react";
 import { Link, useNavigate, useParams } from "react-router-dom";
 import { getTask, listChecklist, patchTask } from "@/api";
 import { useDocumentTitle } from "@/shared/useDocumentTitle";
@@ -30,6 +30,7 @@ import {
   TaskDetailSubtasksHead,
   TaskDetailUpdatesSection,
   TaskGatePanel,
+  TaskModelConfigModal,
 } from "../components/task-detail";
 import { sanitizePromptHtml } from "../task-prompt";
 import { taskDescendantCount, userAttention } from "../task-display";
@@ -50,6 +51,7 @@ export function TaskDetailPage({ app }: Props) {
   const { taskId = "" } = useParams<{ taskId: string }>();
   const navigate = useNavigate();
   const queryClient = useQueryClient();
+  const [modelConfigOpen, setModelConfigOpen] = useState(false);
   const {
     subtaskModalOpen,
     subtaskTitle,
@@ -245,7 +247,6 @@ export function TaskDetailPage({ app }: Props) {
         attention={attention}
         saving={app.saving}
         onEdit={() => app.openEdit(task)}
-        onChangeModel={() => app.openChangeModel(task)}
         onDelete={() =>
           app.requestDelete({
             ...task,
@@ -260,8 +261,18 @@ export function TaskDetailPage({ app }: Props) {
             : undefined
         }
         requeuePending={requeueMutation.isPending}
-        failedRunnerHint={task.status === "failed"}
+        onConfigureModel={() => setModelConfigOpen(true)}
+        showModelConfig={task.status === "failed"}
       />
+
+      {modelConfigOpen ? (
+        <TaskModelConfigModal
+          taskTitle={task.title}
+          saving={app.saving}
+          onChangeModel={() => app.openChangeModel(task)}
+          onClose={() => setModelConfigOpen(false)}
+        />
+      ) : null}
 
       {requeueMutation.isError ? (
         <p className="err" role="alert">

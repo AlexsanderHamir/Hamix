@@ -72,6 +72,47 @@ button.task-detail-btn-edit:focus-visible {
   box-shadow: 0 0 0 3px var(--brand-muted);
 }
 
+/* Same secondary chrome as Edit; offered only after a failed run so the
+   operator can re-aim the model without re-opening the full edit form. */
+button.task-detail-btn-model-config {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: var(--touch-target-min);
+  border-radius: var(--radius-md);
+  padding: 0.5rem 1rem;
+  font-weight: 600;
+  font-size: var(--text-sm);
+  letter-spacing: -0.015em;
+  color: var(--text-primary);
+  background: var(--bg-elevated);
+  border: 1px solid var(--border-soft);
+  box-shadow: var(--shadow-chrome-xs);
+  transition:
+    border-color var(--duration-normal) var(--ease-out),
+    background var(--duration-normal) var(--ease-out),
+    box-shadow var(--duration-normal) var(--ease-out);
+}
+
+button.task-detail-btn-model-config:not(:disabled):hover {
+  background: var(--bg-subtle);
+  border-color: var(--border-chrome-muted);
+  transform: none;
+  filter: none;
+  box-shadow: var(--shadow-chrome-sm);
+}
+
+button.task-detail-btn-model-config:focus-visible {
+  outline: none;
+  border-color: var(--brand-border-focus);
+  box-shadow: 0 0 0 3px var(--brand-muted);
+}
+
+button.task-detail-btn-model-config:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+
 /* Per redesign brief: destructive controls render as white background +
    --danger text and border. A delete that's already gated by a confirm
    dialog doesn't need to scream — the colour is the affordance, the

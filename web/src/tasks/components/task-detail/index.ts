@@ -10,6 +10,7 @@ export * from "./subtasks/TaskDetailSubtasksHead";
 export * from "./updates/TaskDetailUpdatesSection";
 export * from "./edit/TaskEditForm";
 export * from "./edit/TaskChangeModelModal";
+export * from "./edit/TaskModelConfigModal";
 export * from "./schedule/TaskDetailSchedule";
 export * from "./scheduling/TaskDependenciesPanel";
 export * from "./scheduling/TaskGatePanel";

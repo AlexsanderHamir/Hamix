@@ -86,4 +86,61 @@ describe("TaskDetailAttentionBar", () => {
     await user.click(screen.getByRole("button", { name: /^run again$/i }));
     expect(onRequeue).toHaveBeenCalledOnce();
   });
+
+  // Pin the consolidation: the model-configuration CTA replaces the inline
+  // "Model configuration" panel that used to render below the action row,
+  // and only shows up when showModelConfig is set (today: failed runs).
+  it("renders Model configuration only when showModelConfig is true", async () => {
+    const user = userEvent.setup();
+    const onConfigureModel = vi.fn();
+
+    const { rerender } = render(
+      <TaskDetailAttentionBar
+        attention={{ show: false, headline: "", body: "" }}
+        saving={false}
+        onEdit={vi.fn()}
+        onDelete={vi.fn()}
+        onConfigureModel={onConfigureModel}
+      />,
+    );
+    expect(
+      screen.queryByRole("button", { name: /model configuration/i }),
+    ).not.toBeInTheDocument();
+
+    rerender(
+      <TaskDetailAttentionBar
+        attention={{ show: false, headline: "", body: "" }}
+        saving={false}
+        onEdit={vi.fn()}
+        onDelete={vi.fn()}
+        onConfigureModel={onConfigureModel}
+        showModelConfig
+      />,
+    );
+
+    const button = screen.getByRole("button", {
+      name: /model configuration/i,
+    });
+    await user.click(button);
+    expect(onConfigureModel).toHaveBeenCalledOnce();
+  });
+
+  it("no longer renders the legacy inline model-config panel", () => {
+    render(
+      <TaskDetailAttentionBar
+        attention={{ show: false, headline: "", body: "" }}
+        saving={false}
+        onEdit={vi.fn()}
+        onDelete={vi.fn()}
+        onConfigureModel={vi.fn()}
+        showModelConfig
+      />,
+    );
+
+    expect(
+      screen.queryByRole("heading", { name: /model configuration/i, level: 3 }),
+    ).not.toBeInTheDocument();
+    expect(screen.queryByText(/global model/i)).not.toBeInTheDocument();
+    expect(screen.queryByText(/per-task model/i)).not.toBeInTheDocument();
+  });
 });

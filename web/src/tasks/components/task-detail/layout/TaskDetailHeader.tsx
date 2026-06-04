@@ -50,13 +50,6 @@ export function TaskDetailHeader({ task }: Props) {
         <h2 className="task-detail-title term-arrow">
           <span>{task.title}</span>
         </h2>
-        <p
-          className="task-event-detail-stance"
-          role="status"
-          data-stance={needsUser ? "needs-user" : "informational"}
-        >
-          {needsUser ? "Agent needs input" : "Informational"}
-        </p>
         <div className="task-detail-meta">
           <span
             className={statusPillClass(task.status)}

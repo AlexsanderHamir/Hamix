@@ -68,13 +68,13 @@ export function TaskDetailAttentionBar({
           <p>{attention.body}</p>
         </div>
       ) : (
-        <div className="task-detail-ok" role="status">
-          <strong>No agent is waiting on you for this task right now.</strong>
-          <p className="muted">
-            Follow the timeline for updates. We highlight when an agent needs
-            input or approval.
-          </p>
-        </div>
+        // Happy path: the operator owns nothing here. A bordered card with
+        // an icon ring overstated a non-event — the default state should
+        // recede, not announce itself. One muted line keeps the signal
+        // present without competing with the title or actions for attention.
+        <p className="task-detail-ok" role="status">
+          No agent is waiting on you for this task right now.
+        </p>
       )}
 
       <div className="task-detail-actions">

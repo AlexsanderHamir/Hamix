@@ -6,7 +6,7 @@ import { TASK_TEST_DEFAULTS } from "@/test/taskDefaults";
 import { TaskDetailHeader } from "./TaskDetailHeader";
 
 describe("TaskDetailHeader", () => {
-  it("renders title, stance, status and priority pills, and back link", () => {
+  it("renders title, status and priority pills, and back link", () => {
     render(
       <MemoryRouter future={ROUTER_FUTURE_FLAGS}>
         <TaskDetailHeader
@@ -21,10 +21,6 @@ describe("TaskDetailHeader", () => {
     );
 
     expect(screen.getByRole("heading", { name: /^my task$/i })).toBeInTheDocument();
-    expect(screen.getByText("Informational")).toHaveAttribute(
-      "data-stance",
-      "informational",
-    );
     expect(screen.getByText("ready")).toBeInTheDocument();
     expect(screen.getByText("high")).toBeInTheDocument();
     expect(screen.getByRole("link", { name: /^all tasks$/i })).toHaveAttribute(
@@ -33,7 +29,11 @@ describe("TaskDetailHeader", () => {
     );
   });
 
-  it("marks stance when status needs user input", () => {
+  // The header is identity-only: the needs-user signal lives in the
+  // attention callout, while the header surfaces it as a highlighted
+  // status pill (`data-needs-user`). No separate stance line — that was
+  // redundant with both the pill and the callout. (Redesign 2026-06-04.)
+  it("highlights the status pill when status needs user input", () => {
     render(
       <MemoryRouter future={ROUTER_FUTURE_FLAGS}>
         <TaskDetailHeader
@@ -48,11 +48,10 @@ describe("TaskDetailHeader", () => {
       </MemoryRouter>,
     );
 
-    expect(screen.getByText("Agent needs input")).toHaveAttribute(
-      "data-stance",
-      "needs-user",
-    );
     expect(screen.getByText("blocked")).toHaveAttribute("data-needs-user", "true");
+    // The old standalone stance line is gone — guard against its return.
+    expect(screen.queryByText("Agent needs input")).not.toBeInTheDocument();
+    expect(screen.queryByText("Informational")).not.toBeInTheDocument();
   });
 
   it("renders the runtime chip with runner and model intent (Phase 4a of plan)", () => {

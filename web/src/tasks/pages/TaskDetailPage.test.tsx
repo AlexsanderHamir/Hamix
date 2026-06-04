@@ -328,8 +328,9 @@ describe("TaskDetailPage", () => {
 
     expect(await screen.findByRole("heading", { name: /^testing$/i })).toBeInTheDocument();
     expect(document.title).toBe(`Testing · ${DEFAULT_DOCUMENT_TITLE}`);
-    const stance = await screen.findByText("Informational");
-    expect(stance).toHaveAttribute("data-stance", "informational");
+    expect(
+      await screen.findByText(/no agent is waiting on you for this task right now/i),
+    ).toBeInTheDocument();
     expect(await screen.findByText(/no updates yet/i)).toBeInTheDocument();
 
     const details = document.querySelector(".task-detail-prompt-details");
@@ -383,7 +384,10 @@ describe("TaskDetailPage", () => {
     expect(empty).toHaveClass("task-detail-prompt-empty");
   });
 
-  it("shows status stance when the task status needs user input", async () => {
+  it("surfaces the needs-user signal via the attention callout and pill", async () => {
+    // Redesign (2026-06-04): the header no longer carries a standalone
+    // stance line. A needs-user task is signalled by (a) the rich
+    // attention callout and (b) the highlighted status pill.
     mockTaskDetailFetch(taskDetail("tb", "Blocked task", {
       status: "blocked",
     }));
@@ -393,8 +397,12 @@ describe("TaskDetailPage", () => {
     expect(
       await screen.findByRole("heading", { name: /^blocked task$/i }),
     ).toBeInTheDocument();
-    const stance = await screen.findByText("Agent needs input");
-    expect(stance).toHaveAttribute("data-stance", "needs-user");
+    expect(await screen.findByText(/the agent is blocked/i)).toBeInTheDocument();
+    expect(screen.getByText("blocked")).toHaveAttribute(
+      "data-needs-user",
+      "true",
+    );
+    expect(screen.queryByText("Agent needs input")).not.toBeInTheDocument();
   });
 
   it("shows done criteria as read-only with progress counts", async () => {

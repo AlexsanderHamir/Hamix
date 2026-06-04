@@ -49,6 +49,20 @@
   margin: 0;
 }
 
+/* Section-head buttons share the same chrome spec as the hero-toolbar
+   secondary buttons (Edit task / Autonomy / Model config). Before this
+   alignment they used `0.45rem 0.95rem` padding + `font-weight: 600` +
+   `letter-spacing: -0.015em`, while the hero buttons used `0.5rem 1rem`
+   + `font-weight: 500` + `letter-spacing: -0.01em`. Side-by-side that
+   made the section buttons read a touch denser and bolder than the
+   hero buttons even though both are "secondary chrome" in design
+   intent — the kind of half-pixel mismatch that adds up to "looks
+   unpolished" without the user being able to name what's off.
+
+   Unified spec (industry standard, Stripe/Linear/Apple): all secondary
+   buttons on the page share identical dimensions; colour provides the
+   hierarchy. Primary CTAs (`--primary` variant) keep weight 600 for
+   emphasis. */
 button.task-detail-add-subtask-btn,
 button.task-detail-add-checklist-btn {
   display: inline-flex;
@@ -56,10 +70,10 @@ button.task-detail-add-checklist-btn {
   justify-content: center;
   border-radius: var(--radius-md);
   min-height: var(--touch-target-min);
-  padding: 0.45rem 0.95rem;
-  font-weight: 600;
+  padding: 0.5rem 1rem;
+  font-weight: 500;
   font-size: var(--text-sm);
-  letter-spacing: -0.015em;
+  letter-spacing: -0.01em;
   color: var(--text-primary);
   background: var(--bg-elevated);
   border: 1px solid var(--border-soft);
@@ -74,10 +88,10 @@ a.task-detail-open-graph-btn {
   justify-content: center;
   border-radius: var(--radius-md);
   min-height: var(--touch-target-min);
-  padding: 0.45rem 0.95rem;
-  font-weight: 600;
+  padding: 0.5rem 1rem;
+  font-weight: 500;
   font-size: var(--text-sm);
-  letter-spacing: -0.015em;
+  letter-spacing: -0.01em;
   color: var(--text-primary);
   background: var(--bg-elevated);
   border: 1px solid var(--border-soft);
@@ -125,8 +139,14 @@ button.task-detail-add-checklist-btn:disabled {
 
 /* Per redesign brief: "Never use purple or indigo as a primary button color.
    It weakens the professional signal." Primary section CTAs match the page
-   primary CTA chrome (near-black `--control-primary-bg`). */
+   primary CTA chrome (near-black `--control-primary-bg`). Weight 600 here
+   restores the visual emphasis the base style used to carry (the base
+   secondary spec drops to weight 500 to align with the hero-toolbar
+   buttons — see comment above). The dimensions remain identical to the
+   secondary chrome so a primary CTA looks like the same button with a
+   different colour, not a different size. */
 button.task-detail-add-subtask-btn--primary {
+  font-weight: 600;
   color: var(--control-primary-fg);
   background: var(--control-primary-bg);
   border-color: var(--control-primary-bg);

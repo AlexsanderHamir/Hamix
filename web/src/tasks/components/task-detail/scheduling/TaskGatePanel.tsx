@@ -32,7 +32,7 @@ export function TaskGatePanel({
           Release gate
         </h3>
         <p className="task-detail-empty-hint" data-testid="task-gate-empty">
-          No gate on this task.
+          No gates on this task.
         </p>
       </section>
     );

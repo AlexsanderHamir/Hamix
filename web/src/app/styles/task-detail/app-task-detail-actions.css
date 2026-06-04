@@ -1,14 +1,20 @@
-/* Primary: requeue failed task for another agent run (PATCH → ready). */
+/* Primary: requeue failed task for another agent run (PATCH → ready).
+   Dimensions match the rest of the task-detail action cluster
+   (`0.5rem 1rem` padding, `-0.01em` letter-spacing) so the primary
+   CTA reads as the same button as Edit / Delete with a brand
+   colour, not a different size. Previously this used
+   `0.5rem 1.15rem` + `var(--text-button-tracking)` which made it
+   subtly wider and looser than every other button on the page. */
 button.task-detail-btn-requeue {
   display: inline-flex;
   align-items: center;
   justify-content: center;
   border-radius: var(--radius-md);
   min-height: var(--touch-target-min);
-  padding: 0.5rem 1.15rem;
+  padding: 0.5rem 1rem;
   font-weight: 600;
   font-size: var(--text-sm);
-  letter-spacing: var(--text-button-tracking);
+  letter-spacing: -0.01em;
   color: var(--text-on-brand);
   background: var(--brand);
   border: 1px solid var(--brand-border-cta);
@@ -180,6 +186,7 @@ button.task-detail-btn-delete {
   padding: 0.5rem 1rem;
   font-weight: 500;
   font-size: var(--text-sm);
+  letter-spacing: -0.01em;
   color: var(--danger);
   background: var(--bg-elevated);
   border: 1px solid var(--danger-control-hover-border);

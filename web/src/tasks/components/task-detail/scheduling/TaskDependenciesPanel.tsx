@@ -28,8 +28,7 @@ export function TaskDependenciesPanel({ dependencies }: Props) {
       </h3>
       {dependencies.length === 0 ? (
         <p className="task-detail-empty-hint" data-testid="task-deps-empty">
-          No upstream dependencies. This task can start whenever its gate
-          allows pickup.
+          No upstream dependencies.
         </p>
       ) : (
         <ul className="task-deps-list" data-testid="task-deps-list">

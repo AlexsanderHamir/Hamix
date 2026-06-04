@@ -27,7 +27,7 @@ export function SubtaskTree({
         id="task-subtasks-empty"
         data-testid="task-subtasks-empty"
       >
-        No subtasks yet. Use Add subtask to break work into smaller steps.
+        No subtasks yet.
       </p>
     );
   }

@@ -159,11 +159,6 @@
   background: var(--success-border);
 }
 
-.task-checklist-verified-badge-by {
-  color: var(--text-tertiary);
-  font-weight: 400;
-}
-
 /* Inline button that opens the verification popup. Visual weight kept
    intentionally light — a text link with a trailing arrow rather than
    a chrome button — so the criterion text remains the dominant read
@@ -249,10 +244,9 @@ button.task-checklist-verification-trigger:hover
   color: var(--text-tertiary);
 }
 
-.checklist-verification-modal-verifier code {
-  font-family: var(--font-mono);
-  font-size: 0.95em;
+.checklist-verification-modal-verifier {
   color: var(--text-secondary);
+  font-weight: 500;
   letter-spacing: 0;
   text-transform: none;
 }

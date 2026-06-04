@@ -65,10 +65,6 @@ export function TaskDetailChecklistItemList({
                   {item.done && item.verified_by ? (
                     <span className="task-checklist-verified-badge">
                       Verified
-                      <span className="task-checklist-verified-badge-by">
-                        {" "}
-                        ({item.verified_by})
-                      </span>
                     </span>
                   ) : null}
                   {hasVerificationDetail ? (

@@ -1,6 +1,19 @@
 import { Modal } from "@/shared/Modal";
 import { CHECKLIST_EVIDENCE_DISPLAY_CAP } from "@/types/task";
 
+/**
+ * Humanises a verifier identifier (e.g. `verify_agent`) into a
+ * sentence-case label (`Verify agent`). The backend ships these as
+ * snake_case system identifiers, but the modal eyebrow is prose copy
+ * for the operator — keeping the raw snake_case in a `<code>` element
+ * read like a debug field, not a verification audit attribution.
+ */
+function humaniseVerifier(identifier: string): string {
+  const cleaned = identifier.trim().replace(/[_-]+/g, " ");
+  if (!cleaned) return identifier;
+  return cleaned.charAt(0).toUpperCase() + cleaned.slice(1).toLowerCase();
+}
+
 type Props = {
   /** The criterion text — shown as the modal heading. */
   criterionText: string;
@@ -47,7 +60,7 @@ export function ChecklistVerificationModal({
               <>
                 {" · "}
                 <span className="checklist-verification-modal-verifier">
-                  by <code>{verifiedBy}</code>
+                  by {humaniseVerifier(verifiedBy)}
                 </span>
               </>
             ) : null}

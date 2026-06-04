@@ -398,12 +398,10 @@ export function TaskDetailPage({ app }: Props) {
       <TaskDetailSchedule task={task} />
 
       {/* Dependencies are fixed at creation time: a task's upstream graph is
-          chosen in the create modal, not edited afterward. On the detail page
-          we only surface the existing upstream tasks (read-only), and only
-          when there are any — an empty, action-less section is just noise. */}
-      {dependencySummaries.length > 0 ? (
-        <TaskDependenciesPanel dependencies={dependencySummaries} />
-      ) : null}
+          chosen in the create modal, not edited afterward. The detail page
+          surfaces the graph read-only — listing upstream tasks when they
+          exist, and stating plainly that there are none otherwise. */}
+      <TaskDependenciesPanel dependencies={dependencySummaries} />
 
       <TaskGatePanel
         gate={task.gate}

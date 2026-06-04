@@ -405,6 +405,23 @@ describe("TaskDetailPage", () => {
     expect(screen.queryByText("Agent needs input")).not.toBeInTheDocument();
   });
 
+  // The Dependencies section is always present so the absence of upstream
+  // tasks is stated explicitly rather than rendering nothing. (2026-06-04:
+  // reverted an earlier "hide when empty" pass per product feedback.)
+  it("always renders the Dependencies section, with an empty state when there are none", async () => {
+    mockTaskDetailFetch(taskDetail("tnd", "No deps task"));
+
+    renderDetail("/tasks/tnd", mockApp());
+
+    expect(
+      await screen.findByRole("heading", { name: /^no deps task$/i }),
+    ).toBeInTheDocument();
+    expect(screen.getByTestId("task-deps-empty")).toBeInTheDocument();
+    expect(
+      screen.getByText(/no upstream dependencies/i),
+    ).toBeInTheDocument();
+  });
+
   it("shows done criteria as read-only with progress counts", async () => {
     mockTaskDetailFetch(
       taskDetail("tc", "Checklist task"),

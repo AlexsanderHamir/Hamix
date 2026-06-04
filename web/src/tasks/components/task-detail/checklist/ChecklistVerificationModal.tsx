@@ -49,7 +49,6 @@ export function ChecklistVerificationModal({
     <Modal
       onClose={onClose}
       labelledBy="checklist-verification-title"
-      describedBy="checklist-verification-desc"
       size="wide"
     >
       <section className="panel modal-sheet checklist-verification-modal">
@@ -71,14 +70,6 @@ export function ChecklistVerificationModal({
           >
             {criterionText}
           </h2>
-          <p
-            id="checklist-verification-desc"
-            className="checklist-verification-modal-lede muted"
-          >
-            Captured at the moment the verifier accepted this criterion. The
-            payload below is read-only — editing or removing a satisfied
-            criterion would rewrite the audit trail.
-          </p>
         </header>
 
         <div className="checklist-verification-modal-body">

@@ -260,13 +260,6 @@ button.task-checklist-verification-trigger:hover
   color: var(--text-primary);
 }
 
-.checklist-verification-modal-lede {
-  margin: 0;
-  font-size: var(--text-sm);
-  line-height: 1.5;
-  max-width: 42rem;
-}
-
 .checklist-verification-modal-body {
   display: flex;
   flex-direction: column;

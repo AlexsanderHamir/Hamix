@@ -32,6 +32,7 @@ import {
   TaskGatePanel,
   TaskModelConfigModal,
 } from "../components/task-detail";
+import type { TaskDetailOkTone } from "../components/task-detail/layout/TaskDetailAttentionBar";
 import { AutonomyConfirmDialog } from "../components/dialogs";
 import { sanitizePromptHtml } from "../task-prompt";
 import { taskDescendantCount, userAttention } from "../task-display";
@@ -318,6 +319,22 @@ export function TaskDetailPage({ app }: Props) {
       : "hidden";
   const autonomyEnable = autonomyMode === "on_hold";
 
+  // The OK line ("No agent is waiting on you…") renders for every
+  // non-attention state, but those states mean different things —
+  // "done" is finished, "running" is in flight, "on_hold" is paused
+  // by the operator. Encode that distinction in the leading dot's
+  // colour so two OK-state tasks can still be told apart at a glance.
+  const okTone: TaskDetailOkTone =
+    task.status === "done"
+      ? "success"
+      : task.status === "running"
+      ? "active"
+      : task.status === "on_hold"
+      ? "caution"
+      : task.status === "ready"
+      ? "info"
+      : "neutral";
+
   return (
     <section className="panel task-detail-panel task-detail-content--enter">
       <TaskDetailHeader task={task} />
@@ -336,6 +353,7 @@ export function TaskDetailPage({ app }: Props) {
         <TaskDetailAttentionBar
           attention={attention}
           saving={app.saving}
+          okTone={okTone}
           onEdit={() => app.openEdit(task)}
           onDelete={() =>
             app.requestDelete({

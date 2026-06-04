@@ -5,11 +5,43 @@ export type TaskDetailAttention = {
   body: string;
 };
 
+/**
+ * Semantic tone for the "all clear" dot. The OK line carries a single
+ * pre-defined copy line ("No agent is waiting on you…"), but the
+ * *reason* there's nothing for the operator to do varies by task
+ * status — done, actively running, queued, or operator-paused. The
+ * dot colour encodes that reason at a glance so two tasks both
+ * showing the OK line are distinguishable without reading status
+ * pills:
+ *
+ * - `success` → done (task finished cleanly)
+ * - `active`  → running (the agent is doing the work right now)
+ * - `info`    → ready (queued for the agent to pick up)
+ * - `caution` → on_hold (operator paused; nothing will happen)
+ * - `neutral` → fallback for any other quiet state
+ *
+ * Tones map 1:1 to `data-tone` selectors in
+ * `app-task-detail-model-config.css`.
+ */
+export type TaskDetailOkTone =
+  | "success"
+  | "active"
+  | "info"
+  | "caution"
+  | "neutral";
+
 type Props = {
   attention: TaskDetailAttention;
   saving: boolean;
   onEdit: () => void;
   onDelete: () => void;
+  /**
+   * Semantic colour for the OK-line dot. Only consulted when
+   * `attention.show` is false (i.e. the OK line actually renders).
+   * Defaults to `"neutral"` so callers that don't yet plumb a tone
+   * still get a sensible grey.
+   */
+  okTone?: TaskDetailOkTone;
   /** When set, shows "Run again" to requeue the task for the agent (PATCH status → ready). */
   onRequeue?: () => void;
   requeuePending?: boolean;
@@ -42,6 +74,7 @@ export function TaskDetailAttentionBar({
   saving,
   onEdit,
   onDelete,
+  okTone = "neutral",
   onRequeue,
   requeuePending,
   onConfigureModel,
@@ -72,7 +105,10 @@ export function TaskDetailAttentionBar({
         // an icon ring overstated a non-event — the default state should
         // recede, not announce itself. One muted line keeps the signal
         // present without competing with the title or actions for attention.
-        <p className="task-detail-ok" role="status">
+        // `data-tone` colours the leading dot per task status (see
+        // `TaskDetailOkTone`) so the same copy still distinguishes
+        // "done" from "running" from "on_hold" at a glance.
+        <p className="task-detail-ok" role="status" data-tone={okTone}>
           No agent is waiting on you for this task right now.
         </p>
       )}

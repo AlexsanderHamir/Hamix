@@ -27,19 +27,24 @@
   color: var(--text-secondary);
 }
 
-/* Dot is intentionally NEUTRAL (text-tertiary) and ring-less. The
-   previous brand-purple dot wrapped in a 3px brand-muted glow ring
-   was the noisiest atom in the upper region — it screamed "primary
-   accent" for a piece of quiet metadata. Keeping the dot in the same
-   neutral family as `.task-detail-ok::before` lets the two fact lines
-   read as a coherent pair instead of two competing signals. */
+/* Info-blue dot with a 2px soft halo. Schedule is an *informational*
+   future event ("the agent will pick this up at X") — neither a
+   success state nor an active-now signal, so blue carries the
+   universal "scheduled / calendar / timing" semantic without
+   stealing the success-green reserved for `done` or the brand-purple
+   reserved for `running` on the OK line directly above. The 2px
+   halo matches the OK dot family so the two fact lines read as a
+   coherent pair; the previous 3px brand ring was the loudest atom
+   in the upper region and shouted "primary accent" for what is
+   plainly quiet metadata. */
 .task-detail-schedule-badge-dot {
   display: inline-block;
   flex-shrink: 0;
   width: 0.4rem;
   height: 0.4rem;
   border-radius: var(--radius-full);
-  background: var(--text-tertiary);
+  background: var(--info);
+  box-shadow: 0 0 0 2px var(--info-soft);
 }
 
 .task-detail-schedule-empty {

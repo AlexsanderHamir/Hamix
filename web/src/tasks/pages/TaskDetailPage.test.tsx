@@ -405,6 +405,27 @@ describe("TaskDetailPage", () => {
     expect(screen.queryByText("Agent needs input")).not.toBeInTheDocument();
   });
 
+  // OK-line dot tone is derived from task.status on the page so two
+  // "all clear" tasks (e.g. done vs running) render the same copy but
+  // a distinct dot colour. Pin a couple of representative statuses.
+  it("colours the OK-line dot per task.status (done -> success, running -> active, on_hold -> caution)", async () => {
+    for (const { id, status, expectedTone } of [
+      { id: "td-done", status: "done", expectedTone: "success" },
+      { id: "td-run", status: "running", expectedTone: "active" },
+      { id: "td-hold", status: "on_hold", expectedTone: "caution" },
+    ] as const) {
+      mockTaskDetailFetch(taskDetail(id, `Task ${id}`, { status }));
+      const { unmount } = renderDetail(
+        `/tasks/${id}`,
+        mockApp(),
+      );
+
+      const ok = await screen.findByText(/no agent is waiting on you/i);
+      expect(ok).toHaveAttribute("data-tone", expectedTone);
+      unmount();
+    }
+  });
+
   // The Dependencies section is always present so the absence of upstream
   // tasks is stated explicitly rather than rendering nothing. (2026-06-04:
   // reverted an earlier "hide when empty" pass per product feedback.)

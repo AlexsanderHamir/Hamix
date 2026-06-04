@@ -139,13 +139,24 @@ a.task-create-agent-lock-notice-link:hover {
 
 /* "All clear" state. Deliberately NOT a card — the happy path is the
    common case and should recede. A single muted line with a small
-   neutral dot communicates "nothing for you here" without the visual
+   coloured dot communicates "nothing for you here" without the visual
    weight of the warning callout it sits in for. The leading dot keeps a
    faint family resemblance to the alert glyph so the two states still
-   read as the same slot, just at very different urgencies. The dot is
-   neutral (text-tertiary) rather than success-green: green reads as a
-   positive state signal, but the happy path here is the *absence* of a
-   signal, not a celebration — neutral chrome is more honest. */
+   read as the same slot, just at very different urgencies.
+
+   The dot colour is driven by `data-tone` from the parent component
+   (TaskDetailOkTone, derived from task.status). The OK message is one
+   pre-defined line for several quiet statuses, so encoding the
+   *reason* the operator is off the hook into the dot colour lets two
+   OK-state tasks be told apart at a glance without reading the
+   status pill: green for done, brand for running, blue for ready,
+   amber for on-hold, neutral grey for anything else.
+
+   Each tone pairs a solid dot with a 2px soft halo in the same
+   colour family. The halo gives the 0.4rem dot enough visual weight
+   to read as an intentional indicator rather than a punctuation
+   speck, without the loud 3px glow the old schedule dot used to
+   carry. */
 .task-detail-ok {
   display: flex;
   align-items: center;
@@ -163,6 +174,30 @@ a.task-create-agent-lock-notice-link:hover {
   width: 0.4rem;
   height: 0.4rem;
   border-radius: var(--radius-full);
+  background: var(--text-tertiary);
+}
+
+.task-detail-ok[data-tone="success"]::before {
+  background: var(--success);
+  box-shadow: 0 0 0 2px var(--success-soft);
+}
+
+.task-detail-ok[data-tone="active"]::before {
+  background: var(--brand);
+  box-shadow: 0 0 0 2px var(--brand-muted);
+}
+
+.task-detail-ok[data-tone="info"]::before {
+  background: var(--info);
+  box-shadow: 0 0 0 2px var(--info-soft);
+}
+
+.task-detail-ok[data-tone="caution"]::before {
+  background: var(--warning);
+  box-shadow: 0 0 0 2px var(--warning-soft);
+}
+
+.task-detail-ok[data-tone="neutral"]::before {
   background: var(--text-tertiary);
 }
 

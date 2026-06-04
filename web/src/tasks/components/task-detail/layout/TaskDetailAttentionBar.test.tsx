@@ -37,6 +37,45 @@ describe("TaskDetailAttentionBar", () => {
     ).toBeInTheDocument();
   });
 
+  // The OK dot encodes the underlying status via `data-tone` on the
+  // <p class="task-detail-ok"> element. Same copy, different colour:
+  // a done task and a running task both render the OK line, but the
+  // dot tells you which is which at a glance.
+  it("defaults the OK dot to a neutral tone when no okTone is passed", () => {
+    const { container } = render(
+      <TaskDetailAttentionBar
+        attention={{ show: false, headline: "", body: "" }}
+        saving={false}
+        onEdit={vi.fn()}
+        onDelete={vi.fn()}
+      />,
+    );
+    expect(container.querySelector(".task-detail-ok")).toHaveAttribute(
+      "data-tone",
+      "neutral",
+    );
+  });
+
+  it("applies the requested okTone to the OK line element", () => {
+    const tones = ["success", "active", "info", "caution", "neutral"] as const;
+    for (const tone of tones) {
+      const { container, unmount } = render(
+        <TaskDetailAttentionBar
+          attention={{ show: false, headline: "", body: "" }}
+          saving={false}
+          okTone={tone}
+          onEdit={vi.fn()}
+          onDelete={vi.fn()}
+        />,
+      );
+      expect(container.querySelector(".task-detail-ok")).toHaveAttribute(
+        "data-tone",
+        tone,
+      );
+      unmount();
+    }
+  });
+
   it("invokes edit and delete handlers", async () => {
     const user = userEvent.setup();
     const onEdit = vi.fn();

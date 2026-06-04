@@ -164,10 +164,13 @@ a.task-create-agent-lock-notice-link:hover {
   box-shadow: 0 0 0 3px var(--success-soft);
 }
 
-/* Action row — visually grouped, comfortable gap, primary CTA leads,
-   `.task-detail-btn-delete` self-pushes to the trailing edge via the
-   selector below so destructive intent is never mistaken for an
-   adjacent confirmation button. */
+/* Action row — a single tidy cluster, primary CTA leads. The previous
+   `margin-left: auto` on Delete stranded it at the far panel edge,
+   leaving a large dead gap between Edit and Delete that read as a
+   layout bug on wide panels. Destructive intent is carried by the
+   danger colour + confirm dialog, not by distance, so the buttons now
+   group together with a slightly wider gap before Delete to keep it
+   distinct without exiling it. */
 .task-detail-actions {
   display: flex;
   flex-wrap: wrap;
@@ -177,12 +180,16 @@ a.task-create-agent-lock-notice-link:hover {
   margin-bottom: 0;
 }
 
-/* Trailing-edge separation for the destructive action. `margin-left: auto`
-   only kicks in on a single-row layout (flex-wrap collapses it on small
-   widths), which is the correct behavior — when buttons wrap, the visual
-   "destructive is far away" pattern naturally breaks anyway. */
 .task-detail-actions .task-detail-btn-delete {
-  margin-left: auto;
+  margin-left: var(--space-3);
+}
+
+/* When the row wraps on narrow widths the extra left margin would
+   orphan Delete; reset it so it aligns with the rest of the cluster. */
+@media (max-width: 540px) {
+  .task-detail-actions .task-detail-btn-delete {
+    margin-left: 0;
+  }
 }
 
 /* Heavy horizontal rule directly under the action row felt jammed. Replace

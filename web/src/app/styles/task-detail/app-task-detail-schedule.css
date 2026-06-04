@@ -1,34 +1,35 @@
+/* Schedule line. Previously a full-width bordered + filled band that
+   read as a heavy stray strip beneath the action row. It carries one
+   short fact ("Scheduled for …"), so it now renders as a quiet metadata
+   line — small dot + muted text — matching the slim "all clear" line in
+   the hero. Edit/Clear (non-terminal tasks) sit at the trailing edge. */
 .task-detail-schedule {
   display: flex;
   flex-wrap: wrap;
   align-items: center;
-  gap: 0.5rem;
-  padding: 0.5rem 0.75rem;
-  margin: 0.5rem 0;
-  border: 1px solid var(--border-hairline);
-  border-radius: 6px;
-  background: var(--surface-soft, transparent);
-}
-
-.task-detail-schedule[data-state="scheduled"] {
-  border-color: var(--brand-soft, var(--border-hairline));
+  gap: var(--space-2) var(--space-3);
+  margin-top: var(--space-4);
+  margin-bottom: 0;
 }
 
 .task-detail-schedule-badge {
   display: inline-flex;
   align-items: center;
-  gap: 0.4rem;
+  gap: var(--space-2);
   font-size: var(--text-sm);
-  font-weight: 500;
-  color: var(--text-primary);
+  font-weight: 400;
+  line-height: 1.4;
+  color: var(--text-secondary);
 }
 
 .task-detail-schedule-badge-dot {
   display: inline-block;
+  flex-shrink: 0;
   width: 0.5rem;
   height: 0.5rem;
-  border-radius: 50%;
-  background: var(--brand, currentColor);
+  border-radius: var(--radius-full);
+  background: var(--brand);
+  box-shadow: 0 0 0 3px var(--brand-muted);
 }
 
 .task-detail-schedule-empty {
@@ -37,7 +38,7 @@
 
 .task-detail-schedule-actions {
   display: flex;
-  gap: 0.4rem;
+  gap: var(--space-2);
   margin-left: auto;
 }
 

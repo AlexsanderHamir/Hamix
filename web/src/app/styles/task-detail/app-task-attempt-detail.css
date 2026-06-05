@@ -244,6 +244,13 @@
   background: var(--border-chrome-hairline);
 }
 
+.task-attempt-phase-step-heading {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  min-width: 0;
+}
+
 .task-attempt-phase-step-name {
   font-size: var(--text-sm);
   font-weight: 600;
@@ -321,7 +328,7 @@
   color: var(--text-primary);
 }
 
-.task-attempt-stream-phase {
+.task-attempt-phase-seq {
   flex-shrink: 0;
   padding: 0.1rem 0.4rem;
   border-radius: var(--radius-sm);
@@ -640,7 +647,7 @@
     max-width: 100%;
   }
 
-  .task-attempt-stream-phase {
+  .task-attempt-stream-summary .task-attempt-phase-seq {
     display: none;
   }
 

@@ -207,6 +207,85 @@ describe("TaskCycleDetailPage", () => {
     ).toBe(true);
   });
 
+  it("shows matching phase sequence badges in the phases track and stream", async () => {
+    vi.spyOn(globalThis, "fetch").mockImplementation(async (input) => {
+      const url = requestUrl(input);
+      if (url === "/tasks/t1/cycles/cyc-1") {
+        return Response.json({
+          ...cycleDetail,
+          phases: [
+            {
+              id: "phase-1",
+              cycle_id: "cyc-1",
+              phase: "diagnose",
+              phase_seq: 1,
+              status: "skipped",
+              started_at: "2026-04-25T12:00:00.000Z",
+              ended_at: "2026-04-25T12:00:01.000Z",
+              details: {},
+            },
+            {
+              id: "phase-2",
+              cycle_id: "cyc-1",
+              phase: "execute",
+              phase_seq: 2,
+              status: "succeeded",
+              started_at: "2026-04-25T12:00:10.000Z",
+              ended_at: "2026-04-25T12:00:20.000Z",
+              details: {},
+            },
+            {
+              id: "phase-3",
+              cycle_id: "cyc-1",
+              phase: "verify",
+              phase_seq: 3,
+              status: "succeeded",
+              started_at: "2026-04-25T12:00:20.000Z",
+              ended_at: "2026-04-25T12:00:30.000Z",
+              details: {},
+            },
+          ],
+        });
+      }
+      if (url === "/tasks/t1/cycles/cyc-1/stream?limit=500") {
+        return Response.json({
+          task_id: "t1",
+          cycle_id: "cyc-1",
+          events: [streamEvent(1)],
+          limit: 500,
+          has_more: false,
+        });
+      }
+      if (url === "/tasks/t1/events?limit=200") {
+        return Response.json({
+          task_id: "t1",
+          events: [],
+          approval_pending: false,
+        });
+      }
+      return new Response("not found", { status: 404 });
+    });
+
+    renderAttemptPage();
+
+    expect(
+      await screen.findByRole("heading", { name: /attempt #3/i }),
+    ).toBeInTheDocument();
+
+    const phasesHeading = screen.getByRole("heading", { name: /^phases$/i });
+    const phasesSection = phasesHeading.closest("section");
+    if (!phasesSection) throw new Error("missing phases section");
+    expect(within(phasesSection).getByLabelText("Phase 1")).toHaveTextContent("P1");
+    expect(within(phasesSection).getByLabelText("Phase 2")).toHaveTextContent("P2");
+    expect(within(phasesSection).getByLabelText("Phase 3")).toHaveTextContent("P3");
+
+    const activitySection = screen.getByRole("heading", {
+      name: /^activity$/i,
+    }).parentElement?.parentElement;
+    if (!activitySection) throw new Error("missing activity section");
+    expect(within(activitySection).getByLabelText("Phase 2")).toHaveTextContent("P2");
+  });
+
   it("updates running attempt duration on a steady timer", async () => {
     vi.useFakeTimers({ shouldAdvanceTime: true });
     vi.setSystemTime(new Date("2026-04-25T12:00:30.000Z"));

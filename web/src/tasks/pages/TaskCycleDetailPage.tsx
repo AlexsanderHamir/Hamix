@@ -211,9 +211,14 @@ export function TaskCycleDetailPage() {
             >
               <span className="task-attempt-phase-step-marker" aria-hidden="true" />
               <div className="task-attempt-phase-step-main">
-                <span className="task-attempt-phase-step-name">
-                  {phaseLabel(phase.phase)}
-                </span>
+                <div className="task-attempt-phase-step-heading">
+                  <span className="task-attempt-phase-step-name">
+                    {phaseLabel(phase.phase)}
+                  </span>
+                  {showPhaseBadge ? (
+                    <PhaseSeqBadge seq={phase.phase_seq} />
+                  ) : null}
+                </div>
                 <span
                   className={`cell-pill ${phaseStatusFillClass(phase.status)}`}
                 >
@@ -474,6 +479,14 @@ function LoadMoreRows({
   );
 }
 
+function PhaseSeqBadge({ seq }: { seq: number }) {
+  return (
+    <span className="task-attempt-phase-seq" aria-label={`Phase ${seq}`}>
+      P{seq}
+    </span>
+  );
+}
+
 function StreamEventRow({
   ev,
   showPhaseBadge,
@@ -490,9 +503,7 @@ function StreamEventRow({
             {streamKindLabel(ev.kind, ev.subtype)}
           </span>
           <span className="task-attempt-stream-message">{preview}</span>
-          {showPhaseBadge ? (
-            <span className="task-attempt-stream-phase">P{ev.phase_seq}</span>
-          ) : null}
+          {showPhaseBadge ? <PhaseSeqBadge seq={ev.phase_seq} /> : null}
           <time className="task-attempt-stream-time" dateTime={ev.at}>
             {new Date(ev.at).toLocaleTimeString(undefined, {
               hour: "numeric",

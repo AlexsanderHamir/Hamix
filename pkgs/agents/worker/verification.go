@@ -166,7 +166,7 @@ func (w *Worker) runVerificationPipeline(
 			"cycle_id", cycle.ID, "err", preErr)
 	}
 
-	verdicts, feedbackOut, verifyErr := w.runVerifyChecks(parentCtx, task, cycle, phase.PhaseSeq, snap, feedback)
+	verdicts, feedbackOut, verifyErr := w.runVerifyChecks(parentCtx, task, cycle, phase.PhaseSeq, snap, state.previouslyPassed, feedback)
 
 	tampered, tamperReason := w.checkVerifyIntegrity(parentCtx, cycle.ID, pre, preErr)
 
@@ -248,12 +248,23 @@ func (w *Worker) runVerifyChecks(
 	cycle *domain.TaskCycle,
 	phaseSeq int64,
 	snap verificationSnapshot,
+	previouslyPassed map[string]criterionVerdict,
 	feedback string,
 ) ([]criterionVerdict, string, error) {
 	slog.Debug("trace", "cmd", workerLogCmd, "operation", "agent.worker.Worker.runVerifyChecks",
-		"task_id", task.ID, "cycle_id", cycle.ID, "criteria_count", len(snap.criteria))
+		"task_id", task.ID, "cycle_id", cycle.ID,
+		"criteria_count", len(snap.criteria), "previously_passed", len(previouslyPassed))
+	// expected is the set of criterion IDs the execute agent MUST
+	// include in criteria-report.json. Items already proven passed in
+	// earlier attempts are excluded so a retry prompt that legitimately
+	// omits them does not parse-fail; per docs/data-model.md the
+	// atomic-decision contract is preserved by carrying the verdicts
+	// in memory until terminal-success.
 	expected := make(map[string]struct{}, len(snap.criteria))
 	for _, it := range snap.criteria {
+		if _, locked := previouslyPassed[it.ID]; locked {
+			continue
+		}
 		expected[it.ID] = struct{}{}
 	}
 
@@ -266,6 +277,15 @@ func (w *Worker) runVerifyChecks(
 	needLLMVerify := false
 
 	for _, it := range snap.criteria {
+		// Short-circuit locked passes: the verifier has already
+		// approved this criterion in an earlier attempt. Re-running
+		// deterministic checks or the LLM verify on a settled item
+		// is wasted budget and risks a flaky check failing what
+		// we've already decided.
+		if locked, ok := previouslyPassed[it.ID]; ok {
+			verdicts = append(verdicts, locked)
+			continue
+		}
 		entry := selfReport[it.ID]
 		v := criterionVerdict{
 			id:       it.ID,
@@ -296,7 +316,7 @@ func (w *Worker) runVerifyChecks(
 	}
 
 	if needLLMVerify {
-		if err := w.runLLMVerifyAgent(parentCtx, task, cycle, phaseSeq, snap, selfReport, feedback); err != nil {
+		if err := w.runLLMVerifyAgent(parentCtx, task, cycle, phaseSeq, snap, previouslyPassed, selfReport, feedback); err != nil {
 			return nil, "", err
 		}
 		vrep, err := parseVerifyReport(w.options.WorkingDir, cycle.ID, expected)
@@ -305,6 +325,15 @@ func (w *Worker) runVerifyChecks(
 		}
 		next := make([]criterionVerdict, 0, len(verdicts))
 		for _, v := range verdicts {
+			// Locked passes carry their original verifier kind +
+			// reasoning forward unchanged. They were not in the
+			// expected-IDs set passed to the verifier, so vrep has no
+			// entry for them and re-evaluating would either fail or
+			// flake.
+			if _, locked := previouslyPassed[v.id]; locked {
+				next = append(next, v)
+				continue
+			}
 			it := findVerifyItem(snap.criteria, v.id)
 			if it != nil && strings.TrimSpace(it.Check) != "" {
 				next = append(next, v)
@@ -357,11 +386,12 @@ func (w *Worker) runLLMVerifyAgent(
 	cycle *domain.TaskCycle,
 	phaseSeq int64,
 	snap verificationSnapshot,
+	previouslyPassed map[string]criterionVerdict,
 	selfReport map[string]criteriaReportEntry,
 	feedback string,
 ) error {
 	slog.Debug("trace", "cmd", workerLogCmd, "operation", "agent.worker.Worker.runLLMVerifyAgent",
-		"task_id", task.ID, "cycle_id", cycle.ID)
+		"task_id", task.ID, "cycle_id", cycle.ID, "locked_passes", len(previouslyPassed))
 	diff, err := gitDiff(w.options.WorkingDir, "HEAD")
 	if err != nil {
 		diff = "(diff unavailable: " + err.Error() + ")"
@@ -370,7 +400,18 @@ func (w *Worker) runLLMVerifyAgent(
 	b.WriteString("You are the verification agent. Do not modify source files.\n")
 	b.WriteString(fmt.Sprintf("Write `.t2a/%s/verify-report.json` only.\n\n", cycle.ID))
 	b.WriteString("Schema: {\"criteria\":[{\"id\":\"...\",\"verified\":true|false,\"reasoning\":\"...\"}]}\n\n")
+	if len(previouslyPassed) > 0 {
+		b.WriteString("## Locked passes (do not re-evaluate)\n\n")
+		b.WriteString("These criteria were verified in earlier attempts. Do NOT include them in your report.\n\n")
+		for id := range previouslyPassed {
+			b.WriteString(fmt.Sprintf("- [%s]\n", id))
+		}
+		b.WriteString("\n")
+	}
 	for _, it := range snap.criteria {
+		if _, locked := previouslyPassed[it.ID]; locked {
+			continue
+		}
 		if strings.TrimSpace(it.Check) != "" {
 			continue
 		}

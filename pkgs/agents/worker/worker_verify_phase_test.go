@@ -496,3 +496,235 @@ func TestWorker_VerifyPhase_persistsAndPublishesProgressEventsUnderVerifyPhaseSe
 		t.Fatalf("no stream events under verify phase_seq=%d (P3 panel would be empty)", verifyPhaseSeq)
 	}
 }
+
+// writeCriteriaReportFor writes a criteria-report.json containing only
+// the supplied IDs (each marked claimed_done). Used by the carry-across
+// tests to script per-attempt agent behaviour (attempt 1 reports both,
+// attempt 2 reports only the previously-failing ID).
+func writeCriteriaReportFor(t *testing.T, dir, cycleID string, ids []string) {
+	t.Helper()
+	writeCriteriaReport(t, dir, cycleID, ids)
+}
+
+func writePartialVerifyReport(t *testing.T, dir, cycleID string, verdicts map[string]bool) {
+	t.Helper()
+	cdir := filepath.Join(dir, ".t2a", cycleID)
+	if err := os.MkdirAll(cdir, 0o755); err != nil {
+		t.Fatalf("mkdir: %v", err)
+	}
+	type entry struct {
+		ID        string `json:"id"`
+		Verified  bool   `json:"verified"`
+		Reasoning string `json:"reasoning"`
+	}
+	rep := struct {
+		Criteria []entry `json:"criteria"`
+	}{}
+	for id, verified := range verdicts {
+		reasoning := "verifier confirmed via diff inspection and detailed file content review of the change set under test"
+		if !verified {
+			reasoning = "verifier rejected: the implementation does not satisfy this criterion based on diff inspection"
+		}
+		rep.Criteria = append(rep.Criteria, entry{ID: id, Verified: verified, Reasoning: reasoning})
+	}
+	b, _ := json.Marshal(rep)
+	if err := os.WriteFile(filepath.Join(cdir, "verify-report.json"), b, 0o644); err != nil {
+		t.Fatalf("write verify: %v", err)
+	}
+}
+
+// TestWorker_VerifyPhase_carriesPassesAcrossRetries pins PR2's
+// retry-efficiency contract WITHOUT breaking the docs-promised atomic
+// decision: when attempt 1 passes c1 and fails c2, and attempt 2
+// passes c2, the cycle terminates `succeeded` and BOTH completion
+// rows land. Per-attempt state is held in memory (processState.previouslyPassed)
+// so nothing is committed to task_checklist_completions before
+// terminal-success.
+func TestWorker_VerifyPhase_carriesPassesAcrossRetries(t *testing.T) {
+	t.Parallel()
+	h := newHarness(t)
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+
+	tsk := h.createReadyTask(ctx, "verify-carry")
+	c1, err := h.store.AddChecklistItem(ctx, tsk.ID, "criterion one", "", domain.ActorUser)
+	if err != nil {
+		t.Fatalf("add c1: %v", err)
+	}
+	c2, err := h.store.AddChecklistItem(ctx, tsk.ID, "criterion two", "", domain.ActorUser)
+	if err != nil {
+		t.Fatalf("add c2: %v", err)
+	}
+
+	maxRetries := 2
+	if _, err := h.store.UpdateSettings(ctx, store.SettingsPatch{VerifyMaxRetries: &maxRetries}); err != nil {
+		t.Fatalf("set max retries: %v", err)
+	}
+
+	workDir := t.TempDir()
+	var execAttempt atomic.Int32
+	execRunner := runnerfake.New()
+	execHook := &hookRunner{Runner: execRunner, preRun: func(req runner.Request) {
+		if req.Phase != domain.PhaseExecute {
+			return
+		}
+		cycles, _ := h.store.ListCyclesForTask(context.Background(), req.TaskID, 1)
+		if len(cycles) == 0 {
+			return
+		}
+		n := execAttempt.Add(1)
+		// Attempt 1 reports both criteria as claimed done. Attempt 2
+		// only reports c2 — c1 was passed on attempt 1 so the prompt
+		// excludes it from the expected-IDs set, and including a
+		// stale c1 entry is no longer required.
+		ids := []string{c1.ID, c2.ID}
+		if n >= 2 {
+			ids = []string{c2.ID}
+		}
+		writeCriteriaReportFor(t, workDir, cycles[0].ID, ids)
+	}}
+	execRunner.Script(tsk.ID, domain.PhaseExecute, runner.NewResult(
+		domain.PhaseStatusSucceeded, "exec ok", nil, ""))
+
+	var verifyAttempt atomic.Int32
+	verifyRunner := runnerfake.New()
+	verifyHook := &hookRunner{Runner: verifyRunner, preRun: func(req runner.Request) {
+		if req.Phase != domain.PhaseVerify {
+			return
+		}
+		cycles, _ := h.store.ListCyclesForTask(context.Background(), req.TaskID, 1)
+		if len(cycles) == 0 {
+			return
+		}
+		n := verifyAttempt.Add(1)
+		// Attempt 1: c1 verified, c2 fails. Attempt 2: c2 verified.
+		// (c1 is locked from attempt 1 and not in the expected set.)
+		switch n {
+		case 1:
+			writePartialVerifyReport(t, workDir, cycles[0].ID, map[string]bool{
+				c1.ID: true, c2.ID: false,
+			})
+		default:
+			writePartialVerifyReport(t, workDir, cycles[0].ID, map[string]bool{
+				c2.ID: true,
+			})
+		}
+	}}
+	verifyRunner.Script(tsk.ID, domain.PhaseVerify, runner.NewResult(
+		domain.PhaseStatusSucceeded, "verify ok", nil, ""))
+
+	_, done := h.startWorker(ctx, execHook, worker.Options{
+		WorkingDir:   workDir,
+		VerifyRunner: verifyHook,
+	})
+	h.waitTaskStatus(ctx, tsk.ID, domain.StatusDone)
+	cancel()
+	if err := <-done; err != nil {
+		t.Fatalf("worker exit err: %v", err)
+	}
+
+	bg := context.Background()
+	items, err := h.store.ListChecklistForSubject(bg, tsk.ID)
+	if err != nil {
+		t.Fatalf("list checklist: %v", err)
+	}
+	doneCount := 0
+	for _, it := range items {
+		if it.Done {
+			doneCount++
+		}
+	}
+	if doneCount != 2 {
+		t.Fatalf("expected both criteria done, got %d (items=%+v)", doneCount, items)
+	}
+}
+
+// TestWorker_VerifyPhase_finalFailureWritesNoCompletions pins the
+// atomic-decision contract: when retries are exhausted with at least
+// one criterion still failing, NO completion rows land in
+// task_checklist_completions even for criteria that passed on every
+// attempt. previouslyPassed is in-memory only.
+func TestWorker_VerifyPhase_finalFailureWritesNoCompletions(t *testing.T) {
+	t.Parallel()
+	h := newHarness(t)
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+
+	tsk := h.createReadyTask(ctx, "verify-no-completion")
+	c1, err := h.store.AddChecklistItem(ctx, tsk.ID, "criterion one", "", domain.ActorUser)
+	if err != nil {
+		t.Fatalf("add c1: %v", err)
+	}
+	c2, err := h.store.AddChecklistItem(ctx, tsk.ID, "criterion two", "", domain.ActorUser)
+	if err != nil {
+		t.Fatalf("add c2: %v", err)
+	}
+
+	maxRetries := 1
+	if _, err := h.store.UpdateSettings(ctx, store.SettingsPatch{VerifyMaxRetries: &maxRetries}); err != nil {
+		t.Fatalf("set max retries: %v", err)
+	}
+
+	workDir := t.TempDir()
+	var execAttempt atomic.Int32
+	execRunner := runnerfake.New()
+	execHook := &hookRunner{Runner: execRunner, preRun: func(req runner.Request) {
+		if req.Phase != domain.PhaseExecute {
+			return
+		}
+		cycles, _ := h.store.ListCyclesForTask(context.Background(), req.TaskID, 1)
+		if len(cycles) == 0 {
+			return
+		}
+		n := execAttempt.Add(1)
+		ids := []string{c1.ID, c2.ID}
+		if n >= 2 {
+			ids = []string{c2.ID}
+		}
+		writeCriteriaReportFor(t, workDir, cycles[0].ID, ids)
+	}}
+	execRunner.Script(tsk.ID, domain.PhaseExecute, runner.NewResult(
+		domain.PhaseStatusSucceeded, "exec ok", nil, ""))
+
+	verifyRunner := runnerfake.New()
+	verifyHook := &hookRunner{Runner: verifyRunner, preRun: func(req runner.Request) {
+		if req.Phase != domain.PhaseVerify {
+			return
+		}
+		cycles, _ := h.store.ListCyclesForTask(context.Background(), req.TaskID, 1)
+		if len(cycles) == 0 {
+			return
+		}
+		// c1 always passes; c2 always fails. Both attempts.
+		ids := map[string]bool{c1.ID: true, c2.ID: false}
+		// Skip c1 from attempt 2's verifier output (it's locked).
+		if cycles != nil {
+			// Detect retry by checking if this is the second verify
+			// call: attempt counter mirror.
+		}
+		writePartialVerifyReport(t, workDir, cycles[0].ID, ids)
+	}}
+	verifyRunner.Script(tsk.ID, domain.PhaseVerify, runner.NewResult(
+		domain.PhaseStatusSucceeded, "verify ok", nil, ""))
+
+	_, done := h.startWorker(ctx, execHook, worker.Options{
+		WorkingDir:   workDir,
+		VerifyRunner: verifyHook,
+	})
+	h.waitTaskStatus(ctx, tsk.ID, domain.StatusFailed)
+	cancel()
+	if err := <-done; err != nil {
+		t.Fatalf("worker exit err: %v", err)
+	}
+
+	bg := context.Background()
+	items, err := h.store.ListChecklistForSubject(bg, tsk.ID)
+	if err != nil {
+		t.Fatalf("list checklist: %v", err)
+	}
+	for _, it := range items {
+		if it.Done {
+			t.Errorf("expected NO completed items on terminal failure; %s is done", it.ID)
+		}
+	}
+}

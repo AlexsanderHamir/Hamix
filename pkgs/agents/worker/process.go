@@ -30,6 +30,16 @@ type processState struct {
 	verifySnap      verificationSnapshot
 	verifyAttempt   int
 	verifyFeedback  string
+	// previouslyPassed accumulates criterion verdicts that earlier
+	// retry attempts proved passed. Keyed by criterion ID; carried in
+	// memory across the retry loop so the next execute prompt can list
+	// these items as "already verified, do not re-do" and the next
+	// verify pass can short-circuit them. The atomic-decision contract
+	// (docs/data-model.md "Worker verification loop") is preserved
+	// because nothing here is committed to task_checklist_completions
+	// until the cycle succeeds and applyVerifiedCompletions is called
+	// with the union. On terminal failure the map is discarded.
+	previouslyPassed map[string]criterionVerdict
 	// startedAt is captured at processOne entry so every TerminateCycle
 	// path (happy / panic / shutdown / best-effort) observes the same
 	// wall-clock duration into the metrics histogram.
@@ -50,7 +60,7 @@ func (w *Worker) processOne(parentCtx context.Context, task domain.Task) {
 	slog.Debug("trace", "cmd", workerLogCmd, "operation", "agent.worker.Worker.processOne",
 		"task_id", task.ID)
 	startedAt := w.options.Clock()
-	state := processState{startedAt: startedAt}
+	state := processState{startedAt: startedAt, previouslyPassed: map[string]criterionVerdict{}}
 
 	// Defer order is LIFO: ack runs LAST so the queue-pending guard
 	// holds for the entire processOne body, including the deferred
@@ -108,7 +118,7 @@ func (w *Worker) processOne(parentCtx context.Context, task domain.Task) {
 			return
 		}
 		_ = scrubCycleArtifacts(w.options.WorkingDir, cycle.ID)
-		prompt := injectCriteria(fresh.InitialPrompt, state.verifySnap.criteria, cycle.ID)
+		prompt := injectCriteria(fresh.InitialPrompt, state.verifySnap.criteria, cycle.ID, state.previouslyPassed)
 		prompt = appendVerifyFeedback(prompt, state.verifyFeedback)
 		freshExec := *fresh
 		freshExec.InitialPrompt = prompt
@@ -164,6 +174,19 @@ func (w *Worker) processOne(parentCtx context.Context, task domain.Task) {
 			if verifyErr != nil && feedback != "" {
 				state.verifyFeedback = feedback
 			}
+			// Merge passed verdicts into previouslyPassed so the next
+			// retry prompt can mark them as locked, and so the final
+			// applyVerifiedCompletions on terminal-success has the
+			// full union without needing per-attempt state. Tampering
+			// errors return early; they don't contribute passes.
+			for _, v := range verdicts {
+				if !v.passed {
+					continue
+				}
+				if _, exists := state.previouslyPassed[v.id]; !exists {
+					state.previouslyPassed[v.id] = v
+				}
+			}
 			if verifyErr != nil {
 				// Tampering is terminal regardless of retries left:
 				// the verifier modified source (or moved HEAD), which
@@ -206,7 +229,16 @@ func (w *Worker) processOne(parentCtx context.Context, task domain.Task) {
 			return
 		}
 
-		if err := w.applyVerifiedCompletions(parentCtx, task.ID, cycle.ID, verdicts); err != nil {
+		// Atomic-decision contract: completions land in one tx at
+		// terminal-success, drawing from the union of all retry
+		// attempts. state.previouslyPassed already holds the union
+		// (every passed verdict from this and earlier attempts) so
+		// applyVerifiedCompletions sees every criterion exactly once.
+		unionVerdicts := make([]criterionVerdict, 0, len(state.previouslyPassed))
+		for _, v := range state.previouslyPassed {
+			unionVerdicts = append(unionVerdicts, v)
+		}
+		if err := w.applyVerifiedCompletions(parentCtx, task.ID, cycle.ID, unionVerdicts); err != nil {
 			cycleStatus = domain.CycleStatusFailed
 			taskStatus = domain.StatusFailed
 			reason = checklistCompletionFailedReason

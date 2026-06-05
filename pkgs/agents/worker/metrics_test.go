@@ -22,9 +22,17 @@ type recordedRun struct {
 	Duration       time.Duration
 }
 
+type recordedVerdict struct {
+	Kind   domain.VerifierKind
+	Passed bool
+}
+
 type recordingMetrics struct {
-	mu    sync.Mutex
-	calls []recordedRun
+	mu             sync.Mutex
+	calls          []recordedRun
+	verdicts       []recordedVerdict
+	verifyDuration []time.Duration
+	verifyRetries  []int
 }
 
 func (m *recordingMetrics) RecordRun(runnerName, model, terminalStatus string, d time.Duration) {
@@ -38,11 +46,53 @@ func (m *recordingMetrics) RecordRun(runnerName, model, terminalStatus string, d
 	})
 }
 
+func (m *recordingMetrics) RecordVerifyVerdict(kind domain.VerifierKind, passed bool) {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+	m.verdicts = append(m.verdicts, recordedVerdict{Kind: kind, Passed: passed})
+}
+
+func (m *recordingMetrics) ObserveVerifyDuration(d time.Duration) {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+	m.verifyDuration = append(m.verifyDuration, d)
+}
+
+func (m *recordingMetrics) ObserveVerifyRetries(n int) {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+	m.verifyRetries = append(m.verifyRetries, n)
+}
+
 func (m *recordingMetrics) snapshot() []recordedRun {
 	m.mu.Lock()
 	defer m.mu.Unlock()
 	out := make([]recordedRun, len(m.calls))
 	copy(out, m.calls)
+	return out
+}
+
+func (m *recordingMetrics) verdictSnapshot() []recordedVerdict {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+	out := make([]recordedVerdict, len(m.verdicts))
+	copy(out, m.verdicts)
+	return out
+}
+
+func (m *recordingMetrics) verifyDurationSnapshot() []time.Duration {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+	out := make([]time.Duration, len(m.verifyDuration))
+	copy(out, m.verifyDuration)
+	return out
+}
+
+func (m *recordingMetrics) verifyRetriesSnapshot() []int {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+	out := make([]int, len(m.verifyRetries))
+	copy(out, m.verifyRetries)
 	return out
 }
 

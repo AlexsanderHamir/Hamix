@@ -8,6 +8,7 @@ import (
 	"time"
 
 	"github.com/AlexsanderHamir/T2A/pkgs/agents/worker"
+	"github.com/AlexsanderHamir/T2A/pkgs/tasks/domain"
 	"github.com/prometheus/client_golang/prometheus"
 )
 
@@ -22,6 +23,23 @@ import (
 var agentRunDurationBuckets = []float64{
 	0.5, 1, 2.5, 5, 10, 30, 60, 120, 300, 600, 1200, 1800,
 }
+
+// verifyPhaseDurationBuckets are the histogram buckets for the verify
+// phase wall-clock duration. The verify path is expected to be much
+// shorter than the full run duration (no execute, just deterministic
+// checks + one LLM verify call + integrity snapshot), so the upper
+// bound is tighter and the lower buckets are denser to surface
+// "verify is slower than expected" before it dominates cycle time.
+var verifyPhaseDurationBuckets = []float64{
+	0.1, 0.25, 0.5, 1, 2.5, 5, 10, 30, 60, 120, 300, 600,
+}
+
+// verifyRetriesBuckets bound the per-cycle retry count histogram.
+// Most cycles are 0 (first attempt verified) or capped near
+// VerifyMaxRetries (default 1, soft-capped at MaxVerifyMaxRetries).
+// Buckets are integer-aligned so quantile readouts map directly to
+// retry counts without rounding ambiguity.
+var verifyRetriesBuckets = []float64{0, 1, 2, 3, 5, 10}
 
 var registerAgentWorkerMetrics sync.Once
 
@@ -41,6 +59,14 @@ type workerMetricsAdapter struct {
 	duration        *prometheus.HistogramVec
 	runsByModel     *prometheus.CounterVec
 	durationByModel *prometheus.HistogramVec
+	// Verify-phase observability — see ADR-0003. One counter for all
+	// verdict events (verifier_kind × verdict labels) doubles as the
+	// disagreement signal: agent_self/failed = the verifier rejected
+	// what execute claimed done. One histogram for verify-phase
+	// duration. One histogram for retries-per-cycle.
+	verifyVerdicts *prometheus.CounterVec
+	verifyDuration prometheus.Histogram
+	verifyRetries  prometheus.Histogram
 }
 
 // RecordRun increments both the by-runner and the by-(runner, model)
@@ -65,6 +91,47 @@ func (a *workerMetricsAdapter) RecordRun(runnerName, model, terminalStatus strin
 	a.duration.WithLabelValues(runnerName).Observe(d.Seconds())
 	a.runsByModel.WithLabelValues(runnerName, model, terminalStatus).Inc()
 	a.durationByModel.WithLabelValues(runnerName, model).Observe(d.Seconds())
+}
+
+// RecordVerifyVerdict increments t2a_verify_verdict_total. Verdict
+// label is a stable two-value enum ("passed"/"failed") so dashboards
+// can sum across without enumerating the label space.
+func (a *workerMetricsAdapter) RecordVerifyVerdict(kind domain.VerifierKind, passed bool) {
+	slog.Debug("trace", "cmd", cmdLog, "operation", "taskapi.workerMetricsAdapter.RecordVerifyVerdict",
+		"verifier_kind", string(kind), "passed", passed)
+	if a == nil {
+		return
+	}
+	verdict := "passed"
+	if !passed {
+		verdict = "failed"
+	}
+	a.verifyVerdicts.WithLabelValues(string(kind), verdict).Inc()
+}
+
+// ObserveVerifyDuration records one wall-clock observation for the
+// verify phase (StartPhase(verify) → CompletePhase). Skipped cycles
+// (verification disabled or no checklist items) do not call this.
+func (a *workerMetricsAdapter) ObserveVerifyDuration(d time.Duration) {
+	slog.Debug("trace", "cmd", cmdLog, "operation", "taskapi.workerMetricsAdapter.ObserveVerifyDuration",
+		"duration_ms", d.Milliseconds())
+	if a == nil {
+		return
+	}
+	a.verifyDuration.Observe(d.Seconds())
+}
+
+// ObserveVerifyRetries records the retry count per terminated cycle
+// (0 when the first verify pass succeeded or verification was
+// skipped). Histogram so we can read p99/p95 retries-per-cycle drift
+// over time without standing up a per-cycle gauge.
+func (a *workerMetricsAdapter) ObserveVerifyRetries(n int) {
+	slog.Debug("trace", "cmd", cmdLog, "operation", "taskapi.workerMetricsAdapter.ObserveVerifyRetries",
+		"retries", n)
+	if a == nil {
+		return
+	}
+	a.verifyRetries.Observe(float64(n))
 }
 
 // registerAgentWorkerMetricsOn registers the counter + histogram on
@@ -114,11 +181,40 @@ func registerAgentWorkerMetricsOn(reg prometheus.Registerer) (*workerMetricsAdap
 	if err := reg.Register(durationByModel); err != nil {
 		return nil, fmt.Errorf("register t2a_agent_run_duration_by_model_seconds: %w", err)
 	}
+	verifyVerdicts := prometheus.NewCounterVec(prometheus.CounterOpts{
+		Namespace: "t2a",
+		Name:      "verify_verdict_total",
+		Help:      "Per-criterion verify verdicts. verifier_kind is one of the domain.VerifierKind values; verdict is passed|failed. Disagreements (verifier rejecting an agent self-claim) are the verifier_kind=\"agent_self\",verdict=\"failed\" slice.",
+	}, []string{"verifier_kind", "verdict"})
+	verifyDuration := prometheus.NewHistogram(prometheus.HistogramOpts{
+		Namespace: "t2a",
+		Name:      "verify_phase_duration_seconds",
+		Help:      "Wall-clock duration of one verify phase (StartPhase(verify) -> CompletePhase), in seconds.",
+		Buckets:   verifyPhaseDurationBuckets,
+	})
+	verifyRetries := prometheus.NewHistogram(prometheus.HistogramOpts{
+		Namespace: "t2a",
+		Name:      "verify_retries_per_cycle",
+		Help:      "Verify retry count per terminal cycle (0 when first attempt succeeded or verification was skipped).",
+		Buckets:   verifyRetriesBuckets,
+	})
+	if err := reg.Register(verifyVerdicts); err != nil {
+		return nil, fmt.Errorf("register t2a_verify_verdict_total: %w", err)
+	}
+	if err := reg.Register(verifyDuration); err != nil {
+		return nil, fmt.Errorf("register t2a_verify_phase_duration_seconds: %w", err)
+	}
+	if err := reg.Register(verifyRetries); err != nil {
+		return nil, fmt.Errorf("register t2a_verify_retries_per_cycle: %w", err)
+	}
 	return &workerMetricsAdapter{
 		runs:            runs,
 		duration:        duration,
 		runsByModel:     runsByModel,
 		durationByModel: durationByModel,
+		verifyVerdicts:  verifyVerdicts,
+		verifyDuration:  verifyDuration,
+		verifyRetries:   verifyRetries,
 	}, nil
 }
 

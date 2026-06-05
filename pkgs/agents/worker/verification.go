@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"log/slog"
 	"os/exec"
+	"sort"
 	"strings"
 	"time"
 
@@ -142,6 +143,11 @@ func (w *Worker) runVerificationPipeline(
 		return nil, "", nil
 	}
 	_ = ensureT2ADir(w.options.WorkingDir)
+
+	verifyStarted := w.options.Clock()
+	defer func() {
+		w.observeVerifyDuration(w.options.Clock().Sub(verifyStarted))
+	}()
 
 	phase, err := w.store.StartPhase(parentCtx, cycle.ID, domain.PhaseVerify, domain.ActorAgent)
 	if err != nil {
@@ -293,8 +299,10 @@ func (w *Worker) runVerifyChecks(
 		}
 		if !entry.ClaimedDone {
 			v.passed = false
+			v.verifier = domain.VerifierAgentSelf
 			v.reasoning = "execute agent did not claim criterion done"
 			verdicts = append(verdicts, v)
+			w.recordVerifyVerdict(domain.VerifierAgentSelf, false)
 			continue
 		}
 		if strings.TrimSpace(it.Check) != "" {
@@ -309,6 +317,7 @@ func (w *Worker) runVerifyChecks(
 				v.reasoning = fmt.Sprintf("deterministic check failed: %s %s", out.stdout, out.stderr)
 			}
 			verdicts = append(verdicts, v)
+			w.recordVerifyVerdict(domain.VerifierDeterministicCheck, v.passed)
 			continue
 		}
 		needLLMVerify = true
@@ -352,6 +361,7 @@ func (w *Worker) runVerifyChecks(
 				nv.reasoning = vr.Reasoning
 			}
 			next = append(next, nv)
+			w.recordVerifyVerdict(domain.VerifierVerifyAgent, nv.passed)
 		}
 		verdicts = next
 	}
@@ -454,6 +464,67 @@ func gitDiff(dir, rev string) (string, error) {
 		return string(out[:200*1024]) + "\n…(truncated)", nil
 	}
 	return string(out), nil
+}
+
+// formatVerificationFailedReason builds the terminate-reason string for
+// a cycle that exhausted retries with at least one criterion still
+// failing. Format: "verification_failed:<id1>,<id2>,...". The
+// "verification_failed" prefix is contract-stable — clients consuming
+// terminate_reason MUST use prefix matching (`startsWith`) per
+// docs/api.md and docs/data-model.md. Bare "verification_failed" is
+// no longer emitted by the worker but remains a valid value for older
+// cycle rows.
+//
+// IDs are sorted for deterministic output (test pinning + grep-friendly
+// audit trail) and de-duplicated across attempts. The terminate_reason
+// column is varchar(256); if the comma-separated list exceeds that, we
+// truncate the suffix with a trailing "…" to keep the prefix intact.
+//
+// finalVerdicts are this attempt's verdicts; lockedPasses is the union
+// of criteria proved passed in earlier attempts. A criterion in
+// lockedPasses is by construction NOT failing.
+func formatVerificationFailedReason(finalVerdicts []criterionVerdict, lockedPasses map[string]criterionVerdict) string {
+	slog.Debug("trace", "cmd", workerLogCmd, "operation", "agent.worker.formatVerificationFailedReason",
+		"verdict_count", len(finalVerdicts), "locked_count", len(lockedPasses))
+	failing := make([]string, 0, len(finalVerdicts))
+	seen := map[string]struct{}{}
+	for _, v := range finalVerdicts {
+		if v.passed {
+			continue
+		}
+		if _, locked := lockedPasses[v.id]; locked {
+			continue
+		}
+		if _, dup := seen[v.id]; dup {
+			continue
+		}
+		seen[v.id] = struct{}{}
+		failing = append(failing, v.id)
+	}
+	if len(failing) == 0 {
+		return verificationFailedReason
+	}
+	sort.Strings(failing)
+	const maxLen = 256
+	const prefix = verificationFailedReason + ":"
+	body := strings.Join(failing, ",")
+	full := prefix + body
+	if len(full) <= maxLen {
+		return full
+	}
+	const ellipsis = "…"
+	budget := maxLen - len(prefix) - len(ellipsis)
+	if budget < 0 {
+		budget = 0
+	}
+	if budget > len(body) {
+		budget = len(body)
+	}
+	trimmed := body[:budget]
+	if i := strings.LastIndex(trimmed, ","); i > 0 {
+		trimmed = trimmed[:i]
+	}
+	return prefix + trimmed + ellipsis
 }
 
 func encodeCriteriaSnapshot(items []store.ChecklistVerifyItem) []byte {

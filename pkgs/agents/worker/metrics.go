@@ -3,6 +3,8 @@ package worker
 import (
 	"log/slog"
 	"time"
+
+	"github.com/AlexsanderHamir/T2A/pkgs/tasks/domain"
 )
 
 // RunMetrics is the optional Prometheus seam for the agent worker.
@@ -26,6 +28,30 @@ import (
 // per-task runner+model attribution plan.
 type RunMetrics interface {
 	RecordRun(runner string, model string, terminalStatus string, duration time.Duration)
+	// RecordVerifyVerdict is fired once per criterion verdict produced
+	// by the verify pass. verifierKind is one of the
+	// domain.VerifierKind values (deterministic_check, verify_agent,
+	// agent_self) — see docs/data-model.md "verified_by" column.
+	// passed is the verdict.
+	//
+	// This is the single counter for both verdict-rate dashboards and
+	// disagreement queries: disagreement = the verifier rejecting a
+	// criterion the execute agent claimed done, derivable as the
+	// {verifier_kind="agent_self",verdict="failed"} slice. There is no
+	// separate disagreement counter — one fact, one metric.
+	RecordVerifyVerdict(verifierKind domain.VerifierKind, passed bool)
+	// ObserveVerifyDuration receives one observation per cycle that
+	// actually ran a verify phase (StartPhase(verify) → CompletePhase),
+	// regardless of pass/fail/tampered outcome. Wall-clock duration
+	// across deterministic checks, LLM verify, and integrity check.
+	ObserveVerifyDuration(d time.Duration)
+	// ObserveVerifyRetries receives one observation per terminal
+	// cycle, value = number of verify retries the cycle consumed
+	// (0 when the first verify attempt succeeded or verification was
+	// skipped). The run histogram is the cycle distribution; alarm
+	// signals look like p99 climbing over time as the verifier (or the
+	// agent) drifts.
+	ObserveVerifyRetries(n int)
 }
 
 // recordRun fans out to the configured RunMetrics, if any. It is the
@@ -51,4 +77,46 @@ func (w *Worker) recordRun(terminalStatus, runnerName, model string, started tim
 		d = 0
 	}
 	w.options.Metrics.RecordRun(runnerName, model, terminalStatus, d)
+}
+
+// recordVerifyVerdict fans the per-criterion verdict out to the
+// configured RunMetrics. No-op when Metrics is nil.
+func (w *Worker) recordVerifyVerdict(kind domain.VerifierKind, passed bool) {
+	slog.Debug("trace", "cmd", workerLogCmd, "operation", "agent.worker.Worker.recordVerifyVerdict",
+		"verifier_kind", string(kind), "passed", passed)
+	if w == nil || w.options.Metrics == nil {
+		return
+	}
+	w.options.Metrics.RecordVerifyVerdict(kind, passed)
+}
+
+// observeVerifyDuration fans the verify-phase wall-clock observation
+// out to the configured RunMetrics. d is clamped to >= 0 so a backwards
+// fake clock cannot land a negative observation in the histogram.
+func (w *Worker) observeVerifyDuration(d time.Duration) {
+	slog.Debug("trace", "cmd", workerLogCmd, "operation", "agent.worker.Worker.observeVerifyDuration",
+		"duration_ms", d.Milliseconds())
+	if w == nil || w.options.Metrics == nil {
+		return
+	}
+	if d < 0 {
+		d = 0
+	}
+	w.options.Metrics.ObserveVerifyDuration(d)
+}
+
+// observeVerifyRetries records the per-cycle retry count. Called once
+// from terminateCycle — same single funnel pattern as recordRun so
+// adding a new TerminateCycle call site cannot accidentally skip
+// metrics.
+func (w *Worker) observeVerifyRetries(n int) {
+	slog.Debug("trace", "cmd", workerLogCmd, "operation", "agent.worker.Worker.observeVerifyRetries",
+		"retries", n)
+	if w == nil || w.options.Metrics == nil {
+		return
+	}
+	if n < 0 {
+		n = 0
+	}
+	w.options.Metrics.ObserveVerifyRetries(n)
 }

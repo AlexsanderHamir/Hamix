@@ -91,7 +91,7 @@ See [data-model.md](./data-model.md) for state machine and substrate semantics.
 | POST | `/tasks/{id}/cycles` | Start a cycle. Body `{ parent_cycle_id?, meta? }`. Returns `taskCycleResponse` (with typed `cycle_meta` projection). Publishes `task_cycle_changed`. |
 | GET | `/tasks/{id}/cycles` | List. `?limit` (1–200), `?before_attempt_seq` keyset cursor. Newest first. |
 | GET | `/tasks/{id}/cycles/{cycleId}` | One cycle with `phases[]` ordered ascending. |
-| PATCH | `/tasks/{id}/cycles/{cycleId}` | Terminate. Body `{ status: succeeded|failed|aborted, reason? }`. Publishes `task_cycle_changed`. |
+| PATCH | `/tasks/{id}/cycles/{cycleId}` | Terminate. Body `{ status: succeeded|failed|aborted, reason? }`. Publishes `task_cycle_changed`. The agent worker emits `verification_failed:<id>,<id>,…` on terminal verify failure (sorted, deduped failing criterion IDs); the `verification_failed` prefix is contract-stable — clients MUST use prefix matching. Bare `verification_failed` (older cycles) remains a valid value. The reason column is 256 chars; long lists are truncated with `…` while the prefix stays intact. |
 | GET | `/tasks/{id}/cycles/{cycleId}/stream` | Normalized Cursor live-run history. `?limit` (1–500), `?after_seq` keyset. |
 | POST | `/tasks/{id}/cycles/{cycleId}/phases` | Start a phase. Body `{ phase: diagnose|execute|verify|persist }`. Transitions follow `domain.ValidPhaseTransition`. Publishes `task_cycle_changed`. |
 | PATCH | `/tasks/{id}/cycles/{cycleId}/phases/{phaseSeq}` | Terminate a phase. Body `{ status: succeeded|failed|skipped, summary?, details? }`. Publishes `task_cycle_changed`. |

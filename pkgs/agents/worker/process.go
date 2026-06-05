@@ -207,7 +207,7 @@ func (w *Worker) processOne(parentCtx context.Context, task domain.Task) {
 				}
 				cycleStatus = domain.CycleStatusFailed
 				taskStatus = domain.StatusFailed
-				reason = verificationFailedReason
+				reason = formatVerificationFailedReason(verdicts, state.previouslyPassed)
 				if !w.terminateCycle(parentCtx, &state, cycle.TaskID, cycleStatus, reason) {
 					return
 				}
@@ -571,6 +571,7 @@ func (w *Worker) terminateCycle(ctx context.Context, state *processState, taskID
 	state.cycleStarted = false
 	w.publish(taskID, state.cycleID)
 	w.recordRun(string(status), w.runner.Name(), state.effectiveModel, state.startedAt)
+	w.observeVerifyRetries(state.verifyAttempt)
 	return true
 }
 

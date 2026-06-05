@@ -728,3 +728,180 @@ func TestWorker_VerifyPhase_finalFailureWritesNoCompletions(t *testing.T) {
 		}
 	}
 }
+
+// TestWorker_VerifyPhase_recordsDisagreementAsAgentSelfFailed pins the
+// disagreement-via-derived-query contract from PR3: when the execute
+// agent does NOT claim a criterion done, that surfaces on
+// t2a_verify_verdict_total{verifier_kind="agent_self",verdict="failed"}.
+// The same counter handles passes and the verifier's own verdicts;
+// disagreement is the {agent_self,failed} slice.
+func TestWorker_VerifyPhase_recordsDisagreementAsAgentSelfFailed(t *testing.T) {
+	t.Parallel()
+	h := newHarness(t)
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+
+	tsk := h.createReadyTask(ctx, "verify-disagreement")
+	c1, err := h.store.AddChecklistItem(ctx, tsk.ID, "criterion one", "", domain.ActorUser)
+	if err != nil {
+		t.Fatalf("add c1: %v", err)
+	}
+
+	maxRetries := 0
+	if _, err := h.store.UpdateSettings(ctx, store.SettingsPatch{VerifyMaxRetries: &maxRetries}); err != nil {
+		t.Fatalf("set max retries: %v", err)
+	}
+
+	workDir := t.TempDir()
+	r := runnerfake.New()
+	hook := &hookRunner{Runner: r, preRun: func(req runner.Request) {
+		if req.Phase != domain.PhaseExecute {
+			return
+		}
+		cycles, _ := h.store.ListCyclesForTask(context.Background(), req.TaskID, 1)
+		if len(cycles) == 0 {
+			return
+		}
+		cdir := filepath.Join(workDir, ".t2a", cycles[0].ID)
+		if err := os.MkdirAll(cdir, 0o755); err != nil {
+			t.Fatalf("mkdir: %v", err)
+		}
+		// claimed_done=false models the agent self-rejecting the criterion.
+		body := `{"criteria":[{"id":"` + c1.ID + `","claimed_done":false,"evidence":"agent gave up"}]}`
+		if err := os.WriteFile(filepath.Join(cdir, "criteria-report.json"), []byte(body), 0o644); err != nil {
+			t.Fatalf("write criteria: %v", err)
+		}
+	}}
+	r.Script(tsk.ID, domain.PhaseExecute, runner.NewResult(
+		domain.PhaseStatusSucceeded, "exec ok", nil, ""))
+
+	metrics := &recordingMetrics{}
+	_, done := h.startWorker(ctx, hook, worker.Options{WorkingDir: workDir, Metrics: metrics})
+	h.waitTaskStatus(ctx, tsk.ID, domain.StatusFailed)
+	cancel()
+	if err := <-done; err != nil {
+		t.Fatalf("worker exit err: %v", err)
+	}
+
+	verdicts := metrics.verdictSnapshot()
+	if len(verdicts) == 0 {
+		t.Fatalf("expected at least one verdict recorded")
+	}
+	disagreements := 0
+	for _, v := range verdicts {
+		if v.Kind == domain.VerifierAgentSelf && !v.Passed {
+			disagreements++
+		}
+	}
+	if disagreements != 1 {
+		t.Fatalf("agent_self/failed verdict count = %d, want 1; verdicts=%+v", disagreements, verdicts)
+	}
+
+	durations := metrics.verifyDurationSnapshot()
+	if len(durations) == 0 {
+		t.Fatalf("expected ObserveVerifyDuration to fire when verify ran")
+	}
+
+	retries := metrics.verifyRetriesSnapshot()
+	if len(retries) == 0 || retries[len(retries)-1] != 0 {
+		t.Fatalf("expected one retries observation = 0 (no retries); got %+v", retries)
+	}
+}
+
+// TestWorker_VerifyPhase_terminateReasonIncludesFailingIDs pins the
+// SPA-renderable failure detail: when retries exhaust, the cycle's
+// terminate_reason carries the failing criterion IDs after the
+// stable `verification_failed:` prefix.
+func TestWorker_VerifyPhase_terminateReasonIncludesFailingIDs(t *testing.T) {
+	t.Parallel()
+	h := newHarness(t)
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+
+	tsk := h.createReadyTask(ctx, "verify-reason-ids")
+	c1, err := h.store.AddChecklistItem(ctx, tsk.ID, "criterion one", "", domain.ActorUser)
+	if err != nil {
+		t.Fatalf("add c1: %v", err)
+	}
+	c2, err := h.store.AddChecklistItem(ctx, tsk.ID, "criterion two", "", domain.ActorUser)
+	if err != nil {
+		t.Fatalf("add c2: %v", err)
+	}
+
+	maxRetries := 0
+	if _, err := h.store.UpdateSettings(ctx, store.SettingsPatch{VerifyMaxRetries: &maxRetries}); err != nil {
+		t.Fatalf("set max retries: %v", err)
+	}
+
+	workDir := t.TempDir()
+	execRunner := runnerfake.New()
+	execHook := &hookRunner{Runner: execRunner, preRun: func(req runner.Request) {
+		if req.Phase != domain.PhaseExecute {
+			return
+		}
+		cycles, _ := h.store.ListCyclesForTask(context.Background(), req.TaskID, 1)
+		if len(cycles) == 0 {
+			return
+		}
+		writeCriteriaReport(t, workDir, cycles[0].ID, []string{c1.ID, c2.ID})
+	}}
+	execRunner.Script(tsk.ID, domain.PhaseExecute, runner.NewResult(
+		domain.PhaseStatusSucceeded, "exec ok", nil, ""))
+
+	verifyRunner := runnerfake.New()
+	verifyHook := &hookRunner{Runner: verifyRunner, preRun: func(req runner.Request) {
+		if req.Phase != domain.PhaseVerify {
+			return
+		}
+		cycles, _ := h.store.ListCyclesForTask(context.Background(), req.TaskID, 1)
+		if len(cycles) == 0 {
+			return
+		}
+		writePartialVerifyReport(t, workDir, cycles[0].ID, map[string]bool{
+			c1.ID: false, c2.ID: false,
+		})
+	}}
+	verifyRunner.Script(tsk.ID, domain.PhaseVerify, runner.NewResult(
+		domain.PhaseStatusSucceeded, "verify ok", nil, ""))
+
+	_, done := h.startWorker(ctx, execHook, worker.Options{
+		WorkingDir:   workDir,
+		VerifyRunner: verifyHook,
+	})
+	h.waitTaskStatus(ctx, tsk.ID, domain.StatusFailed)
+	cancel()
+	if err := <-done; err != nil {
+		t.Fatalf("worker exit err: %v", err)
+	}
+
+	bg := context.Background()
+	events, err := h.store.ListTaskEvents(bg, tsk.ID)
+	if err != nil {
+		t.Fatalf("list events: %v", err)
+	}
+	var reason string
+	for _, e := range events {
+		if e.Type != domain.EventCycleFailed {
+			continue
+		}
+		var payload struct {
+			Reason string `json:"reason"`
+		}
+		if err := json.Unmarshal(e.Data, &payload); err != nil {
+			continue
+		}
+		if strings.HasPrefix(payload.Reason, "verification_failed") {
+			reason = payload.Reason
+		}
+	}
+	if reason == "" {
+		t.Fatalf("no cycle_failed event with verification_failed reason; events=%+v", events)
+	}
+	if !strings.HasPrefix(reason, "verification_failed:") {
+		t.Fatalf("reason must start with verification_failed:; got %q", reason)
+	}
+	// IDs are sorted; assert both appear regardless of seed order.
+	if !strings.Contains(reason, c1.ID) || !strings.Contains(reason, c2.ID) {
+		t.Fatalf("reason must include both failing IDs; got %q (c1=%s c2=%s)", reason, c1.ID, c2.ID)
+	}
+}

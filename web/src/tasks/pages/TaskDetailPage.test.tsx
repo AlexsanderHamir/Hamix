@@ -233,28 +233,6 @@ function mockTaskDetailFetchForSubtaskCreate(taskId: string) {
   };
 }
 
-function mockTaskDetailFetchWithEvents(
-  task: MockTaskDetailData,
-  eventsPayload: Record<string, unknown>,
-  checklistItems: unknown[] = [],
-) {
-  return vi
-    .spyOn(globalThis, "fetch")
-    .mockImplementation(async (input) => {
-      const url = requestUrl(input);
-      if (url === `/tasks/${task.id}`) {
-        return Response.json(task);
-      }
-      if (url === `/tasks/${task.id}/checklist`) {
-        return Response.json({ items: checklistItems });
-      }
-      if (url.startsWith(`/tasks/${task.id}/events`)) {
-        return Response.json(eventsPayload);
-      }
-      return new Response("not found", { status: 404 });
-    });
-}
-
 describe("TaskDetailPage", () => {
   beforeEach(() => {
     stubEventSource();
@@ -331,7 +309,6 @@ describe("TaskDetailPage", () => {
     expect(
       await screen.findByText(/no agent is waiting on you for this task right now/i),
     ).toBeInTheDocument();
-    expect(await screen.findByText(/no updates yet/i)).toBeInTheDocument();
 
     const details = document.querySelector(".task-detail-prompt-details");
     expect(details).not.toBeNull();
@@ -602,54 +579,6 @@ describe("TaskDetailPage", () => {
 
     expect(api.getPatchBody()).toBe(JSON.stringify({ text: "After" }));
     expect(await screen.findByText("After")).toBeInTheDocument();
-  });
-
-  it("lists updates newest first by seq", async () => {
-    mockTaskDetailFetchWithEvents(
-      taskDetail("t3", "Timeline order"),
-      {
-        task_id: "t3",
-        limit: 20,
-        total: 2,
-        range_start: 1,
-        range_end: 2,
-        has_more_newer: false,
-        has_more_older: false,
-        approval_pending: false,
-        events: [
-          {
-            seq: 2,
-            at: "2026-01-02T12:00:00.000Z",
-            type: "sync_ping",
-            by: "user",
-            data: {},
-          },
-          {
-            seq: 1,
-            at: "2026-01-01T12:00:00.000Z",
-            type: "task_created",
-            by: "user",
-            data: {},
-          },
-        ],
-      },
-    );
-
-    renderDetail("/tasks/t3", mockApp());
-
-    expect(
-      await screen.findByRole("heading", { name: /^timeline order$/i }),
-    ).toBeInTheDocument();
-
-    const timeline = await screen.findByRole("list", { name: /^updates$/i });
-    const items = within(timeline).getAllByRole("listitem");
-    expect(items).toHaveLength(2);
-    expect(items[0]).toHaveTextContent(/sync_ping/i);
-    expect(items[1]).toHaveTextContent(/task_created/i);
-    expect(items[0].querySelector("code.task-timeline-type-pill")).toHaveAttribute(
-      "aria-label",
-      expect.stringMatching(/live sync check/i),
-    );
   });
 
   it("creates a subtask with checklist items after POST /tasks", async () => {

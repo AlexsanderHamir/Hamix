@@ -24,7 +24,7 @@ import type { TaskEventType } from "@/types";
  * | sync_ping | no | Dev / connectivity check |
  *
  * Extend `NEEDS_USER_INPUT` when new `EventType` values require a person to respond to the agent.
- * The task timeline highlights these rows (see `TaskUpdatesTimeline` + `App.css`).
+ * The task timeline highlights these rows (see `TaskUpdatesTimelineEventList` + `App.css`).
  */
 const NEEDS_USER_INPUT: ReadonlySet<TaskEventType> = new Set([
   "approval_requested",

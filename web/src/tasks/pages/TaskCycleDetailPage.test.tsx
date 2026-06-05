@@ -160,44 +160,51 @@ describe("TaskCycleDetailPage", () => {
         },
       });
     });
-    expect(
-      screen.getByText(/live updates for this running phase/i),
-    ).toBeInTheDocument();
+    expect(screen.getByText(/^Live$/)).toBeInTheDocument();
     expect(screen.getByText("Still working live")).toBeInTheDocument();
     expect(screen.getByText("Newest live update")).toBeInTheDocument();
     expect(screen.getByText("Searching for *.go in worker")).toBeInTheDocument();
     expect(screen.queryByText("tool_call")).toBeNull();
-    expect(screen.getAllByLabelText(/received at/i)).toHaveLength(3);
     const liveList = screen.getByRole("list", { name: /recent live updates/i });
     const liveItems = within(liveList).getAllByRole("listitem");
-    expect(liveItems[0]).toHaveTextContent(/waiting for the next update/i);
+    expect(liveItems[0]).toHaveTextContent(/waiting/i);
     expect(liveItems[0]).toHaveTextContent(/last just now/i);
     expect(liveItems[1]).toHaveTextContent("Tool");
     expect(liveItems[1]).toHaveTextContent("Searching for *.go in worker");
     expect(liveItems[2]).toHaveTextContent("Newest live update");
     expect(liveItems[3]).toHaveTextContent("Still working live");
 
-    const streamSection = screen.getByRole("heading", {
-      name: /cursor events/i,
+    const activitySection = screen.getByRole("heading", {
+      name: /^activity$/i,
     }).parentElement?.parentElement;
-    if (!streamSection) throw new Error("missing stream section");
-    expect(within(streamSection).getByText("Cursor update 8")).toBeInTheDocument();
-    expect(within(streamSection).queryByText("Cursor update 1")).toBeNull();
-    await user.click(within(streamSection).getByText("Cursor update 8"));
-    expect(within(streamSection).getAllByText("Raw JSON").length).toBeGreaterThan(0);
-    expect(within(streamSection).queryByText("Full message")).toBeNull();
-    expect(within(streamSection).getByText(/full payload 8/)).toBeInTheDocument();
-    await user.click(within(streamSection).getByRole("button", { name: /load more/i }));
-    expect(within(streamSection).getByText("Cursor update 1")).toBeInTheDocument();
+    if (!activitySection) throw new Error("missing activity section");
+    expect(within(activitySection).getByText("Cursor update 8")).toBeInTheDocument();
+    expect(within(activitySection).queryByText("Cursor update 1")).toBeNull();
+    await user.click(within(activitySection).getByText("Cursor update 8"));
+    expect(within(activitySection).getAllByText("Raw payload").length).toBeGreaterThan(0);
+    expect(within(activitySection).queryByText("Full message")).toBeNull();
+    expect(within(activitySection).getByText(/full payload 8/)).toBeInTheDocument();
+    await user.click(within(activitySection).getByRole("button", { name: /load more/i }));
+    expect(within(activitySection).getByText("Cursor update 1")).toBeInTheDocument();
 
-    const auditSection = screen.getByRole("heading", {
-      name: /t2a audit events/i,
-    }).parentElement;
-    if (!auditSection) throw new Error("missing audit section");
-    expect(within(auditSection).getByText("Event #8")).toBeInTheDocument();
-    expect(within(auditSection).queryByText("Event #1")).toBeNull();
-    await user.click(within(auditSection).getByRole("button", { name: /load more/i }));
-    expect(within(auditSection).getByText("Event #1")).toBeInTheDocument();
+    await user.click(screen.getByRole("tab", { name: /audit/i }));
+    const auditPanel = screen.getByRole("tabpanel", { name: /audit/i });
+    const auditEventLinks = within(auditPanel)
+      .getAllByRole("link")
+      .filter((link) => Boolean(link.getAttribute("href")?.includes("/events/")));
+    expect(auditEventLinks.some((link) => link.getAttribute("href") === "/tasks/t1/events/8")).toBe(
+      true,
+    );
+    expect(auditEventLinks.some((link) => link.getAttribute("href") === "/tasks/t1/events/1")).toBe(
+      false,
+    );
+    await user.click(within(auditPanel).getByRole("button", { name: /load more/i }));
+    const expandedAuditLinks = within(auditPanel)
+      .getAllByRole("link")
+      .filter((link) => Boolean(link.getAttribute("href")?.includes("/events/")));
+    expect(
+      expandedAuditLinks.some((link) => link.getAttribute("href") === "/tasks/t1/events/1"),
+    ).toBe(true);
   });
 
   it("updates running attempt duration on a steady timer", async () => {
@@ -233,14 +240,12 @@ describe("TaskCycleDetailPage", () => {
     expect(
       await screen.findByRole("heading", { name: /attempt #3/i }),
     ).toBeInTheDocument();
-    const durationRow = screen.getByText("Duration").parentElement;
-    if (!durationRow) throw new Error("missing duration row");
-    expect(durationRow).toHaveTextContent(/30\.0 s/);
+    expect(screen.getByText(/30\.0 s/)).toBeInTheDocument();
 
     act(() => {
       vi.advanceTimersByTime(5000);
     });
 
-    expect(durationRow).toHaveTextContent(/35\.0 s/);
+    expect(screen.getByText(/35\.0 s/)).toBeInTheDocument();
   });
 });

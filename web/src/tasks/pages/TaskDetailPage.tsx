@@ -28,7 +28,6 @@ import {
   TaskDetailSchedule,
   TaskDependenciesPanel,
   TaskDetailSubtasksHead,
-  TaskDetailUpdatesSection,
   TaskGatePanel,
   TaskModelConfigModal,
 } from "../components/task-detail";
@@ -108,13 +107,7 @@ export function TaskDetailPage({ app }: Props) {
     enabled: Boolean(taskId),
   });
 
-  const {
-    eventsQuery,
-    timelineEvents,
-    eventsTotal,
-    onEventsPagerPrev,
-    onEventsPagerNext,
-  } = useTaskDetailEvents(taskId, taskQuery.isSuccess);
+  const { eventsQuery } = useTaskDetailEvents(taskId, taskQuery.isSuccess);
 
   const checklistQuery = useQuery({
     queryKey: taskQueryKeys.checklist(taskId),
@@ -507,15 +500,6 @@ export function TaskDetailPage({ app }: Props) {
       />
 
       <TaskCyclesPanel taskId={taskId} enabled={taskQuery.isSuccess} />
-
-      <TaskDetailUpdatesSection
-        taskId={taskId}
-        eventsQuery={eventsQuery}
-        timelineEvents={timelineEvents}
-        eventsTotal={eventsTotal}
-        onEventsPagerPrev={onEventsPagerPrev}
-        onEventsPagerNext={onEventsPagerNext}
-      />
     </section>
   );
 }

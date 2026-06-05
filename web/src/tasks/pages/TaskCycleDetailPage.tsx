@@ -1,5 +1,5 @@
 import { useQuery } from "@tanstack/react-query";
-import { useEffect, useState } from "react";
+import { useEffect, useId, useState } from "react";
 import { Link, useParams } from "react-router-dom";
 import { listTaskEvents } from "@/api";
 import { errorMessage } from "@/lib/errorMessage";
@@ -12,22 +12,25 @@ import {
   phaseStatusFillClass,
   phaseStatusLabel,
 } from "@/observability";
-import { CopyableId } from "@/shared/CopyableId";
 import { EmptyState } from "@/shared/EmptyState";
 import { useDocumentTitle } from "@/shared/useDocumentTitle";
 import { useNow } from "@/shared/useNow";
-import type { TaskCyclePhase, TaskCycleStreamEvent, TaskEvent } from "@/types";
-import { eventTypeLabel } from "../task-events";
-import { taskQueryKeys } from "../task-query";
+import type { TaskCyclePhase, TaskCycleStreamEvent } from "@/types";
+import { AttemptAuditTimeline } from "../components/task-detail/attempt/AttemptAuditTimeline";
+import { TaskTimelineSkeleton } from "../components/skeletons";
+import { formatPhaseSummaryCompact } from "../task-events";
 import {
   useAgentRunProgress,
   type AgentRunProgressItem,
 } from "../hooks/useAgentRunProgress";
 import { useTaskCycle, useTaskCycleStream } from "../hooks/useTaskCycles";
+import { taskQueryKeys } from "../task-query";
 
 const STREAM_VISIBLE_INITIAL = 6;
 const AUDIT_VISIBLE_INITIAL = 6;
 const LOAD_MORE_STEP = 6;
+
+type ActivityTab = "cursor" | "audit";
 
 export function TaskCycleDetailPage() {
   const { taskId = "", cycleId = "" } = useParams<{
@@ -35,11 +38,17 @@ export function TaskCycleDetailPage() {
     cycleId: string;
   }>();
   const paramsValid = Boolean(taskId) && Boolean(cycleId);
+  const [activityTab, setActivityTab] = useState<ActivityTab>("cursor");
   const [visibleStreamCount, setVisibleStreamCount] = useState(
     STREAM_VISIBLE_INITIAL,
   );
   const [visibleAuditCount, setVisibleAuditCount] =
     useState(AUDIT_VISIBLE_INITIAL);
+  const cursorTabId = useId();
+  const auditTabId = useId();
+  const cursorPanelId = useId();
+  const auditPanelId = useId();
+
   const cycleQuery = useTaskCycle(taskId, cycleId, { enabled: paramsValid });
   const streamQuery = useTaskCycleStream(taskId, cycleId, {
     enabled: paramsValid,
@@ -54,6 +63,7 @@ export function TaskCycleDetailPage() {
   useEffect(() => {
     setVisibleStreamCount(STREAM_VISIBLE_INITIAL);
     setVisibleAuditCount(AUDIT_VISIBLE_INITIAL);
+    setActivityTab("cursor");
   }, [cycleId]);
 
   useDocumentTitle(
@@ -129,6 +139,12 @@ export function TaskCycleDetailPage() {
   ).sort((a, b) => b.seq - a.seq);
   const visibleAuditEvents = auditEvents.slice(0, visibleAuditCount);
   const startedParts = formatAttemptStartedParts(cycle.started_at);
+  const durationLabel = attemptDurationLabel(
+    cycle.started_at,
+    cycle.ended_at,
+    now,
+  );
+  const showPhaseBadge = cycle.phases.length > 1;
 
   return (
     <section className="panel task-detail-panel task-attempt-detail task-detail-content--enter">
@@ -140,7 +156,6 @@ export function TaskCycleDetailPage() {
           to="/"
           className="pd__back project-context-back-link task-attempt-nav-link"
         >
-          <span aria-hidden="true">&#8249;</span>
           All tasks
         </Link>
         <span className="task-attempt-nav-separator" aria-hidden="true">
@@ -150,160 +165,217 @@ export function TaskCycleDetailPage() {
           to={`/tasks/${encodeURIComponent(taskId)}`}
           className="pd__back project-context-back-link task-attempt-nav-link"
         >
-          <span aria-hidden="true">&#8249;</span>
-          Task detail
+          Task
         </Link>
       </nav>
 
       <header className="task-attempt-header">
         <div className="task-attempt-title-group">
-          <p className="task-cycle-ticker-eyebrow">Execution attempt</p>
-          <h2 className="task-detail-title term-arrow">
-            <span>Attempt #{cycle.attempt_seq}</span>
-          </h2>
-          <p className="task-attempt-header-copy">
-            Cursor run timeline, phase state, and persisted audit trail.
+          <div className="task-attempt-title-row">
+            <h2 className="task-detail-title">
+              Attempt #{cycle.attempt_seq}
+            </h2>
+            <span className={`cell-pill ${cycleStatusFillClass(cycle.status)}`}>
+              {cycleStatusLabel(cycle.status)}
+            </span>
+          </div>
+          <p className="task-attempt-meta-inline">
+            <span>{formatRunnerModel(cycle.cycle_meta)}</span>
+            <span className="task-attempt-meta-inline-sep" aria-hidden="true">
+              ·
+            </span>
+            <time dateTime={cycle.started_at}>
+              {startedParts.date} at {startedParts.time}
+            </time>
+            <span className="task-attempt-meta-inline-sep" aria-hidden="true">
+              ·
+            </span>
+            <span>{durationLabel}</span>
           </p>
         </div>
-        <span className={`cell-pill ${cycleStatusFillClass(cycle.status)}`}>
-          {cycleStatusLabel(cycle.status)}
-        </span>
       </header>
 
-      <dl
-        className="task-event-detail-dl task-attempt-meta"
-        aria-label="Attempt metadata"
-      >
-        <div className="task-attempt-meta-card task-attempt-meta-card--task">
-          <dt>Task</dt>
-          <dd>
-            <CopyableId value={cycle.task_id} />
-          </dd>
-        </div>
-        <div className="task-attempt-meta-card">
-          <dt>Runner</dt>
-          <dd>
-            <span className="task-attempt-meta-value task-attempt-meta-value--runner">
-              {formatRunnerModel(cycle.cycle_meta)}
-            </span>
-          </dd>
-        </div>
-        <div className="task-attempt-meta-card">
-          <dt>Started</dt>
-          <dd>
-            <time className="task-attempt-meta-time" dateTime={cycle.started_at}>
-              <span className="task-attempt-meta-value">
-                {startedParts.time}
-              </span>
-              <span className="task-attempt-meta-subvalue">{startedParts.date}</span>
-            </time>
-          </dd>
-        </div>
-        <div className="task-attempt-meta-card task-attempt-meta-card--duration">
-          <dt>Duration</dt>
-          <dd>
-            <span className="task-attempt-meta-value task-attempt-meta-value--duration">
-              {attemptDurationLabel(cycle.started_at, cycle.ended_at, now)}
-            </span>
-          </dd>
-        </div>
-      </dl>
-
-      <section className="task-attempt-section" aria-labelledby="attempt-phases">
+      <section className="task-attempt-section task-attempt-section--phases" aria-labelledby="attempt-phases">
         <h3 className="task-detail-subheading" id="attempt-phases">
           <span>Phases</span>
         </h3>
-        <ol className="task-attempt-phase-list">
-          {cycle.phases.map((phase) => (
-            <li key={phase.id} className="task-attempt-phase">
-              <div className="task-attempt-phase-main">
-                <span>{phaseLabel(phase.phase)}</span>
-                <span className={`cell-pill ${phaseStatusFillClass(phase.status)}`}>
+        <ol className="task-attempt-phase-track">
+          {cycle.phases.map((phase, index) => {
+            const phaseSummary = formatPhaseSummaryCompact(phase.summary);
+            return (
+            <li
+              key={phase.id}
+              className="task-attempt-phase-step"
+              data-status={phase.status}
+              data-last={index === cycle.phases.length - 1 ? "true" : undefined}
+            >
+              <span className="task-attempt-phase-step-marker" aria-hidden="true" />
+              <div className="task-attempt-phase-step-main">
+                <span className="task-attempt-phase-step-name">
+                  {phaseLabel(phase.phase)}
+                </span>
+                <span
+                  className={`cell-pill ${phaseStatusFillClass(phase.status)}`}
+                >
                   {phaseStatusLabel(phase.status)}
                 </span>
               </div>
-              {phase.summary ? (
-                <p className="muted task-attempt-phase-summary">{phase.summary}</p>
+              {phaseSummary ? (
+                <p className="task-attempt-phase-summary">{phaseSummary}</p>
               ) : null}
-              <LivePhaseTail
-                taskId={taskId}
-                cycleId={cycleId}
-                phase={phase}
-              />
+              <LivePhaseTail taskId={taskId} cycleId={cycleId} phase={phase} />
             </li>
-          ))}
+            );
+          })}
         </ol>
       </section>
 
-      <section className="task-attempt-section" aria-labelledby="attempt-stream">
+      <section
+        className="task-attempt-section task-attempt-section--activity"
+        aria-labelledby="attempt-activity-heading"
+      >
         <div className="task-attempt-section-heading-row">
-          <h3 className="task-detail-subheading" id="attempt-stream">
-            <span>Cursor events</span>
+          <h3 className="task-detail-subheading" id="attempt-activity-heading">
+            <span>Activity</span>
           </h3>
-        </div>
-        {streamQuery.isError ? (
-          <div className="err" role="alert">
-            <p>{errorMessage(streamQuery.error, "Could not load stream events.")}</p>
-          </div>
-        ) : streamEvents.length === 0 ? (
-          <EmptyState
-            title="No Cursor updates yet"
-            description="No saved stream lines yet. Live output can still show while a phase runs."
-            density="compact"
-            hideIcon
-          />
-        ) : (
-          <>
-            <ol className="task-attempt-timeline">
-              {visibleStreamEvents.map((ev) => (
-                <StreamEventRow key={ev.id} ev={ev} />
-              ))}
-            </ol>
-            <LoadMoreRows
-              shown={visibleStreamEvents.length}
-              total={streamEvents.length}
-              itemLabel="Cursor updates"
-              onLoadMore={() =>
-                setVisibleStreamCount((n) => n + LOAD_MORE_STEP)
+          <div
+            className="task-attempt-activity-tabs"
+            role="tablist"
+            aria-label="Attempt activity views"
+          >
+            <button
+              type="button"
+              role="tab"
+              id={cursorTabId}
+              aria-selected={activityTab === "cursor"}
+              aria-controls={cursorPanelId}
+              className={
+                activityTab === "cursor"
+                  ? "task-attempt-activity-tab task-attempt-activity-tab--active"
+                  : "task-attempt-activity-tab"
               }
-            />
-          </>
-        )}
-      </section>
-
-      <section className="task-attempt-section" aria-labelledby="attempt-audit">
-        <h3 className="task-detail-subheading" id="attempt-audit">
-          <span>T2A audit events</span>
-        </h3>
-        {auditQuery.isPending ? (
-          <p className="muted" aria-busy="true">
-            Loading audit events…
-          </p>
-        ) : auditQuery.isError ? (
-          <div className="err" role="alert">
-            <p>{errorMessage(auditQuery.error, "Could not load audit events.")}</p>
+              onClick={() => setActivityTab("cursor")}
+            >
+              Cursor
+              <span className="task-attempt-activity-tab-count">
+                {streamEvents.length}
+              </span>
+            </button>
+            <button
+              type="button"
+              role="tab"
+              id={auditTabId}
+              aria-selected={activityTab === "audit"}
+              aria-controls={auditPanelId}
+              className={
+                activityTab === "audit"
+                  ? "task-attempt-activity-tab task-attempt-activity-tab--active"
+                  : "task-attempt-activity-tab"
+              }
+              onClick={() => setActivityTab("audit")}
+            >
+              Audit
+              <span className="task-attempt-activity-tab-count">
+                {auditEvents.length}
+              </span>
+            </button>
           </div>
-        ) : auditEvents.length === 0 ? (
-          <EmptyState
-            title="No audit events yet"
-            description="No audit lines for this attempt yet. They appear as the run records activity."
-            density="compact"
-            hideIcon
-          />
+        </div>
+
+        {activityTab === "cursor" ? (
+          <div
+            role="tabpanel"
+            id={cursorPanelId}
+            aria-labelledby={cursorTabId}
+            className="task-attempt-activity-panel"
+          >
+            {streamQuery.isError ? (
+              <div className="err" role="alert">
+                <p>
+                  {errorMessage(
+                    streamQuery.error,
+                    "Could not load stream events.",
+                  )}
+                </p>
+              </div>
+            ) : streamEvents.length === 0 ? (
+              <EmptyState
+                title="No Cursor output yet"
+                description="Stream lines appear here as the agent runs."
+                density="compact"
+                hideIcon
+              />
+            ) : (
+              <>
+                <ol className="task-attempt-stream-list">
+                  {visibleStreamEvents.map((ev) => (
+                    <StreamEventRow
+                      key={ev.id}
+                      ev={ev}
+                      showPhaseBadge={showPhaseBadge}
+                    />
+                  ))}
+                </ol>
+                <LoadMoreRows
+                  shown={visibleStreamEvents.length}
+                  total={streamEvents.length}
+                  itemLabel="updates"
+                  onLoadMore={() =>
+                    setVisibleStreamCount((n) => n + LOAD_MORE_STEP)
+                  }
+                />
+              </>
+            )}
+          </div>
         ) : (
-          <>
-            <ol className="task-attempt-timeline">
-              {visibleAuditEvents.map((ev) => (
-                <AuditEventRow key={ev.seq} taskId={taskId} ev={ev} />
-              ))}
-            </ol>
-            <LoadMoreRows
-              shown={visibleAuditEvents.length}
-              total={auditEvents.length}
-              itemLabel="audit events"
-              onLoadMore={() => setVisibleAuditCount((n) => n + LOAD_MORE_STEP)}
-            />
-          </>
+          <div
+            role="tabpanel"
+            id={auditPanelId}
+            aria-labelledby={auditTabId}
+            className="task-attempt-activity-panel"
+          >
+            {auditQuery.isPending ? (
+              <TaskTimelineSkeleton />
+            ) : auditQuery.isError ? (
+              <div className="err" role="alert">
+                <p>
+                  {errorMessage(auditQuery.error, "Could not load audit events.")}
+                </p>
+                <div className="task-detail-error-actions">
+                  <button
+                    type="button"
+                    className="secondary"
+                    onClick={() => void auditQuery.refetch()}
+                  >
+                    Try again
+                  </button>
+                </div>
+              </div>
+            ) : auditEvents.length === 0 ? (
+              <EmptyState
+                title="No audit events yet"
+                description="System events for this attempt appear here."
+                density="compact"
+                hideIcon
+              />
+            ) : (
+              <>
+                <AttemptAuditTimeline
+                  events={visibleAuditEvents}
+                  taskId={taskId}
+                  ariaLabelledBy={auditTabId}
+                />
+                <LoadMoreRows
+                  shown={visibleAuditEvents.length}
+                  total={auditEvents.length}
+                  itemLabel="events"
+                  onLoadMore={() =>
+                    setVisibleAuditCount((n) => n + LOAD_MORE_STEP)
+                  }
+                />
+              </>
+            )}
+          </div>
         )}
       </section>
     </section>
@@ -331,7 +403,7 @@ function LivePhaseTail({
     <div className="task-attempt-live-tail" aria-live="polite">
       <div className="task-attempt-live-tail-heading">
         <span className="task-attempt-live-dot" aria-hidden="true" />
-        <span>Live updates for this running phase</span>
+        <span>Live</span>
       </div>
       <ul className="task-cycle-progress-list" aria-label="Recent live updates">
         <li
@@ -343,14 +415,12 @@ function LivePhaseTail({
             <span />
             <span />
           </span>
-          <span className="task-cycle-progress-message">
-            Waiting for the next update
-          </span>
+          <span className="task-cycle-progress-message">Waiting…</span>
           <span className="task-cycle-progress-time" aria-hidden="true">
             {latest ? `Last ${formatElapsedSince(latest.receivedAt, now)}` : ""}
           </span>
         </li>
-        {newestFirst.map((item, i) => (
+        {newestFirst.slice(0, 3).map((item, i) => (
           <li
             key={`${item.receivedAt}:${i}:${item.progress.kind}:${item.progress.subtype ?? ""}`}
             className={`task-cycle-progress-item${i === 0 ? " task-cycle-progress-item--latest" : ""}`}
@@ -364,7 +434,6 @@ function LivePhaseTail({
             <time
               className="task-cycle-progress-time"
               dateTime={new Date(item.receivedAt).toISOString()}
-              aria-label={`Received at ${formatLiveProgressTime(item.receivedAt)}`}
             >
               {formatLiveProgressTime(item.receivedAt)}
             </time>
@@ -389,14 +458,14 @@ function LoadMoreRows({
   if (shown >= total) {
     return (
       <p className="task-attempt-count muted">
-        Showing all {total} {itemLabel}.
+        All {total} {itemLabel} shown.
       </p>
     );
   }
   return (
     <div className="task-attempt-load-more">
       <p className="task-attempt-count muted">
-        Showing {shown} of {total} {itemLabel}.
+        {shown} of {total} {itemLabel}
       </p>
       <button type="button" className="secondary" onClick={onLoadMore}>
         Load more
@@ -405,40 +474,34 @@ function LoadMoreRows({
   );
 }
 
-function StreamEventRow({ ev }: { ev: TaskCycleStreamEvent }) {
+function StreamEventRow({
+  ev,
+  showPhaseBadge,
+}: {
+  ev: TaskCycleStreamEvent;
+  showPhaseBadge: boolean;
+}) {
+  const preview = ev.message || ev.tool || "Agent reported progress.";
   return (
-    <li className="task-attempt-timeline-item">
+    <li className="task-attempt-stream-row">
       <details className="task-attempt-stream-details">
-        <summary>
-          <article>
-            <header className="task-attempt-timeline-header">
-              <span className="task-cycle-progress-kind">
-                {streamKindLabel(ev.kind, ev.subtype)}
-              </span>
-              <time dateTime={ev.at}>{new Date(ev.at).toLocaleTimeString()}</time>
-            </header>
-            <p className="task-attempt-stream-preview">
-              {ev.message || ev.tool || "Cursor reported progress."}
-            </p>
-            <p className="muted">Phase #{ev.phase_seq}</p>
-          </article>
+        <summary className="task-attempt-stream-summary">
+          <span className="task-cycle-progress-kind">
+            {streamKindLabel(ev.kind, ev.subtype)}
+          </span>
+          <span className="task-attempt-stream-message">{preview}</span>
+          {showPhaseBadge ? (
+            <span className="task-attempt-stream-phase">P{ev.phase_seq}</span>
+          ) : null}
+          <time className="task-attempt-stream-time" dateTime={ev.at}>
+            {new Date(ev.at).toLocaleTimeString(undefined, {
+              hour: "numeric",
+              minute: "2-digit",
+            })}
+          </time>
         </summary>
         <div className="task-attempt-stream-detail-panel">
           <dl className="task-attempt-stream-detail-list">
-            <div>
-              <dt>Source</dt>
-              <dd>{ev.source}</dd>
-            </div>
-            <div>
-              <dt>Kind</dt>
-              <dd>{ev.kind}</dd>
-            </div>
-            {ev.subtype ? (
-              <div>
-                <dt>Subtype</dt>
-                <dd>{ev.subtype}</dd>
-              </div>
-            ) : null}
             {ev.tool ? (
               <div>
                 <dt>Tool</dt>
@@ -446,33 +509,16 @@ function StreamEventRow({ ev }: { ev: TaskCycleStreamEvent }) {
               </div>
             ) : null}
             <div>
-              <dt>Stream seq</dt>
-              <dd>{ev.stream_seq}</dd>
+              <dt>Phase</dt>
+              <dd>#{ev.phase_seq}</dd>
             </div>
           </dl>
           <div className="task-attempt-stream-detail-block">
-            <h4>Raw JSON</h4>
+            <h4>Raw payload</h4>
             <pre>{JSON.stringify(ev.payload, null, 2)}</pre>
           </div>
         </div>
       </details>
-    </li>
-  );
-}
-
-function AuditEventRow({ taskId, ev }: { taskId: string; ev: TaskEvent }) {
-  return (
-    <li className="task-attempt-timeline-item">
-      <article>
-        <header className="task-attempt-timeline-header">
-          <Link to={`/tasks/${encodeURIComponent(taskId)}/events/${ev.seq}`}>
-            Event #{ev.seq}
-          </Link>
-          <time dateTime={ev.at}>{new Date(ev.at).toLocaleTimeString()}</time>
-        </header>
-        <p>{eventTypeLabel(ev.type)}</p>
-        <p className="muted">Recorded by {ev.by}</p>
-      </article>
     </li>
   );
 }
@@ -485,7 +531,7 @@ function attemptDurationLabel(
   const start = Date.parse(startedAt);
   const end = endedAt ? Date.parse(endedAt) : now;
   if (!Number.isFinite(start) || !Number.isFinite(end) || end < start) {
-    return "Unknown";
+    return "Unknown duration";
   }
   return formatDurationSeconds(Math.round((end - start) / 1000));
 }
@@ -529,7 +575,10 @@ function streamMessage(item: AgentRunProgressItem): string {
 }
 
 function formatLiveProgressTime(receivedAt: number): string {
-  return new Date(receivedAt).toLocaleTimeString();
+  return new Date(receivedAt).toLocaleTimeString(undefined, {
+    hour: "numeric",
+    minute: "2-digit",
+  });
 }
 
 function formatElapsedSince(receivedAt: number, now: number): string {

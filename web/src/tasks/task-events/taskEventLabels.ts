@@ -1,4 +1,5 @@
-import type { TaskEventType } from "@/types";
+import type { Phase, TaskEvent, TaskEventType } from "@/types";
+import { phaseLabel } from "@/observability";
 
 const LABELS: Record<TaskEventType, string> = {
   task_created: "Task created",
@@ -33,6 +34,37 @@ const LABELS: Record<TaskEventType, string> = {
   sync_ping: "Live sync check (legacy dev ping)",
 };
 
+const PHASE_EVENT_ACTION: Partial<Record<TaskEventType, string>> = {
+  phase_started: "started",
+  phase_completed: "completed",
+  phase_failed: "failed",
+  phase_skipped: "skipped",
+};
+
+function isPhase(value: string): value is Phase {
+  return (
+    value === "diagnose" ||
+    value === "execute" ||
+    value === "verify" ||
+    value === "persist"
+  );
+}
+
 export function eventTypeLabel(type: TaskEventType): string {
   return LABELS[type] ?? type;
+}
+
+/**
+ * Human label for compact timelines. Phase mirror events include the phase
+ * kind (Execute, Diagnose, …) so rows are scannable without opening detail.
+ */
+export function eventDisplayLabel(ev: TaskEvent): string {
+  const action = PHASE_EVENT_ACTION[ev.type];
+  if (action) {
+    const phase = ev.data.phase;
+    if (typeof phase === "string" && isPhase(phase)) {
+      return `${phaseLabel(phase)} ${action}`;
+    }
+  }
+  return eventTypeLabel(ev.type);
 }

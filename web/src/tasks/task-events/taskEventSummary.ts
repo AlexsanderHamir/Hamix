@@ -5,6 +5,13 @@ import {
   parsePhaseEventOverview,
 } from "./parsePhaseEventOverview";
 
+const PHASE_LIFECYCLE_TYPES = new Set<TaskEventType>([
+  "phase_started",
+  "phase_completed",
+  "phase_failed",
+  "phase_skipped",
+]);
+
 const TRANSITION_TYPES = new Set<TaskEventType>([
   "status_changed",
   "priority_changed",
@@ -104,4 +111,31 @@ export function formatEventSummaryCompact(ev: TaskEvent): string | null {
   }
 
   return null;
+}
+
+/**
+ * Right-column preview for the attempt audit timeline. Phase lifecycle rows
+ * show P{n} for correlation with the phases track; long phase summaries stay
+ * on the event detail page.
+ */
+export function formatAttemptAuditPreview(ev: TaskEvent): string | null {
+  if (ev.type === "phase_failed") {
+    const phaseOverview = parsePhaseEventOverview(ev.type, ev.data);
+    if (phaseOverview?.standardizedMessage) {
+      return truncate(phaseOverview.standardizedMessage, 140);
+    }
+    if (phaseOverview?.summary) {
+      return formatPhaseSummaryCompact(phaseOverview.summary, 140);
+    }
+  }
+
+  if (PHASE_LIFECYCLE_TYPES.has(ev.type)) {
+    const seq = ev.data.phase_seq;
+    if (typeof seq === "number" && Number.isFinite(seq)) {
+      return `P${seq}`;
+    }
+    return null;
+  }
+
+  return formatEventSummaryCompact(ev);
 }

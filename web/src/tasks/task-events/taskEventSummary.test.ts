@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import type { TaskEvent } from "@/types";
 import {
+  formatAttemptAuditPreview,
   formatEventSummaryCompact,
   formatPhaseSummaryCompact,
 } from "./taskEventSummary";
@@ -95,5 +96,34 @@ describe("formatPhaseSummaryCompact", () => {
 
   it("returns null for blank summaries", () => {
     expect(formatPhaseSummaryCompact("   ")).toBeNull();
+  });
+});
+
+describe("formatAttemptAuditPreview", () => {
+  it("shows phase sequence instead of long summaries for lifecycle rows", () => {
+    expect(
+      formatAttemptAuditPreview(
+        ev({
+          type: "phase_completed",
+          data: {
+            phase: "execute",
+            phase_seq: 2,
+            status: "succeeded",
+            summary: "## Hottest path: GET /tasks",
+          },
+        }),
+      ),
+    ).toBe("P2");
+  });
+
+  it("keeps transition summaries for non-phase events", () => {
+    expect(
+      formatAttemptAuditPreview(
+        ev({
+          type: "status_changed",
+          data: { from: "running", to: "done" },
+        }),
+      ),
+    ).toBe("running → done");
   });
 });

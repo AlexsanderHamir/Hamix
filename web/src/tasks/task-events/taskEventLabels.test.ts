@@ -1,6 +1,10 @@
 import { describe, expect, it } from "vitest";
 import { TASK_EVENT_TYPES, type TaskEventType } from "@/types";
-import { eventTypeLabel } from "./taskEventLabels";
+import { eventDisplayLabel, eventTypeLabel } from "./taskEventLabels";
+
+function ev(type: TaskEventType, data: Record<string, unknown> = {}) {
+  return { seq: 1, at: "2026-01-01T12:00:00.000Z", type, by: "agent" as const, data };
+}
 
 describe("eventTypeLabel", () => {
   it("maps common types to stable human labels", () => {
@@ -21,5 +25,29 @@ describe("eventTypeLabel", () => {
     expect(eventTypeLabel("totally_unknown" as TaskEventType)).toBe(
       "totally_unknown",
     );
+  });
+});
+
+describe("eventDisplayLabel", () => {
+  it("includes phase kind for phase mirror events", () => {
+    expect(
+      eventDisplayLabel(
+        ev("phase_skipped", { phase: "diagnose", phase_seq: 1 }),
+      ),
+    ).toBe("Diagnose skipped");
+    expect(
+      eventDisplayLabel(
+        ev("phase_started", { phase: "execute", phase_seq: 2 }),
+      ),
+    ).toBe("Execute started");
+    expect(
+      eventDisplayLabel(
+        ev("phase_completed", { phase: "verify", phase_seq: 3 }),
+      ),
+    ).toBe("Verify completed");
+  });
+
+  it("falls back to type label when phase is missing", () => {
+    expect(eventDisplayLabel(ev("phase_started", {}))).toBe("Phase started");
   });
 });

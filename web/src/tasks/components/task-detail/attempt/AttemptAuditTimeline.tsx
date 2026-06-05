@@ -2,9 +2,9 @@ import { Link } from "react-router-dom";
 import type { TaskEvent } from "@/types";
 import {
   awaitingUserReply,
-  eventTypeLabel,
+  eventDisplayLabel,
   eventTypeNeedsUserInput,
-  formatEventSummaryCompact,
+  formatAttemptAuditPreview,
 } from "../../../task-events";
 
 export function AttemptAuditTimeline({
@@ -27,9 +27,9 @@ export function AttemptAuditTimeline({
 
 function AttemptAuditRow({ ev, taskId }: { ev: TaskEvent; taskId: string }) {
   const needsUser = eventTypeNeedsUserInput(ev.type);
-  const summary = formatEventSummaryCompact(ev);
+  const preview = formatAttemptAuditPreview(ev);
   const eventHref = `/tasks/${encodeURIComponent(taskId)}/events/${ev.seq}`;
-  const label = eventTypeLabel(ev.type);
+  const label = eventDisplayLabel(ev);
 
   return (
     <li
@@ -51,7 +51,7 @@ function AttemptAuditRow({ ev, taskId }: { ev: TaskEvent; taskId: string }) {
             : undefined
         }
       >
-        <AttemptAuditRowHead ev={ev} label={label} summary={summary} />
+        <AttemptAuditRowHead ev={ev} label={label} preview={preview} />
       </Link>
       <AttemptAuditThread ev={ev} />
     </li>
@@ -61,13 +61,14 @@ function AttemptAuditRow({ ev, taskId }: { ev: TaskEvent; taskId: string }) {
 function AttemptAuditRowHead({
   ev,
   label,
-  summary,
+  preview,
 }: {
   ev: TaskEvent;
   label: string;
-  summary: string | null;
+  preview: string | null;
 }) {
   const needsUser = eventTypeNeedsUserInput(ev.type);
+  const previewIsPhaseSeq = preview !== null && /^P\d+$/.test(preview);
   return (
     <>
       <time className="attempt-audit-time" dateTime={ev.at}>
@@ -77,8 +78,17 @@ function AttemptAuditRowHead({
         })}
       </time>
       <span className="attempt-audit-label">{label}</span>
-      {summary ? (
-        <span className="attempt-audit-preview">{summary}</span>
+      {preview ? (
+        <span
+          className={
+            previewIsPhaseSeq
+              ? "attempt-audit-preview attempt-audit-preview--phase-seq"
+              : "attempt-audit-preview"
+          }
+          aria-label={previewIsPhaseSeq ? `Phase ${preview.slice(1)}` : undefined}
+        >
+          {preview}
+        </span>
       ) : null}
       {needsUser && awaitingUserReply(ev) ? (
         <span className="attempt-audit-needs-user">Needs your input</span>

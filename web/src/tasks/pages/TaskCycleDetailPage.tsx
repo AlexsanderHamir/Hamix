@@ -15,7 +15,7 @@ import {
 import { EmptyState } from "@/shared/EmptyState";
 import { useDocumentTitle } from "@/shared/useDocumentTitle";
 import { useNow } from "@/shared/useNow";
-import type { TaskCyclePhase, TaskCycleStreamEvent } from "@/types";
+import type { TaskCyclePhase, TaskCycleStreamEvent, CycleStatus } from "@/types";
 import { AttemptAuditTimeline } from "../components/task-detail/attempt/AttemptAuditTimeline";
 import { TaskTimelineSkeleton } from "../components/skeletons";
 import { formatPhaseSummaryCompact } from "../task-events";
@@ -139,9 +139,10 @@ export function TaskCycleDetailPage() {
   ).sort((a, b) => b.seq - a.seq);
   const visibleAuditEvents = auditEvents.slice(0, visibleAuditCount);
   const startedParts = formatAttemptStartedParts(cycle.started_at);
-  const durationLabel = attemptDurationLabel(
+  const durationLabel = formatAttemptDurationMeta(
     cycle.started_at,
     cycle.ended_at,
+    cycle.status,
     now,
   );
   const showPhaseBadge = cycle.phases.length > 1;
@@ -180,17 +181,16 @@ export function TaskCycleDetailPage() {
             </span>
           </div>
           <p className="task-attempt-meta-inline">
-            <span>{formatRunnerModel(cycle.cycle_meta)}</span>
-            <span className="task-attempt-meta-inline-sep" aria-hidden="true">
-              ·
+            <span className="task-attempt-meta-inline-item">
+              {formatRunnerModel(cycle.cycle_meta)}
             </span>
-            <time dateTime={cycle.started_at}>
+            <time
+              className="task-attempt-meta-inline-item"
+              dateTime={cycle.started_at}
+            >
               {startedParts.date} at {startedParts.time}
             </time>
-            <span className="task-attempt-meta-inline-sep" aria-hidden="true">
-              ·
-            </span>
-            <span>{durationLabel}</span>
+            <span className="task-attempt-meta-inline-item">{durationLabel}</span>
           </p>
         </div>
       </header>
@@ -534,9 +534,10 @@ function StreamEventRow({
   );
 }
 
-function attemptDurationLabel(
+function formatAttemptDurationMeta(
   startedAt: string,
   endedAt: string | undefined,
+  status: CycleStatus,
   now: number,
 ): string {
   const start = Date.parse(startedAt);
@@ -544,7 +545,9 @@ function attemptDurationLabel(
   if (!Number.isFinite(start) || !Number.isFinite(end) || end < start) {
     return "Unknown duration";
   }
-  return formatDurationSeconds(Math.round((end - start) / 1000));
+  const duration = formatDurationSeconds(Math.round((end - start) / 1000));
+  const running = status === "running" || !endedAt;
+  return running ? `Running for ${duration}` : `Ran for ${duration}`;
 }
 
 function formatAttemptStartedParts(startedAt: string): {

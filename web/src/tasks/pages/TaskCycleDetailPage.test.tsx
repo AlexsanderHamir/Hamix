@@ -319,12 +319,12 @@ describe("TaskCycleDetailPage", () => {
     expect(
       await screen.findByRole("heading", { name: /attempt #3/i }),
     ).toBeInTheDocument();
-    expect(screen.getByText(/30\.0 s/)).toBeInTheDocument();
+    expect(screen.getByText(/Running for 30\.0 s/)).toBeInTheDocument();
 
     act(() => {
       vi.advanceTimersByTime(5000);
     });
 
-    expect(screen.getByText(/35\.0 s/)).toBeInTheDocument();
+    expect(screen.getByText(/Running for 35\.0 s/)).toBeInTheDocument();
   });
 });

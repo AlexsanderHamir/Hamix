@@ -1,6 +1,35 @@
 import type { AppSettings, AppSettingsPatch } from "@/api/settings";
 
-export const RUNNERS = [{ id: "cursor", label: "Cursor (cursor-agent CLI)" }] as const;
+/**
+ * Registered runners.
+ *
+ * `label` is the long form rendered inside <select> options ("Cursor
+ * (cursor-agent CLI)"); `shortLabel` is the operator-facing display
+ * name reused for section headings and nav rail entries
+ * ("Cursor"). Keep `shortLabel` to one or two words — it gets
+ * concatenated with " runner" to form the Settings section heading
+ * (e.g. "Cursor runner") and must remain readable in a 220px-wide
+ * left rail.
+ */
+export const RUNNERS = [
+  { id: "cursor", label: "Cursor (cursor-agent CLI)", shortLabel: "Cursor" },
+] as const;
+
+/**
+ * Resolve a runner id (typically `form.runner`) to its short
+ * operator-facing label. Falls back to the raw runner id, then to a
+ * generic "Runner" so the heading never displays an empty string.
+ *
+ * Used by the SettingsPage to derive the heading and nav label of
+ * the runner-configuration section so they reflect the operator's
+ * chosen runner instead of being hardcoded to "Cursor".
+ */
+export function runnerShortLabel(runnerId: string): string {
+  const trimmed = runnerId.trim();
+  const entry = RUNNERS.find((r) => r.id === trimmed);
+  if (entry) return entry.shortLabel;
+  return trimmed || "Runner";
+}
 
 export type SettingsFormState = {
   workerEnabled: boolean;

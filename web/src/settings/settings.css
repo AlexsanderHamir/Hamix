@@ -460,6 +460,24 @@
   padding: 18px var(--layout-gutter-x) 22px;
 }
 
+/*
+ * Optional one-line description directly under the section title.
+ *
+ * Reserved for sections whose title alone does not communicate that
+ * they are dynamically scoped to a choice elsewhere on the page —
+ * e.g. the runner section's title tracks Agent worker's runner pick
+ * and would otherwise read as a hardcoded "Cursor runner". Sized
+ * one tier below body copy so it reads as orienting metadata rather
+ * than primary content; tighter top margin so it sits visually
+ * paired with the heading instead of with the first field below.
+ */
+.settings-section-description {
+  margin: -4px 0 4px;
+  font-size: var(--text-sm, 0.875rem);
+  line-height: 1.5;
+  color: var(--text-secondary, var(--color-text-muted, #555));
+}
+
 /* Legacy: pre-existing fieldset selector. Kept as an alias so any
    markup that still uses `.settings-fieldset` (older docs/screens,
    embedded help) inherits the new card styling without breaking.

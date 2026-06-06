@@ -130,14 +130,24 @@ export function WorkspaceWarning() {
  * pattern was visually decorative chrome; promoting it to an h2
  * gives the section a real anchor a sighted operator can scan and
  * an assistive-tech user can land on.
+ *
+ * `description` is reserved for the rare case where the section's
+ * title alone does not convey that the section's contents are
+ * dynamically scoped to a choice made elsewhere on the page (e.g.
+ * the Runner section configures whichever runner was picked under
+ * Agent worker). Most sections leave this undefined; the redesign
+ * deliberately dropped per-section subtitle paragraphs that simply
+ * restated the heading.
  */
 function SectionCard({
   id,
   title,
+  description,
   children,
 }: {
   id: string;
   title: string;
+  description?: string;
   children: React.ReactNode;
 }) {
   return (
@@ -149,7 +159,12 @@ function SectionCard({
       <h2 id={`${id}-title`} className="settings-section-title">
         {title}
       </h2>
-      <div className="settings-section-body">{children}</div>
+      <div className="settings-section-body">
+        {description ? (
+          <p className="settings-section-description">{description}</p>
+        ) : null}
+        {children}
+      </div>
     </section>
   );
 }
@@ -261,6 +276,7 @@ export function AgentWorkerSettingsSection({
 
 export function CursorAgentSettingsSection({
   form,
+  title,
   cursorModelsQuery,
   modelIdsFromList,
   resolvedDefaultBin,
@@ -269,6 +285,13 @@ export function CursorAgentSettingsSection({
   onProbe,
 }: {
   form: SettingsFormState;
+  /**
+   * Dynamic section title resolved by the parent from
+   * `runnerShortLabel(form.runner) + " runner"`. Passed in rather
+   * than hardcoded so the section heading and nav rail label both
+   * reflect the operator's chosen runner.
+   */
+  title: string;
   cursorModelsQuery: UseQueryResult<ListCursorModelsResult, Error>;
   modelIdsFromList: Set<string>;
   resolvedDefaultBin: string | null;
@@ -277,7 +300,11 @@ export function CursorAgentSettingsSection({
   onProbe: () => void;
 }) {
   return (
-    <SectionCard id={SECTION_IDS.cursorAgent} title="Cursor runner">
+    <SectionCard
+      id={SECTION_IDS.cursorAgent}
+      title={title}
+      description="Configures the runner you selected in Agent worker. Changing the runner above swaps this section for that runner's settings."
+    >
       <label className="settings-field">
         <span className="settings-field-label">Model</span>
         <select

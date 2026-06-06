@@ -32,19 +32,34 @@ import { SettingsNav, type SettingsNavItem } from "./SettingsNav";
  * the operator's vertical scroll path matches the rail's top-to-
  * bottom reading order. Keep ids in sync with `SECTION_IDS` exported
  * from SettingsSections.tsx.
+ *
+ * The runner section's label is dynamic: it tracks the runner picked
+ * in Agent worker (e.g. "Cursor runner") so the nav reflects the
+ * operator's actual config rather than a hardcoded "Cursor runner"
+ * that would silently lie if more runners were registered later.
  */
-const SETTINGS_NAV_ITEMS: SettingsNavItem[] = [
-  { id: SECTION_IDS.workspace, label: "Workspace" },
-  { id: SECTION_IDS.agentWorker, label: "Agent worker" },
-  { id: SECTION_IDS.cursorAgent, label: "Cursor runner" },
-  { id: SECTION_IDS.verification, label: "Verification" },
-  { id: SECTION_IDS.runTimeout, label: "Run timeout" },
-  { id: SECTION_IDS.display, label: "Display" },
-  { id: SECTION_IDS.developer, label: "Developer" },
-];
+function buildSettingsNavItems(runnerLabel: string): SettingsNavItem[] {
+  return [
+    { id: SECTION_IDS.workspace, label: "Workspace" },
+    { id: SECTION_IDS.agentWorker, label: "Agent worker" },
+    { id: SECTION_IDS.cursorAgent, label: runnerLabel },
+    { id: SECTION_IDS.verification, label: "Verification" },
+    { id: SECTION_IDS.runTimeout, label: "Run timeout" },
+    { id: SECTION_IDS.display, label: "Display" },
+    { id: SECTION_IDS.developer, label: "Developer" },
+  ];
+}
+
+/** Section ids that have a stable nav anchor — used by the deep-link
+ *  scroll handler to ignore arbitrary `#…` fragments that don't match a
+ *  registered section. */
+const SETTINGS_NAV_IDS: ReadonlySet<string> = new Set(
+  Object.values(SECTION_IDS),
+);
 import {
   SETTINGS_SUCCESS_DISMISS_MS,
   diffPatch,
+  runnerShortLabel,
   toFormState,
   type SettingsFormState,
   type SettingsStatus,
@@ -90,8 +105,7 @@ export function SettingsPage() {
     if (isLoading || !form || !settings) return;
     const hash = location.hash.replace(/^#/, "");
     if (!hash) return;
-    const known = SETTINGS_NAV_ITEMS.some((it) => it.id === hash);
-    if (!known) return;
+    if (!SETTINGS_NAV_IDS.has(hash)) return;
     const el = document.getElementById(hash);
     if (!el) return;
     const prefersReduced =
@@ -365,6 +379,12 @@ export function SettingsPage() {
         timeZoneName: "longOffset",
       })
     : "";
+  // The runner-configuration section's heading and matching nav-rail
+  // entry both track the runner picked under Agent worker. Resolved
+  // here (in the parent that already owns the form state) so the two
+  // surfaces never disagree about which runner is being configured.
+  const runnerSectionTitle = `${runnerShortLabel(form.runner)} runner`;
+  const navItems = buildSettingsNavItems(runnerSectionTitle);
 
   return (
     <section className="settings-page">
@@ -377,7 +397,7 @@ export function SettingsPage() {
 
       <div className="settings-layout">
         <aside className="settings-layout-aside">
-          <SettingsNav items={SETTINGS_NAV_ITEMS} />
+          <SettingsNav items={navItems} />
         </aside>
 
         <form
@@ -394,6 +414,7 @@ export function SettingsPage() {
 
           <CursorAgentSettingsSection
             form={form}
+            title={runnerSectionTitle}
             cursorModelsQuery={cursorModelsQuery}
             modelIdsFromList={modelIdsFromList}
             resolvedDefaultBin={resolvedDefaultBin}

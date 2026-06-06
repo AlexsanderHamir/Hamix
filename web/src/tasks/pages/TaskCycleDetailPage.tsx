@@ -18,7 +18,6 @@ import { useNow } from "@/shared/useNow";
 import type { TaskCyclePhase, TaskCycleStreamEvent, CycleStatus } from "@/types";
 import { AttemptAuditTimeline } from "../components/task-detail/attempt/AttemptAuditTimeline";
 import { TaskTimelineSkeleton } from "../components/skeletons";
-import { formatPhaseSummaryCompact } from "../task-events";
 import {
   useAgentRunProgress,
   type AgentRunProgressItem,
@@ -199,10 +198,14 @@ export function TaskCycleDetailPage() {
         <h3 className="task-detail-subheading" id="attempt-phases">
           <span>Phases</span>
         </h3>
-        <ol className="task-attempt-phase-track">
-          {cycle.phases.map((phase, index) => {
-            const phaseSummary = formatPhaseSummaryCompact(phase.summary);
-            return (
+        <ol
+          className={
+            showPhaseBadge
+              ? "task-attempt-phase-track task-attempt-phase-track--numbered"
+              : "task-attempt-phase-track"
+          }
+        >
+          {cycle.phases.map((phase, index) => (
             <li
               key={phase.id}
               className="task-attempt-phase-step"
@@ -211,27 +214,21 @@ export function TaskCycleDetailPage() {
             >
               <span className="task-attempt-phase-step-marker" aria-hidden="true" />
               <div className="task-attempt-phase-step-main">
-                <div className="task-attempt-phase-step-heading">
-                  <span className="task-attempt-phase-step-name">
-                    {phaseLabel(phase.phase)}
-                  </span>
-                  {showPhaseBadge ? (
-                    <PhaseSeqBadge seq={phase.phase_seq} />
-                  ) : null}
-                </div>
+                <span className="task-attempt-phase-step-name">
+                  {phaseLabel(phase.phase)}
+                </span>
                 <span
                   className={`cell-pill ${phaseStatusFillClass(phase.status)}`}
                 >
                   {phaseStatusLabel(phase.status)}
                 </span>
+                {showPhaseBadge ? (
+                  <PhaseSeqBadge seq={phase.phase_seq} />
+                ) : null}
               </div>
-              {phaseSummary ? (
-                <p className="task-attempt-phase-summary">{phaseSummary}</p>
-              ) : null}
               <LivePhaseTail taskId={taskId} cycleId={cycleId} phase={phase} />
             </li>
-            );
-          })}
+          ))}
         </ol>
       </section>
 
@@ -312,7 +309,13 @@ export function TaskCycleDetailPage() {
               />
             ) : (
               <>
-                <ol className="task-attempt-stream-list">
+                <ol
+                  className={
+                    showPhaseBadge
+                      ? "task-attempt-stream-list task-attempt-stream-list--numbered"
+                      : "task-attempt-stream-list"
+                  }
+                >
                   {visibleStreamEvents.map((ev) => (
                     <StreamEventRow
                       key={ev.id}
@@ -431,7 +434,11 @@ function LivePhaseTail({
             className={`task-cycle-progress-item${i === 0 ? " task-cycle-progress-item--latest" : ""}`}
           >
             <span className="task-cycle-progress-kind">
-              {streamKindLabel(item.progress.kind, item.progress.subtype)}
+              {streamKindLabel(
+                item.progress.kind,
+                item.progress.subtype,
+                item.progress.tool,
+              )}
             </span>
             <span className="task-cycle-progress-message">
               {streamMessage(item)}
@@ -482,7 +489,7 @@ function LoadMoreRows({
 function PhaseSeqBadge({ seq }: { seq: number }) {
   return (
     <span className="task-attempt-phase-seq" aria-label={`Phase ${seq}`}>
-      P{seq}
+      PHASE {seq}
     </span>
   );
 }
@@ -495,21 +502,29 @@ function StreamEventRow({
   showPhaseBadge: boolean;
 }) {
   const preview = ev.message || ev.tool || "Agent reported progress.";
+  const kind = streamKindDescriptor(ev.kind, ev.subtype, ev.tool);
   return (
     <li className="task-attempt-stream-row">
       <details className="task-attempt-stream-details">
         <summary className="task-attempt-stream-summary">
-          <span className="task-cycle-progress-kind">
-            {streamKindLabel(ev.kind, ev.subtype)}
-          </span>
-          <span className="task-attempt-stream-message">{preview}</span>
-          {showPhaseBadge ? <PhaseSeqBadge seq={ev.phase_seq} /> : null}
           <time className="task-attempt-stream-time" dateTime={ev.at}>
             {new Date(ev.at).toLocaleTimeString(undefined, {
               hour: "numeric",
               minute: "2-digit",
             })}
           </time>
+          <span className="task-attempt-stream-label">
+            <span
+              className={`task-attempt-stream-kind task-attempt-stream-kind--${kind.tone}`}
+              title={kind.title}
+            >
+              {kind.label}
+            </span>
+            <span className="task-attempt-stream-message" title={preview}>
+              {preview}
+            </span>
+          </span>
+          {showPhaseBadge ? <PhaseSeqBadge seq={ev.phase_seq} /> : null}
         </summary>
         <div className="task-attempt-stream-detail-panel">
           <dl className="task-attempt-stream-detail-list">
@@ -568,20 +583,85 @@ function formatAttemptStartedParts(startedAt: string): {
   };
 }
 
-function streamKindLabel(kind: string, subtype?: string): string {
+type StreamKindTone =
+  | "reply"
+  | "tool"
+  | "done"
+  | "failed"
+  | "session"
+  | "error"
+  | "neutral";
+
+type StreamKindDescriptor = {
+  label: string;
+  title: string;
+  tone: StreamKindTone;
+};
+
+function streamKindDescriptor(
+  kind: string,
+  subtype?: string,
+  tool?: string,
+): StreamKindDescriptor {
+  const toolName = tool?.trim();
   if (kind === "tool_call" || kind === "tool") {
     if (subtype === "completed" || subtype === "success" || subtype === "done") {
-      return "Done";
+      return {
+        label: "Tool done",
+        title: toolName
+          ? `Tool finished successfully: ${toolName}`
+          : "Cursor tool finished successfully",
+        tone: "done",
+      };
     }
     if (subtype === "failed" || subtype === "error") {
-      return "Failed";
+      return {
+        label: "Tool failed",
+        title: toolName
+          ? `Tool returned an error: ${toolName}`
+          : "Cursor tool returned an error",
+        tone: "failed",
+      };
     }
-    return "Tool";
+    return {
+      label: "Tool call",
+      title: toolName
+        ? `Cursor invoked a tool: ${toolName}`
+        : "Cursor started running a tool",
+      tone: "tool",
+    };
   }
-  if (kind === "assistant" || kind === "message") return "Agent";
-  if (kind === "system") return "Session";
-  if (kind === "error") return "Error";
-  return kind.replace(/_/g, " ");
+  if (kind === "assistant" || kind === "message") {
+    return {
+      label: "Agent reply",
+      title: "Message from the Cursor agent",
+      tone: "reply",
+    };
+  }
+  if (kind === "system") {
+    return {
+      label: "Session",
+      title: "Cursor CLI session event",
+      tone: "session",
+    };
+  }
+  if (kind === "error") {
+    return {
+      label: "Error",
+      title: "Cursor stream reported an error",
+      tone: "error",
+    };
+  }
+  const normalized = kind.replace(/_/g, " ");
+  return {
+    label: normalized,
+    title: `Cursor stream event: ${normalized}`,
+    tone: "neutral",
+  };
+}
+
+function streamKindLabel(kind: string, subtype?: string, tool?: string): string {
+  return streamKindDescriptor(kind, subtype, tool).label;
 }
 
 function streamMessage(item: AgentRunProgressItem): string {

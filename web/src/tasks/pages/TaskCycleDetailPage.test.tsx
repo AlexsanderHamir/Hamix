@@ -169,7 +169,7 @@ describe("TaskCycleDetailPage", () => {
     const liveItems = within(liveList).getAllByRole("listitem");
     expect(liveItems[0]).toHaveTextContent(/waiting/i);
     expect(liveItems[0]).toHaveTextContent(/last just now/i);
-    expect(liveItems[1]).toHaveTextContent("Tool");
+    expect(liveItems[1]).toHaveTextContent("Tool call");
     expect(liveItems[1]).toHaveTextContent("Searching for *.go in worker");
     expect(liveItems[2]).toHaveTextContent("Newest live update");
     expect(liveItems[3]).toHaveTextContent("Still working live");
@@ -275,15 +275,15 @@ describe("TaskCycleDetailPage", () => {
     const phasesHeading = screen.getByRole("heading", { name: /^phases$/i });
     const phasesSection = phasesHeading.closest("section");
     if (!phasesSection) throw new Error("missing phases section");
-    expect(within(phasesSection).getByLabelText("Phase 1")).toHaveTextContent("P1");
-    expect(within(phasesSection).getByLabelText("Phase 2")).toHaveTextContent("P2");
-    expect(within(phasesSection).getByLabelText("Phase 3")).toHaveTextContent("P3");
+    expect(within(phasesSection).getByLabelText("Phase 1")).toHaveTextContent("PHASE 1");
+    expect(within(phasesSection).getByLabelText("Phase 2")).toHaveTextContent("PHASE 2");
+    expect(within(phasesSection).getByLabelText("Phase 3")).toHaveTextContent("PHASE 3");
 
     const activitySection = screen.getByRole("heading", {
       name: /^activity$/i,
     }).parentElement?.parentElement;
     if (!activitySection) throw new Error("missing activity section");
-    expect(within(activitySection).getByLabelText("Phase 2")).toHaveTextContent("P2");
+    expect(within(activitySection).getByLabelText("Phase 2")).toHaveTextContent("PHASE 2");
   });
 
   it("updates running attempt duration on a steady timer", async () => {

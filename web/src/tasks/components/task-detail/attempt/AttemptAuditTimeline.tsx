@@ -4,7 +4,8 @@ import {
   awaitingUserReply,
   eventDisplayLabel,
   eventTypeNeedsUserInput,
-  formatAttemptAuditPreview,
+  resolveAttemptAuditRightColumn,
+  type AttemptAuditRightColumn,
 } from "../../../task-events";
 
 export function AttemptAuditTimeline({
@@ -27,7 +28,7 @@ export function AttemptAuditTimeline({
 
 function AttemptAuditRow({ ev, taskId }: { ev: TaskEvent; taskId: string }) {
   const needsUser = eventTypeNeedsUserInput(ev.type);
-  const preview = formatAttemptAuditPreview(ev);
+  const rightColumn = resolveAttemptAuditRightColumn(ev);
   const eventHref = `/tasks/${encodeURIComponent(taskId)}/events/${ev.seq}`;
   const label = eventDisplayLabel(ev);
 
@@ -51,7 +52,7 @@ function AttemptAuditRow({ ev, taskId }: { ev: TaskEvent; taskId: string }) {
             : undefined
         }
       >
-        <AttemptAuditRowHead ev={ev} label={label} preview={preview} />
+        <AttemptAuditRowHead ev={ev} label={label} rightColumn={rightColumn} />
       </Link>
       <AttemptAuditThread ev={ev} />
     </li>
@@ -61,14 +62,13 @@ function AttemptAuditRow({ ev, taskId }: { ev: TaskEvent; taskId: string }) {
 function AttemptAuditRowHead({
   ev,
   label,
-  preview,
+  rightColumn,
 }: {
   ev: TaskEvent;
   label: string;
-  preview: string | null;
+  rightColumn: AttemptAuditRightColumn | null;
 }) {
   const needsUser = eventTypeNeedsUserInput(ev.type);
-  const previewIsPhaseSeq = preview !== null && /^P\d+$/.test(preview);
   return (
     <>
       <time className="attempt-audit-time" dateTime={ev.at}>
@@ -78,16 +78,13 @@ function AttemptAuditRowHead({
         })}
       </time>
       <span className="attempt-audit-label">{label}</span>
-      {preview ? (
+      {rightColumn ? (
         <span
-          className={
-            previewIsPhaseSeq
-              ? "attempt-audit-preview attempt-audit-preview--phase-seq"
-              : "attempt-audit-preview"
-          }
-          aria-label={previewIsPhaseSeq ? `Phase ${preview.slice(1)}` : undefined}
+          className={attemptAuditRightColumnClassName(rightColumn)}
+          title={rightColumn.title}
+          aria-label={rightColumn.ariaLabel}
         >
-          {preview}
+          {rightColumn.label}
         </span>
       ) : null}
       {needsUser && awaitingUserReply(ev) ? (
@@ -95,6 +92,18 @@ function AttemptAuditRowHead({
       ) : null}
     </>
   );
+}
+
+function attemptAuditRightColumnClassName(
+  column: AttemptAuditRightColumn,
+): string {
+  if (column.variant === "phase") {
+    return "attempt-audit-preview attempt-audit-preview--phase-seq";
+  }
+  if (column.variant === "scope") {
+    return `attempt-audit-preview attempt-audit-preview--scope attempt-audit-preview--scope-${column.tone ?? "neutral"}`;
+  }
+  return "attempt-audit-preview attempt-audit-preview--detail";
 }
 
 function AttemptAuditThread({ ev }: { ev: TaskEvent }) {

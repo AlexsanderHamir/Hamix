@@ -4,6 +4,7 @@ import {
   formatAttemptAuditPreview,
   formatEventSummaryCompact,
   formatPhaseSummaryCompact,
+  resolveAttemptAuditRightColumn,
 } from "./taskEventSummary";
 
 function ev(
@@ -113,7 +114,7 @@ describe("formatAttemptAuditPreview", () => {
           },
         }),
       ),
-    ).toBe("P2");
+    ).toBe("PHASE 2");
   });
 
   it("keeps transition summaries for non-phase events", () => {
@@ -125,5 +126,91 @@ describe("formatAttemptAuditPreview", () => {
         }),
       ),
     ).toBe("running → done");
+  });
+});
+
+describe("resolveAttemptAuditRightColumn", () => {
+  it("shows phase sequence for lifecycle rows", () => {
+    expect(
+      resolveAttemptAuditRightColumn(
+        ev({
+          type: "phase_started",
+          data: { phase: "verify", phase_seq: 3 },
+        }),
+      ),
+    ).toEqual({
+      label: "PHASE 3",
+      variant: "phase",
+      ariaLabel: "Phase 3",
+    });
+  });
+
+  it("shows detail text when a compact summary exists", () => {
+    expect(
+      resolveAttemptAuditRightColumn(
+        ev({
+          type: "status_changed",
+          data: { from: "running", to: "done" },
+        }),
+      ),
+    ).toEqual({
+      label: "running → done",
+      variant: "detail",
+      title: "running → done",
+    });
+  });
+
+  it("shows cycle scope when there is no preview text", () => {
+    expect(
+      resolveAttemptAuditRightColumn(
+        ev({
+          type: "cycle_started",
+          data: { cycle_id: "c1", attempt_seq: 1 },
+        }),
+      ),
+    ).toEqual({
+      label: "CYCLE",
+      variant: "scope",
+      tone: "cycle",
+      title: "Applies to the whole execution attempt",
+      ariaLabel: "Whole attempt",
+    });
+  });
+
+  it("shows checklist scope for checklist mutations", () => {
+    expect(
+      resolveAttemptAuditRightColumn(
+        ev({
+          type: "checklist_item_toggled",
+          data: { cycle_id: "c1", text: "Ship tests" },
+        }),
+      ),
+    ).toEqual({
+      label: "CHECKLIST",
+      variant: "scope",
+      tone: "checklist",
+      title: "Done criteria or checklist change",
+      ariaLabel: "Checklist",
+    });
+  });
+
+  it("prefers failure detail over cycle scope when both apply", () => {
+    expect(
+      resolveAttemptAuditRightColumn(
+        ev({
+          type: "cycle_failed",
+          data: {
+            status: "failed",
+            cycle_id: "c1",
+            attempt_seq: 1,
+            reason: "execute phase timed out",
+          },
+        }),
+      ),
+    ).toEqual({
+      label: "execute phase timed out",
+      variant: "detail",
+      title: "execute phase timed out",
+    });
   });
 });

@@ -1,24 +1,9 @@
 import { Modal } from "@/shared/Modal";
 import { CHECKLIST_EVIDENCE_DISPLAY_CAP } from "@/types/task";
 
-/**
- * Humanises a verifier identifier (e.g. `verify_agent`) into a
- * sentence-case label (`Verify agent`). The backend ships these as
- * snake_case system identifiers, but the modal eyebrow is prose copy
- * for the operator — keeping the raw snake_case in a `<code>` element
- * read like a debug field, not a verification audit attribution.
- */
-function humaniseVerifier(identifier: string): string {
-  const cleaned = identifier.trim().replace(/[_-]+/g, " ");
-  if (!cleaned) return identifier;
-  return cleaned.charAt(0).toUpperCase() + cleaned.slice(1).toLowerCase();
-}
-
 type Props = {
   /** The criterion text — shown as the modal heading. */
   criterionText: string;
-  /** Verifier identity (e.g. `verify_agent`). Surfaced as a sub-label. */
-  verifiedBy?: string;
   /** Raw evidence payload captured at verification time. */
   evidence?: string;
   /** Free-form verifier reasoning. */
@@ -36,7 +21,6 @@ type Props = {
  */
 export function ChecklistVerificationModal({
   criterionText,
-  verifiedBy,
   evidence,
   verifierReasoning,
   onClose,
@@ -55,14 +39,6 @@ export function ChecklistVerificationModal({
         <header className="checklist-verification-modal-head">
           <p className="checklist-verification-modal-eyebrow">
             Verification details
-            {verifiedBy ? (
-              <>
-                {" · "}
-                <span className="checklist-verification-modal-verifier">
-                  by {humaniseVerifier(verifiedBy)}
-                </span>
-              </>
-            ) : null}
           </p>
           <h2
             id="checklist-verification-title"

@@ -148,7 +148,6 @@ export function TaskDetailChecklistItemList({
       {openItem ? (
         <ChecklistVerificationModal
           criterionText={openItem.text}
-          verifiedBy={openItem.verified_by}
           evidence={openItem.evidence}
           verifierReasoning={openItem.verifier_reasoning}
           onClose={() => setOpenVerificationId(null)}

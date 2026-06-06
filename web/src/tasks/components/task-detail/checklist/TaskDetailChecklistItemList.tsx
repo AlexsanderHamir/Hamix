@@ -67,7 +67,9 @@ export function TaskDetailChecklistItemList({
                       onClick={() => setOpenVerificationId(item.id)}
                       aria-label={`View verification details for: ${item.text}`}
                     >
-                      View verification
+                      <span className="task-checklist-verification-trigger-label">
+                        View verification
+                      </span>
                       <span
                         className="task-checklist-verification-trigger-arrow"
                         aria-hidden="true"

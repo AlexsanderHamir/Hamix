@@ -275,14 +275,14 @@
 /* Inline button that opens the verification popup. Visual weight kept
    intentionally light — a text link with a trailing arrow rather than
    a chrome button — so the criterion text remains the dominant read
-   on the row. The arrow doubles as an affordance hint that the
-   interaction opens additional content rather than performing a write. */
+   on the row. Hover reads as a link (underline + color shift), not a
+   filled chip, so it stays subordinate to the criterion copy. */
 button.task-checklist-verification-trigger {
   display: inline-flex;
   align-items: center;
   gap: var(--space-1);
-  padding: 0.1rem 0.25rem 0.15rem;
-  margin: 0;
+  padding: 0.2rem 0.35rem;
+  margin: -0.2rem -0.35rem;
   font-size: var(--text-xs);
   font-weight: 500;
   letter-spacing: -0.005em;
@@ -293,19 +293,41 @@ button.task-checklist-verification-trigger {
   border-radius: var(--radius-sm);
   cursor: pointer;
   text-decoration: none;
-  transition:
-    color var(--duration-fast) var(--ease-out),
-    background-color var(--duration-fast) var(--ease-out);
+  transition: color var(--duration-fast) var(--ease-out);
 }
 
-button.task-checklist-verification-trigger:hover {
-  color: var(--brand-hover);
-  background: var(--brand-muted);
+.task-checklist-verification-trigger-label {
+  text-underline-offset: 0.18em;
+  transition:
+    color var(--duration-fast) var(--ease-out),
+    text-decoration-color var(--duration-fast) var(--ease-out);
+}
+
+@media (hover: hover) {
+  button.task-checklist-verification-trigger:hover {
+    color: var(--link-hover);
+    background: transparent;
+  }
+
+  button.task-checklist-verification-trigger:hover
+    .task-checklist-verification-trigger-label {
+    text-decoration: underline;
+    text-decoration-color: color-mix(in srgb, var(--link) 35%, transparent);
+  }
+
+  button.task-checklist-verification-trigger:hover
+    .task-checklist-verification-trigger-arrow {
+    transform: translateX(2px);
+  }
+}
+
+button.task-checklist-verification-trigger:active {
+  color: var(--brand-deep, var(--link-hover));
 }
 
 button.task-checklist-verification-trigger:focus-visible {
   outline: none;
-  box-shadow: 0 0 0 3px var(--brand-muted);
+  box-shadow: 0 0 0 3px var(--focus-ring);
 }
 
 .task-checklist-verification-trigger-arrow {
@@ -315,15 +337,11 @@ button.task-checklist-verification-trigger:focus-visible {
   transition: transform var(--duration-fast) var(--ease-out);
 }
 
-button.task-checklist-verification-trigger:hover
-  .task-checklist-verification-trigger-arrow {
-  transform: translateX(2px);
-}
-
 @media (prefers-reduced-motion: reduce) {
   .task-checklist-verification-trigger-arrow {
     transition: none;
   }
+
   button.task-checklist-verification-trigger:hover
     .task-checklist-verification-trigger-arrow {
     transform: none;

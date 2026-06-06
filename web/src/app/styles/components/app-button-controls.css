@@ -8,9 +8,9 @@ textarea {
    .btn-utility / .task-event-data-tab are excluded (see app-task-timeline.css).
    .task-detail-agent-model-cta is a compact secondary control (model config panel; app-task-detail.css). */
 :where(
-  button:not(.custom-select-trigger):not(.btn-utility):not(.task-event-data-tab):not(
-      .task-detail-agent-model-cta
-    ):not(.pg__toggle-btn)
+  button:not(.custom-select-trigger):not(.settings-dropdown-trigger):not(.btn-utility):not(
+      .task-event-data-tab
+    ):not(.task-detail-agent-model-cta):not(.pg__toggle-btn)
 ) {
   font: inherit;
   font-weight: 500;
@@ -28,7 +28,7 @@ textarea {
 }
 
 :where(
-  button:not(.custom-select-trigger):not(.btn-utility):not(.task-event-data-tab):not(
+  button:not(.custom-select-trigger):not(.settings-dropdown-trigger):not(.btn-utility):not(.task-event-data-tab):not(
     .task-detail-agent-model-cta
   ):not(.pg__toggle-btn)
 ):not(:disabled):hover {
@@ -39,7 +39,7 @@ textarea {
 }
 
 :where(
-  button:not(.custom-select-trigger):not(.btn-utility):not(.task-event-data-tab):not(
+  button:not(.custom-select-trigger):not(.settings-dropdown-trigger):not(.btn-utility):not(.task-event-data-tab):not(
     .task-detail-agent-model-cta
   ):not(.pg__toggle-btn)
 ):not(:disabled):active {

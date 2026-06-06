@@ -65,9 +65,6 @@ func (w *Worker) loadVerificationSnapshot(ctx context.Context, taskID string) (v
 		return verificationSnapshot{}, err
 	}
 	maxRetries := settings.VerifyMaxRetries
-	if maxRetries > domain.MaxVerifyMaxRetries {
-		maxRetries = domain.MaxVerifyMaxRetries
-	}
 	// The supervisor (cmd/taskapi/run_agentworker.go::applySettings) is
 	// the source of truth for which runner verify uses: if the operator
 	// configured app_settings.VerifyRunnerName, the supervisor probed

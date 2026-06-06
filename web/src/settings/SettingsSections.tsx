@@ -1,4 +1,5 @@
 import type { UseQueryResult } from "@tanstack/react-query";
+import { useMemo } from "react";
 import { MutationErrorBanner } from "@/shared/MutationErrorBanner";
 import {
   filterCursorModelsForSelect,
@@ -8,6 +9,7 @@ import type { ListCursorModelsResult } from "@/api/settings";
 import type { TimezoneSelectOption } from "@/shared/time/appTimezone";
 import { formatTimezoneMenuLabel } from "@/shared/time/appTimezone";
 import { TimezoneCombobox } from "./TimezoneCombobox";
+import { SettingsSelect, groupModelSelectRows, type SettingsSelectOption } from "./SettingsSelect";
 import {
   RUNNERS,
   type SettingsFormState,
@@ -16,9 +18,6 @@ import {
 import {
   DEFAULT_CHECK_COMMAND_TIMEOUT_SECONDS,
   DEFAULT_VERIFY_MAX_RETRIES,
-  MAX_CHECK_COMMAND_TIMEOUT_SECONDS,
-  MAX_VERIFY_MAX_RETRIES,
-  MIN_CHECK_COMMAND_TIMEOUT_SECONDS,
 } from "@/types/task";
 
 type HandleField = <K extends keyof SettingsFormState>(
@@ -230,27 +229,29 @@ export function RunnerSettingsSection({
   onField: HandleField;
   onProbe: () => void;
 }) {
+  const runnerOptions = useMemo((): SettingsSelectOption[] => {
+    const opts: SettingsSelectOption[] = RUNNERS.map((r) => ({
+      value: r.id,
+      label: r.label,
+    }));
+    const saved = form.runner.trim();
+    if (saved !== "" && !RUNNERS.some((r) => r.id === saved)) {
+      opts.push({ value: saved, label: `${saved} (saved — not registered)` });
+    }
+    return opts;
+  }, [form.runner]);
+
   return (
     <SectionCard id={SECTION_IDS.cursorAgent} title="Runner">
       <label className="settings-field">
         <span className="settings-field-label">Runner</span>
-        <select
-          data-testid="settings-runner-select"
+        <SettingsSelect
+          testId="settings-runner-select"
           value={form.runner}
-          onChange={(e) => onField("runner", e.target.value)}
-        >
-          {RUNNERS.map((r) => (
-            <option key={r.id} value={r.id}>
-              {r.label}
-            </option>
-          ))}
-          {form.runner.trim() !== "" &&
-          !RUNNERS.some((r) => r.id === form.runner.trim()) ? (
-            <option value={form.runner}>
-              {form.runner} (saved — not registered)
-            </option>
-          ) : null}
-        </select>
+          onChange={(next) => onField("runner", next)}
+          options={runnerOptions}
+          searchable={false}
+        />
       </label>
       <p className="settings-field-help">
         The agent CLI used by every phase. More runners coming soon.
@@ -325,29 +326,39 @@ function PhaseModelField({
   const models = filterCursorModelsForSelect(
     query.data?.ok ? query.data.models : undefined,
   );
+  const modelOptions = useMemo((): SettingsSelectOption[] => {
+    const opts: SettingsSelectOption[] = [{ value: "", label: "Auto" }];
+    for (const m of models) {
+      opts.push({ value: m.id, label: m.label });
+    }
+    if (selectValue !== "" && !knownIds.has(selectValue)) {
+      opts.push({
+        value: selectValue,
+        label: `${selectValue} (saved — not in current list)`,
+      });
+    }
+    return opts;
+  }, [models, selectValue, knownIds]);
+
+  const modelRows = useMemo(
+    () => groupModelSelectRows(modelOptions),
+    [modelOptions],
+  );
+
   return (
     <>
       <label className="settings-field">
         <span className="settings-field-label">Model</span>
-        <select
-          data-testid={testId}
+        <SettingsSelect
+          testId={testId}
           value={selectValue}
-          onChange={(e) => onChange(e.target.value)}
+          onChange={onChange}
+          options={modelOptions}
+          rows={modelRows}
           disabled={disabled || query.isFetching}
-          aria-busy={query.isFetching}
-        >
-          <option value="">Auto</option>
-          {models.map((m) => (
-            <option key={m.id} value={m.id}>
-              {m.label}
-            </option>
-          ))}
-          {selectValue !== "" && !knownIds.has(selectValue) ? (
-            <option value={selectValue}>
-              {selectValue} (saved — not in current list)
-            </option>
-          ) : null}
-        </select>
+          ariaBusy={query.isFetching}
+          searchPlaceholder="Search models…"
+        />
       </label>
       {query.isError ? (
         <p role="alert" className="settings-field-error">
@@ -557,10 +568,14 @@ export function PhasesSettingsSection({
                 </span>
               </span>
             </label>
-            <p className="settings-field-help">
-              Minimum wait before the next ready task. Default <code>5</code>s ·{" "}
-              <code>0</code> = no wait.
-            </p>
+            <div className="settings-field-help-block">
+              <p className="settings-field-help">
+                Minimum wait before the next ready task.
+              </p>
+              <p className="settings-field-help settings-field-help-meta">
+                Default <code>5</code>s
+              </p>
+            </div>
             {pickupInvalid ? (
               <p role="alert" className="settings-field-error">
                 Must be between 0 and 604800 (7 days).
@@ -581,7 +596,7 @@ export function PhasesSettingsSection({
               run.
             </p>
 
-            <div id={SECTION_IDS.runTimeout}>
+            <div id={SECTION_IDS.runTimeout} className="settings-field-block">
               <label className="settings-field">
                 <span className="settings-field-label">Max execute duration</span>
                 <span className="settings-field-input-suffix">
@@ -600,10 +615,14 @@ export function PhasesSettingsSection({
                   </span>
                 </span>
               </label>
-              <p className="settings-field-help">
-                Cancels the run if it takes longer than this. Default{" "}
-                <code>0</code> = no limit.
-              </p>
+              <div className="settings-field-help-block">
+                <p className="settings-field-help">
+                  Cancels the run if it takes longer than this.
+                </p>
+                <p className="settings-field-help settings-field-help-meta">
+                  Default <code>0</code>
+                </p>
+              </div>
               {maxInvalid ? (
                 <p role="alert" className="settings-field-error">
                   Must be a non-negative integer.
@@ -618,7 +637,7 @@ export function PhasesSettingsSection({
         <PhasePanel
           id={SECTION_IDS.verification}
           phase="verify"
-          description="Runs after execute when the task has done criteria. Proves each criterion passed before marking it complete."
+          description="Verifies done criteria after execute."
         >
           <PhaseFieldGroup title="Runner">
             <PhaseModelField
@@ -643,7 +662,6 @@ export function PhasesSettingsSection({
                 <input
                   type="number"
                   min={0}
-                  max={MAX_VERIFY_MAX_RETRIES}
                   step={1}
                   value={form.verifyMaxRetries}
                   onChange={(e) =>
@@ -655,21 +673,23 @@ export function PhasesSettingsSection({
                 </span>
               </span>
             </label>
-            <p className="settings-field-help">
-              Re-runs of execute after a verify failure. Default{" "}
-              <code>{DEFAULT_VERIFY_MAX_RETRIES}</code> · Range{" "}
-              <code>0</code>–<code>{MAX_VERIFY_MAX_RETRIES}</code>.
-            </p>
+            <div className="settings-field-help-block">
+              <p className="settings-field-help">
+                Re-runs of execute after a verify failure.
+              </p>
+              <p className="settings-field-help settings-field-help-meta">
+                Default: <code>{DEFAULT_VERIFY_MAX_RETRIES}</code>
+              </p>
+            </div>
 
             <label className="settings-field">
               <span className="settings-field-label">
-                Check command timeout
+                Shell command time limit
               </span>
               <span className="settings-field-input-suffix">
                 <input
                   type="number"
-                  min={MIN_CHECK_COMMAND_TIMEOUT_SECONDS}
-                  max={MAX_CHECK_COMMAND_TIMEOUT_SECONDS}
+                  min={0}
                   step={1}
                   value={form.checkCommandTimeoutSeconds}
                   onChange={(e) =>
@@ -681,13 +701,16 @@ export function PhasesSettingsSection({
                 </span>
               </span>
             </label>
-            <p className="settings-field-help">
-              Stops a criterion&apos;s verification command if it runs longer
-              than this. Default{" "}
-              <code>{DEFAULT_CHECK_COMMAND_TIMEOUT_SECONDS}</code>s · Range{" "}
-              <code>{MIN_CHECK_COMMAND_TIMEOUT_SECONDS}</code>–
-              <code>{MAX_CHECK_COMMAND_TIMEOUT_SECONDS}</code>.
-            </p>
+            <div className="settings-field-help-block">
+              <p className="settings-field-help">
+                For done criteria that use a shell command (for example, npm
+                test), exceeding the time limit terminates the command and
+                fails the criterion.
+              </p>
+              <p className="settings-field-help settings-field-help-meta">
+                Default: <code>{DEFAULT_CHECK_COMMAND_TIMEOUT_SECONDS}</code>s
+              </p>
+            </div>
           </PhaseFieldGroup>
         </PhasePanel>
       </div>

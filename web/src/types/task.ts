@@ -344,9 +344,6 @@ export const CHECKLIST_EVIDENCE_DISPLAY_CAP = 12 * 1024;
 /** Defaults aligned with pkgs/tasks/domain/app_settings.go. */
 export const DEFAULT_VERIFY_MAX_RETRIES = 2;
 export const DEFAULT_CHECK_COMMAND_TIMEOUT_SECONDS = 120;
-export const MAX_VERIFY_MAX_RETRIES = 10;
-export const MAX_CHECK_COMMAND_TIMEOUT_SECONDS = 600;
-export const MIN_CHECK_COMMAND_TIMEOUT_SECONDS = 1;
 
 export type DraftTaskEvaluationInput = {
   id?: string;

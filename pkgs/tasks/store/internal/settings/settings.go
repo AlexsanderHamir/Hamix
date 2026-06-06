@@ -208,14 +208,14 @@ func validatePatch(patch Patch) error {
 	}
 	if patch.VerifyMaxRetries != nil {
 		v := *patch.VerifyMaxRetries
-		if v < 0 || v > domain.MaxVerifyMaxRetries {
-			return fmt.Errorf("%w: verify_max_retries must be between 0 and %d", domain.ErrInvalidInput, domain.MaxVerifyMaxRetries)
+		if v < 0 {
+			return fmt.Errorf("%w: verify_max_retries must be >= 0", domain.ErrInvalidInput)
 		}
 	}
 	if patch.CheckCommandTimeoutSeconds != nil {
 		v := *patch.CheckCommandTimeoutSeconds
-		if v < domain.MinCheckCommandTimeoutSeconds || v > domain.MaxCheckCommandTimeoutSeconds {
-			return fmt.Errorf("%w: check_command_timeout_seconds must be between %d and %d", domain.ErrInvalidInput, domain.MinCheckCommandTimeoutSeconds, domain.MaxCheckCommandTimeoutSeconds)
+		if v < domain.MinCheckCommandTimeoutSeconds {
+			return fmt.Errorf("%w: check_command_timeout_seconds must be >= %d", domain.ErrInvalidInput, domain.MinCheckCommandTimeoutSeconds)
 		}
 	}
 	if patch.VerifyRunnerModel != nil && len(strings.TrimSpace(*patch.VerifyRunnerModel)) > 256 {

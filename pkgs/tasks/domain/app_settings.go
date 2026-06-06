@@ -71,14 +71,14 @@ type AppSettings struct {
 	// Dual-written alongside the legacy CursorBin/CursorModel columns
 	// during the migration to pluggable runners.
 	RunnerConfigs datatypes.JSON `gorm:"column:runner_configs;type:jsonb;not null;default:'{}'"`
-	// VerifyMaxRetries is the corrective execute retries after verify failure (hard cap 10).
-	VerifyMaxRetries int `gorm:"not null;default:2;check:chk_app_settings_verify_max_retries,verify_max_retries >= 0 AND verify_max_retries <= 10"`
+	// VerifyMaxRetries is the corrective execute retries after verify failure.
+	VerifyMaxRetries int `gorm:"not null;default:2;check:chk_app_settings_verify_max_retries,verify_max_retries >= 0"`
 	// VerifyRunnerName empty means use the execute runner id.
 	VerifyRunnerName string `gorm:"not null;default:''"`
 	// VerifyRunnerModel empty means use the verify runner's default model.
 	VerifyRunnerModel string `gorm:"not null;default:''"`
-	// CheckCommandTimeoutSeconds caps each criterion check subprocess.
-	CheckCommandTimeoutSeconds int       `gorm:"not null;default:120;check:chk_app_settings_check_timeout,check_command_timeout_seconds >= 1 AND check_command_timeout_seconds <= 600"`
+	// CheckCommandTimeoutSeconds caps each criterion check subprocess. 0 = no limit.
+	CheckCommandTimeoutSeconds int       `gorm:"not null;default:120;check:chk_app_settings_check_timeout,check_command_timeout_seconds >= 0"`
 	UpdatedAt                  time.Time `gorm:"not null"`
 }
 
@@ -101,14 +101,8 @@ const DefaultVerifyMaxRetries = 2
 // DefaultCheckCommandTimeoutSeconds is the seed value for CheckCommandTimeoutSeconds.
 const DefaultCheckCommandTimeoutSeconds = 120
 
-// MaxVerifyMaxRetries is the hard ceiling for VerifyMaxRetries (DB CHECK and PATCH validation).
-const MaxVerifyMaxRetries = 10
-
-// MaxCheckCommandTimeoutSeconds is the hard ceiling for CheckCommandTimeoutSeconds.
-const MaxCheckCommandTimeoutSeconds = 600
-
-// MinCheckCommandTimeoutSeconds is the minimum allowed check command timeout.
-const MinCheckCommandTimeoutSeconds = 1
+// MinCheckCommandTimeoutSeconds is the minimum allowed check command timeout (0 = no limit).
+const MinCheckCommandTimeoutSeconds = 0
 
 // DefaultDisplayTimezone is the seed value for DisplayTimezone on first
 // boot. Empty string is the "auto-detect" sentinel: the SPA reads it as

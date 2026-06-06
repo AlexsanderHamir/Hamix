@@ -8,8 +8,6 @@ import (
 	"runtime"
 	"strings"
 	"time"
-
-	"github.com/AlexsanderHamir/T2A/pkgs/tasks/domain"
 )
 
 const maxCheckOutputBytes = 4 * 1024
@@ -26,10 +24,13 @@ func runDeterministicCheck(ctx context.Context, workingDir, command string, time
 	if command == "" {
 		return checkOutcome{passed: true}
 	}
+	var runCtx context.Context
+	var cancel context.CancelFunc
 	if timeout <= 0 {
-		timeout = time.Duration(domain.DefaultCheckCommandTimeoutSeconds) * time.Second
+		runCtx, cancel = context.WithCancel(ctx)
+	} else {
+		runCtx, cancel = context.WithTimeout(ctx, timeout)
 	}
-	runCtx, cancel := context.WithTimeout(ctx, timeout)
 	defer cancel()
 
 	var cmd *exec.Cmd

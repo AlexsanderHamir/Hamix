@@ -76,10 +76,10 @@ Singleton row in Postgres (CHECK enforces `id=1`). AutoMigrate creates the table
 | `display_timezone` | string | `""` | IANA timezone for SPA timestamps. Empty = browser auto-detect. Validated via `time.LoadLocation`. |
 | `optimistic_mutations_enabled` | bool | `true` | Always-on compatibility field. |
 | `sse_replay_enabled` | bool | `true` | Always-on compatibility field. |
-| `verify_max_retries` | int (0–10) | `2` | Max execute↔verify retry loops per cycle. |
+| `verify_max_retries` | int (≥0) | `2` | Max execute↔verify retry loops per cycle. |
 | `verify_runner_name` | string | `""` | Adversarial verify runner id. Empty = reuse execute runner. When set to a different id (e.g. `claudecode`), the supervisor builds and probes that runner separately at startup and on every `PATCH /settings`; build/probe failure logs `verify_runner_probe_failed` / `verify_runner_build_failed` and demotes verify to "reuse execute runner" so the worker keeps running. Setting it equal to `runner` is equivalent to leaving it empty. |
 | `verify_runner_model` | string | `""` | Optional model for the verify runner. Changing this triggers a worker restart on `PATCH /settings`. |
-| `check_command_timeout_seconds` | int (1–600) | `120` | Wall-clock cap for each deterministic `check` command. |
+| `check_command_timeout_seconds` | int (≥0) | `120` | Wall-clock cap for each deterministic `check` command. `0` = no limit. |
 | `updated_at` | RFC3339 (response only) | server clock | Last successful upsert. SPA shows "last changed N ago". |
 
 ### Validation
@@ -88,8 +88,8 @@ Singleton row in Postgres (CHECK enforces `id=1`). AutoMigrate creates the table
 
 - `runner` is non-empty and not in `pkgs/agents/runner/registry`.
 - `max_run_duration_seconds` is negative.
-- `verify_max_retries` is outside `0..10`.
-- `check_command_timeout_seconds` is outside `1..600`.
+- `verify_max_retries` is negative.
+- `check_command_timeout_seconds` is negative.
 - `repo_root` contains a NUL byte.
 
 `repo_root` is **not** validated for "directory exists" on `PATCH` — the supervisor reports `repo_root_open_failed` on the next reload, surfaced via `/health/ready` (`workspace_repo: fail`).

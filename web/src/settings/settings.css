@@ -615,19 +615,20 @@
   color: color-mix(in srgb, currentColor 42%, transparent);
 }
 
-/* Searchable timezone combobox (Display section) */
-.settings-tz-combobox {
+/* Settings dropdown (Runner, Model, Timezone) */
+.settings-dropdown {
   position: relative;
   width: 100%;
 }
 
-.settings-field .settings-tz-combobox-shell {
+.settings-dropdown-shell {
   display: flex;
   align-items: center;
   gap: 8px;
   width: 100%;
   box-sizing: border-box;
-  padding: 9px 10px 9px 12px;
+  min-height: 40px;
+  padding: 0 10px 0 12px;
   border-radius: 8px;
   border: 1px solid var(--border-hairline, var(--color-border, #d0d0d5));
   background: var(--bg-elevated);
@@ -639,45 +640,53 @@
     background-color var(--duration-short, 150ms) ease;
 }
 
+.settings-dropdown-shell--open,
+.settings-dropdown-shell:focus-within {
+  border-color: var(--border-strong, var(--color-border-strong, #a1a1aa));
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--focus-ring, #635bff) 28%, transparent);
+}
+
 @media (hover: hover) {
-  .settings-field .settings-tz-combobox-shell:hover {
-    border-color: var(--border-soft, var(--color-border, #d0d0d5));
+  .settings-dropdown-shell:hover:not(.settings-dropdown-shell--open) {
+    border-color: color-mix(in srgb, currentColor 28%, transparent);
     background: var(--bg-subtle);
   }
 }
 
-.settings-field .settings-tz-combobox-shell:focus-within {
-  outline: none;
-  border-color: var(--text-primary);
-  box-shadow: 0 0 0 3px color-mix(in srgb, var(--text-primary) 12%, transparent);
-}
-
-.settings-field .settings-tz-combobox-shell--open .settings-tz-combobox-chevron {
-  transform: rotate(180deg);
-}
-
-.settings-field .settings-tz-combobox-input {
+.settings-dropdown-trigger {
   flex: 1 1 auto;
   min-width: 0;
   margin: 0;
-  padding: 0;
+  padding: 9px 0;
   border: none;
-  outline: none;
   background: transparent;
-  box-shadow: none;
   color: inherit;
   font: inherit;
   font-size: 0.875rem;
   line-height: 1.3;
-  cursor: text;
-  width: auto;
+  text-align: left;
+  cursor: pointer;
+  box-shadow: none;
 }
 
-.settings-field .settings-tz-combobox-input::placeholder {
-  color: color-mix(in srgb, currentColor 42%, transparent);
+.settings-dropdown-trigger:focus-visible {
+  outline: none;
+  box-shadow: none;
 }
 
-.settings-field .settings-tz-combobox-chevron {
+.settings-dropdown-trigger:disabled {
+  cursor: not-allowed;
+  opacity: 0.55;
+}
+
+.settings-dropdown-trigger-label {
+  display: block;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.settings-dropdown-chevron {
   flex-shrink: 0;
   display: flex;
   align-items: center;
@@ -687,50 +696,178 @@
   pointer-events: none;
 }
 
-.settings-tz-combobox-list {
-  position: absolute;
-  left: 0;
-  right: 0;
-  top: 100%;
-  z-index: 50;
-  margin: 4px 0 0;
-  padding: 4px 0;
+.settings-dropdown-chevron--open {
+  transform: rotate(180deg);
+}
+
+.settings-dropdown-list {
+  margin: 0;
+  padding: 4px;
   max-height: min(280px, 42vh);
   overflow-y: auto;
   list-style: none;
-  border-radius: 8px;
-  border: 1px solid var(--border-hairline, var(--color-border, #d0d0d5));
-  background: var(--surface-card, #fff);
-  box-shadow: var(--shadow-sm, 0 4px 14px rgba(0, 0, 0, 0.08));
+  scrollbar-width: thin;
+  scrollbar-color: color-mix(in srgb, currentColor 22%, transparent) transparent;
 }
 
-.settings-tz-combobox-option {
-  margin: 0;
-  padding: 8px 12px;
-  font-size: 13px;
-  line-height: 1.35;
-  cursor: pointer;
-}
-
-.settings-tz-combobox-option--active,
-.settings-tz-combobox-option:hover {
-  background: var(--bg-subtle);
-}
-
-.settings-tz-combobox-empty {
+.settings-dropdown-list:not(.settings-dropdown-list--portal) {
   position: absolute;
   left: 0;
   right: 0;
-  top: 100%;
-  z-index: 50;
-  margin: 4px 0 0;
+  top: calc(100% + 4px);
+  z-index: 200;
+  border-radius: var(--radius-lg, 12px);
+  border: 1px solid var(--border-hairline, var(--color-border, #d0d0d5));
+  background: var(--surface-card, var(--bg-elevated, #fff));
+  box-shadow:
+    0 4px 6px -1px rgba(0, 0, 0, 0.08),
+    0 10px 24px -4px rgba(0, 0, 0, 0.1);
+}
+
+.settings-dropdown-panel {
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+  border-radius: var(--radius-lg, 12px);
+  border: 1px solid var(--border-hairline, var(--color-border, #d0d0d5));
+  background: var(--surface-card, var(--bg-elevated, #fff));
+  box-shadow:
+    0 4px 6px -1px rgba(0, 0, 0, 0.08),
+    0 10px 24px -4px rgba(0, 0, 0, 0.1);
+  overflow: hidden;
+}
+
+.settings-dropdown-panel-search {
+  padding: 8px 8px 4px;
+  border-bottom: 1px solid var(--border-hairline, var(--color-border, #e5e5e7));
+}
+
+.settings-dropdown-panel-search-input {
+  width: 100%;
+  box-sizing: border-box;
+  margin: 0;
+  padding: 8px 10px;
+  border: 1px solid var(--border-hairline, var(--color-border, #d0d0d5));
+  border-radius: var(--radius-md, 8px);
+  background: var(--bg-elevated, #fff);
+  color: var(--text-primary, #1a1a1a);
+  font: inherit;
+  font-size: 0.8125rem;
+  line-height: 1.35;
+  outline: none;
+}
+
+.settings-dropdown-panel-search-input::placeholder {
+  color: var(--text-tertiary, var(--color-text-muted, #666));
+}
+
+.settings-dropdown-panel-search-input:focus-visible {
+  border-color: var(--border-strong, #a1a1aa);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--focus-ring, #635bff) 22%, transparent);
+}
+
+.settings-dropdown-list--portal {
+  position: static;
+  border: none;
+  border-radius: 0;
+  box-shadow: none;
+  max-height: min(260px, 40vh);
+}
+
+.settings-dropdown-option-header {
+  margin: 0;
+  padding: 8px 10px 4px;
+  font-size: 0.6875rem;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--text-tertiary, var(--color-text-muted, #777));
+  cursor: default;
+  pointer-events: none;
+}
+
+.settings-dropdown-option-header:first-child {
+  padding-top: 6px;
+}
+
+.settings-dropdown-list::-webkit-scrollbar {
+  width: 8px;
+}
+
+.settings-dropdown-list::-webkit-scrollbar-thumb {
+  border-radius: 9999px;
+  background: color-mix(in srgb, currentColor 22%, transparent);
+}
+
+.settings-dropdown-option {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 0;
+  padding: 9px 10px;
+  border-radius: var(--radius-md, 8px);
+  font-size: 0.8125rem;
+  line-height: 1.35;
+  cursor: pointer;
+  color: var(--text-primary, var(--color-text, #1a1a1a));
+  transition: background-color var(--duration-short, 150ms) ease;
+}
+
+.settings-dropdown-option-check-slot {
+  flex-shrink: 0;
+  width: 14px;
+  height: 14px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--accent, var(--color-brand, #635bff));
+}
+
+.settings-dropdown-option-label {
+  flex: 1 1 auto;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.settings-dropdown-option--active,
+.settings-dropdown-option:hover {
+  background: var(--bg-subtle);
+}
+
+.settings-dropdown-option--selected {
+  font-weight: 500;
+}
+
+.settings-dropdown-option--selected.settings-dropdown-option--active,
+.settings-dropdown-option--selected:hover {
+  background: var(--bg-subtle);
+}
+
+.settings-dropdown-empty--portal {
+  position: static;
+  border: none;
+  border-radius: 0;
+  box-shadow: none;
+}
+
+.settings-dropdown-empty {
+  position: absolute;
+  left: 0;
+  right: 0;
+  top: calc(100% + 4px);
+  z-index: 200;
+  margin: 0;
   padding: 12px;
-  border-radius: 8px;
+  border-radius: var(--radius-lg, 12px);
   border: 1px solid var(--border-hairline, var(--color-border, #d0d0d5));
   background: var(--surface-card, #fff);
   font-size: 13px;
   color: var(--color-text-muted, #666);
-  box-shadow: var(--shadow-sm, 0 4px 14px rgba(0, 0, 0, 0.08));
+  box-shadow:
+    0 4px 6px -1px rgba(0, 0, 0, 0.08),
+    0 10px 24px -4px rgba(0, 0, 0, 0.1);
 }
 
 .settings-field input[aria-invalid="true"] {
@@ -745,7 +882,30 @@
 .settings-field-help {
   margin: 0;
   font-size: 12px;
+  line-height: 1.45;
   color: var(--color-text-muted, #666);
+}
+
+.settings-field-help-block {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1, 4px);
+}
+
+.settings-field-help-meta {
+  color: var(--text-tertiary, var(--color-text-tertiary, #888));
+}
+
+/*
+ * Wraps a label + help/error when a deep-link id must sit on the
+ * outer element. Direct children of `.settings-phase-group` already
+ * get gap from the group flex; without this block, help text sits
+ * flush against the input shell.
+ */
+.settings-field-block {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3, 12px);
 }
 
 /*
@@ -774,7 +934,7 @@
   border: 1px solid var(--border-hairline, var(--color-border, #e5e5e7));
   border-radius: var(--radius-lg, 12px);
   background: var(--bg-elevated, #fff);
-  overflow: hidden;
+  overflow: visible;
   transition:
     border-color var(--duration-short, 150ms) ease,
     box-shadow var(--duration-short, 150ms) ease;
@@ -937,7 +1097,7 @@
  * Input + trailing unit suffix (e.g. "120  seconds").
  * The suffix sits inside the input shell so the unit reads inline with
  * the value, while the help text below carries the longer-form
- * "Range 1–600". Padding-right reserves space so the entered number
+ * default line. Padding-right reserves space so the entered number
  * never visually collides with the suffix label.
  */
 .settings-field-input-suffix {
@@ -952,6 +1112,14 @@
      the right-edge inset; tested at the section's narrowest sensible
      width on mobile (320px viewport). */
   padding-right: 84px;
+  -moz-appearance: textfield;
+  appearance: textfield;
+}
+
+.settings-field-input-suffix > input[type="number"]::-webkit-inner-spin-button,
+.settings-field-input-suffix > input[type="number"]::-webkit-outer-spin-button {
+  -webkit-appearance: none;
+  margin: 0;
 }
 
 .settings-field-suffix {

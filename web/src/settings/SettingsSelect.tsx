@@ -9,27 +9,27 @@ import {
   type KeyboardEvent,
 } from "react";
 import { createPortal } from "react-dom";
-import {
-  type TimezoneSelectOption,
-  filterTimezoneSelectOptions,
-  formatTimezoneMenuLabel,
-  getTimezoneSearchHaystack,
-  matchesTimezoneSearchQuery,
-} from "@/shared/time/appTimezone";
 
-type Row =
-  | { kind: "auto" }
-  | { kind: "iana"; opt: TimezoneSelectOption }
-  | { kind: "custom"; value: string; label: string };
+export type SettingsSelectOption = {
+  value: string;
+  label: string;
+};
+
+export type SettingsSelectRow =
+  | { type: "header"; label: string }
+  | { type: "option"; value: string; label: string };
 
 type Props = {
   value: string;
   onChange: (value: string) => void;
-  browserTz: string;
-  options: TimezoneSelectOption[];
-  /** Saved IANA not present in `options` — show a third list row. */
-  customSaved?: { value: string; label: string } | null;
-  testId?: string;
+  options: SettingsSelectOption[];
+  testId: string;
+  disabled?: boolean;
+  ariaBusy?: boolean;
+  searchable?: boolean;
+  searchPlaceholder?: string;
+  /** When set, renders section headers between options (e.g. model families). */
+  rows?: SettingsSelectRow[];
 };
 
 function ChevronIcon({ open }: { open: boolean }) {
@@ -76,35 +76,50 @@ function CheckIcon() {
   );
 }
 
-function rowKey(row: Row): string {
-  if (row.kind === "auto") return "auto";
-  if (row.kind === "iana") return row.opt.value;
-  return `custom-${row.value}`;
+function isSelectableRow(
+  row: SettingsSelectRow,
+): row is { type: "option"; value: string; label: string } {
+  return row.type === "option";
 }
 
-function rowLabel(row: Row, autoLabel: string): string {
-  if (row.kind === "auto") return autoLabel;
-  if (row.kind === "iana") return row.opt.label;
-  return row.label;
+function selectableRows(rows: SettingsSelectRow[]) {
+  return rows.filter(isSelectableRow);
 }
 
-function rowValue(row: Row): string {
-  if (row.kind === "auto") return "";
-  if (row.kind === "iana") return row.opt.value;
-  return row.value;
+function firstSelectableIndex(rows: SettingsSelectRow[]): number {
+  return rows.findIndex(isSelectableRow);
 }
 
-function isRowSelected(row: Row, value: string): boolean {
-  return rowValue(row) === value;
+function nextSelectableIndex(rows: SettingsSelectRow[], from: number): number {
+  for (let i = from + 1; i < rows.length; i++) {
+    if (isSelectableRow(rows[i])) return i;
+  }
+  for (let i = 0; i < rows.length; i++) {
+    if (isSelectableRow(rows[i])) return i;
+  }
+  return from;
 }
 
-export function TimezoneCombobox({
+function prevSelectableIndex(rows: SettingsSelectRow[], from: number): number {
+  for (let i = from - 1; i >= 0; i--) {
+    if (isSelectableRow(rows[i])) return i;
+  }
+  for (let i = rows.length - 1; i >= 0; i--) {
+    if (isSelectableRow(rows[i])) return i;
+  }
+  return from;
+}
+
+export function SettingsSelect({
   value,
   onChange,
-  browserTz,
   options,
-  customSaved,
-  testId = "settings-display-timezone-select",
+  testId,
+  disabled = false,
+  ariaBusy = false,
+  searchable: searchableProp,
+  searchPlaceholder = "Search…",
+  rows: rowsProp,
 }: Props) {
   const baseId = useId();
   const listId = `${baseId}-list`;
@@ -123,53 +138,45 @@ export function TimezoneCombobox({
     width: number;
   } | null>(null);
 
-  const autoLabel = useMemo(
-    () => `Auto-detect — ${formatTimezoneMenuLabel(browserTz)}`,
-    [browserTz],
-  );
+  const searchable = searchableProp ?? options.length > 10;
 
-  const autoHaystack = useMemo(
-    () =>
-      `auto auto-detect detect browser ${browserTz} ${formatTimezoneMenuLabel(browserTz)}`
-        .toLowerCase(),
-    [browserTz],
+  const baseRows = useMemo(
+    (): SettingsSelectRow[] =>
+      rowsProp ??
+      options.map((o) => ({ type: "option" as const, value: o.value, label: o.label })),
+    [options, rowsProp],
   );
 
   const selectedLabel = useMemo(() => {
-    if (value === "") return autoLabel;
     const hit = options.find((o) => o.value === value);
-    if (hit) return hit.label;
-    if (customSaved && value === customSaved.value) return customSaved.label;
-    return formatTimezoneMenuLabel(value);
-  }, [value, autoLabel, options, customSaved]);
+    return hit?.label ?? value;
+  }, [options, value]);
 
-  const filteredIana = useMemo(
-    () => filterTimezoneSelectOptions(options, search),
-    [options, search],
-  );
-
-  const rows: Row[] = useMemo(() => {
-    const out: Row[] = [];
-    const q = search.trim();
-    if (!q || matchesTimezoneSearchQuery(autoHaystack, q)) {
-      out.push({ kind: "auto" });
-    }
-    for (const opt of filteredIana) {
-      out.push({ kind: "iana", opt });
-    }
-    if (customSaved) {
-      const ch = getTimezoneSearchHaystack({
-        value: customSaved.value,
-        label: customSaved.label,
-      });
-      if (!q || matchesTimezoneSearchQuery(ch, q)) {
-        out.push({ kind: "custom", value: customSaved.value, label: customSaved.label });
+  const filteredRows = useMemo(() => {
+    const q = search.trim().toLowerCase();
+    if (!q) return baseRows;
+    const out: SettingsSelectRow[] = [];
+    let pendingHeader: SettingsSelectRow | null = null;
+    for (const row of baseRows) {
+      if (row.type === "header") {
+        pendingHeader = row;
+        continue;
       }
+      const haystack = `${row.label} ${row.value}`.toLowerCase();
+      if (!haystack.includes(q)) continue;
+      if (pendingHeader) {
+        out.push(pendingHeader);
+        pendingHeader = null;
+      }
+      out.push(row);
     }
     return out;
-  }, [search, autoHaystack, filteredIana, customSaved]);
+  }, [baseRows, search]);
 
-  const rowCount = rows.length;
+  const selectable = useMemo(
+    () => selectableRows(filteredRows),
+    [filteredRows],
+  );
 
   const updatePosition = useCallback(() => {
     const el = triggerRef.current;
@@ -208,22 +215,24 @@ export function TimezoneCombobox({
 
   useEffect(() => {
     if (!open) return;
-    searchRef.current?.focus();
-  }, [open]);
+    if (searchable) {
+      searchRef.current?.focus();
+    } else {
+      listRef.current?.focus();
+    }
+  }, [open, searchable]);
 
   useEffect(() => {
     if (!open) return;
     if (!search.trim()) {
-      const idx = rows.findIndex((row) => isRowSelected(row, value));
-      setActiveIndex(idx >= 0 ? idx : 0);
+      const idx = filteredRows.findIndex(
+        (row) => isSelectableRow(row) && row.value === value,
+      );
+      setActiveIndex(idx >= 0 ? idx : firstSelectableIndex(filteredRows));
       return;
     }
-    setActiveIndex(0);
-  }, [open, search, rows, value]);
-
-  useEffect(() => {
-    if (activeIndex >= rowCount) setActiveIndex(Math.max(0, rowCount - 1));
-  }, [activeIndex, rowCount]);
+    setActiveIndex(firstSelectableIndex(filteredRows));
+  }, [open, search, filteredRows, value]);
 
   const closeMenu = useCallback(() => {
     setOpen(false);
@@ -231,19 +240,21 @@ export function TimezoneCombobox({
     triggerRef.current?.focus();
   }, []);
 
-  const commitRow = useCallback(
-    (row: Row) => {
-      onChange(rowValue(row));
+  const commitOption = useCallback(
+    (opt: SettingsSelectOption) => {
+      onChange(opt.value);
       closeMenu();
     },
     [closeMenu, onChange],
   );
 
   const openMenu = useCallback(() => {
+    if (disabled) return;
     setOpen(true);
-  }, []);
+  }, [disabled]);
 
   const onTriggerKeyDown = (e: KeyboardEvent<HTMLButtonElement>) => {
+    if (disabled) return;
     if (e.key === "ArrowDown" || e.key === "Enter" || e.key === " ") {
       e.preventDefault();
       openMenu();
@@ -261,20 +272,20 @@ export function TimezoneCombobox({
       closeMenu();
       return;
     }
-    if (e.key === "ArrowDown" && rowCount > 0) {
+    if (e.key === "ArrowDown") {
       e.preventDefault();
-      setActiveIndex((i) => Math.min(i + 1, rowCount - 1));
+      setActiveIndex((i) => nextSelectableIndex(filteredRows, i));
       return;
     }
-    if (e.key === "ArrowUp" && rowCount > 0) {
+    if (e.key === "ArrowUp") {
       e.preventDefault();
-      setActiveIndex((i) => Math.max(i - 1, 0));
+      setActiveIndex((i) => prevSelectableIndex(filteredRows, i));
       return;
     }
-    if (e.key === "Enter" && rowCount > 0) {
+    if (e.key === "Enter" && selectable.length > 0) {
       e.preventDefault();
-      const row = rows[activeIndex];
-      if (row) commitRow(row);
+      const row = filteredRows[activeIndex];
+      if (row && isSelectableRow(row)) commitOption(row);
     }
   };
 
@@ -284,20 +295,20 @@ export function TimezoneCombobox({
       closeMenu();
       return;
     }
-    if (e.key === "ArrowDown" && rowCount > 0) {
+    if (e.key === "ArrowDown") {
       e.preventDefault();
-      setActiveIndex((i) => Math.min(i + 1, rowCount - 1));
+      setActiveIndex((i) => nextSelectableIndex(filteredRows, i));
       return;
     }
-    if (e.key === "ArrowUp" && rowCount > 0) {
+    if (e.key === "ArrowUp") {
       e.preventDefault();
-      setActiveIndex((i) => Math.max(i - 1, 0));
+      setActiveIndex((i) => prevSelectableIndex(filteredRows, i));
       return;
     }
-    if (e.key === "Enter" && rowCount > 0) {
+    if (e.key === "Enter" && selectable.length > 0) {
       e.preventDefault();
-      const row = rows[activeIndex];
-      if (row) commitRow(row);
+      const row = filteredRows[activeIndex];
+      if (row && isSelectableRow(row)) commitOption(row);
     }
   };
 
@@ -319,42 +330,57 @@ export function TimezoneCombobox({
               zIndex: "var(--z-portal-popover, 13000)",
             }}
           >
-            <div className="settings-dropdown-panel-search">
-              <input
-                ref={searchRef}
-                id={searchId}
-                type="search"
-                className="settings-dropdown-panel-search-input"
-                placeholder="Search by city, region, or GMT offset…"
-                value={search}
-                autoComplete="off"
-                spellCheck={false}
-                aria-controls={listId}
-                aria-autocomplete="list"
-                onChange={(e) => setSearch(e.target.value)}
-                onKeyDown={onSearchKeyDown}
-              />
-            </div>
-            {rowCount > 0 ? (
+            {searchable ? (
+              <div className="settings-dropdown-panel-search">
+                <input
+                  ref={searchRef}
+                  id={searchId}
+                  type="search"
+                  className="settings-dropdown-panel-search-input"
+                  placeholder={searchPlaceholder}
+                  value={search}
+                  autoComplete="off"
+                  spellCheck={false}
+                  aria-controls={listId}
+                  aria-autocomplete="list"
+                  onChange={(e) => setSearch(e.target.value)}
+                  onKeyDown={onSearchKeyDown}
+                />
+              </div>
+            ) : null}
+            {selectable.length > 0 ? (
               <ul
                 ref={listRef}
                 id={listId}
                 role="listbox"
-                tabIndex={-1}
+                tabIndex={searchable ? -1 : 0}
                 className="settings-dropdown-list settings-dropdown-list--portal"
                 aria-activedescendant={
-                  rowCount > 0 ? `${baseId}-opt-${activeIndex}` : undefined
+                  filteredRows[activeIndex] &&
+                  isSelectableRow(filteredRows[activeIndex])
+                    ? `${baseId}-opt-${activeIndex}`
+                    : undefined
                 }
                 onKeyDown={onListKeyDown}
               >
-                {rows.map((row, idx) => {
+                {filteredRows.map((row, idx) => {
+                  if (row.type === "header") {
+                    return (
+                      <li
+                        key={`header-${row.label}-${idx}`}
+                        role="presentation"
+                        className="settings-dropdown-option-header"
+                      >
+                        {row.label}
+                      </li>
+                    );
+                  }
                   const id = `${baseId}-opt-${idx}`;
                   const isActive = idx === activeIndex;
-                  const isSelected = isRowSelected(row, value);
-                  const text = rowLabel(row, autoLabel);
+                  const isSelected = row.value === value;
                   return (
                     <li
-                      key={rowKey(row)}
+                      key={`${row.value}-${row.label}`}
                       id={id}
                       role="option"
                       aria-selected={isSelected}
@@ -367,24 +393,21 @@ export function TimezoneCombobox({
                         .join(" ")}
                       onMouseEnter={() => setActiveIndex(idx)}
                       onMouseDown={(e) => e.preventDefault()}
-                      onClick={() => commitRow(row)}
+                      onClick={() => commitOption(row)}
                     >
                       <span className="settings-dropdown-option-check-slot">
                         {isSelected ? <CheckIcon /> : null}
                       </span>
                       <span className="settings-dropdown-option-label">
-                        {text}
+                        {row.label}
                       </span>
                     </li>
                   );
                 })}
               </ul>
             ) : (
-              <div
-                className="settings-dropdown-empty settings-dropdown-empty--portal"
-                role="status"
-              >
-                No matching timezones
+              <div className="settings-dropdown-empty settings-dropdown-empty--portal" role="status">
+                No matches
               </div>
             )}
           </div>,
@@ -402,6 +425,8 @@ export function TimezoneCombobox({
           role="combobox"
           aria-expanded={open}
           aria-controls={open ? listId : undefined}
+          aria-busy={ariaBusy || undefined}
+          disabled={disabled}
           className="settings-dropdown-trigger"
           onClick={() => (open ? closeMenu() : openMenu())}
           onKeyDown={onTriggerKeyDown}
@@ -413,4 +438,35 @@ export function TimezoneCombobox({
       {panel}
     </div>
   );
+}
+
+export function groupModelSelectRows(
+  options: SettingsSelectOption[],
+): SettingsSelectRow[] {
+  const rows: SettingsSelectRow[] = [];
+  let lastGroup = "";
+
+  for (const opt of options) {
+    if (opt.value === "") {
+      rows.push({ type: "option", value: opt.value, label: opt.label });
+      continue;
+    }
+    const group = extractModelFamily(opt.label);
+    if (group && group !== lastGroup) {
+      rows.push({ type: "header", label: group });
+      lastGroup = group;
+    }
+    rows.push({ type: "option", value: opt.value, label: opt.label });
+  }
+  return rows;
+}
+
+function extractModelFamily(label: string): string {
+  const codex = label.match(/^(Codex \d+(?:\.\d+)?(?: Max)?)/i);
+  if (codex) return codex[1];
+  const gpt = label.match(/^(GPT-[\d.]+)/i);
+  if (gpt) return gpt[1];
+  const composer = label.match(/^(Composer [\d.]+)/i);
+  if (composer) return composer[1];
+  return "";
 }

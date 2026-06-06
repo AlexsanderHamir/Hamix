@@ -9,6 +9,7 @@ import type { TimezoneSelectOption } from "@/shared/time/appTimezone";
 import { formatTimezoneMenuLabel } from "@/shared/time/appTimezone";
 import { TimezoneCombobox } from "./TimezoneCombobox";
 import {
+  RUNNERS,
   type SettingsFormState,
   type SettingsStatus,
 } from "./settingsForm";
@@ -30,11 +31,11 @@ type HandleField = <K extends keyof SettingsFormState>(
  * and as test/select hooks. Keep in sync with SETTINGS_NAV_ITEMS in
  * SettingsPage.tsx.
  *
- * `cursorAgent` and `verification` are retained so existing deep
- * links (e.g. TaskModelConfigModal -> /settings#cursor-agent) still
- * scroll to a meaningful target after the redesign:
- * `#cursor-agent` lands on the Cursor runner card; `#verification`
- * lands on the Phases section that hosts the verify subgroup.
+ * `cursorAgent`, `agentWorker`, `verification`, and `runTimeout` are
+ * retained so existing deep links still scroll to a meaningful target:
+ * `#cursor-agent` → Cursor runner card; `#agent-worker` → Execute
+ * phase block; `#run-timeout` → max execute duration field;
+ * `#verification` → Verify phase block.
  */
 export const SECTION_IDS = {
   workspace: "workspace",
@@ -199,76 +200,24 @@ export function WorkspaceSettingsSection({
   );
 }
 
-export function AgentWorkerSettingsSection({
-  form,
-  pickupInvalid,
-  onField,
-}: {
-  form: SettingsFormState;
-  pickupInvalid: boolean;
-  onField: HandleField;
-}) {
-  return (
-    <SectionCard id={SECTION_IDS.agentWorker} title="Agent worker">
-      <label className="settings-field settings-field--inline">
-        <input
-          type="checkbox"
-          checked={form.workerEnabled}
-          onChange={(e) => onField("workerEnabled", e.target.checked)}
-        />
-        <span className="settings-field-label">Enable agent worker</span>
-      </label>
-      <p className="settings-field-help">
-        Pulls ready tasks and dispatches them to the runner configured below.
-      </p>
-
-      <label className="settings-field">
-        <span className="settings-field-label">Pickup delay</span>
-        <span className="settings-field-input-suffix">
-          <input
-            type="number"
-            min={0}
-            max={604800}
-            step={1}
-            placeholder="5"
-            value={form.agentPickupDelaySeconds}
-            onChange={(e) => onField("agentPickupDelaySeconds", e.target.value)}
-            aria-invalid={pickupInvalid}
-          />
-          <span className="settings-field-suffix" aria-hidden="true">
-            seconds
-          </span>
-        </span>
-      </label>
-      <p className="settings-field-help">
-        Minimum wait before the next ready task runs. Default <code>5</code>s ·{" "}
-        <code>0</code> = no wait.
-      </p>
-      {pickupInvalid ? (
-        <p role="alert" className="settings-field-error">
-          Must be between 0 and 604800 (7 days).
-        </p>
-      ) : null}
-    </SectionCard>
-  );
-}
-
 /**
- * Cursor — the only runner today. Holds the runner-level
- * configuration that is independent of any single phase: which
- * binary to invoke and a probe to verify it works.
+ * Runner — the agent CLI used by every phase. Today only `cursor` is
+ * registered, so the picker is single-option, but the section is
+ * framed generically so adding a runner later is a matter of pushing
+ * a new entry into RUNNERS without rewriting the UI.
  *
- * Per-phase choices (which model to pass to cursor-agent for execute
- * vs verify) live under the Phases section. This split mirrors the
- * backend: `cursor_bin` is a runner setting (shared across phases),
- * while `cursor_model` and `verify_runner_model` are phase-keyed
- * model overrides handed to that one runner.
+ * Holds the runner-level configuration that is independent of any
+ * single phase: the runner identity, the binary path, and a probe to
+ * verify it works. Per-phase choices (which model to pass for execute
+ * vs verify) live under the Phases section. This mirrors the backend:
+ * `cursor_bin` is a runner setting (shared across phases), while
+ * `cursor_model` and `verify_runner_model` are phase-keyed model
+ * overrides handed to that one runner.
  *
- * The card carries `id="cursor-agent"` so legacy deep links from
- * TaskModelConfigModal (and elsewhere) still land on a meaningful
- * target after the section was renamed from "Cursor agent".
+ * The card retains `id="cursor-agent"` so legacy deep links from
+ * TaskModelConfigModal still land on a meaningful target.
  */
-export function CursorRunnerSettingsSection({
+export function RunnerSettingsSection({
   form,
   resolvedDefaultBin,
   probePending,
@@ -282,9 +231,33 @@ export function CursorRunnerSettingsSection({
   onProbe: () => void;
 }) {
   return (
-    <SectionCard id={SECTION_IDS.cursorAgent} title="Cursor">
+    <SectionCard id={SECTION_IDS.cursorAgent} title="Runner">
       <label className="settings-field">
-        <span className="settings-field-label">Cursor CLI path</span>
+        <span className="settings-field-label">Runner</span>
+        <select
+          data-testid="settings-runner-select"
+          value={form.runner}
+          onChange={(e) => onField("runner", e.target.value)}
+        >
+          {RUNNERS.map((r) => (
+            <option key={r.id} value={r.id}>
+              {r.label}
+            </option>
+          ))}
+          {form.runner.trim() !== "" &&
+          !RUNNERS.some((r) => r.id === form.runner.trim()) ? (
+            <option value={form.runner}>
+              {form.runner} (saved — not registered)
+            </option>
+          ) : null}
+        </select>
+      </label>
+      <p className="settings-field-help">
+        The agent CLI used by every phase. More runners coming soon.
+      </p>
+
+      <label className="settings-field">
+        <span className="settings-field-label">CLI path</span>
         <input
           type="text"
           value={form.cursorBin}
@@ -317,7 +290,7 @@ export function CursorRunnerSettingsSection({
           onClick={onProbe}
           disabled={probePending}
         >
-          {probePending ? "Testing…" : "Test cursor binary"}
+          {probePending ? "Testing…" : "Test binary"}
         </button>
       </div>
     </SectionCard>
@@ -394,19 +367,152 @@ function PhaseModelField({
 }
 
 /**
- * Phases — execute and verify configuration, side-by-side under a
- * single card. Each phase has its own block with its own Model field
- * and any phase-specific controls (verify additionally has the
- * enable toggle, retry budget, and check-command timeout).
+ * Phase icon — outline SVG matching the icon weight used elsewhere
+ * in the app (1.6px stroke, 18px viewport). Execute shows a power
+ * bolt (active work); Verify shows a shield-check (judgment pass).
+ * Inline rather than imported from an icon library so the settings
+ * page does not pull a new dependency for two glyphs.
+ */
+function PhaseIcon({ phase }: { phase: "execute" | "verify" }) {
+  if (phase === "execute") {
+    return (
+      <svg
+        className="settings-phase-icon"
+        viewBox="0 0 24 24"
+        width="18"
+        height="18"
+        fill="none"
+        stroke="currentColor"
+        strokeWidth="1.6"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+        aria-hidden="true"
+      >
+        <path d="M13 3 4.5 13.5h6L11 21l8.5-10.5h-6L13 3Z" />
+      </svg>
+    );
+  }
+  return (
+    <svg
+      className="settings-phase-icon"
+      viewBox="0 0 24 24"
+      width="18"
+      height="18"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="1.6"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      aria-hidden="true"
+    >
+      <path d="M12 3 4 6v6c0 4.5 3.5 8 8 9 4.5-1 8-4.5 8-9V6l-8-3Z" />
+      <path d="m9 12 2 2 4-4" />
+    </svg>
+  );
+}
+
+/**
+ * Phase flow connector — small vertical chevron + "then" label
+ * rendered between the Execute and Verify panels so the lifecycle
+ * reads as a sequence, not two coequal cards. The arrow is purely
+ * decorative; the screen-reader-only label is "then" so AT users
+ * still hear the ordering.
+ */
+function PhaseFlowConnector() {
+  return (
+    <div className="settings-phase-flow" aria-hidden="true">
+      <span className="settings-phase-flow-line" />
+      <span className="settings-phase-flow-label">then</span>
+      <svg
+        className="settings-phase-flow-icon"
+        viewBox="0 0 12 12"
+        width="12"
+        height="12"
+        fill="none"
+        stroke="currentColor"
+        strokeWidth="1.6"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      >
+        <path d="M6 2v8" />
+        <path d="m3 7 3 3 3-3" />
+      </svg>
+    </div>
+  );
+}
+
+/**
+ * Nested phase panel — Execute and Verify each get their own inset
+ * card with a phase icon and name so the operator can scan the
+ * lifecycle without reading every field label.
+ */
+function PhasePanel({
+  id,
+  phase,
+  description,
+  children,
+}: {
+  id: string;
+  phase: "execute" | "verify";
+  description: string;
+  children: React.ReactNode;
+}) {
+  const title = phase === "execute" ? "Execute" : "Verify";
+  return (
+    <section
+      id={id}
+      className="settings-phase-panel"
+      data-phase={phase}
+      aria-labelledby={`${id}-title`}
+    >
+      <header className="settings-phase-panel-header">
+        <span className="settings-phase-panel-glyph" aria-hidden="true">
+          <PhaseIcon phase={phase} />
+        </span>
+        <div className="settings-phase-panel-heading">
+          <h3
+            id={`${id}-title`}
+            className="settings-phase-panel-title"
+          >
+            {title}
+          </h3>
+          <p className="settings-phase-panel-desc">{description}</p>
+        </div>
+      </header>
+      <div className="settings-phase-panel-body">{children}</div>
+    </section>
+  );
+}
+
+function PhaseFieldGroup({
+  title,
+  children,
+}: {
+  title: string;
+  children: React.ReactNode;
+}) {
+  return (
+    <div className="settings-phase-group">
+      <p className="settings-phase-group-title">{title}</p>
+      {children}
+    </div>
+  );
+}
+
+
+/**
+ * Phases — execute and verify configuration under one section card.
+ * Each phase is a nested panel with grouped fields (worker vs runner
+ * for execute; policy vs runner vs budget for verify).
  *
  * The runner picker is intentionally absent today: only one runner
- * (Cursor) is registered, so showing a "Same as execute / Cursor"
- * dropdown would offer no real choice. When a second runner ships,
- * a per-phase runner select can return alongside the model field
- * without disturbing this layout.
+ * (Cursor) is registered. When a second runner ships, a per-phase
+ * runner select can return alongside the model field.
  */
 export function PhasesSettingsSection({
   form,
+  pickupInvalid,
+  maxInvalid,
   cursorModelsQuery,
   modelIdsFromList,
   verifyModelsQuery,
@@ -414,55 +520,107 @@ export function PhasesSettingsSection({
   onField,
 }: {
   form: SettingsFormState;
+  pickupInvalid: boolean;
+  maxInvalid: boolean;
   cursorModelsQuery: UseQueryResult<ListCursorModelsResult, Error>;
   modelIdsFromList: Set<string>;
   verifyModelsQuery: UseQueryResult<ListCursorModelsResult, Error>;
   verifyModelIdsFromList: Set<string>;
   onField: HandleField;
 }) {
-  const verifyEnabled = form.verifyEnabled;
   return (
     <SectionCard id={SECTION_IDS.phases} title="Phases">
-      <div className="settings-phase-block">
-        <p className="settings-phase-title">Execute</p>
-        <p className="settings-phase-help">
-          The agent runs the work for each task. Pick the model
-          cursor-agent should use, or leave on Auto to let it choose.
-        </p>
-        <PhaseModelField
-          testId="settings-cursor-model-select"
-          value={form.cursorModel}
-          onChange={(v) => onField("cursorModel", v)}
-          query={cursorModelsQuery}
-          knownIds={modelIdsFromList}
-        />
-      </div>
+      <div className="settings-phases-stack">
+        <PhasePanel
+          id={SECTION_IDS.agentWorker}
+          phase="execute"
+          description="Pulls ready tasks and runs the agent to do the work."
+        >
+          <PhaseFieldGroup title="Worker">
+            <label className="settings-field">
+              <span className="settings-field-label">Pickup delay</span>
+              <span className="settings-field-input-suffix">
+                <input
+                  type="number"
+                  min={0}
+                  max={604800}
+                  step={1}
+                  placeholder="5"
+                  value={form.agentPickupDelaySeconds}
+                  onChange={(e) =>
+                    onField("agentPickupDelaySeconds", e.target.value)
+                  }
+                  aria-invalid={pickupInvalid}
+                />
+                <span className="settings-field-suffix" aria-hidden="true">
+                  seconds
+                </span>
+              </span>
+            </label>
+            <p className="settings-field-help">
+              Minimum wait before the next ready task. Default <code>5</code>s ·{" "}
+              <code>0</code> = no wait.
+            </p>
+            {pickupInvalid ? (
+              <p role="alert" className="settings-field-error">
+                Must be between 0 and 604800 (7 days).
+              </p>
+            ) : null}
+          </PhaseFieldGroup>
 
-      <div id={SECTION_IDS.verification} className="settings-phase-block">
-        <p className="settings-phase-title">Verify</p>
-        <label className="settings-verify-toggle">
-          <input
-            type="checkbox"
-            role="switch"
-            aria-checked={verifyEnabled}
-            checked={verifyEnabled}
-            onChange={(e) => onField("verifyEnabled", e.target.checked)}
-          />
-          <span className="settings-verify-toggle-copy">
-            <span className="settings-verify-toggle-title">
-              Verify done criteria before marking them complete
-            </span>
-            <span className="settings-verify-toggle-help">
-              The agent must prove each criterion passed — via your{" "}
-              <code>check</code> command or an LLM verifier — before it&apos;s
-              marked done. When off, criteria are bulk-marked done on a
-              successful execute run.
-            </span>
-          </span>
-        </label>
+          <PhaseFieldGroup title="Runner">
+            <PhaseModelField
+              testId="settings-cursor-model-select"
+              value={form.cursorModel}
+              onChange={(v) => onField("cursorModel", v)}
+              query={cursorModelsQuery}
+              knownIds={modelIdsFromList}
+            />
+            <p className="settings-field-help">
+              Auto lets cursor-agent choose. Pick a model to pin it for every
+              run.
+            </p>
 
-        {verifyEnabled ? (
-          <div className="settings-verify-details">
+            <div id={SECTION_IDS.runTimeout}>
+              <label className="settings-field">
+                <span className="settings-field-label">Max execute duration</span>
+                <span className="settings-field-input-suffix">
+                  <input
+                    type="number"
+                    min={0}
+                    step={1}
+                    value={form.maxRunDurationSeconds}
+                    onChange={(e) =>
+                      onField("maxRunDurationSeconds", e.target.value)
+                    }
+                    aria-invalid={maxInvalid}
+                  />
+                  <span className="settings-field-suffix" aria-hidden="true">
+                    seconds
+                  </span>
+                </span>
+              </label>
+              <p className="settings-field-help">
+                Cancels the run if it takes longer than this. Default{" "}
+                <code>0</code> = no limit.
+              </p>
+              {maxInvalid ? (
+                <p role="alert" className="settings-field-error">
+                  Must be a non-negative integer.
+                </p>
+              ) : null}
+            </div>
+          </PhaseFieldGroup>
+        </PhasePanel>
+
+        <PhaseFlowConnector />
+
+        <PhasePanel
+          id={SECTION_IDS.verification}
+          phase="verify"
+          description="Runs after execute when the task has done criteria. Proves each criterion passed before marking it complete."
+        >
+          <PhaseFieldGroup title="Runner">
             <PhaseModelField
               testId="settings-verify-model-select"
               value={form.verifyRunnerModel}
@@ -470,7 +628,13 @@ export function PhasesSettingsSection({
               query={verifyModelsQuery}
               knownIds={verifyModelIdsFromList}
             />
+            <p className="settings-field-help">
+              Auto lets the verify runner choose. Pick a model to pin for
+              verify only.
+            </p>
+          </PhaseFieldGroup>
 
+          <PhaseFieldGroup title="Budget">
             <label className="settings-field">
               <span className="settings-field-label">
                 Retry attempts on failure
@@ -518,54 +682,15 @@ export function PhasesSettingsSection({
               </span>
             </label>
             <p className="settings-field-help">
-              Each criterion&apos;s <code>check</code> shell command is killed
-              after this. Default{" "}
+              Stops a criterion&apos;s verification command if it runs longer
+              than this. Default{" "}
               <code>{DEFAULT_CHECK_COMMAND_TIMEOUT_SECONDS}</code>s · Range{" "}
               <code>{MIN_CHECK_COMMAND_TIMEOUT_SECONDS}</code>–
               <code>{MAX_CHECK_COMMAND_TIMEOUT_SECONDS}</code>.
             </p>
-          </div>
-        ) : null}
+          </PhaseFieldGroup>
+        </PhasePanel>
       </div>
-    </SectionCard>
-  );
-}
-
-export function RunTimeoutSettingsSection({
-  form,
-  maxInvalid,
-  onField,
-}: {
-  form: SettingsFormState;
-  maxInvalid: boolean;
-  onField: HandleField;
-}) {
-  return (
-    <SectionCard id={SECTION_IDS.runTimeout} title="Run timeout">
-      <label className="settings-field">
-        <span className="settings-field-label">Max run duration</span>
-        <span className="settings-field-input-suffix">
-          <input
-            type="number"
-            min={0}
-            step={1}
-            value={form.maxRunDurationSeconds}
-            onChange={(e) => onField("maxRunDurationSeconds", e.target.value)}
-            aria-invalid={maxInvalid}
-          />
-          <span className="settings-field-suffix" aria-hidden="true">
-            seconds
-          </span>
-        </span>
-      </label>
-      <p className="settings-field-help">
-        Hard ceiling per run. <code>0</code> = no limit.
-      </p>
-      {maxInvalid ? (
-        <p role="alert" className="settings-field-error">
-          Must be a non-negative integer.
-        </p>
-      ) : null}
     </SectionCard>
   );
 }

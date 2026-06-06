@@ -37,7 +37,6 @@ function stubListCursorModelsFetch(
 
 function defaultSettings(overrides: Partial<Record<string, unknown>> = {}) {
   return {
-    worker_enabled: true,
     agent_paused: false,
     repo_root: "/Users/me/code/example",
     cursor_bin: "/usr/local/bin/cursor-agent",
@@ -115,11 +114,10 @@ describe("SettingsPage", () => {
     renderPage();
     const repoInput = await screen.findByLabelText(/Repository root/);
     expect(repoInput).toHaveValue("/Users/me/code/example");
-    expect(screen.getByLabelText(/Enable agent worker/)).toBeChecked();
-    expect(screen.getByLabelText(/Cursor CLI path/)).toHaveValue(
+    expect(screen.getByLabelText(/^CLI path$/)).toHaveValue(
       "/usr/local/bin/cursor-agent",
     );
-    expect(screen.getByLabelText(/Max run duration/)).toHaveValue(0);
+    expect(screen.getByLabelText(/Max execute duration/)).toHaveValue(0);
   });
 
   it("formats Last saved in the selected display timezone (explicit IANA)", async () => {
@@ -188,7 +186,7 @@ describe("SettingsPage", () => {
 
     // Wait for the form to hydrate, then assert the (retired) status
     // row is gone and no stray "Paused"/"Running" pill bled through.
-    await screen.findByLabelText(/Cursor CLI path/);
+    await screen.findByLabelText(/^CLI path$/);
     expect(
       screen.queryByTestId("settings-agent-paused-status"),
     ).not.toBeInTheDocument();
@@ -199,7 +197,7 @@ describe("SettingsPage", () => {
 
     // Editing an unrelated field and saving must still succeed
     // without the patch including agent_paused.
-    const cursorBin = screen.getByLabelText(/Cursor CLI path/);
+    const cursorBin = screen.getByLabelText(/^CLI path$/);
     await userEvent.clear(cursorBin);
     await userEvent.type(cursorBin, "/usr/local/bin/cursor-agent-2");
 
@@ -324,7 +322,7 @@ describe("SettingsPage", () => {
     }));
 
     renderPage();
-    const probeBtn = await screen.findByRole("button", { name: /Test cursor binary/ });
+    const probeBtn = await screen.findByRole("button", { name: /Test binary/ });
     await userEvent.click(probeBtn);
     await waitFor(() =>
       expect(screen.getByTestId("settings-status")).toHaveTextContent(/2026\.04/),
@@ -356,7 +354,7 @@ describe("SettingsPage", () => {
 
     renderPage();
     const probeBtn = await screen.findByRole("button", {
-      name: /Test cursor binary/,
+      name: /Test binary/,
     });
     await userEvent.click(probeBtn);
     await waitFor(() =>
@@ -386,7 +384,7 @@ describe("SettingsPage", () => {
     }));
 
     renderPage();
-    const probeBtn = await screen.findByRole("button", { name: /Test cursor binary/ });
+    const probeBtn = await screen.findByRole("button", { name: /Test binary/ });
     await userEvent.click(probeBtn);
     await waitFor(() =>
       expect(screen.getByTestId("settings-status-error")).toHaveTextContent(
@@ -474,7 +472,7 @@ describe("SettingsPage", () => {
 
     // PATCH is in flight; the user keeps typing in the cursor-bin
     // field (a field NOT in the submitted patch body).
-    const cursorInput = screen.getByLabelText(/Cursor CLI path/);
+    const cursorInput = screen.getByLabelText(/^CLI path$/);
     await userEvent.clear(cursorInput);
     await userEvent.type(cursorInput, "/opt/local/bin/cursor-agent");
 
@@ -559,7 +557,7 @@ describe("SettingsPage", () => {
       jsonResponse(defaultSettings()),
     ));
     renderPage();
-    const maxInput = await screen.findByLabelText(/Max run duration/);
+    const maxInput = await screen.findByLabelText(/Max execute duration/);
     await userEvent.clear(maxInput);
     await userEvent.type(maxInput, "-5");
     expect(screen.getByRole("alert")).toHaveTextContent(

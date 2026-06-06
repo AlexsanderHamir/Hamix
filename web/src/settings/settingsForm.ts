@@ -4,25 +4,18 @@ import type { AppSettings, AppSettingsPatch } from "@/api/settings";
  * Registered runners.
  *
  * `label` is the long form rendered inside <select> options ("Cursor
- * (cursor-agent CLI)"); `shortLabel` is the operator-facing display
- * name reused for section headings and nav rail entries
- * ("Cursor"). Keep `shortLabel` to one or two words — it gets
- * concatenated with " runner" to form the Settings section heading
- * (e.g. "Cursor runner") and must remain readable in a 220px-wide
- * left rail.
+ * (cursor-agent CLI)"); `shortLabel` is a one-word display name
+ * (e.g. "Cursor") for places that need to refer to the runner
+ * inline without the parenthetical detail.
  */
 export const RUNNERS = [
   { id: "cursor", label: "Cursor (cursor-agent CLI)", shortLabel: "Cursor" },
 ] as const;
 
 /**
- * Resolve a runner id (typically `form.runner`) to its short
- * operator-facing label. Falls back to the raw runner id, then to a
- * generic "Runner" so the heading never displays an empty string.
- *
- * Used by the SettingsPage to derive the heading and nav label of
- * the runner-configuration section so they reflect the operator's
- * chosen runner instead of being hardcoded to "Cursor".
+ * Resolve a runner id (typically `form.runner`) to its short display
+ * name. Falls back to the raw runner id, then to a generic "Runner"
+ * so callers never display an empty string.
  */
 export function runnerShortLabel(runnerId: string): string {
   const trimmed = runnerId.trim();
@@ -32,7 +25,6 @@ export function runnerShortLabel(runnerId: string): string {
 }
 
 export type SettingsFormState = {
-  workerEnabled: boolean;
   runner: string;
   repoRoot: string;
   cursorBin: string;
@@ -40,7 +32,6 @@ export type SettingsFormState = {
   maxRunDurationSeconds: string;
   agentPickupDelaySeconds: string;
   displayTimezone: string;
-  verifyEnabled: boolean;
   verifyMaxRetries: string;
   verifyRunnerName: string;
   verifyRunnerModel: string;
@@ -57,7 +48,6 @@ export const SETTINGS_SUCCESS_DISMISS_MS = 4_000;
 
 export function toFormState(s: AppSettings): SettingsFormState {
   return {
-    workerEnabled: s.worker_enabled,
     runner: s.runner,
     repoRoot: s.repo_root,
     cursorBin: s.cursor_bin,
@@ -65,7 +55,6 @@ export function toFormState(s: AppSettings): SettingsFormState {
     maxRunDurationSeconds: String(s.max_run_duration_seconds),
     agentPickupDelaySeconds: String(s.agent_pickup_delay_seconds),
     displayTimezone: s.display_timezone,
-    verifyEnabled: s.verify_enabled,
     verifyMaxRetries: String(s.verify_max_retries),
     verifyRunnerName: s.verify_runner_name,
     verifyRunnerModel: s.verify_runner_model,
@@ -78,9 +67,6 @@ export function diffPatch(
   form: SettingsFormState,
 ): AppSettingsPatch {
   const out: AppSettingsPatch = {};
-  if (initial.worker_enabled !== form.workerEnabled) {
-    out.worker_enabled = form.workerEnabled;
-  }
   if (initial.runner !== form.runner.trim()) {
     out.runner = form.runner.trim();
   }
@@ -110,9 +96,6 @@ export function diffPatch(
   const tzTrimmed = form.displayTimezone.trim();
   if (tzTrimmed !== initial.display_timezone) {
     out.display_timezone = tzTrimmed;
-  }
-  if (form.verifyEnabled !== initial.verify_enabled) {
-    out.verify_enabled = form.verifyEnabled;
   }
   const parsedRetries = Number.parseInt(form.verifyMaxRetries.trim() || "0", 10);
   if (

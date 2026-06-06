@@ -10,11 +10,9 @@ import {
 } from "@/shared/time/appTimezone";
 import { useAppSettings } from "./useAppSettings";
 import {
-  AgentWorkerSettingsSection,
-  CursorRunnerSettingsSection,
   DisplaySettingsSection,
   PhasesSettingsSection,
-  RunTimeoutSettingsSection,
+  RunnerSettingsSection,
   SECTION_IDS,
   SettingsActions,
   SettingsHeader,
@@ -35,17 +33,15 @@ import {
 
 /**
  * In-page navigation rail entries. Order matches the form below
- * (workspace → worker lifecycle → runner config → phases → safety →
- * cosmetic → dev) so the operator's vertical scroll path matches the
- * rail's top-to-bottom reading order. Keep ids in sync with
- * `SECTION_IDS` exported from SettingsSections.tsx.
+ * (workspace → runner config → phases → cosmetic → dev) so
+ * the operator's vertical scroll path matches the rail's top-to-bottom
+ * reading order. Keep ids in sync with `SECTION_IDS` exported from
+ * SettingsSections.tsx.
  */
 const SETTINGS_NAV_ITEMS: SettingsNavItem[] = [
   { id: SECTION_IDS.workspace, label: "Workspace" },
-  { id: SECTION_IDS.agentWorker, label: "Agent worker" },
-  { id: SECTION_IDS.cursorAgent, label: "Cursor" },
+  { id: SECTION_IDS.cursorAgent, label: "Runner" },
   { id: SECTION_IDS.phases, label: "Phases" },
-  { id: SECTION_IDS.runTimeout, label: "Run timeout" },
   { id: SECTION_IDS.display, label: "Display" },
   { id: SECTION_IDS.developer, label: "Developer" },
 ];
@@ -182,7 +178,7 @@ export function SettingsPage() {
         },
         { signal },
       ),
-    enabled: Boolean(settings && form && form.verifyEnabled),
+    enabled: Boolean(settings && form),
   });
 
   const verifyModelIdsFromList = useMemo(() => {
@@ -259,9 +255,6 @@ export function SettingsPage() {
       setForm((cur) => {
         if (cur === null) return toFormState(next);
         const merged: SettingsFormState = { ...cur };
-        if (cur.workerEnabled === formAtSubmit.workerEnabled) {
-          merged.workerEnabled = next.worker_enabled;
-        }
         if (cur.runner === formAtSubmit.runner) {
           merged.runner = next.runner;
         }
@@ -394,13 +387,7 @@ export function SettingsPage() {
         >
           <WorkspaceSettingsSection form={form} onField={handleField} />
 
-          <AgentWorkerSettingsSection
-            form={form}
-            pickupInvalid={pickupInvalid}
-            onField={handleField}
-          />
-
-          <CursorRunnerSettingsSection
+          <RunnerSettingsSection
             form={form}
             resolvedDefaultBin={resolvedDefaultBin}
             probePending={probe.isPending}
@@ -412,16 +399,12 @@ export function SettingsPage() {
 
           <PhasesSettingsSection
             form={form}
+            pickupInvalid={pickupInvalid}
+            maxInvalid={maxInvalid}
             cursorModelsQuery={cursorModelsQuery}
             modelIdsFromList={modelIdsFromList}
             verifyModelsQuery={verifyModelsQuery}
             verifyModelIdsFromList={verifyModelIdsFromList}
-            onField={handleField}
-          />
-
-          <RunTimeoutSettingsSection
-            form={form}
-            maxInvalid={maxInvalid}
             onField={handleField}
           />
 

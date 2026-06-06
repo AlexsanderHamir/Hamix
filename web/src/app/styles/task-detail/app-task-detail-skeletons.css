@@ -138,26 +138,25 @@
 .task-checklist-skeleton {
   display: flex;
   flex-direction: column;
-  gap: 0;
+  gap: var(--space-2);
+  padding: 0;
 }
 
 .task-checklist-skeleton-row {
   display: flex;
   align-items: center;
   gap: 0.65rem;
-  padding: 0.65rem 0;
-  border-bottom: 1px solid var(--border-hairline);
-}
-
-.task-checklist-skeleton-row:last-child {
-  border-bottom: none;
+  padding: var(--space-3) var(--space-4);
+  border: 1px solid var(--border-soft);
+  border-radius: var(--radius-md);
+  background: var(--bg-elevated);
 }
 
 .task-checklist-skeleton-check {
   flex-shrink: 0;
-  width: 1.35rem;
-  height: 1.35rem;
-  border-radius: var(--radius-sm);
+  width: 1.375rem;
+  height: 1.375rem;
+  border-radius: var(--radius-full);
 }
 
 .task-checklist-skeleton-text {

@@ -72,6 +72,17 @@ export function TaskDetailChecklistSection({
   editCriterionError = null,
   removeItemError = null,
 }: TaskDetailChecklistSectionProps) {
+  const showProgress =
+    !checklistInherit &&
+    !checklistQuery.isPending &&
+    !checklistQuery.isError &&
+    totalCount > 0;
+  const allSatisfied = showProgress && doneCount === totalCount;
+  const progressPct =
+    showProgress && totalCount > 0
+      ? Math.round((doneCount / totalCount) * 100)
+      : 0;
+
   return (
     <div className="task-detail-section" id="task-detail-checklist">
       <div className="task-detail-checklist-head">
@@ -97,37 +108,51 @@ export function TaskDetailChecklistSection({
           </button>
         ) : null}
       </div>
-      {checklistInherit ||
-      (!checklistQuery.isPending &&
-        !checklistQuery.isError &&
-        totalCount > 0) ? (
-        <div className="task-checklist-intro">
-          {checklistInherit ? (
-            <p className="task-checklist-intro-lead muted" role="status">
-              Inherited for <strong>this</strong> task; criteria are defined
-              upstream.
+      {checklistInherit ? (
+        <p className="task-checklist-intro-lead muted" role="status">
+          Inherited for <strong>this</strong> task; criteria are defined
+          upstream.
+        </p>
+      ) : null}
+      {showProgress ? (
+        <div
+          className={
+            allSatisfied
+              ? "task-checklist-progress-card task-checklist-progress-card--complete"
+              : "task-checklist-progress-card"
+          }
+          role="status"
+          aria-label={
+            totalCount === 1
+              ? `Checklist progress: ${doneCount} of 1 requirement satisfied`
+              : `Checklist progress: ${doneCount} of ${totalCount} requirements satisfied`
+          }
+        >
+          <div className="task-checklist-progress-head">
+            <p className="task-checklist-progress-fraction">
+              <span className="task-checklist-progress-done">{doneCount}</span>
+              <span className="task-checklist-progress-sep" aria-hidden="true">
+                /
+              </span>
+              <span className="task-checklist-progress-total">{totalCount}</span>
             </p>
-          ) : null}
-          {!checklistQuery.isPending &&
-          !checklistQuery.isError &&
-          totalCount > 0 ? (
-            <p
-              className="task-checklist-progress muted"
-              role="status"
-              aria-label={
-                totalCount === 1
-                  ? `Checklist progress: ${doneCount} of 1 requirement satisfied`
-                  : `Checklist progress: ${doneCount} of ${totalCount} requirements satisfied`
-              }
-            >
-              <strong className="task-checklist-progress-strong">
-                {doneCount} of {totalCount}
-              </strong>{" "}
-              {totalCount === 1
-                ? "requirement satisfied"
-                : "requirements satisfied"}
-            </p>
-          ) : null}
+            {allSatisfied ? null : (
+              <p className="task-checklist-progress-label">
+                {totalCount - doneCount === 1
+                  ? "1 remaining"
+                  : `${totalCount - doneCount} remaining`}
+              </p>
+            )}
+          </div>
+          <div
+            className="task-checklist-progress-track"
+            aria-hidden="true"
+          >
+            <div
+              className="task-checklist-progress-fill"
+              style={{ width: `${progressPct}%` }}
+            />
+          </div>
         </div>
       ) : null}
       <div

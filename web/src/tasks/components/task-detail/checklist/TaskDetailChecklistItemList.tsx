@@ -1,5 +1,6 @@
 import { useState } from "react";
 import type { TaskChecklistItemView } from "@/types";
+import { ChecklistStatusIcon } from "./ChecklistStatusIcon";
 import { ChecklistVerificationModal } from "./ChecklistVerificationModal";
 
 type Props = {
@@ -43,30 +44,22 @@ export function TaskDetailChecklistItemList({
               (typeof item.verifier_reasoning === "string" &&
                 item.verifier_reasoning.length > 0));
           return (
-            <li key={item.id} className="task-checklist-row">
+            <li
+              key={item.id}
+              className={
+                item.done
+                  ? "task-checklist-row task-checklist-row--done"
+                  : "task-checklist-row task-checklist-row--pending"
+              }
+            >
             <div className="task-checklist-row-main">
-              <span
-                className={
-                  item.done
-                    ? "task-checklist-status task-checklist-status--done"
-                    : "task-checklist-status task-checklist-status--pending"
-                }
-                role="img"
-                aria-label={item.done ? "Satisfied" : "Not satisfied yet"}
-              >
-                {item.done ? "✓" : null}
-              </span>
+              <ChecklistStatusIcon done={item.done} />
               <div className="task-checklist-text-block">
                 <span className="task-checklist-text">{item.text}</span>
                 {item.check ? (
                   <code className="task-checklist-check">{item.check}</code>
                 ) : null}
                 <div className="task-checklist-row-meta">
-                  {item.done && item.verified_by ? (
-                    <span className="task-checklist-verified-badge">
-                      Verified
-                    </span>
-                  ) : null}
                   {hasVerificationDetail ? (
                     <button
                       type="button"

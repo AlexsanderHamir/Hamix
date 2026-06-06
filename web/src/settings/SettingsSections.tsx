@@ -381,6 +381,18 @@ export function VerificationSettingsSection({
   const verifyRunnerKnown =
     verifyRunnerSaved === "" ||
     RUNNERS.some((r) => r.id === verifyRunnerSaved);
+  /**
+   * Resolved execute-runner label, surfaced inside the verify-runner
+   * dropdown so the operator can see WHICH runner verify will reuse
+   * when the field is left at its default. Per pkgs/agents/worker/
+   * verification.go, an empty `verify_runner_name` falls back to
+   * `w.runner` (the execute runner) — without surfacing that here
+   * the operator has to read backend code to find out what
+   * "Same as execute runner" actually means.
+   */
+  const executeRunnerEntry = RUNNERS.find((r) => r.id === form.runner.trim());
+  const executeRunnerLabel =
+    executeRunnerEntry?.label ?? form.runner.trim() ?? "execute runner";
   return (
     <SectionCard id={SECTION_IDS.verification} title="Verification">
       <label className="settings-verify-toggle">
@@ -465,11 +477,11 @@ export function VerificationSettingsSection({
           </div>
 
           <details className="settings-learn-more settings-verify-advanced">
-            <summary>Advanced verifier</summary>
+            <summary>Override verifier for this phase</summary>
             <p>
-              Pick a different runner — or a different model on the same
-              runner — to judge the work. Leave both at default to reuse the
-              execute runner.
+              By default, verify reuses your execute runner and lets it pick
+              the model. Override either field below to pin a specific judge
+              for the verify phase only.
             </p>
 
             <label className="settings-field">
@@ -479,7 +491,9 @@ export function VerificationSettingsSection({
                 value={form.verifyRunnerName}
                 onChange={(e) => onField("verifyRunnerName", e.target.value)}
               >
-                <option value="">Same as execute runner</option>
+                <option value="">
+                  {executeRunnerLabel} (same as execute runner)
+                </option>
                 {RUNNERS.map((r) => (
                   <option key={r.id} value={r.id}>
                     {r.label}
@@ -492,6 +506,11 @@ export function VerificationSettingsSection({
                 ) : null}
               </select>
             </label>
+            <p className="settings-field-help">
+              {verifyRunnerSaved === ""
+                ? "Verify will reuse the runner you chose above."
+                : "Override active — verify uses this runner instead of the execute runner."}
+            </p>
 
             <label className="settings-field">
               <span className="settings-field-label">Verify runner model</span>
@@ -504,7 +523,9 @@ export function VerificationSettingsSection({
                 disabled={verifyModelsQuery.isFetching}
                 aria-busy={verifyModelsQuery.isFetching}
               >
-                <option value="">Default (runner picks)</option>
+                <option value="">
+                  Runner default (Cursor picks at runtime)
+                </option>
                 {verifyModelsQuery.data?.ok && verifyModelsQuery.data.models
                   ? verifyModelsQuery.data.models.map((m) => (
                       <option key={m.id} value={m.id}>
@@ -520,6 +541,11 @@ export function VerificationSettingsSection({
                 ) : null}
               </select>
             </label>
+            <p className="settings-field-help">
+              {verifyModelSaved === ""
+                ? "No --model flag is passed; the runner uses its default."
+                : "Override active — verify pins this model regardless of execute."}
+            </p>
             {verifyModelsQuery.isError ? (
               <p role="alert" className="settings-field-error">
                 Could not load models for this runner:{" "}

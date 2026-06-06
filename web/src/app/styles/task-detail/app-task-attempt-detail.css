@@ -333,7 +333,7 @@ time.task-attempt-meta-inline-item {
   background: var(--surface-soft);
   color: var(--text-tertiary);
   font-family: var(--font-mono, ui-monospace, SFMono-Regular, Menlo, monospace);
-  font-size: 0.6875rem;
+  font-size: var(--text-xs);
   font-weight: 600;
   letter-spacing: 0.06em;
   font-variant-numeric: tabular-nums;
@@ -353,7 +353,7 @@ time.task-attempt-meta-inline-item {
   padding: 0 0.5rem;
   border-radius: var(--radius-sm);
   border: 1px solid transparent;
-  font-size: 0.6875rem;
+  font-size: var(--text-xs);
   font-weight: 600;
   letter-spacing: 0.05em;
   line-height: 1;
@@ -474,7 +474,7 @@ time.task-attempt-meta-inline-item {
   padding: 0 0.45rem;
   border-radius: var(--radius-sm);
   border: 1px solid transparent;
-  font-size: 0.6875rem;
+  font-size: var(--text-xs);
   font-weight: 600;
   letter-spacing: 0.02em;
   line-height: 1;

@@ -1,5 +1,9 @@
 import type { UseQueryResult } from "@tanstack/react-query";
 import { MutationErrorBanner } from "@/shared/MutationErrorBanner";
+import {
+  filterCursorModelsForSelect,
+  normalizeCursorModelSelectValue,
+} from "@/api/cursorModels";
 import type { ListCursorModelsResult } from "@/api/settings";
 import type { TimezoneSelectOption } from "@/shared/time/appTimezone";
 import { formatTimezoneMenuLabel } from "@/shared/time/appTimezone";
@@ -211,6 +215,12 @@ export function AgentWorkerSettingsSection({
 }) {
   const runnerLabel = runnerShortLabel(form.runner);
   const showCursorRunnerFields = form.runner.trim() === "cursor";
+  const cursorModelSelectValue = normalizeCursorModelSelectValue(
+    form.cursorModel,
+  );
+  const cursorModelsForSelect = filterCursorModelsForSelect(
+    cursorModelsQuery.data?.ok ? cursorModelsQuery.data.models : undefined,
+  );
 
   return (
     <SectionCard id={SECTION_IDS.agentWorker} title="Agent worker">
@@ -288,23 +298,21 @@ export function AgentWorkerSettingsSection({
             <span className="settings-field-label">Model</span>
             <select
               data-testid="settings-cursor-model-select"
-              value={form.cursorModel}
+              value={cursorModelSelectValue}
               onChange={(e) => onField("cursorModel", e.target.value)}
               disabled={cursorModelsQuery.isFetching}
               aria-busy={cursorModelsQuery.isFetching}
             >
-              <option value="">Default (runner picks)</option>
-              {cursorModelsQuery.data?.ok && cursorModelsQuery.data.models
-                ? cursorModelsQuery.data.models.map((m) => (
-                    <option key={m.id} value={m.id}>
-                      {m.label}
-                    </option>
-                  ))
-                : null}
-              {form.cursorModel.trim() !== "" &&
-              !modelIdsFromList.has(form.cursorModel.trim()) ? (
-                <option value={form.cursorModel.trim()}>
-                  {form.cursorModel.trim()} (saved — not in current list)
+              <option value="">Auto</option>
+              {cursorModelsForSelect.map((m) => (
+                <option key={m.id} value={m.id}>
+                  {m.label}
+                </option>
+              ))}
+              {cursorModelSelectValue !== "" &&
+              !modelIdsFromList.has(cursorModelSelectValue) ? (
+                <option value={cursorModelSelectValue}>
+                  {cursorModelSelectValue} (saved — not in current list)
                 </option>
               ) : null}
             </select>
@@ -323,16 +331,9 @@ export function AgentWorkerSettingsSection({
             </p>
           ) : null}
           <p className="settings-field-help">
-            From <code>cursor-agent --list-models</code>. Default omits{" "}
-            <code>--model</code>.
+            Auto lets cursor-agent choose. Pick a model to pin it for every
+            run.
           </p>
-          <details className="settings-learn-more">
-            <summary>Hit a usage-limit error?</summary>
-            <p>
-              Pick a different model here and save to route new runs through
-              it.
-            </p>
-          </details>
 
           <label className="settings-field">
             <span className="settings-field-label">Cursor CLI path</span>
@@ -413,6 +414,12 @@ export function VerificationSettingsSection({
   const executeRunnerLabel =
     executeRunnerEntry?.label ??
     (executeRunnerTrim || "(none configured)");
+  const verifyModelSelectValue = normalizeCursorModelSelectValue(
+    verifyModelSaved,
+  );
+  const verifyModelsForSelect = filterCursorModelsForSelect(
+    verifyModelsQuery.data?.ok ? verifyModelsQuery.data.models : undefined,
+  );
   return (
     <SectionCard id={SECTION_IDS.verification} title="Verification">
       <label className="settings-verify-toggle">
@@ -536,34 +543,30 @@ export function VerificationSettingsSection({
               <span className="settings-field-label">Verify runner model</span>
               <select
                 data-testid="settings-verify-model-select"
-                value={form.verifyRunnerModel}
+                value={verifyModelSelectValue}
                 onChange={(e) =>
                   onField("verifyRunnerModel", e.target.value)
                 }
                 disabled={verifyModelsQuery.isFetching}
                 aria-busy={verifyModelsQuery.isFetching}
               >
-                <option value="">
-                  Runner default (Cursor picks at runtime)
-                </option>
-                {verifyModelsQuery.data?.ok && verifyModelsQuery.data.models
-                  ? verifyModelsQuery.data.models.map((m) => (
-                      <option key={m.id} value={m.id}>
-                        {m.label}
-                      </option>
-                    ))
-                  : null}
-                {verifyModelSaved !== "" &&
-                !verifyModelIdsFromList.has(verifyModelSaved) ? (
-                  <option value={verifyModelSaved}>
-                    {verifyModelSaved} (saved — not in current list)
+                <option value="">Auto</option>
+                {verifyModelsForSelect.map((m) => (
+                  <option key={m.id} value={m.id}>
+                    {m.label}
+                  </option>
+                ))}
+                {verifyModelSelectValue !== "" &&
+                !verifyModelIdsFromList.has(verifyModelSelectValue) ? (
+                  <option value={verifyModelSelectValue}>
+                    {verifyModelSelectValue} (saved — not in current list)
                   </option>
                 ) : null}
               </select>
             </label>
             <p className="settings-field-help">
-              {verifyModelSaved === ""
-                ? "No --model flag is passed; the runner uses its default."
+              {verifyModelSelectValue === ""
+                ? "Auto lets the verify runner choose. Pick a model to pin for verify only."
                 : "Override active — verify pins this model regardless of execute."}
             </p>
             {verifyModelsQuery.isError ? (

@@ -2,6 +2,10 @@ import { useId, useMemo } from "react";
 import { Link } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
 import type { AppSettings } from "@/api/settings";
+import {
+  filterCursorModelsForSelect,
+  normalizeCursorModelSelectValue,
+} from "@/api/cursorModels";
 import { fetchAppSettings, listCursorModels } from "@/api/settings";
 import { settingsQueryKeys } from "@/tasks/task-query/queryKeys";
 
@@ -97,6 +101,10 @@ export function TaskCreateModalAgentSection({
 
   const modelSelectBusy = modelsQuery.isFetching;
   const modelSelectDisabled = disabled || modelSelectBusy;
+  const cursorModelSelectValue = normalizeCursorModelSelectValue(cursorModel);
+  const modelsForSelect = filterCursorModelsForSelect(
+    modelsQuery.data?.ok ? modelsQuery.data.models : undefined,
+  );
 
   const modelFetchError = modelsQuery.isError
     ? modelsQuery.error instanceof Error
@@ -186,23 +194,21 @@ export function TaskCreateModalAgentSection({
                     id={modelId}
                     className="task-create-agent-select task-create-agent-select--with-trail"
                     data-testid="task-create-cursor-model-select"
-                    value={cursorModel}
+                    value={cursorModelSelectValue}
                     disabled={modelSelectDisabled}
                     aria-busy={modelSelectBusy}
                     onChange={(e) => onCursorModelChange(e.target.value)}
                   >
-                    <option value="">Default</option>
-                    {modelsQuery.data?.ok && modelsQuery.data.models
-                      ? modelsQuery.data.models.map((m) => (
-                          <option key={m.id} value={m.id}>
-                            {m.label}
-                          </option>
-                        ))
-                      : null}
-                    {cursorModel.trim() !== "" &&
-                    !modelIdsFromList.has(cursorModel.trim()) ? (
-                      <option value={cursorModel.trim()}>
-                        {cursorModel.trim()} (saved — not in current list)
+                    <option value="">Auto</option>
+                    {modelsForSelect.map((m) => (
+                      <option key={m.id} value={m.id}>
+                        {m.label}
+                      </option>
+                    ))}
+                    {cursorModelSelectValue !== "" &&
+                    !modelIdsFromList.has(cursorModelSelectValue) ? (
+                      <option value={cursorModelSelectValue}>
+                        {cursorModelSelectValue} (saved — not in current list)
                       </option>
                     ) : null}
                   </select>
@@ -216,8 +222,8 @@ export function TaskCreateModalAgentSection({
                     ? "Loading available models…"
                     : lockRunner
                       ? isModelDialog
-                        ? "Pick a model or Default. This overrides the workspace default for this task only."
-                        : "Per-task: pick a model or Default. (Current) in the list reflects Cursor’s global default — this field still overrides the model for this task only."
+                        ? "Pick a model or Auto. This overrides the workspace default for this task only."
+                        : "Per-task: pick a model or Auto. Auto lets cursor-agent choose for this task only."
                       : "Auto uses Cursor's current default unless overridden."}
                 </p>
                 {modelFetchError ? (

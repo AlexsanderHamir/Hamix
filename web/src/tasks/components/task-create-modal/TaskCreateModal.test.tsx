@@ -282,7 +282,7 @@ describe("TaskCreateModal", () => {
     const model = screen.getByTestId("task-create-cursor-model-select");
     expect(model.tagName).toBe("SELECT");
     expect(
-      screen.getByRole("option", { name: /^default$/i }),
+      screen.getByRole("option", { name: /^auto$/i }),
     ).toBeInTheDocument();
   });
 

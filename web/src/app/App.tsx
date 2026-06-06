@@ -24,7 +24,6 @@ import {
   useProjectContextPromptBinding,
   useProjects,
 } from "@/projects";
-import { SystemStatusChip } from "@/observability";
 import { UiTestModeBanner } from "@/dev/UiTestModeBanner";
 import { ErrorBanner } from "../shared/ErrorBanner";
 import { ModalStackProvider } from "../shared/ModalStackContext";
@@ -100,7 +99,6 @@ function AppShell({ app }: { app: ReturnType<typeof useTasksApp> }) {
               </Link>
             </nav>
             <div className="app-header-actions">
-              <SystemStatusChip connected={app.sseLive} />
               <Link
                 to="/settings"
                 className="app-header-settings-link"

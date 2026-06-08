@@ -159,12 +159,12 @@ func migrateChecklistCheckToText(ctx context.Context, db *gorm.DB) error {
 	}
 	if err := db.WithContext(ctx).Exec(`
 UPDATE task_checklist_items
-   SET text = text || ' (verification: ' || trim(check) || ')'
- WHERE trim(check) != ''
+   SET text = text || ' (verification: ' || trim("check") || ')'
+ WHERE trim("check") != ''
    AND text NOT LIKE '%(verification:%'`).Error; err != nil {
 		return fmt.Errorf("merge checklist check into text: %w", err)
 	}
-	if err := db.WithContext(ctx).Exec(`ALTER TABLE task_checklist_items DROP COLUMN IF EXISTS check`).Error; err != nil {
+	if err := db.WithContext(ctx).Exec(`ALTER TABLE task_checklist_items DROP COLUMN IF EXISTS "check"`).Error; err != nil {
 		return fmt.Errorf("drop task_checklist_items.check: %w", err)
 	}
 	if err := db.WithContext(ctx).Exec(`ALTER TABLE app_settings DROP CONSTRAINT IF EXISTS chk_app_settings_check_timeout`).Error; err != nil {

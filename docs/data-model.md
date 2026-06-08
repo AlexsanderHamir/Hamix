@@ -219,7 +219,7 @@ Per-task acceptance requirements. Stored in `task_checklist_items` (definitions:
 
 ### Worker verification loop
 
-Verify runs after every successful execute when the task has at least one done criterion. Tasks with zero criteria fall through to the legacy bulk-mark path (see end of this section).
+Verify runs after every successful execute **only when the task has at least one criterion**. Tasks with **zero criteria** skip verify and write no checklist completion rows — a successful execute alone marks the task `done`.
 
 1. **Execute** — prompt prepends all criteria with stable ids and the **absolute** worker-managed path the agent must write its report to (`<worker-managed dir>/<cycle_id>/criteria-report.json`, see "Report file contracts" below). `claimed_done` in the report is an assertion only — not final acceptance.
 2. **Gate** — criteria with `claimed_done: false` fail immediately (`verified_by=agent_self`); no verify pass for those ids.
@@ -227,7 +227,7 @@ Verify runs after every successful execute when the task has at least one done c
 4. **Decision** — all pass → atomic `SetDoneWithEvidence` + `status=done`; any fail → retry execute up to `verify_max_retries` or terminate with reason `verification_failed:<id>,<id>,…` (sorted, deduped failing criterion IDs after the prefix) and **no** completion rows. The `verification_failed` prefix is contract-stable; consumers MUST use prefix matching (`startsWith`). Bare `verification_failed` (older cycles) remains a valid value. The reason column is 256 chars; long failure lists are truncated with a trailing `…` while keeping the prefix intact.
 5. **Retry efficiency** — verdicts that passed in earlier attempts are carried in memory across retries. The next execute prompt lists them under "Already verified (do not re-do)" and excludes them from the active checklist; the next verify pass short-circuits them. The atomic-decision contract is preserved: nothing is committed to `task_checklist_completions` until the cycle terminates `succeeded`, at which point all passes (this attempt + earlier) land in one transaction. On terminal failure, no completion rows are written even for criteria that passed on every attempt.
 
-When the task has no done criteria, the worker uses the legacy bulk-mark path (empty evidence) on a successful execute. Existing `legacy` rows remain valid.
+Pre-V1.1 completion rows may carry `verified_by=legacy` (backfilled at migrate); the current worker never writes that value.
 
 ### Report file contracts
 

@@ -8,7 +8,7 @@ import (
 	"github.com/AlexsanderHamir/T2A/pkgs/tasks/store"
 )
 
-// injectCriteria appends the Done-criteria block to the operator's
+// injectCriteria prepends the Done-criteria block before the operator's
 // initial prompt. alreadyVerified is the set of criterion IDs proven
 // passed in earlier retry attempts (carried across the retry loop in
 // processState.previouslyPassed); when non-empty, those items render
@@ -38,41 +38,34 @@ func injectCriteria(prompt string, items []store.ChecklistVerifyItem, cycleID, r
 		active = append(active, it)
 	}
 
-	var b strings.Builder
-	b.WriteString(prompt)
+	var criteria strings.Builder
 
 	if len(locked) > 0 {
-		b.WriteString("\n\n## Already verified (do not re-do)\n\n")
-		b.WriteString("These criteria were proven passed in an earlier attempt. Do not undo or modify the work that satisfied them; do not include them in your report.\n\n")
+		criteria.WriteString("\n\n## Already verified (do not re-do)\n\n")
+		criteria.WriteString("These criteria were proven passed in an earlier attempt. Do not undo or modify the work that satisfied them; do not include them in your report.\n\n")
 		for _, it := range locked {
-			b.WriteString(fmt.Sprintf("- [%s] %s\n", it.ID, it.Text))
+			criteria.WriteString(fmt.Sprintf("- [%s] %s\n", it.ID, it.Text))
 		}
 	}
 
 	if len(active) == 0 {
-		// All criteria already passed in earlier attempts; the agent
-		// has nothing to do but the worker's loop still expects an
-		// execute pass. Render an empty active-section header so the
-		// prompt structure stays predictable for downstream tooling.
-		b.WriteString("\n\n## Done criteria (required)\n\nAll criteria are already verified. Re-run is a no-op; the worker will exit successfully.\n")
-		return b.String()
+		criteria.WriteString("\n\n## Done criteria (required)\n\nAll criteria are already verified. Re-run is a no-op; the worker will exit successfully.\n")
+		return strings.TrimPrefix(criteria.String(), "\n\n") + "\n\n" + prompt
 	}
 
-	b.WriteString("\n\n## Done criteria (required)\n\n")
-	b.WriteString("You must satisfy every criterion below. When finished, write a JSON report at:\n")
-	b.WriteString(fmt.Sprintf("`%s`\n\n", reportPath))
-	b.WriteString("Schema:\n```json\n{\"criteria\":[{\"id\":\"<id>\",\"claimed_done\":true,\"evidence\":\"...\"}]}\n```\n")
+	criteria.WriteString("\n\n## Done criteria (required)\n\n")
+	criteria.WriteString("You must satisfy every criterion below. When finished, write a JSON report at:\n")
+	criteria.WriteString(fmt.Sprintf("`%s`\n\n", reportPath))
+	criteria.WriteString("Schema:\n```json\n{\"criteria\":[{\"id\":\"<id>\",\"claimed_done\":true,\"evidence\":\"...\"}]}\n```\n")
+	criteria.WriteString("claimed_done is your assertion that you completed the work; the verification agent independently decides whether each criterion is satisfied.\n")
 	if len(locked) > 0 {
-		b.WriteString("(Report only the criteria below; do NOT include already-verified IDs.)\n")
+		criteria.WriteString("(Report only the criteria below; do NOT include already-verified IDs.)\n")
 	}
-	b.WriteString("\n")
+	criteria.WriteString("\n")
 	for _, it := range active {
-		b.WriteString(fmt.Sprintf("- [%s] %s\n", it.ID, it.Text))
-		if strings.TrimSpace(it.Check) != "" {
-			b.WriteString(fmt.Sprintf("  (deterministic check will run: %s)\n", it.Check))
-		}
+		criteria.WriteString(fmt.Sprintf("- [%s] %s\n", it.ID, it.Text))
 	}
-	return b.String()
+	return strings.TrimPrefix(criteria.String(), "\n\n") + "\n\n" + prompt
 }
 
 func appendVerifyFeedback(prompt string, feedback string) string {

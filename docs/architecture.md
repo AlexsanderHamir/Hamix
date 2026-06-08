@@ -168,7 +168,7 @@ sequenceDiagram
   W->>R: Run(ctx, Request{Prompt, WorkingDir, Timeout})
   R-->>W: Result or typed error
   opt task has done criteria
-    W->>W: parse criteria-report.json, run checks, StartPhase(verify), parse verify-report.json
+    W->>W: parse criteria-report.json, gate claimed_done, StartPhase(verify), parse verify-report.json
   end
   W->>S: CompletePhase(execute, succeeded or failed)
   W->>S: TerminateCycle(succeeded|failed|aborted)

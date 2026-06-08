@@ -33,9 +33,9 @@ func (s *Store) ListChecklistForSubject(ctx context.Context, taskID string) ([]C
 
 // AddChecklistItem appends a definition row; the task must exist and
 // not use checklist_inherit.
-func (s *Store) AddChecklistItem(ctx context.Context, taskID, text, check string, by domain.Actor) (*domain.TaskChecklistItem, error) {
+func (s *Store) AddChecklistItem(ctx context.Context, taskID, text string, by domain.Actor) (*domain.TaskChecklistItem, error) {
 	slog.Debug("trace", "cmd", storeLogCmd, "operation", "tasks.store.AddChecklistItem")
-	return checklist.Add(ctx, s.db, taskID, text, check, by)
+	return checklist.Add(ctx, s.db, taskID, text, by)
 }
 
 // ListChecklistForVerify returns criteria rows for worker verification.
@@ -74,12 +74,6 @@ func (s *Store) DeleteChecklistItem(ctx context.Context, taskID, itemID string, 
 func (s *Store) UpdateChecklistItemText(ctx context.Context, taskID, itemID, text string, by domain.Actor) error {
 	slog.Debug("trace", "cmd", storeLogCmd, "operation", "tasks.store.UpdateChecklistItemText")
 	return checklist.UpdateText(ctx, s.db, taskID, itemID, text, by)
-}
-
-// UpdateChecklistItemCheck updates the optional shell check for an item.
-func (s *Store) UpdateChecklistItemCheck(ctx context.Context, taskID, itemID, check string, by domain.Actor) error {
-	slog.Debug("trace", "cmd", storeLogCmd, "operation", "tasks.store.UpdateChecklistItemCheck")
-	return checklist.UpdateCheck(ctx, s.db, taskID, itemID, check, by)
 }
 
 // SetChecklistItemDone sets or clears completion for subjectTaskID on

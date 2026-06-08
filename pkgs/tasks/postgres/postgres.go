@@ -98,6 +98,9 @@ func Migrate(ctx context.Context, db *gorm.DB) error {
 	if err := backfillLegacyChecklistCompletions(ctx, db); err != nil {
 		return fmt.Errorf("backfill checklist completions: %w", err)
 	}
+	if err := migrateChecklistCheckToText(ctx, db); err != nil {
+		return fmt.Errorf("migrate checklist check column: %w", err)
+	}
 	if err := dropLegacyGoalStepTables(ctx, db); err != nil {
 		return fmt.Errorf("drop legacy goal/step tables: %w", err)
 	}
@@ -142,6 +145,33 @@ UPDATE task_checklist_completions
 	)
 	if res.Error != nil {
 		return res.Error
+	}
+	return nil
+}
+
+// migrateChecklistCheckToText merges legacy shell-check commands into criterion
+// text, then drops the check column and app_settings.check_command_timeout_seconds.
+// Postgres only; SQLite test DBs rely on AutoMigrate after the domain field removal.
+func migrateChecklistCheckToText(ctx context.Context, db *gorm.DB) error {
+	slog.Debug("trace", "operation", "postgres.migrateChecklistCheckToText")
+	if db.Dialector == nil || db.Dialector.Name() != "postgres" {
+		return nil
+	}
+	if err := db.WithContext(ctx).Exec(`
+UPDATE task_checklist_items
+   SET text = text || ' (verification: ' || trim(check) || ')'
+ WHERE trim(check) != ''
+   AND text NOT LIKE '%(verification:%'`).Error; err != nil {
+		return fmt.Errorf("merge checklist check into text: %w", err)
+	}
+	if err := db.WithContext(ctx).Exec(`ALTER TABLE task_checklist_items DROP COLUMN IF EXISTS check`).Error; err != nil {
+		return fmt.Errorf("drop task_checklist_items.check: %w", err)
+	}
+	if err := db.WithContext(ctx).Exec(`ALTER TABLE app_settings DROP CONSTRAINT IF EXISTS chk_app_settings_check_timeout`).Error; err != nil {
+		return fmt.Errorf("drop app_settings check timeout constraint: %w", err)
+	}
+	if err := db.WithContext(ctx).Exec(`ALTER TABLE app_settings DROP COLUMN IF EXISTS check_command_timeout_seconds`).Error; err != nil {
+		return fmt.Errorf("drop app_settings.check_command_timeout_seconds: %w", err)
 	}
 	return nil
 }

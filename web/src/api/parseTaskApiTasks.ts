@@ -454,7 +454,6 @@ export function parseTaskChecklistResponse(value: unknown): TaskChecklistRespons
       id: parseNonEmptyString(row.id, "id"),
       sort_order: parseFiniteNumber(row.sort_order, "sort_order"),
       text: parseString(row.text, "text"),
-      check: typeof row.check === "string" ? row.check : undefined,
       done: row.done === true,
       evidence: typeof row.evidence === "string" ? row.evidence : undefined,
       verified_by:

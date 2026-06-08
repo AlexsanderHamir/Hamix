@@ -72,10 +72,6 @@ function parseSettingsField(raw: unknown): AppSettings {
     typeof o.verify_runner_name === "string" ? o.verify_runner_name : "";
   const verifyRunnerModel =
     typeof o.verify_runner_model === "string" ? o.verify_runner_model : "";
-  const checkTimeout =
-    typeof o.check_command_timeout_seconds === "number"
-      ? o.check_command_timeout_seconds
-      : 0;
   if (
     typeof runner !== "string" ||
     typeof repoRoot !== "string" ||
@@ -100,7 +96,6 @@ function parseSettingsField(raw: unknown): AppSettings {
     verify_max_retries: verifyMaxRetries,
     verify_runner_name: verifyRunnerName,
     verify_runner_model: verifyRunnerModel,
-    check_command_timeout_seconds: checkTimeout,
   };
   if (typeof o.updated_at === "string") {
     out.updated_at = o.updated_at;

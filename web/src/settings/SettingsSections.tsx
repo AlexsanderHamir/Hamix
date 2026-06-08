@@ -15,10 +15,7 @@ import {
   type SettingsFormState,
   type SettingsStatus,
 } from "./settingsForm";
-import {
-  DEFAULT_CHECK_COMMAND_TIMEOUT_SECONDS,
-  DEFAULT_VERIFY_MAX_RETRIES,
-} from "@/types/task";
+import { DEFAULT_VERIFY_MAX_RETRIES } from "@/types/task";
 
 type HandleField = <K extends keyof SettingsFormState>(
   key: K,
@@ -679,36 +676,6 @@ export function PhasesSettingsSection({
               </p>
               <p className="settings-field-help settings-field-help-meta">
                 Default: <code>{DEFAULT_VERIFY_MAX_RETRIES}</code>
-              </p>
-            </div>
-
-            <label className="settings-field">
-              <span className="settings-field-label">
-                Shell command time limit
-              </span>
-              <span className="settings-field-input-suffix">
-                <input
-                  type="number"
-                  min={0}
-                  step={1}
-                  value={form.checkCommandTimeoutSeconds}
-                  onChange={(e) =>
-                    onField("checkCommandTimeoutSeconds", e.target.value)
-                  }
-                />
-                <span className="settings-field-suffix" aria-hidden="true">
-                  seconds
-                </span>
-              </span>
-            </label>
-            <div className="settings-field-help-block">
-              <p className="settings-field-help">
-                For done criteria that use a shell command (for example, npm
-                test), exceeding the time limit terminates the command and
-                fails the criterion.
-              </p>
-              <p className="settings-field-help settings-field-help-meta">
-                Default: <code>{DEFAULT_CHECK_COMMAND_TIMEOUT_SECONDS}</code>s
               </p>
             </div>
           </PhaseFieldGroup>

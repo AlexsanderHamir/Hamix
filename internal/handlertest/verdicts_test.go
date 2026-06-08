@@ -31,11 +31,11 @@ func TestHandler_GetCycleVerdicts_returnsBothReports(t *testing.T) {
 	if err != nil {
 		t.Fatalf("create task: %v", err)
 	}
-	c1, err := st.AddChecklistItem(ctx, tsk.ID, "criterion one", "", domain.ActorUser)
+	c1, err := st.AddChecklistItem(ctx, tsk.ID, "criterion one", domain.ActorUser)
 	if err != nil {
 		t.Fatalf("add c1: %v", err)
 	}
-	c2, err := st.AddChecklistItem(ctx, tsk.ID, "criterion two", "", domain.ActorUser)
+	c2, err := st.AddChecklistItem(ctx, tsk.ID, "criterion two", domain.ActorUser)
 	if err != nil {
 		t.Fatalf("add c2: %v", err)
 	}

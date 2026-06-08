@@ -20,7 +20,7 @@ func TestValidateCanMarkDone_acceptsLegacyCompletions(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	it, err := st.AddChecklistItem(ctx, tsk.ID, "criterion", "", domain.ActorUser)
+	it, err := st.AddChecklistItem(ctx, tsk.ID, "criterion", domain.ActorUser)
 	if err != nil {
 		t.Fatal(err)
 	}

@@ -9,7 +9,6 @@ import (
 	"os/exec"
 	"sort"
 	"strings"
-	"time"
 
 	"github.com/AlexsanderHamir/T2A/pkgs/agents/runner"
 	"github.com/AlexsanderHamir/T2A/pkgs/tasks/domain"
@@ -39,7 +38,6 @@ func (e *verifyTamperedError) Error() string {
 type verificationSnapshot struct {
 	enabled      bool
 	maxRetries   int
-	checkTimeout time.Duration
 	criteria     []store.ChecklistVerifyItem
 	verifyRunner runner.Runner
 	verifyModel  string
@@ -84,7 +82,6 @@ func (w *Worker) loadVerificationSnapshot(ctx context.Context, taskID string) (v
 		// process.go for the dispatch.
 		enabled:      len(items) > 0,
 		maxRetries:   maxRetries,
-		checkTimeout: time.Duration(settings.CheckCommandTimeoutSeconds) * time.Second,
 		criteria:     items,
 		verifyRunner: verifyRunner,
 		verifyModel:  strings.TrimSpace(settings.VerifyRunnerModel),
@@ -124,8 +121,8 @@ func (w *Worker) applyVerifiedCompletions(ctx context.Context, taskID, cycleID s
 	return nil
 }
 
-// runVerificationPipeline opens a verify phase, runs deterministic and
-// optional LLM-driven checks within it, then closes the phase. The
+// runVerificationPipeline opens a verify phase, runs LLM-driven checks
+// within it, then closes the phase. The
 // caller must have already terminated the execute phase — verification
 // is its own phase row, not a step inside execute. See process.go for
 // the loop that depends on this contract (verify → execute is the only
@@ -257,12 +254,11 @@ func (w *Worker) checkVerifyIntegrity(ctx context.Context, cycleID string, pre i
 	return tampered, summary
 }
 
-// runVerifyChecks performs the deterministic and (when needed) LLM
-// verification work. It does NOT manage the verify phase row — the
-// caller wraps it with StartPhase / CompletePhase. phaseSeq is the
-// verify phase row's seq, threaded through so progress events from the
-// verify runner land on the verify phase (not execute) for the SPA
-// activity panel's per-phase filter.
+// runVerifyChecks performs LLM verification work. It does NOT manage
+// the verify phase row — the caller wraps it with StartPhase /
+// CompletePhase. phaseSeq is the verify phase row's seq, threaded
+// through so progress events from the verify runner land on the verify
+// phase (not execute) for the SPA activity panel's per-phase filter.
 func (w *Worker) runVerifyChecks(
 	parentCtx context.Context,
 	task *domain.Task,
@@ -315,9 +311,8 @@ func (w *Worker) runVerifyChecks(
 	for _, it := range snap.criteria {
 		// Short-circuit locked passes: the verifier has already
 		// approved this criterion in an earlier attempt. Re-running
-		// deterministic checks or the LLM verify on a settled item
-		// is wasted budget and risks a flaky check failing what
-		// we've already decided.
+		// verify on a settled item is wasted budget and risks a
+		// flaky failure on what we've already decided.
 		if locked, ok := previouslyPassed[it.ID]; ok {
 			verdicts = append(verdicts, locked)
 			continue
@@ -333,21 +328,6 @@ func (w *Worker) runVerifyChecks(
 			v.reasoning = "execute agent did not claim criterion done"
 			verdicts = append(verdicts, v)
 			w.recordVerifyVerdict(domain.VerifierAgentSelf, false)
-			continue
-		}
-		if strings.TrimSpace(it.Check) != "" {
-			out := runDeterministicCheck(parentCtx, w.options.WorkingDir, it.Check, snap.checkTimeout)
-			if out.passed {
-				v.passed = true
-				v.verifier = domain.VerifierDeterministicCheck
-				v.reasoning = "deterministic check passed"
-			} else {
-				v.passed = false
-				v.verifier = domain.VerifierDeterministicCheck
-				v.reasoning = fmt.Sprintf("deterministic check failed: %s %s", out.stdout, out.stderr)
-			}
-			verdicts = append(verdicts, v)
-			w.recordVerifyVerdict(domain.VerifierDeterministicCheck, v.passed)
 			continue
 		}
 		needLLMVerify = true
@@ -373,8 +353,7 @@ func (w *Worker) runVerifyChecks(
 				next = append(next, v)
 				continue
 			}
-			it := findVerifyItem(snap.criteria, v.id)
-			if it != nil && strings.TrimSpace(it.Check) != "" {
+			if v.verifier == domain.VerifierAgentSelf {
 				next = append(next, v)
 				continue
 			}
@@ -396,8 +375,8 @@ func (w *Worker) runVerifyChecks(
 		verdicts = next
 	}
 
-	// Mirror this attempt's final verdicts (deterministic_check +
-	// agent_self + verify_agent) into the DB at the verify-phase
+	// Mirror this attempt's final verdicts (agent_self for "did not claim
+	// done", verify_agent for LLM verdicts) into the DB at the verify-phase
 	// boundary. Carrying-over locked passes from earlier attempts is
 	// intentionally NOT replayed here — those rows already exist
 	// under their original attempt_seq, and re-writing them would
@@ -422,15 +401,6 @@ func (w *Worker) runVerifyChecks(
 		return verdicts, strings.Join(failures, "; "), fmt.Errorf("verification failed")
 	}
 	return verdicts, "", nil
-}
-
-func findVerifyItem(items []store.ChecklistVerifyItem, id string) *store.ChecklistVerifyItem {
-	for i := range items {
-		if items[i].ID == id {
-			return &items[i]
-		}
-	}
-	return nil
 }
 
 // runLLMVerifyAgent invokes the verify runner against the criteria
@@ -472,11 +442,11 @@ func (w *Worker) runLLMVerifyAgent(
 		if _, locked := previouslyPassed[it.ID]; locked {
 			continue
 		}
-		if strings.TrimSpace(it.Check) != "" {
+		e, ok := selfReport[it.ID]
+		if !ok || !e.ClaimedDone {
 			continue
 		}
-		e := selfReport[it.ID]
-		b.WriteString(fmt.Sprintf("- [%s] %s\n  execute evidence: %s\n", it.ID, it.Text, e.Evidence))
+		b.WriteString(fmt.Sprintf("- [%s] %s\n  execute claimed_done: true (assertion only)\n  execute evidence: %s\n", it.ID, it.Text, e.Evidence))
 	}
 	b.WriteString("\nDiff:\n")
 	b.WriteString(diff)
@@ -614,9 +584,8 @@ func (w *Worker) persistCriteriaReports(
 
 // persistVerifyReports mirrors this attempt's final verdicts into
 // task_cycle_verify_reports. Stores every verdict produced in the
-// verify phase (deterministic_check, agent_self for "did not claim
-// done", verify_agent for LLM verdicts) so the SPA can render a
-// uniform per-criterion timeline regardless of how the decision was
+// verify phase (agent_self for "did not claim done", verify_agent for
+// LLM verdicts) so the SPA can render a uniform per-criterion timeline regardless of how the decision was
 // reached. Rows for criteria that were locked-passed in earlier
 // attempts are skipped — those already exist at their original
 // attempt_seq and re-writing them under the current attempt_seq
@@ -649,12 +618,11 @@ func encodeCriteriaSnapshot(items []store.ChecklistVerifyItem) []byte {
 	type row struct {
 		ID           string `json:"id"`
 		Text         string `json:"text"`
-		Check        string `json:"check"`
 		SourceTaskID string `json:"source_task_id"`
 	}
 	rows := make([]row, len(items))
 	for i, it := range items {
-		rows[i] = row{ID: it.ID, Text: it.Text, Check: it.Check, SourceTaskID: it.SourceTaskID}
+		rows[i] = row{ID: it.ID, Text: it.Text, SourceTaskID: it.SourceTaskID}
 	}
 	b, _ := json.Marshal(rows)
 	return b

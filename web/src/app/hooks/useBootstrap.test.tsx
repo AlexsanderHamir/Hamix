@@ -50,7 +50,6 @@ const SAMPLE_BOOTSTRAP = {
     verify_max_retries: 1,
     verify_runner_name: "",
     verify_runner_model: "",
-    check_command_timeout_seconds: 0,
   },
   tasks: {
     tasks: [],

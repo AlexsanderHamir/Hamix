@@ -15,13 +15,12 @@ import (
 type VerifyItem struct {
 	ID             string
 	Text           string
-	Check          string
 	SourceTaskID   string
 	DefinitionTask string
 }
 
 // ListForVerify returns all definition items for the subject task's
-// checklist source, including optional check commands.
+// checklist source.
 func ListForVerify(ctx context.Context, db *gorm.DB, taskID string) ([]VerifyItem, error) {
 	defer kernel.DeferLatency(kernel.OpListChecklist)()
 	slog.Debug("trace", "cmd", logCmd, "operation", "tasks.store.checklist.ListForVerify")
@@ -47,7 +46,6 @@ func ListForVerify(ctx context.Context, db *gorm.DB, taskID string) ([]VerifyIte
 			out = append(out, VerifyItem{
 				ID:             it.ID,
 				Text:           it.Text,
-				Check:          it.Check,
 				SourceTaskID:   taskID,
 				DefinitionTask: defID,
 			})

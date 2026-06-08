@@ -1,8 +1,5 @@
 import { fetchWithTimeout, jsonHeaders, apiErrorFromResponse } from "./shared";
-import {
-  DEFAULT_CHECK_COMMAND_TIMEOUT_SECONDS,
-  DEFAULT_VERIFY_MAX_RETRIES,
-} from "@/types/task";
+import { DEFAULT_VERIFY_MAX_RETRIES } from "@/types/task";
 
 /**
  * On-the-wire shape returned by GET /settings and PATCH /settings.
@@ -52,7 +49,6 @@ export type AppSettings = {
   verify_max_retries: number;
   verify_runner_name: string;
   verify_runner_model: string;
-  check_command_timeout_seconds: number;
   updated_at?: string;
 };
 
@@ -83,7 +79,6 @@ export type AppSettingsPatch = Partial<{
   verify_max_retries: number;
   verify_runner_name: string;
   verify_runner_model: string;
-  check_command_timeout_seconds: number;
 }>;
 
 export type ProbeCursorResult = {
@@ -155,10 +150,6 @@ function assertSettings(raw: unknown): AppSettings {
     typeof o.verify_runner_name === "string" ? o.verify_runner_name : "";
   const verifyRunnerModel =
     typeof o.verify_runner_model === "string" ? o.verify_runner_model : "";
-  const checkTimeout =
-    typeof o.check_command_timeout_seconds === "number"
-      ? o.check_command_timeout_seconds
-      : DEFAULT_CHECK_COMMAND_TIMEOUT_SECONDS;
   if (
     typeof runner !== "string" ||
     typeof repoRoot !== "string" ||
@@ -183,7 +174,6 @@ function assertSettings(raw: unknown): AppSettings {
     verify_max_retries: verifyMaxRetries,
     verify_runner_name: verifyRunnerName,
     verify_runner_model: verifyRunnerModel,
-    check_command_timeout_seconds: checkTimeout,
   };
   if (typeof o.updated_at === "string") {
     out.updated_at = o.updated_at;

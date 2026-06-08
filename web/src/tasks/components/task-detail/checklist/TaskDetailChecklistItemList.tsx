@@ -56,9 +56,6 @@ export function TaskDetailChecklistItemList({
               <ChecklistStatusIcon done={item.done} />
               <div className="task-checklist-text-block">
                 <span className="task-checklist-text">{item.text}</span>
-                {item.check ? (
-                  <code className="task-checklist-check">{item.check}</code>
-                ) : null}
                 <div className="task-checklist-row-meta">
                   {hasVerificationDetail ? (
                     <button
@@ -109,7 +106,9 @@ export function TaskDetailChecklistItemList({
                       ? `Edit criterion (locked: already marked done): ${item.text}`
                       : undefined
                   }
-                  onClick={() => onOpenEditCriterionModal(item.id, item.text)}
+                  onClick={() =>
+                    onOpenEditCriterionModal(item.id, item.text)
+                  }
                 >
                   Edit
                 </button>

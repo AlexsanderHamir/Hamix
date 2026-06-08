@@ -71,8 +71,8 @@ Model semantics (tags, milestone, `depends_on`, gate, `parent_id` depth-1, worke
 | Method | Path | Notes |
 |---|---|---|
 | GET | `/tasks/{id}/checklist` | `{ items: [...] }` ordered by `sort_order`. |
-| POST | `/tasks/{id}/checklist/items` | Body `{ text, check? }`. Rejected `409` when cycle is running or `400` when inheriting. Publishes `task_updated`. |
-| PATCH | `/tasks/{id}/checklist/items/{itemId}` | Body: exactly one of `{ text }`, `{ check }`, or `{ done: true|false }`. `done:true` requires `X-Actor: agent` plus `evidence` + optional `verified_by`. Publishes `task_updated`. |
+| POST | `/tasks/{id}/checklist/items` | Body `{ text }`. Rejected `409` when cycle is running or `400` when inheriting. Publishes `task_updated`. |
+| PATCH | `/tasks/{id}/checklist/items/{itemId}` | Body: exactly one of `{ text }` or `{ done: true|false }`. `done:true` requires `X-Actor: agent` plus `evidence` + optional `verified_by`. Publishes `task_updated`. |
 | DELETE | `/tasks/{id}/checklist/items/{itemId}` | `204`. Publishes `task_updated`. |
 
 ### Task drafts

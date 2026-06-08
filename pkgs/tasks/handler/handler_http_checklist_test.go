@@ -34,7 +34,7 @@ func TestHTTP_patch_checklist_item_text_updates_and_returns_items(t *testing.T) 
 	if err := json.Unmarshal(b, &created); err != nil {
 		t.Fatal(err)
 	}
-	it, err := st.AddChecklistItem(ctx, created.ID, "alpha", "", domain.ActorUser)
+	it, err := st.AddChecklistItem(ctx, created.ID, "alpha", domain.ActorUser)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -97,7 +97,7 @@ func TestHTTP_patch_checklist_item_done_rejects_default_user_actor(t *testing.T)
 	if err := json.Unmarshal(b, &created); err != nil {
 		t.Fatal(err)
 	}
-	it, err := st.AddChecklistItem(ctx, created.ID, "c", "", domain.ActorUser)
+	it, err := st.AddChecklistItem(ctx, created.ID, "c", domain.ActorUser)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -153,7 +153,7 @@ func TestHTTP_patch_checklist_item_rejects_text_and_done_together(t *testing.T) 
 	if err := json.Unmarshal(b, &created); err != nil {
 		t.Fatal(err)
 	}
-	it, err := st.AddChecklistItem(ctx, created.ID, "c", "", domain.ActorUser)
+	it, err := st.AddChecklistItem(ctx, created.ID, "c", domain.ActorUser)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -181,7 +181,7 @@ func TestHTTP_patch_checklist_item_rejects_text_and_done_together(t *testing.T) 
 	if err := json.Unmarshal(patchBody, &errOut); err != nil {
 		t.Fatal(err)
 	}
-	if errOut.Error != "send exactly one of text, check, or done" {
+	if errOut.Error != "send exactly one of text or done" {
 		t.Fatalf("error %q", errOut.Error)
 	}
 }
@@ -209,7 +209,7 @@ func TestHTTP_patch_checklist_item_rejects_empty_trimmed_text(t *testing.T) {
 	if err := json.Unmarshal(b, &created); err != nil {
 		t.Fatal(err)
 	}
-	it, err := st.AddChecklistItem(ctx, created.ID, "c", "", domain.ActorUser)
+	it, err := st.AddChecklistItem(ctx, created.ID, "c", domain.ActorUser)
 	if err != nil {
 		t.Fatal(err)
 	}

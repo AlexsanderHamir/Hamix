@@ -35,7 +35,6 @@ export type SettingsFormState = {
   verifyMaxRetries: string;
   verifyRunnerName: string;
   verifyRunnerModel: string;
-  checkCommandTimeoutSeconds: string;
 };
 
 export type SettingsStatus =
@@ -58,7 +57,6 @@ export function toFormState(s: AppSettings): SettingsFormState {
     verifyMaxRetries: String(s.verify_max_retries),
     verifyRunnerName: s.verify_runner_name,
     verifyRunnerModel: s.verify_runner_model,
-    checkCommandTimeoutSeconds: String(s.check_command_timeout_seconds),
   };
 }
 
@@ -111,16 +109,6 @@ export function diffPatch(
   const verifyModel = form.verifyRunnerModel.trim();
   if (verifyModel !== initial.verify_runner_model) {
     out.verify_runner_model = verifyModel;
-  }
-  const parsedCheckTimeout = Number.parseInt(
-    form.checkCommandTimeoutSeconds.trim() || "0",
-    10,
-  );
-  if (
-    Number.isFinite(parsedCheckTimeout) &&
-    parsedCheckTimeout !== initial.check_command_timeout_seconds
-  ) {
-    out.check_command_timeout_seconds = parsedCheckTimeout;
   }
   return out;
 }

@@ -156,7 +156,7 @@ func TestHTTP_SSE_triggerSurface(t *testing.T) {
 		srv, st, hub := newSSETriggerServer(t)
 		defer srv.Close()
 		task := postTaskJSON(t, srv, `{"title":"a","priority":"medium"}`, http.StatusCreated)
-		it, err := st.AddChecklistItem(context.Background(), task.ID, "alpha", "", domain.ActorUser)
+		it, err := st.AddChecklistItem(context.Background(), task.ID, "alpha", domain.ActorUser)
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -173,7 +173,7 @@ func TestHTTP_SSE_triggerSurface(t *testing.T) {
 		srv, st, hub := newSSETriggerServer(t)
 		defer srv.Close()
 		task := postTaskJSON(t, srv, `{"title":"a","priority":"medium"}`, http.StatusCreated)
-		it, err := st.AddChecklistItem(context.Background(), task.ID, "alpha", "", domain.ActorUser)
+		it, err := st.AddChecklistItem(context.Background(), task.ID, "alpha", domain.ActorUser)
 		if err != nil {
 			t.Fatal(err)
 		}

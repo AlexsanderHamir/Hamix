@@ -1,8 +1,5 @@
 import type { AppSettings } from "@/api/settings";
-import {
-  DEFAULT_CHECK_COMMAND_TIMEOUT_SECONDS,
-  DEFAULT_VERIFY_MAX_RETRIES,
-} from "@/types/task";
+import { DEFAULT_VERIFY_MAX_RETRIES } from "@/types/task";
 
 /**
  * Full AppSettings fixture with all required fields. Tests override
@@ -22,5 +19,4 @@ export const APP_SETTINGS_DEFAULTS: AppSettings = {
   verify_max_retries: DEFAULT_VERIFY_MAX_RETRIES,
   verify_runner_name: "",
   verify_runner_model: "",
-  check_command_timeout_seconds: DEFAULT_CHECK_COMMAND_TIMEOUT_SECONDS,
 };

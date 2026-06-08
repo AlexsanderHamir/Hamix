@@ -76,10 +76,8 @@ type AppSettings struct {
 	// VerifyRunnerName empty means use the execute runner id.
 	VerifyRunnerName string `gorm:"not null;default:''"`
 	// VerifyRunnerModel empty means use the verify runner's default model.
-	VerifyRunnerModel string `gorm:"not null;default:''"`
-	// CheckCommandTimeoutSeconds caps each criterion check subprocess. 0 = no limit.
-	CheckCommandTimeoutSeconds int       `gorm:"not null;default:120;check:chk_app_settings_check_timeout,check_command_timeout_seconds >= 0"`
-	UpdatedAt                  time.Time `gorm:"not null"`
+	VerifyRunnerModel string    `gorm:"not null;default:''"`
+	UpdatedAt         time.Time `gorm:"not null"`
 }
 
 // AppSettingsRowID is the singleton primary key. Every read/write of
@@ -97,12 +95,6 @@ const DefaultAgentPickupDelaySeconds = 5
 
 // DefaultVerifyMaxRetries is the seed value for VerifyMaxRetries on first boot.
 const DefaultVerifyMaxRetries = 2
-
-// DefaultCheckCommandTimeoutSeconds is the seed value for CheckCommandTimeoutSeconds.
-const DefaultCheckCommandTimeoutSeconds = 120
-
-// MinCheckCommandTimeoutSeconds is the minimum allowed check command timeout (0 = no limit).
-const MinCheckCommandTimeoutSeconds = 0
 
 // DefaultDisplayTimezone is the seed value for DisplayTimezone on first
 // boot. Empty string is the "auto-detect" sentinel: the SPA reads it as
@@ -135,7 +127,6 @@ func DefaultAppSettings() AppSettings {
 		VerifyMaxRetries:           DefaultVerifyMaxRetries,
 		VerifyRunnerName:           "",
 		VerifyRunnerModel:          "",
-		CheckCommandTimeoutSeconds: DefaultCheckCommandTimeoutSeconds,
 	}
 }
 

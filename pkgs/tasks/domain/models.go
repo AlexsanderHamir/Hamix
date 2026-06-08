@@ -129,14 +129,13 @@ type TaskDependency struct {
 func (TaskDependency) TableName() string { return "task_dependencies" }
 
 // TaskChecklistItem is a definition row owned by a task that does not use checklist_inherit.
+// Completion is recorded only by the agent worker after verify (verified_by=verify_agent)
+// or when execute did not claim done (verified_by=agent_self, failure-only).
 type TaskChecklistItem struct {
 	ID        string `json:"id" gorm:"primaryKey"`
 	TaskID    string `json:"task_id" gorm:"not null;index"`
 	SortOrder int    `json:"sort_order" gorm:"not null"`
 	Text      string `json:"text" gorm:"not null;type:text"`
-	// Check is an optional shell command the worker runs after execute;
-	// exit 0 satisfies the criterion without verify-agent judgement.
-	Check string `json:"check" gorm:"not null;default:'';type:text"`
 }
 
 // TableName returns the GORM table name. Skip-listed in

@@ -70,6 +70,12 @@ export function useTaskDetailChecklist(taskId: string) {
     string | null
   >(null);
   const [editChecklistText, setEditChecklistText] = useState("");
+  /**
+   * Stored at edit-open time so `submitEditChecklistCriterion` can skip
+   * a no-op PATCH when the user saved without changing the text.
+   */
+  const [editChecklistOriginalText, setEditChecklistOriginalText] =
+    useState("");
 
   /**
    * Per-submission token for `addChecklistMutation`. The new criterion
@@ -86,12 +92,26 @@ export function useTaskDetailChecklist(taskId: string) {
    */
   const addSubmissionTokenRef = useRef(0);
 
+  /**
+   * Tracks the live `editingChecklistItemId` for the async
+   * `submitEditChecklistCriterion` flow. The submit awaits the PATCH
+   * `mutateAsync` promise, and between the await and the close the
+   * user may have reopened the edit modal on a different item or
+   * dismissed entirely; reading state via this ref captures the latest
+   * value rather than the closure-captured value at submit time.
+   */
+  const editingChecklistItemIdRef = useRef<string | null>(null);
+  useEffect(() => {
+    editingChecklistItemIdRef.current = editingChecklistItemId;
+  }, [editingChecklistItemId]);
+
   useEffect(() => {
     setChecklistModalOpen(false);
     setNewChecklistText("");
     setEditCriterionModalOpen(false);
     setEditingChecklistItemId(null);
     setEditChecklistText("");
+    setEditChecklistOriginalText("");
     addSubmissionTokenRef.current += 1;
   }, [taskId]);
 
@@ -105,6 +125,7 @@ export function useTaskDetailChecklist(taskId: string) {
     setEditCriterionModalOpen(false);
     setEditingChecklistItemId(null);
     setEditChecklistText("");
+    setEditChecklistOriginalText("");
   }, []);
 
   const openChecklistModal = useCallback(() => {
@@ -114,12 +135,14 @@ export function useTaskDetailChecklist(taskId: string) {
     setEditCriterionModalOpen(false);
     setEditingChecklistItemId(null);
     setEditChecklistText("");
+    setEditChecklistOriginalText("");
   }, []);
 
   const openEditCriterionModal = useCallback((itemId: string, text: string) => {
     addSubmissionTokenRef.current += 1;
     setEditingChecklistItemId(itemId);
     setEditChecklistText(text);
+    setEditChecklistOriginalText(text);
     setEditCriterionModalOpen(true);
     setChecklistModalOpen(false);
     setNewChecklistText("");
@@ -271,7 +294,7 @@ export function useTaskDetailChecklist(taskId: string) {
       }
       toast.error("Couldn't update criterion - reverted.");
     },
-    onSuccess: async (_item, variables, context) => {
+    onSuccess: async (_item, _variables, context) => {
       // Server-truth invalidations always fire: the criterion text was
       // persisted regardless of which item the user is now editing.
       await queryClient.invalidateQueries({
@@ -280,18 +303,6 @@ export function useTaskDetailChecklist(taskId: string) {
       await queryClient.invalidateQueries({
         queryKey: taskQueryKeys.detail(taskId),
       });
-      // Modal-close branch is gated on the natural id-aware compare:
-      // `editingChecklistItemId` already moves on
-      // `openEditCriterionModal(nextId, ...)` and clears on
-      // `closeEditCriterionModal`, so a stale PATCH for criterion A
-      // resolving while the user has reopened the edit modal on
-      // criterion B (or dismissed entirely) won't slam B's modal shut
-      // and reset its text. Same id-aware compare shape as
-      // `useTaskPatchFlow` (#20) / `useTaskDeleteFlow` (#21).
-      if (editingChecklistItemId !== variables.itemId) {
-        return;
-      }
-      closeEditCriterionModal();
       if (context) {
         rumMutationSettled(
           "checklist_edit",
@@ -303,14 +314,38 @@ export function useTaskDetailChecklist(taskId: string) {
   });
 
   const submitEditChecklistCriterion = useCallback(
-    (e: FormEvent) => {
+    async (e: FormEvent) => {
       e.preventDefault();
-      const t = editChecklistText.trim();
       const id = editingChecklistItemId;
-      if (!t || !id || updateChecklistTextMutation.isPending) return;
-      updateChecklistTextMutation.mutate({ itemId: id, text: t });
+      if (!id) return;
+      const newText = editChecklistText.trim();
+      if (!newText) return;
+      if (updateChecklistTextMutation.isPending) return;
+      if (newText === editChecklistOriginalText) {
+        closeEditCriterionModal();
+        return;
+      }
+      try {
+        await updateChecklistTextMutation.mutateAsync({
+          itemId: id,
+          text: newText,
+        });
+        if (editingChecklistItemIdRef.current === id) {
+          closeEditCriterionModal();
+        }
+      } catch {
+        // mutateAsync rejects when the underlying mutation errors. The
+        // mutation's own `error` is now populated and the modal stays
+        // open so `MutationErrorBanner` can surface it.
+      }
     },
-    [editChecklistText, editingChecklistItemId, updateChecklistTextMutation],
+    [
+      editingChecklistItemId,
+      editChecklistText,
+      editChecklistOriginalText,
+      updateChecklistTextMutation,
+      closeEditCriterionModal,
+    ],
   );
 
   const deleteChecklistMutation = useMutation<

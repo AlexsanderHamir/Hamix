@@ -25,7 +25,6 @@ type ItemView struct {
 	ID                string `json:"id"`
 	SortOrder         int    `json:"sort_order"`
 	Text              string `json:"text"`
-	Check             string `json:"check,omitempty"`
 	Done              bool   `json:"done"`
 	Evidence          string `json:"evidence,omitempty"`
 	VerifiedBy        string `json:"verified_by,omitempty"`
@@ -122,7 +121,6 @@ func List(ctx context.Context, db *gorm.DB, taskID string) ([]ItemView, error) {
 				ID:        it.ID,
 				SortOrder: it.SortOrder,
 				Text:      it.Text,
-				Check:     it.Check,
 			}
 			if d, ok := doneByItem[it.ID]; ok {
 				v.Done = true
@@ -143,7 +141,7 @@ func List(ctx context.Context, db *gorm.DB, taskID string) ([]ItemView, error) {
 
 // Add appends a definition row; the task must exist and not use
 // ChecklistInherit. Appends EventChecklistItemAdded in the same TX.
-func Add(ctx context.Context, db *gorm.DB, taskID, text, check string, by domain.Actor) (*domain.TaskChecklistItem, error) {
+func Add(ctx context.Context, db *gorm.DB, taskID, text string, by domain.Actor) (*domain.TaskChecklistItem, error) {
 	defer kernel.DeferLatency(kernel.OpAddChecklistItem)()
 	slog.Debug("trace", "cmd", logCmd, "operation", "tasks.store.checklist.Add")
 	if err := kernel.ValidateActor(by); err != nil {
@@ -176,7 +174,6 @@ func Add(ctx context.Context, db *gorm.DB, taskID, text, check string, by domain
 			TaskID:    taskID,
 			SortOrder: maxOrder + 1,
 			Text:      text,
-			Check:     strings.TrimSpace(check),
 		}
 		if err := tx.Create(it).Error; err != nil {
 			return fmt.Errorf("insert checklist item: %w", err)
@@ -339,59 +336,6 @@ func UpdateText(ctx context.Context, db *gorm.DB, taskID, itemID, text string, b
 			return err
 		}
 		b, _ := json.Marshal(map[string]any{"item_id": itemID, "text": text})
-		return kernel.AppendEvent(tx, taskID, seq, domain.EventChecklistItemUpdated, by, b)
-	})
-}
-
-// UpdateCheck updates the optional deterministic check command for an
-// item owned by taskID. Same edit locks as UpdateText.
-func UpdateCheck(ctx context.Context, db *gorm.DB, taskID, itemID, check string, by domain.Actor) error {
-	defer kernel.DeferLatency(kernel.OpUpdateChecklistItemText)()
-	slog.Debug("trace", "cmd", logCmd, "operation", "tasks.store.checklist.UpdateCheck")
-	if err := kernel.ValidateActor(by); err != nil {
-		return err
-	}
-	taskID = strings.TrimSpace(taskID)
-	itemID = strings.TrimSpace(itemID)
-	check = strings.TrimSpace(check)
-	if taskID == "" || itemID == "" {
-		return fmt.Errorf("%w: id", domain.ErrInvalidInput)
-	}
-	return db.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
-		t, err := kernel.LoadTask(tx, taskID)
-		if err != nil {
-			return err
-		}
-		if t.ChecklistInherit {
-			return fmt.Errorf("%w: cannot update inherited checklist definitions from this task", domain.ErrInvalidInput)
-		}
-		var it domain.TaskChecklistItem
-		if err := tx.Where("id = ? AND task_id = ?", itemID, taskID).First(&it).Error; err != nil {
-			if errors.Is(err, gorm.ErrRecordNotFound) {
-				return domain.ErrNotFound
-			}
-			return fmt.Errorf("load checklist item: %w", err)
-		}
-		var doneCount int64
-		if err := tx.Model(&domain.TaskChecklistCompletion{}).
-			Where("item_id = ?", itemID).
-			Count(&doneCount).Error; err != nil {
-			return fmt.Errorf("count completions: %w", err)
-		}
-		if doneCount > 0 {
-			return fmt.Errorf("%w: cannot edit a criterion that has already been marked done", domain.ErrInvalidInput)
-		}
-		if it.Check == check {
-			return nil
-		}
-		if err := tx.Model(&it).Update("check", check).Error; err != nil {
-			return fmt.Errorf("update checklist check: %w", err)
-		}
-		seq, err := kernel.NextEventSeq(tx, taskID)
-		if err != nil {
-			return err
-		}
-		b, _ := json.Marshal(map[string]any{"item_id": itemID, "check": check})
 		return kernel.AppendEvent(tx, taskID, seq, domain.EventChecklistItemUpdated, by, b)
 	})
 }

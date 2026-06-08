@@ -18,7 +18,7 @@ func TestHTTP_getChecklist_envelopeShape(t *testing.T) {
 	srv, st := newTaskTestServerWithStore(t)
 	defer srv.Close()
 	taskID := mustCreateChecklistTask(t, srv, "chk-get-shape")
-	if _, err := st.AddChecklistItem(context.Background(), taskID, "alpha", "", domain.ActorUser); err != nil {
+	if _, err := st.AddChecklistItem(context.Background(), taskID, "alpha", domain.ActorUser); err != nil {
 		t.Fatal(err)
 	}
 
@@ -119,7 +119,7 @@ func TestHTTP_getChecklist_orderIsSortOrderAscThenIDAsc(t *testing.T) {
 	wantTexts := []string{"first", "second", "third"}
 	wantIDs := make([]string, 0, 3)
 	for _, txt := range wantTexts {
-		it, err := st.AddChecklistItem(ctx, taskID, txt, "", domain.ActorUser)
+		it, err := st.AddChecklistItem(ctx, taskID, txt, domain.ActorUser)
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -192,11 +192,11 @@ func TestHTTP_getChecklist_inheritanceAndPerSubjectDone(t *testing.T) {
 	defer srv.Close()
 	ctx := context.Background()
 	parentID := mustCreateChecklistTask(t, srv, "chk-inh-parent")
-	a, err := st.AddChecklistItem(ctx, parentID, "shared-A", "", domain.ActorUser)
+	a, err := st.AddChecklistItem(ctx, parentID, "shared-A", domain.ActorUser)
 	if err != nil {
 		t.Fatal(err)
 	}
-	b, err := st.AddChecklistItem(ctx, parentID, "shared-B", "", domain.ActorUser)
+	b, err := st.AddChecklistItem(ctx, parentID, "shared-B", domain.ActorUser)
 	if err != nil {
 		t.Fatal(err)
 	}

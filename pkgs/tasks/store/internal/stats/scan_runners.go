@@ -110,7 +110,7 @@ type runnerStatsRow struct {
 }
 
 // runnerStatsMetaProjection mirrors the keys buildCycleMeta
-// (pkgs/agents/worker/meta.go) writes for V2. Decoded per row; missing
+// (pkgs/agents/harness/meta.go) writes for V2. Decoded per row; missing
 // keys decode to "" which the bucketing code maps to the unknown /
 // default bucket per its semantic rules.
 type runnerStatsMetaProjection struct {

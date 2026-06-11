@@ -1,4 +1,4 @@
-package worker
+package harness
 
 import (
 	"context"
@@ -52,84 +52,53 @@ type processState struct {
 	effectiveModel string
 }
 
-// processOne runs the worker's full per-task lifecycle. The function is
-// intentionally long: keeping the happy path, the shutdown branch, and
-// the deferred panic-recovery in one call site is what makes the
-// "ack after terminate" ordering enforceable by reading top-to-bottom.
-func (w *Worker) processOne(parentCtx context.Context, task domain.Task) {
-	slog.Debug("trace", "cmd", workerLogCmd, "operation", "agent.worker.Worker.processOne",
+// Run drives the harness cycle body for one task already in StatusRunning.
+// The worker owns queue admission (reload, readiness, ready→running) and
+// ack ordering before calling Run.
+func (h *Harness) Run(parentCtx context.Context, task *domain.Task) {
+	slog.Debug("trace", "cmd", harnessLogCmd, "operation", "agent.harness.Harness.Run",
 		"task_id", task.ID)
-	startedAt := w.options.Clock()
+	startedAt := h.opts.Clock()
 	state := processState{startedAt: startedAt, previouslyPassed: map[string]criterionVerdict{}}
 
-	// Defer order is LIFO: ack runs LAST so the queue-pending guard
-	// holds for the entire processOne body, including the deferred
-	// recovery writes. AckAfterRecv runs even on early returns and on
-	// recovered panics so a single bad task cannot wedge the queue.
-	defer w.queue.AckAfterRecv(task.ID)
-	defer w.recoverFromPanic(&state, task)
+	defer h.recoverFromPanic(&state, *task)
 
-	fresh, ok := w.reloadTask(parentCtx, task.ID)
+	cycle, ok := h.startCycle(parentCtx, task, &state)
 	if !ok {
-		return
-	}
-	if fresh.Status != domain.StatusReady {
-		slog.Warn("stale task at dequeue", "cmd", workerLogCmd,
-			"operation", "agent.worker.Worker.processOne.stale", "task_id", task.ID,
-			"status", string(fresh.Status))
-		return
-	}
-	now := w.options.Clock()
-	ready, err := w.store.ReadyForAgentPickup(parentCtx, fresh, now)
-	if err != nil {
-		slog.Warn("agent worker readiness check failed", "cmd", workerLogCmd,
-			"operation", "agent.worker.Worker.processOne.readiness", "task_id", task.ID, "err", err)
-		return
-	}
-	if !ready {
-		w.deferTaskPickup(parentCtx, task.ID, 60*time.Second)
-		return
-	}
-	if !w.transitionTask(parentCtx, task.ID, domain.StatusRunning, "transition_to_running") {
+		h.bestEffortFailTask(parentCtx, task.ID)
 		return
 	}
 
-	cycle, ok := w.startCycle(parentCtx, fresh, &state)
-	if !ok {
-		w.bestEffortFailTask(parentCtx, task.ID)
-		return
-	}
-
-	state.verifySnap, _ = w.loadVerificationSnapshot(parentCtx, task.ID)
+	state.verifySnap, _ = h.loadVerificationSnapshot(parentCtx, task.ID)
 
 	// Cycle phase loop. Each iteration is one execute → (optional) verify
 	// pair. On verify failure we re-enter the loop (verify → execute is a
 	// legal transition); the runner's outcome and verification's verdict
 	// stay on their own phase rows so neither pollutes the other.
 	for {
-		execPhase, ok := w.startExecutePhase(parentCtx, cycle, &state)
+		execPhase, ok := h.startExecutePhase(parentCtx, cycle, &state)
 		if !ok {
-			w.bestEffortTerminate(parentCtx, &state, task.ID, domain.CycleStatusFailed, "execute_phase_start_failed")
+			h.bestEffortTerminate(parentCtx, &state, task.ID, domain.CycleStatusFailed, "execute_phase_start_failed")
 			return
 		}
-		_ = scrubCycleArtifacts(w.options.ReportDir, cycle.ID)
-		_ = ensureReportCycleDir(w.options.ReportDir, cycle.ID)
+		_ = scrubCycleArtifacts(h.opts.ReportDir, cycle.ID)
+		_ = ensureReportCycleDir(h.opts.ReportDir, cycle.ID)
 		prompt := injectCriteria(
-			fresh.InitialPrompt,
+			task.InitialPrompt,
 			state.verifySnap.criteria,
 			cycle.ID,
-			criteriaReportPath(w.options.ReportDir, cycle.ID),
+			criteriaReportPath(h.opts.ReportDir, cycle.ID),
 			state.previouslyPassed,
 		)
 		prompt = appendVerifyFeedback(prompt, state.verifyFeedback)
-		freshExec := *fresh
-		freshExec.InitialPrompt = prompt
+		execTask := *task
+		execTask.InitialPrompt = prompt
 
-		result, runErr := w.invokeRunnerWithTask(parentCtx, &freshExec, cycle, execPhase)
-		operatorCancelled := w.consumeOperatorCancel()
+		result, runErr := h.invokeRunnerWithTask(parentCtx, &execTask, cycle, execPhase)
+		operatorCancelled := h.consumeOperatorCancel()
 
 		if parentCtx.Err() != nil {
-			w.handleShutdownAfterRun(&state, task.ID)
+			h.handleShutdownAfterRun(&state, task.ID)
 			return
 		}
 
@@ -147,19 +116,19 @@ func (w *Worker) processOne(parentCtx context.Context, task domain.Task) {
 		// status from being retroactively rewritten by a later
 		// verification failure. See pkgs/tasks/store/internal/cycles
 		// for the assertNoRunningPhase / ValidPhaseTransition contracts.
-		if !w.completeExecutePhase(parentCtx, &state, cycle, execPhase, phaseStatus, result) {
-			w.bestEffortTerminate(parentCtx, &state, task.ID, domain.CycleStatusFailed, completePhaseFailedReason)
+		if !h.completeExecutePhase(parentCtx, &state, cycle, execPhase, phaseStatus, result) {
+			h.bestEffortTerminate(parentCtx, &state, task.ID, domain.CycleStatusFailed, completePhaseFailedReason)
 			return
 		}
 
 		// Runner failure / cancellation: cycle terminates here.
 		// Verification is meaningless without runner output.
 		if runErr != nil || operatorCancelled {
-			if !w.terminateCycle(parentCtx, &state, cycle.TaskID, cycleStatus, reason) {
+			if !h.terminateCycle(parentCtx, &state, cycle.TaskID, cycleStatus, reason) {
 				return
 			}
 			if taskStatus == domain.StatusFailed {
-				_ = w.transitionTask(parentCtx, task.ID, taskStatus, "final_task_transition")
+				_ = h.transitionTask(parentCtx, task.ID, taskStatus, "final_task_transition")
 			}
 			return
 		}
@@ -172,7 +141,7 @@ func (w *Worker) processOne(parentCtx context.Context, task domain.Task) {
 		if state.verifySnap.enabled {
 			var verifyErr error
 			var feedback string
-			verdicts, feedback, verifyErr = w.runVerificationPipeline(parentCtx, fresh, cycle, &state, state.verifySnap, state.verifyFeedback)
+			verdicts, feedback, verifyErr = h.runVerificationPipeline(parentCtx, task, cycle, &state, state.verifySnap, state.verifyFeedback)
 			if verifyErr != nil && feedback != "" {
 				state.verifyFeedback = feedback
 			}
@@ -197,10 +166,10 @@ func (w *Worker) processOne(parentCtx context.Context, task domain.Task) {
 				// verifier misbehaviour, so we short-circuit.
 				var tampered *verifyTamperedError
 				if errors.As(verifyErr, &tampered) {
-					if !w.terminateCycle(parentCtx, &state, cycle.TaskID, domain.CycleStatusFailed, verifyTamperedReason) {
+					if !h.terminateCycle(parentCtx, &state, cycle.TaskID, domain.CycleStatusFailed, verifyTamperedReason) {
 						return
 					}
-					_ = w.transitionTask(parentCtx, task.ID, domain.StatusFailed, "final_task_transition")
+					_ = h.transitionTask(parentCtx, task.ID, domain.StatusFailed, "final_task_transition")
 					return
 				}
 				if state.verifyAttempt < state.verifySnap.maxRetries {
@@ -210,24 +179,24 @@ func (w *Worker) processOne(parentCtx context.Context, task domain.Task) {
 				cycleStatus = domain.CycleStatusFailed
 				taskStatus = domain.StatusFailed
 				reason = formatVerificationFailedReason(verdicts, state.previouslyPassed)
-				if !w.terminateCycle(parentCtx, &state, cycle.TaskID, cycleStatus, reason) {
+				if !h.terminateCycle(parentCtx, &state, cycle.TaskID, cycleStatus, reason) {
 					return
 				}
-				_ = w.transitionTask(parentCtx, task.ID, taskStatus, "final_task_transition")
+				_ = h.transitionTask(parentCtx, task.ID, taskStatus, "final_task_transition")
 				return
 			}
-		} else if err := w.completeChecklistLegacy(parentCtx, task.ID); err != nil {
-			slog.Warn("agent worker checklist completion failed",
-				"cmd", workerLogCmd,
-				"operation", "agent.worker.Worker.processOne.checklist_err",
+		} else if err := h.completeChecklistLegacy(parentCtx, task.ID); err != nil {
+			slog.Warn("agent harness checklist completion failed",
+				"cmd", harnessLogCmd,
+				"operation", "agent.harness.Harness.processOne.checklist_err",
 				"task_id", task.ID, "err", err)
 			cycleStatus = domain.CycleStatusFailed
 			taskStatus = domain.StatusFailed
 			reason = checklistCompletionFailedReason
-			if !w.terminateCycle(parentCtx, &state, cycle.TaskID, cycleStatus, reason) {
+			if !h.terminateCycle(parentCtx, &state, cycle.TaskID, cycleStatus, reason) {
 				return
 			}
-			_ = w.transitionTask(parentCtx, task.ID, taskStatus, "final_task_transition")
+			_ = h.transitionTask(parentCtx, task.ID, taskStatus, "final_task_transition")
 			return
 		}
 
@@ -240,70 +209,40 @@ func (w *Worker) processOne(parentCtx context.Context, task domain.Task) {
 		for _, v := range state.previouslyPassed {
 			unionVerdicts = append(unionVerdicts, v)
 		}
-		if err := w.applyVerifiedCompletions(parentCtx, task.ID, cycle.ID, unionVerdicts); err != nil {
+		if err := h.applyVerifiedCompletions(parentCtx, task.ID, cycle.ID, unionVerdicts); err != nil {
 			cycleStatus = domain.CycleStatusFailed
 			taskStatus = domain.StatusFailed
 			reason = checklistCompletionFailedReason
 		}
-		if !w.terminateCycle(parentCtx, &state, cycle.TaskID, cycleStatus, reason) {
+		if !h.terminateCycle(parentCtx, &state, cycle.TaskID, cycleStatus, reason) {
 			return
 		}
-		if !w.transitionTask(parentCtx, task.ID, taskStatus, "final_task_transition") {
+		if !h.transitionTask(parentCtx, task.ID, taskStatus, "final_task_transition") {
 			return
 		}
-		w.publish(task.ID, cycle.ID)
-		slog.Info("agent worker run complete", "cmd", workerLogCmd,
-			"operation", "agent.worker.Worker.processOne.summary",
+		h.publish(task.ID, cycle.ID)
+		slog.Info("agent harness run complete", "cmd", harnessLogCmd,
+			"operation", "agent.harness.Harness.Run.summary",
 			"task_id", task.ID, "cycle_id", cycle.ID, "attempt_seq", cycle.AttemptSeq,
 			"terminal_cycle_status", string(cycleStatus), "task_status", string(taskStatus),
-			"runner", w.runner.Name(), "runner_version", w.runner.Version(),
-			"duration_ms", w.options.Clock().Sub(startedAt).Milliseconds())
+			"runner", h.runner.Name(), "runner_version", h.runner.Version(),
+			"duration_ms", h.opts.Clock().Sub(startedAt).Milliseconds())
 		return
-	}
-}
-
-// reloadTask fetches the freshest task row from the store. ok==false
-// means the caller should bail (and AckAfterRecv via the deferred path).
-func (w *Worker) reloadTask(ctx context.Context, taskID string) (*domain.Task, bool) {
-	slog.Debug("trace", "cmd", workerLogCmd, "operation", "agent.worker.Worker.reloadTask",
-		"task_id", taskID)
-	fresh, err := w.store.Get(ctx, taskID)
-	if err == nil {
-		return fresh, true
-	}
-	if errors.Is(err, domain.ErrNotFound) {
-		slog.Info("task vanished before dequeue processing", "cmd", workerLogCmd,
-			"operation", "agent.worker.Worker.reloadTask.not_found", "task_id", taskID)
-		return nil, false
-	}
-	slog.Warn("agent worker reload failed", "cmd", workerLogCmd,
-		"operation", "agent.worker.Worker.reloadTask.err", "task_id", taskID, "err", err)
-	return nil, false
-}
-
-func (w *Worker) deferTaskPickup(ctx context.Context, taskID string, delay time.Duration) {
-	slog.Debug("trace", "cmd", workerLogCmd, "operation", "agent.worker.Worker.deferTaskPickup",
-		"task_id", taskID, "delay", delay.String())
-	at := w.options.Clock().Add(delay).UTC()
-	patch := store.PickupNotBeforePatch{At: at}
-	if _, err := w.store.Update(ctx, taskID, store.UpdateTaskInput{PickupNotBefore: &patch}, domain.ActorAgent); err != nil {
-		slog.Warn("agent worker defer pickup failed", "cmd", workerLogCmd,
-			"operation", "agent.worker.Worker.deferTaskPickup.err", "task_id", taskID, "err", err)
 	}
 }
 
 // transitionTask flips the task to next; returns false on any store
 // error (including ErrNotFound when the task was deleted mid-cycle).
-func (w *Worker) transitionTask(ctx context.Context, taskID string, next domain.Status, op string) bool {
-	slog.Debug("trace", "cmd", workerLogCmd, "operation", "agent.worker.Worker.transitionTask",
+func (h *Harness) transitionTask(ctx context.Context, taskID string, next domain.Status, op string) bool {
+	slog.Debug("trace", "cmd", harnessLogCmd, "operation", "agent.harness.Harness.transitionTask",
 		"task_id", taskID, "next", string(next), "op", op)
-	if _, err := w.store.Update(ctx, taskID, store.UpdateTaskInput{Status: &next}, domain.ActorAgent); err != nil {
+	if _, err := h.store.Update(ctx, taskID, store.UpdateTaskInput{Status: &next}, domain.ActorAgent); err != nil {
 		level := slog.LevelWarn
 		if errors.Is(err, domain.ErrNotFound) {
 			level = slog.LevelInfo
 		}
-		slog.Log(ctx, level, "agent worker task transition failed",
-			"cmd", workerLogCmd, "operation", "agent.worker.Worker.transitionTask.err",
+		slog.Log(ctx, level, "agent harness task transition failed",
+			"cmd", harnessLogCmd, "operation", "agent.harness.Harness.transitionTask.err",
 			"task_id", taskID, "next", string(next), "op", op, "err", err)
 		return false
 	}
@@ -324,60 +263,60 @@ func (w *Worker) transitionTask(ctx context.Context, taskID string, next domain.
 // the CycleMetaProvider interface; metric model labels from
 // MetricsLabeler. Both may produce "" and that empty string is the
 // truth, not a placeholder.
-func (w *Worker) startCycle(ctx context.Context, task *domain.Task, state *processState) (*domain.TaskCycle, bool) {
-	slog.Debug("trace", "cmd", workerLogCmd, "operation", "agent.worker.Worker.startCycle",
+func (h *Harness) startCycle(ctx context.Context, task *domain.Task, state *processState) (*domain.TaskCycle, bool) {
+	slog.Debug("trace", "cmd", harnessLogCmd, "operation", "agent.harness.Harness.startCycle",
 		"task_id", task.ID)
 	req := runner.Request{
 		TaskID:      task.ID,
 		Phase:       domain.PhaseExecute,
 		Prompt:      task.InitialPrompt,
-		WorkingDir:  w.options.WorkingDir,
+		WorkingDir:  h.opts.WorkingDir,
 		CursorModel: task.CursorModel,
 	}
-	meta := buildCycleMeta(w.runner, task.InitialPrompt, req)
-	cycle, err := w.store.StartCycle(ctx, store.StartCycleInput{
+	meta := buildCycleMeta(h.runner, task.InitialPrompt, req)
+	cycle, err := h.store.StartCycle(ctx, store.StartCycleInput{
 		TaskID:      task.ID,
 		TriggeredBy: domain.ActorAgent,
 		Meta:        meta,
 	})
 	if err != nil {
-		slog.Warn("agent worker StartCycle failed", "cmd", workerLogCmd,
-			"operation", "agent.worker.Worker.startCycle.err", "task_id", task.ID, "err", err)
+		slog.Warn("agent harness StartCycle failed", "cmd", harnessLogCmd,
+			"operation", "agent.harness.Harness.startCycle.err", "task_id", task.ID, "err", err)
 		return nil, false
 	}
 	state.cycleID = cycle.ID
 	state.cycleStarted = true
-	if ml, ok := w.runner.(runner.MetricsLabeler); ok {
+	if ml, ok := h.runner.(runner.MetricsLabeler); ok {
 		labels := ml.MetricsLabels(req)
 		state.effectiveModel = labels["model"]
 	} else {
-		state.effectiveModel = w.runner.EffectiveModel(req)
+		state.effectiveModel = h.runner.EffectiveModel(req)
 	}
-	w.publish(task.ID, cycle.ID)
+	h.publish(task.ID, cycle.ID)
 	return cycle, true
 }
 
 // startExecutePhase opens the execute phase row that wraps runner.Run.
 // state is updated so the panic-recovery and shutdown branches can find
 // the phase to close out.
-func (w *Worker) startExecutePhase(ctx context.Context, cycle *domain.TaskCycle, state *processState) (*domain.TaskCyclePhase, bool) {
-	slog.Debug("trace", "cmd", workerLogCmd, "operation", "agent.worker.Worker.startExecutePhase",
+func (h *Harness) startExecutePhase(ctx context.Context, cycle *domain.TaskCycle, state *processState) (*domain.TaskCyclePhase, bool) {
+	slog.Debug("trace", "cmd", harnessLogCmd, "operation", "agent.harness.Harness.startExecutePhase",
 		"cycle_id", cycle.ID)
-	exec, err := w.store.StartPhase(ctx, cycle.ID, domain.PhaseExecute, domain.ActorAgent)
+	exec, err := h.store.StartPhase(ctx, cycle.ID, domain.PhaseExecute, domain.ActorAgent)
 	if err != nil {
-		slog.Warn("agent worker StartPhase(execute) failed", "cmd", workerLogCmd,
-			"operation", "agent.worker.Worker.startExecutePhase.err",
+		slog.Warn("agent harness StartPhase(execute) failed", "cmd", harnessLogCmd,
+			"operation", "agent.harness.Harness.startExecutePhase.err",
 			"cycle_id", cycle.ID, "err", err)
 		return nil, false
 	}
 	state.runningPhase = domain.PhaseExecute
 	state.runningPhaseSeq = exec.PhaseSeq
-	w.publish(cycle.TaskID, cycle.ID)
+	h.publish(cycle.TaskID, cycle.ID)
 	return exec, true
 }
 
-func (w *Worker) invokeRunnerWithTask(parentCtx context.Context, task *domain.Task, cycle *domain.TaskCycle, exec *domain.TaskCyclePhase) (runner.Result, error) {
-	return w.invokeRunner(parentCtx, task, cycle, exec)
+func (h *Harness) invokeRunnerWithTask(parentCtx context.Context, task *domain.Task, cycle *domain.TaskCycle, exec *domain.TaskCyclePhase) (runner.Result, error) {
+	return h.invokeRunner(parentCtx, task, cycle, exec)
 }
 
 // invokeRunner builds the Request, applies the per-run timeout (if any),
@@ -387,36 +326,36 @@ func (w *Worker) invokeRunnerWithTask(parentCtx context.Context, task *domain.Ta
 // or CancelCurrentRun (operator-initiated). The returned error is the
 // raw adapter error (typed via runner.Err* sentinels); classification
 // is done by the caller so the shutdown branch can short-circuit it.
-func (w *Worker) invokeRunner(parentCtx context.Context, task *domain.Task, cycle *domain.TaskCycle, exec *domain.TaskCyclePhase) (runner.Result, error) {
-	slog.Debug("trace", "cmd", workerLogCmd, "operation", "agent.worker.Worker.invokeRunner",
+func (h *Harness) invokeRunner(parentCtx context.Context, task *domain.Task, cycle *domain.TaskCycle, exec *domain.TaskCyclePhase) (runner.Result, error) {
+	slog.Debug("trace", "cmd", harnessLogCmd, "operation", "agent.harness.Harness.invokeRunner",
 		"task_id", task.ID, "cycle_id", cycle.ID, "phase_seq", exec.PhaseSeq,
-		"run_timeout_ns", int64(w.options.RunTimeout))
-	runCtx, cancel := withOptionalRunTimeout(parentCtx, w.options.RunTimeout)
+		"run_timeout_ns", int64(h.opts.RunTimeout))
+	runCtx, cancel := withOptionalRunTimeout(parentCtx, h.opts.RunTimeout)
 	defer cancel()
-	projectContext, err := w.selectedProjectContext(runCtx, task, cycle)
+	projectContext, err := h.selectedProjectContext(runCtx, task, cycle)
 	if err != nil {
 		details, _ := json.Marshal(map[string]string{"error": err.Error()})
 		return runner.NewResult(domain.PhaseStatusFailed, "project context selection failed", details, ""), fmt.Errorf("project context: %w: %v", runner.ErrInvalidOutput, err)
 	}
-	w.setCurrentRunCancel(cancel)
-	defer w.setCurrentRunCancel(nil)
-	return w.runner.Run(runCtx, runner.Request{
+	h.setCurrentRunCancel(cancel)
+	defer h.setCurrentRunCancel(nil)
+	return h.runner.Run(runCtx, runner.Request{
 		TaskID:      task.ID,
 		AttemptSeq:  cycle.AttemptSeq,
 		Phase:       domain.PhaseExecute,
 		Prompt:      promptWithProjectContext(task.InitialPrompt, projectContext.Text),
-		WorkingDir:  w.options.WorkingDir,
-		Timeout:     w.options.RunTimeout,
+		WorkingDir:  h.opts.WorkingDir,
+		Timeout:     h.opts.RunTimeout,
 		CursorModel: task.CursorModel,
 		OnProgress: func(ev runner.ProgressEvent) {
-			w.persistProgress(runCtx, task.ID, cycle.ID, exec.PhaseSeq, ev)
-			w.publishProgress(task.ID, cycle.ID, exec.PhaseSeq, ev)
+			h.persistProgress(runCtx, task.ID, cycle.ID, exec.PhaseSeq, ev)
+			h.publishProgress(task.ID, cycle.ID, exec.PhaseSeq, ev)
 		},
 	})
 }
 
-func (w *Worker) persistProgress(ctx context.Context, taskID, cycleID string, phaseSeq int64, ev runner.ProgressEvent) {
-	slog.Debug("trace", "cmd", workerLogCmd, "operation", "agent.worker.Worker.persistProgress",
+func (h *Harness) persistProgress(ctx context.Context, taskID, cycleID string, phaseSeq int64, ev runner.ProgressEvent) {
+	slog.Debug("trace", "cmd", harnessLogCmd, "operation", "agent.harness.Harness.persistProgress",
 		"task_id", taskID, "cycle_id", cycleID, "phase_seq", phaseSeq,
 		"kind", ev.Kind, "subtype", ev.Subtype)
 	if ev.Kind == "" {
@@ -427,13 +366,13 @@ func (w *Worker) persistProgress(ctx context.Context, taskID, cycleID string, ph
 		var err error
 		payload, err = json.Marshal(ev)
 		if err != nil {
-			slog.Warn("agent worker progress payload marshal failed",
-				"cmd", workerLogCmd, "operation", "agent.worker.Worker.persistProgress.marshal_err",
+			slog.Warn("agent harness progress payload marshal failed",
+				"cmd", harnessLogCmd, "operation", "agent.harness.Harness.persistProgress.marshal_err",
 				"task_id", taskID, "cycle_id", cycleID, "phase_seq", phaseSeq, "err", err)
 			payload = []byte("{}")
 		}
 	}
-	if _, err := w.store.AppendCycleStreamEvent(ctx, store.AppendCycleStreamEventInput{
+	if _, err := h.store.AppendCycleStreamEvent(ctx, store.AppendCycleStreamEventInput{
 		TaskID:   taskID,
 		CycleID:  cycleID,
 		PhaseSeq: phaseSeq,
@@ -444,8 +383,8 @@ func (w *Worker) persistProgress(ctx context.Context, taskID, cycleID string, ph
 		Tool:     ev.Tool,
 		Payload:  payload,
 	}); err != nil {
-		slog.Warn("agent worker progress persistence failed",
-			"cmd", workerLogCmd, "operation", "agent.worker.Worker.persistProgress.err",
+		slog.Warn("agent harness progress persistence failed",
+			"cmd", harnessLogCmd, "operation", "agent.harness.Harness.persistProgress.err",
 			"task_id", taskID, "cycle_id", cycleID, "phase_seq", phaseSeq,
 			"kind", ev.Kind, "err", err)
 	}
@@ -457,7 +396,7 @@ func (w *Worker) persistProgress(ctx context.Context, taskID, cycleID string, ph
 // inside invokeRunner. The returned cancel func MUST be called either
 // directly (defer) or via CancelCurrentRun.
 func withOptionalRunTimeout(parent context.Context, d time.Duration) (context.Context, context.CancelFunc) {
-	slog.Debug("trace", "cmd", workerLogCmd, "operation", "agent.worker.withOptionalRunTimeout",
+	slog.Debug("trace", "cmd", harnessLogCmd, "operation", "agent.harness.withOptionalRunTimeout",
 		"timeout_ns", int64(d))
 	if d <= 0 {
 		return context.WithCancel(parent)
@@ -469,8 +408,8 @@ func withOptionalRunTimeout(parent context.Context, d time.Duration) (context.Co
 // phase row. Errors from the store are logged and reported back so the
 // caller can stop the pipeline (a missing row usually means the task
 // was deleted mid-cycle).
-func (w *Worker) completeExecutePhase(ctx context.Context, state *processState, cycle *domain.TaskCycle, exec *domain.TaskCyclePhase, status domain.PhaseStatus, result runner.Result) bool {
-	slog.Debug("trace", "cmd", workerLogCmd, "operation", "agent.worker.Worker.completeExecutePhase",
+func (h *Harness) completeExecutePhase(ctx context.Context, state *processState, cycle *domain.TaskCycle, exec *domain.TaskCyclePhase, status domain.PhaseStatus, result runner.Result) bool {
+	slog.Debug("trace", "cmd", harnessLogCmd, "operation", "agent.harness.Harness.completeExecutePhase",
 		"cycle_id", cycle.ID, "phase_seq", exec.PhaseSeq, "status", string(status))
 	in := store.CompletePhaseInput{
 		CycleID:  cycle.ID,
@@ -483,13 +422,13 @@ func (w *Worker) completeExecutePhase(ctx context.Context, state *processState, 
 		s := result.Summary
 		in.Summary = &s
 	}
-	if _, err := w.store.CompletePhase(ctx, in); err != nil {
+	if _, err := h.store.CompletePhase(ctx, in); err != nil {
 		level := slog.LevelWarn
 		if errors.Is(err, domain.ErrNotFound) {
 			level = slog.LevelInfo
 		}
-		slog.Log(ctx, level, "agent worker CompletePhase(execute) failed",
-			"cmd", workerLogCmd, "operation", "agent.worker.Worker.completeExecutePhase.err",
+		slog.Log(ctx, level, "agent harness CompletePhase(execute) failed",
+			"cmd", harnessLogCmd, "operation", "agent.harness.Harness.completeExecutePhase.err",
 			"cycle_id", cycle.ID, "phase_seq", exec.PhaseSeq, "err", err)
 		// The phase row is in an indeterminate state (either still
 		// running, already terminal, or vanished). Clear the phase
@@ -508,7 +447,7 @@ func (w *Worker) completeExecutePhase(ctx context.Context, state *processState, 
 	}
 	state.runningPhase = ""
 	state.runningPhaseSeq = 0
-	w.publish(cycle.TaskID, cycle.ID)
+	h.publish(cycle.TaskID, cycle.ID)
 	return true
 }
 
@@ -516,35 +455,35 @@ func (w *Worker) completeExecutePhase(ctx context.Context, state *processState, 
 // path is a no-op for already-terminal cycles. Records one metrics
 // observation on success so cmd/taskapi's Prometheus counter +
 // histogram see the happy-path attempt outcome.
-func (w *Worker) terminateCycle(ctx context.Context, state *processState, taskID string, status domain.CycleStatus, reason string) bool {
-	slog.Debug("trace", "cmd", workerLogCmd, "operation", "agent.worker.Worker.terminateCycle",
+func (h *Harness) terminateCycle(ctx context.Context, state *processState, taskID string, status domain.CycleStatus, reason string) bool {
+	slog.Debug("trace", "cmd", harnessLogCmd, "operation", "agent.harness.Harness.terminateCycle",
 		"cycle_id", state.cycleID, "status", string(status), "reason", reason)
 	if state.cycleID == "" {
 		return true
 	}
-	if _, err := w.store.TerminateCycle(ctx, state.cycleID, status, reason, domain.ActorAgent); err != nil {
+	if _, err := h.store.TerminateCycle(ctx, state.cycleID, status, reason, domain.ActorAgent); err != nil {
 		level := slog.LevelWarn
 		if errors.Is(err, domain.ErrNotFound) {
 			level = slog.LevelInfo
 		}
-		slog.Log(ctx, level, "agent worker TerminateCycle failed",
-			"cmd", workerLogCmd, "operation", "agent.worker.Worker.terminateCycle.err",
+		slog.Log(ctx, level, "agent harness TerminateCycle failed",
+			"cmd", harnessLogCmd, "operation", "agent.harness.Harness.terminateCycle.err",
 			"cycle_id", state.cycleID, "err", err)
 		state.cycleStarted = false
 		return false
 	}
 	state.cycleStarted = false
-	w.publish(taskID, state.cycleID)
-	w.recordRun(string(status), w.runner.Name(), state.effectiveModel, state.startedAt)
-	w.observeVerifyRetries(state.verifyAttempt)
+	h.publish(taskID, state.cycleID)
+	h.recordRun(string(status), h.runner.Name(), state.effectiveModel, state.startedAt)
+	h.observeVerifyRetries(state.verifyAttempt)
 	// GC the worker-managed scratch dir for this cycle. Idempotent
 	// against a missing dir; logged at Debug because operators rarely
 	// care unless cleanup itself errors. Closes the unbounded-disk-
 	// growth gap that existed when files were written under RepoRoot/.t2a.
-	if err := cleanupReportDir(w.options.ReportDir, state.cycleID); err != nil {
-		slog.Warn("agent worker cleanupReportDir failed",
-			"cmd", workerLogCmd, "operation", "agent.worker.Worker.terminateCycle.cleanup_err",
-			"cycle_id", state.cycleID, "report_dir", w.options.ReportDir, "err", err)
+	if err := cleanupReportDir(h.opts.ReportDir, state.cycleID); err != nil {
+		slog.Warn("agent harness cleanupReportDir failed",
+			"cmd", harnessLogCmd, "operation", "agent.harness.Harness.terminateCycle.cleanup_err",
+			"cycle_id", state.cycleID, "report_dir", h.opts.ReportDir, "err", err)
 	}
 	return true
 }
@@ -556,7 +495,7 @@ func (w *Worker) terminateCycle(ctx context.Context, state *processState, taskID
 // failed; unexpected errors collapse to the same bucket so the worker
 // is conservative about silent successes.
 func classifyRunOutcome(err error) (domain.PhaseStatus, domain.CycleStatus, domain.Status, string) {
-	slog.Debug("trace", "cmd", workerLogCmd, "operation", "agent.worker.classifyRunOutcome",
+	slog.Debug("trace", "cmd", harnessLogCmd, "operation", "agent.harness.classifyRunOutcome",
 		"err", err)
 	if err == nil {
 		return domain.PhaseStatusSucceeded, domain.CycleStatusSucceeded, domain.StatusDone, ""

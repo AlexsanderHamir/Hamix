@@ -1,4 +1,4 @@
-package worker
+package harness
 
 import (
 	"context"
@@ -144,9 +144,9 @@ func TestIntegrityDiff_ManyPaths_TruncatesSummary(t *testing.T) {
 // pre-snapshot must mark the cycle tampered. A safety property cannot
 // be defeated by "the check threw an exception".
 func TestIntegrityCheck_PreErrorIsTampered(t *testing.T) {
-	w := &Worker{options: Options{WorkingDir: t.TempDir()}}
-	gitInit(t, w.options.WorkingDir)
-	pre, _ := captureIntegritySnapshot(context.Background(), w.options.WorkingDir)
+	w := &Harness{opts: Options{WorkingDir: t.TempDir()}}
+	gitInit(t, w.opts.WorkingDir)
+	pre, _ := captureIntegritySnapshot(context.Background(), w.opts.WorkingDir)
 	tampered, reason := w.checkVerifyIntegrity(context.Background(), "c", pre, os.ErrPermission)
 	if !tampered {
 		t.Fatalf("pre-snapshot error must be treated as tampered; got reason=%q", reason)
@@ -159,7 +159,7 @@ func TestIntegrityCheck_PostGitGoneIsTampered(t *testing.T) {
 	skipIfNoGit(t)
 	dir := t.TempDir()
 	gitInit(t, dir)
-	w := &Worker{options: Options{WorkingDir: dir}}
+	w := &Harness{opts: Options{WorkingDir: dir}}
 	pre, err := captureIntegritySnapshot(context.Background(), dir)
 	if err != nil || pre.notGitRepo {
 		t.Fatalf("pre setup: err=%v notGitRepo=%v", err, pre.notGitRepo)

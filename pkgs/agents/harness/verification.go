@@ -1,4 +1,4 @@
-package worker
+package harness
 
 import (
 	"context"
@@ -51,14 +51,14 @@ type criterionVerdict struct {
 	reasoning string
 }
 
-func (w *Worker) loadVerificationSnapshot(ctx context.Context, taskID string) (verificationSnapshot, error) {
-	slog.Debug("trace", "cmd", workerLogCmd, "operation", "agent.worker.Worker.loadVerificationSnapshot",
+func (h *Harness) loadVerificationSnapshot(ctx context.Context, taskID string) (verificationSnapshot, error) {
+	slog.Debug("trace", "cmd", harnessLogCmd, "operation", "agent.harness.Harness.loadVerificationSnapshot",
 		"task_id", taskID)
-	settings, err := w.store.GetSettings(ctx)
+	settings, err := h.store.GetSettings(ctx)
 	if err != nil {
 		return verificationSnapshot{}, err
 	}
-	items, err := w.store.ListChecklistForVerify(ctx, taskID)
+	items, err := h.store.ListChecklistForVerify(ctx, taskID)
 	if err != nil {
 		return verificationSnapshot{}, err
 	}
@@ -70,10 +70,10 @@ func (w *Worker) loadVerificationSnapshot(ctx context.Context, taskID string) (v
 	// VerifyRunner means either (a) the operator did not configure one
 	// (V1 default) or (b) the supervisor's build/probe failed and
 	// demoted verify back to the execute runner with a warn — either
-	// way, fall back to w.runner here.
-	verifyRunner := w.runner
-	if w.options.VerifyRunner != nil {
-		verifyRunner = w.options.VerifyRunner
+	// way, fall back to h.runner here.
+	verifyRunner := h.runner
+	if h.opts.VerifyRunner != nil {
+		verifyRunner = h.opts.VerifyRunner
 	}
 	snap := verificationSnapshot{
 		// Verify runs only when the task has at least one criterion.
@@ -87,9 +87,9 @@ func (w *Worker) loadVerificationSnapshot(ctx context.Context, taskID string) (v
 	return snap, nil
 }
 
-func (w *Worker) completeChecklistLegacy(ctx context.Context, taskID string) error {
-	slog.Debug("trace", "cmd", workerLogCmd, "operation", "agent.worker.Worker.completeChecklistLegacy", "task_id", taskID)
-	items, err := w.store.ListChecklistForSubject(ctx, taskID)
+func (h *Harness) completeChecklistLegacy(ctx context.Context, taskID string) error {
+	slog.Debug("trace", "cmd", harnessLogCmd, "operation", "agent.harness.Harness.completeChecklistLegacy", "task_id", taskID)
+	items, err := h.store.ListChecklistForSubject(ctx, taskID)
 	if err != nil {
 		return err
 	}
@@ -97,21 +97,21 @@ func (w *Worker) completeChecklistLegacy(ctx context.Context, taskID string) err
 		if it.Done {
 			continue
 		}
-		if err := w.store.SetChecklistItemDone(ctx, taskID, it.ID, true, domain.ActorAgent); err != nil {
+		if err := h.store.SetChecklistItemDone(ctx, taskID, it.ID, true, domain.ActorAgent); err != nil {
 			return err
 		}
 	}
 	return nil
 }
 
-func (w *Worker) applyVerifiedCompletions(ctx context.Context, taskID, cycleID string, verdicts []criterionVerdict) error {
-	slog.Debug("trace", "cmd", workerLogCmd, "operation", "agent.worker.Worker.applyVerifiedCompletions",
+func (h *Harness) applyVerifiedCompletions(ctx context.Context, taskID, cycleID string, verdicts []criterionVerdict) error {
+	slog.Debug("trace", "cmd", harnessLogCmd, "operation", "agent.harness.Harness.applyVerifiedCompletions",
 		"task_id", taskID, "cycle_id", cycleID, "verdict_count", len(verdicts))
 	for _, v := range verdicts {
 		if !v.passed {
 			continue
 		}
-		err := w.store.SetChecklistItemDoneWithEvidence(ctx, taskID, v.id, v.evidence, v.verifier, v.reasoning, cycleID, domain.ActorAgent)
+		err := h.store.SetChecklistItemDoneWithEvidence(ctx, taskID, v.id, v.evidence, v.verifier, v.reasoning, cycleID, domain.ActorAgent)
 		if err != nil && !errors.Is(err, domain.ErrNotFound) {
 			return err
 		}
@@ -125,7 +125,7 @@ func (w *Worker) applyVerifiedCompletions(ctx context.Context, taskID, cycleID s
 // is its own phase row, not a step inside execute. See process.go for
 // the loop that depends on this contract (verify → execute is the only
 // legal retry transition allowed by domain.ValidPhaseTransition).
-func (w *Worker) runVerificationPipeline(
+func (h *Harness) runVerificationPipeline(
 	parentCtx context.Context,
 	task *domain.Task,
 	cycle *domain.TaskCycle,
@@ -133,46 +133,46 @@ func (w *Worker) runVerificationPipeline(
 	snap verificationSnapshot,
 	feedback string,
 ) ([]criterionVerdict, string, error) {
-	slog.Debug("trace", "cmd", workerLogCmd, "operation", "agent.worker.Worker.runVerificationPipeline",
+	slog.Debug("trace", "cmd", harnessLogCmd, "operation", "agent.harness.Harness.runVerificationPipeline",
 		"task_id", task.ID, "cycle_id", cycle.ID, "enabled", snap.enabled)
 	if !snap.enabled {
 		return nil, "", nil
 	}
-	if err := ensureReportCycleDir(w.options.ReportDir, cycle.ID); err != nil {
+	if err := ensureReportCycleDir(h.opts.ReportDir, cycle.ID); err != nil {
 		// Best-effort: the worker can still proceed if the dir
 		// already exists. Hard errors (e.g. ENOSPC, EACCES on the
 		// worker tempdir) surface later when parseVerifyReport
 		// can't find the file the verifier was told to write.
-		slog.Warn("agent worker ensureReportCycleDir failed",
-			"cmd", workerLogCmd, "operation", "agent.worker.Worker.runVerificationPipeline.ensure_err",
-			"cycle_id", cycle.ID, "report_dir", w.options.ReportDir, "err", err)
+		slog.Warn("agent harness ensureReportCycleDir failed",
+			"cmd", harnessLogCmd, "operation", "agent.harness.Harness.runVerificationPipeline.ensure_err",
+			"cycle_id", cycle.ID, "report_dir", h.opts.ReportDir, "err", err)
 	}
 
-	verifyStarted := w.options.Clock()
+	verifyStarted := h.opts.Clock()
 	defer func() {
-		w.observeVerifyDuration(w.options.Clock().Sub(verifyStarted))
+		h.observeVerifyDuration(h.opts.Clock().Sub(verifyStarted))
 	}()
 
-	phase, err := w.store.StartPhase(parentCtx, cycle.ID, domain.PhaseVerify, domain.ActorAgent)
+	phase, err := h.store.StartPhase(parentCtx, cycle.ID, domain.PhaseVerify, domain.ActorAgent)
 	if err != nil {
-		slog.Warn("agent worker StartPhase(verify) failed",
-			"cmd", workerLogCmd, "operation", "agent.worker.Worker.runVerificationPipeline.start_err",
+		slog.Warn("agent harness StartPhase(verify) failed",
+			"cmd", harnessLogCmd, "operation", "agent.harness.Harness.runVerificationPipeline.start_err",
 			"cycle_id", cycle.ID, "err", err)
 		return nil, "", fmt.Errorf("start verify phase: %w", err)
 	}
 	state.runningPhase = domain.PhaseVerify
 	state.runningPhaseSeq = phase.PhaseSeq
-	w.publish(cycle.TaskID, cycle.ID)
+	h.publish(cycle.TaskID, cycle.ID)
 
 	// Pre-snapshot the working dir so we can detect any modifications
 	// the verifier makes to source. The snapshot helper is fail-safe:
 	// snapshot errors return an error here and we treat the cycle as
 	// tampered (a critical safety property cannot be defeated by the
 	// check throwing). Non-git working dirs degrade to a no-op.
-	pre, preErr := captureIntegritySnapshot(parentCtx, w.options.WorkingDir)
+	pre, preErr := captureIntegritySnapshot(parentCtx, h.opts.WorkingDir)
 	if preErr != nil {
-		slog.Warn("agent worker pre-verify integrity snapshot failed",
-			"cmd", workerLogCmd, "operation", "agent.worker.Worker.runVerificationPipeline.pre_snapshot_err",
+		slog.Warn("agent harness pre-verify integrity snapshot failed",
+			"cmd", harnessLogCmd, "operation", "agent.harness.Harness.runVerificationPipeline.pre_snapshot_err",
 			"cycle_id", cycle.ID, "err", preErr)
 	}
 
@@ -182,9 +182,9 @@ func (w *Worker) runVerificationPipeline(
 	// DB rows aligned with how the SPA renders attempts ("Attempt 1"
 	// on first try, "Attempt 2" after the first retry, …).
 	attemptSeq := int64(state.verifyAttempt) + 1
-	verdicts, feedbackOut, verifyErr := w.runVerifyChecks(parentCtx, task, cycle, phase.PhaseSeq, attemptSeq, snap, state.previouslyPassed, feedback)
+	verdicts, feedbackOut, verifyErr := h.runVerifyChecks(parentCtx, task, cycle, phase.PhaseSeq, attemptSeq, snap, state.previouslyPassed, feedback)
 
-	tampered, tamperReason := w.checkVerifyIntegrity(parentCtx, cycle.ID, pre, preErr)
+	tampered, tamperReason := h.checkVerifyIntegrity(parentCtx, cycle.ID, pre, preErr)
 
 	phaseStatus := domain.PhaseStatusSucceeded
 	summary := "verify complete"
@@ -199,20 +199,20 @@ func (w *Worker) runVerificationPipeline(
 		phaseStatus = domain.PhaseStatusFailed
 		summary = verifyErr.Error()
 	}
-	if _, err := w.store.CompletePhase(parentCtx, store.CompletePhaseInput{
+	if _, err := h.store.CompletePhase(parentCtx, store.CompletePhaseInput{
 		CycleID:  cycle.ID,
 		PhaseSeq: phase.PhaseSeq,
 		Status:   phaseStatus,
 		Summary:  &summary,
 		By:       domain.ActorAgent,
 	}); err != nil {
-		slog.Warn("agent worker CompletePhase(verify) failed",
-			"cmd", workerLogCmd, "operation", "agent.worker.Worker.runVerificationPipeline.complete_err",
+		slog.Warn("agent harness CompletePhase(verify) failed",
+			"cmd", harnessLogCmd, "operation", "agent.harness.Harness.runVerificationPipeline.complete_err",
 			"cycle_id", cycle.ID, "phase_seq", phase.PhaseSeq, "err", err)
 	}
 	state.runningPhase = ""
 	state.runningPhaseSeq = 0
-	w.publish(cycle.TaskID, cycle.ID)
+	h.publish(cycle.TaskID, cycle.ID)
 	return verdicts, feedbackOut, verifyErr
 }
 
@@ -222,8 +222,8 @@ func (w *Worker) runVerificationPipeline(
 // if the pre-snapshot itself errored, OR the post-snapshot errors
 // here, OR HEAD moved, OR any path outside the allowed verify-report
 // changed, the verifier failed integrity and the cycle dies terminal.
-func (w *Worker) checkVerifyIntegrity(ctx context.Context, cycleID string, pre integritySnapshot, preErr error) (bool, string) {
-	slog.Debug("trace", "cmd", workerLogCmd, "operation", "agent.worker.Worker.checkVerifyIntegrity",
+func (h *Harness) checkVerifyIntegrity(ctx context.Context, cycleID string, pre integritySnapshot, preErr error) (bool, string) {
+	slog.Debug("trace", "cmd", harnessLogCmd, "operation", "agent.harness.Harness.checkVerifyIntegrity",
 		"cycle_id", cycleID)
 	if pre.notGitRepo {
 		return false, ""
@@ -231,10 +231,10 @@ func (w *Worker) checkVerifyIntegrity(ctx context.Context, cycleID string, pre i
 	if preErr != nil {
 		return true, "pre-verify integrity snapshot failed: " + preErr.Error()
 	}
-	post, err := captureIntegritySnapshot(ctx, w.options.WorkingDir)
+	post, err := captureIntegritySnapshot(ctx, h.opts.WorkingDir)
 	if err != nil {
-		slog.Warn("agent worker post-verify integrity snapshot failed",
-			"cmd", workerLogCmd, "operation", "agent.worker.Worker.checkVerifyIntegrity.post_snapshot_err",
+		slog.Warn("agent harness post-verify integrity snapshot failed",
+			"cmd", harnessLogCmd, "operation", "agent.harness.Harness.checkVerifyIntegrity.post_snapshot_err",
 			"cycle_id", cycleID, "err", err)
 		return true, "post-verify integrity snapshot failed: " + err.Error()
 	}
@@ -246,7 +246,7 @@ func (w *Worker) checkVerifyIntegrity(ctx context.Context, cycleID string, pre i
 	tampered, summary := classifyIntegrityDiff(diff, cycleID)
 	if tampered {
 		slog.Warn("verify pass tampered with working dir",
-			"cmd", workerLogCmd, "operation", "agent.worker.Worker.checkVerifyIntegrity.tampered",
+			"cmd", harnessLogCmd, "operation", "agent.harness.Harness.checkVerifyIntegrity.tampered",
 			"cycle_id", cycleID, "summary", summary)
 	}
 	return tampered, summary
@@ -257,7 +257,7 @@ func (w *Worker) checkVerifyIntegrity(ctx context.Context, cycleID string, pre i
 // CompletePhase. phaseSeq is the verify phase row's seq, threaded
 // through so progress events from the verify runner land on the verify
 // phase (not execute) for the SPA activity panel's per-phase filter.
-func (w *Worker) runVerifyChecks(
+func (h *Harness) runVerifyChecks(
 	parentCtx context.Context,
 	task *domain.Task,
 	cycle *domain.TaskCycle,
@@ -267,7 +267,7 @@ func (w *Worker) runVerifyChecks(
 	previouslyPassed map[string]criterionVerdict,
 	feedback string,
 ) ([]criterionVerdict, string, error) {
-	slog.Debug("trace", "cmd", workerLogCmd, "operation", "agent.worker.Worker.runVerifyChecks",
+	slog.Debug("trace", "cmd", harnessLogCmd, "operation", "agent.harness.Harness.runVerifyChecks",
 		"task_id", task.ID, "cycle_id", cycle.ID,
 		"criteria_count", len(snap.criteria), "previously_passed", len(previouslyPassed))
 	// expected is the set of criterion IDs the execute agent MUST
@@ -284,7 +284,7 @@ func (w *Worker) runVerifyChecks(
 		expected[it.ID] = struct{}{}
 	}
 
-	selfReport, err := parseCriteriaReport(w.options.ReportDir, cycle.ID, expected)
+	selfReport, err := parseCriteriaReport(h.opts.ReportDir, cycle.ID, expected)
 	if err != nil {
 		return nil, "", err
 	}
@@ -297,9 +297,9 @@ func (w *Worker) runVerifyChecks(
 	// in-memory report — because durable mirroring is observability,
 	// not gating logic. If we ever need it to be gating, swap the log
 	// for a return.
-	if uerr := w.persistCriteriaReports(parentCtx, cycle.ID, attemptSeq, snap.criteria, previouslyPassed, selfReport); uerr != nil {
-		slog.Warn("agent worker UpsertCriteriaReports failed",
-			"cmd", workerLogCmd, "operation", "agent.worker.Worker.runVerifyChecks.upsert_criteria_err",
+	if uerr := h.persistCriteriaReports(parentCtx, cycle.ID, attemptSeq, snap.criteria, previouslyPassed, selfReport); uerr != nil {
+		slog.Warn("agent harness UpsertCriteriaReports failed",
+			"cmd", harnessLogCmd, "operation", "agent.harness.Harness.runVerifyChecks.upsert_criteria_err",
 			"cycle_id", cycle.ID, "attempt_seq", attemptSeq, "err", uerr)
 	}
 
@@ -325,7 +325,7 @@ func (w *Worker) runVerifyChecks(
 			v.verifier = domain.VerifierAgentSelf
 			v.reasoning = "execute agent did not claim criterion done"
 			verdicts = append(verdicts, v)
-			w.recordVerifyVerdict(domain.VerifierAgentSelf, false)
+			h.recordVerifyVerdict(domain.VerifierAgentSelf, false)
 			continue
 		}
 		needLLMVerify = true
@@ -333,10 +333,10 @@ func (w *Worker) runVerifyChecks(
 	}
 
 	if needLLMVerify {
-		if err := w.runLLMVerifyAgent(parentCtx, task, cycle, phaseSeq, snap, previouslyPassed, selfReport, feedback); err != nil {
+		if err := h.runLLMVerifyAgent(parentCtx, task, cycle, phaseSeq, snap, previouslyPassed, selfReport, feedback); err != nil {
 			return nil, "", err
 		}
-		vrep, err := parseVerifyReport(w.options.ReportDir, cycle.ID, expected)
+		vrep, err := parseVerifyReport(h.opts.ReportDir, cycle.ID, expected)
 		if err != nil {
 			return nil, "", err
 		}
@@ -368,7 +368,7 @@ func (w *Worker) runVerifyChecks(
 				nv.reasoning = vr.Reasoning
 			}
 			next = append(next, nv)
-			w.recordVerifyVerdict(domain.VerifierVerifyAgent, nv.passed)
+			h.recordVerifyVerdict(domain.VerifierVerifyAgent, nv.passed)
 		}
 		verdicts = next
 	}
@@ -383,9 +383,9 @@ func (w *Worker) runVerifyChecks(
 	// (cycle, attempt, criterion) so a partial-failure rewrite is
 	// safe; observability-only, errors are logged and dropped (same
 	// rationale as persistCriteriaReports).
-	if uerr := w.persistVerifyReports(parentCtx, cycle.ID, attemptSeq, verdicts, previouslyPassed); uerr != nil {
-		slog.Warn("agent worker UpsertVerifyReports failed",
-			"cmd", workerLogCmd, "operation", "agent.worker.Worker.runVerifyChecks.upsert_verify_err",
+	if uerr := h.persistVerifyReports(parentCtx, cycle.ID, attemptSeq, verdicts, previouslyPassed); uerr != nil {
+		slog.Warn("agent harness UpsertVerifyReports failed",
+			"cmd", harnessLogCmd, "operation", "agent.harness.Harness.runVerifyChecks.upsert_verify_err",
 			"cycle_id", cycle.ID, "attempt_seq", attemptSeq, "err", uerr)
 	}
 
@@ -404,7 +404,7 @@ func (w *Worker) runVerifyChecks(
 // runLLMVerifyAgent invokes the verify runner against the criteria
 // self-report. It performs no phase bookkeeping; the caller (the verify
 // phase wrapper in runVerificationPipeline) owns StartPhase / CompletePhase.
-func (w *Worker) runLLMVerifyAgent(
+func (h *Harness) runLLMVerifyAgent(
 	ctx context.Context,
 	task *domain.Task,
 	cycle *domain.TaskCycle,
@@ -414,9 +414,9 @@ func (w *Worker) runLLMVerifyAgent(
 	selfReport map[string]criteriaReportEntry,
 	feedback string,
 ) error {
-	slog.Debug("trace", "cmd", workerLogCmd, "operation", "agent.worker.Worker.runLLMVerifyAgent",
+	slog.Debug("trace", "cmd", harnessLogCmd, "operation", "agent.harness.Harness.runLLMVerifyAgent",
 		"task_id", task.ID, "cycle_id", cycle.ID, "locked_passes", len(previouslyPassed))
-	diff, err := gitDiff(w.options.WorkingDir, "HEAD")
+	diff, err := gitDiff(h.opts.WorkingDir, "HEAD")
 	if err != nil {
 		diff = "(diff unavailable: " + err.Error() + ")"
 	}
@@ -426,7 +426,7 @@ func (w *Worker) runLLMVerifyAgent(
 	// agent CLI writes outside the operator's RepoRoot. Any source
 	// mutation in RepoRoot during the verify pass is now treated as
 	// tampering with no allowlist (see verify_integrity.go).
-	b.WriteString(fmt.Sprintf("Write `%s` only.\n\n", verifyReportPath(w.options.ReportDir, cycle.ID)))
+	b.WriteString(fmt.Sprintf("Write `%s` only.\n\n", verifyReportPath(h.opts.ReportDir, cycle.ID)))
 	b.WriteString("Schema: {\"criteria\":[{\"id\":\"...\",\"verified\":true|false,\"reasoning\":\"...\"}]}\n\n")
 	if len(previouslyPassed) > 0 {
 		b.WriteString("## Locked passes (do not re-evaluate)\n\n")
@@ -457,7 +457,7 @@ func (w *Worker) runLLMVerifyAgent(
 		AttemptSeq:  cycle.AttemptSeq,
 		Phase:       domain.PhaseVerify,
 		Prompt:      prompt,
-		WorkingDir:  w.options.WorkingDir,
+		WorkingDir:  h.opts.WorkingDir,
 		CursorModel: snap.verifyModel,
 		// Stream verify-phase progress events under the verify phase
 		// row's seq (not execute's). The SPA Activity panel filters
@@ -465,8 +465,8 @@ func (w *Worker) runLLMVerifyAgent(
 		// as an empty P3 entry. See process.go::invokeRunner for the
 		// matching execute-phase wiring.
 		OnProgress: func(ev runner.ProgressEvent) {
-			w.persistProgress(ctx, task.ID, cycle.ID, phaseSeq, ev)
-			w.publishProgress(task.ID, cycle.ID, phaseSeq, ev)
+			h.persistProgress(ctx, task.ID, cycle.ID, phaseSeq, ev)
+			h.publishProgress(task.ID, cycle.ID, phaseSeq, ev)
 		},
 	})
 	return err
@@ -502,7 +502,7 @@ func gitDiff(dir, rev string) (string, error) {
 // of criteria proved passed in earlier attempts. A criterion in
 // lockedPasses is by construction NOT failing.
 func formatVerificationFailedReason(finalVerdicts []criterionVerdict, lockedPasses map[string]criterionVerdict) string {
-	slog.Debug("trace", "cmd", workerLogCmd, "operation", "agent.worker.formatVerificationFailedReason",
+	slog.Debug("trace", "cmd", harnessLogCmd, "operation", "agent.harness.formatVerificationFailedReason",
 		"verdict_count", len(finalVerdicts), "locked_count", len(lockedPasses))
 	failing := make([]string, 0, len(finalVerdicts))
 	seen := map[string]struct{}{}
@@ -552,7 +552,7 @@ func formatVerificationFailedReason(finalVerdicts []criterionVerdict, lockedPass
 // (they are not in the expected-IDs set passed to parseCriteriaReport
 // at line 285), so a row would be missing fields and would only
 // confuse the SPA timeline.
-func (w *Worker) persistCriteriaReports(
+func (h *Harness) persistCriteriaReports(
 	ctx context.Context,
 	cycleID string,
 	attemptSeq int64,
@@ -560,7 +560,7 @@ func (w *Worker) persistCriteriaReports(
 	previouslyPassed map[string]criterionVerdict,
 	selfReport map[string]criteriaReportEntry,
 ) error {
-	slog.Debug("trace", "cmd", workerLogCmd, "operation", "agent.worker.Worker.persistCriteriaReports",
+	slog.Debug("trace", "cmd", harnessLogCmd, "operation", "agent.harness.Harness.persistCriteriaReports",
 		"cycle_id", cycleID, "attempt_seq", attemptSeq)
 	entries := make([]store.CriteriaReportEntry, 0, len(criteria))
 	for _, it := range criteria {
@@ -577,7 +577,7 @@ func (w *Worker) persistCriteriaReports(
 			Evidence:    e.Evidence,
 		})
 	}
-	return w.store.UpsertCriteriaReports(ctx, cycleID, attemptSeq, entries)
+	return h.store.UpsertCriteriaReports(ctx, cycleID, attemptSeq, entries)
 }
 
 // persistVerifyReports mirrors this attempt's final verdicts into
@@ -588,14 +588,14 @@ func (w *Worker) persistCriteriaReports(
 // attempts are skipped — those already exist at their original
 // attempt_seq and re-writing them under the current attempt_seq
 // would lie about which attempt evaluated them.
-func (w *Worker) persistVerifyReports(
+func (h *Harness) persistVerifyReports(
 	ctx context.Context,
 	cycleID string,
 	attemptSeq int64,
 	verdicts []criterionVerdict,
 	previouslyPassed map[string]criterionVerdict,
 ) error {
-	slog.Debug("trace", "cmd", workerLogCmd, "operation", "agent.worker.Worker.persistVerifyReports",
+	slog.Debug("trace", "cmd", harnessLogCmd, "operation", "agent.harness.Harness.persistVerifyReports",
 		"cycle_id", cycleID, "attempt_seq", attemptSeq, "verdict_count", len(verdicts))
 	entries := make([]store.VerifyReportEntry, 0, len(verdicts))
 	for _, v := range verdicts {
@@ -609,7 +609,7 @@ func (w *Worker) persistVerifyReports(
 			Reasoning:    v.reasoning,
 		})
 	}
-	return w.store.UpsertVerifyReports(ctx, cycleID, attemptSeq, entries)
+	return h.store.UpsertVerifyReports(ctx, cycleID, attemptSeq, entries)
 }
 
 func encodeCriteriaSnapshot(items []store.ChecklistVerifyItem) []byte {

@@ -1,4 +1,4 @@
-package worker
+package harness
 
 import (
 	"bytes"
@@ -78,7 +78,7 @@ type integritySnapshot struct {
 // porcelain v1 format puts a 2-char status + space + path on each
 // record, which we strip before normalising.
 func captureIntegritySnapshot(ctx context.Context, workingDir string) (integritySnapshot, error) {
-	slog.Debug("trace", "cmd", workerLogCmd, "operation", "agent.worker.captureIntegritySnapshot",
+	slog.Debug("trace", "cmd", harnessLogCmd, "operation", "agent.harness.captureIntegritySnapshot",
 		"working_dir", workingDir)
 
 	probeCtx, cancel := context.WithTimeout(ctx, integritySnapshotTimeout)
@@ -116,7 +116,7 @@ type integrityDiff struct {
 }
 
 func diffIntegritySnapshots(pre, post integritySnapshot) integrityDiff {
-	slog.Debug("trace", "cmd", workerLogCmd, "operation", "agent.worker.diffIntegritySnapshots")
+	slog.Debug("trace", "cmd", harnessLogCmd, "operation", "agent.harness.diffIntegritySnapshots")
 	if pre.notGitRepo || post.notGitRepo {
 		return integrityDiff{}
 	}
@@ -144,7 +144,7 @@ func diffIntegritySnapshots(pre, post integritySnapshot) integrityDiff {
 // longer live under RepoRoot and therefore cannot show up in the
 // porcelain diff under any non-misbehaving codepath.
 func classifyIntegrityDiff(diff integrityDiff, cycleID string) (bool, string) {
-	slog.Debug("trace", "cmd", workerLogCmd, "operation", "agent.worker.classifyIntegrityDiff",
+	slog.Debug("trace", "cmd", harnessLogCmd, "operation", "agent.harness.classifyIntegrityDiff",
 		"cycle_id", cycleID, "head_changed", diff.headChanged, "added_count", len(diff.addedPaths))
 	if diff.headChanged {
 		return true, "HEAD ref moved during verify pass"
@@ -159,7 +159,7 @@ func classifyIntegrityDiff(diff integrityDiff, cycleID string) (bool, string) {
 // gets a "+N more" tail so the operator knows the violation set is
 // larger than the displayed slice.
 func summariseTamperedPaths(paths []string) string {
-	slog.Debug("trace", "cmd", workerLogCmd, "operation", "agent.worker.summariseTamperedPaths",
+	slog.Debug("trace", "cmd", harnessLogCmd, "operation", "agent.harness.summariseTamperedPaths",
 		"path_count", len(paths))
 	const maxInline = 5
 	if len(paths) <= maxInline {
@@ -194,7 +194,7 @@ func itoa(n int) string {
 // Stderr is captured into the error so callers can detect "not a git
 // repo" and degrade to bypass.
 func runGit(ctx context.Context, dir string, args ...string) (string, error) {
-	slog.Debug("trace", "cmd", workerLogCmd, "operation", "agent.worker.runGit",
+	slog.Debug("trace", "cmd", harnessLogCmd, "operation", "agent.harness.runGit",
 		"dir", dir, "args", args)
 	all := append([]string{"-C", dir}, args...)
 	cmd := exec.CommandContext(ctx, "git", all...)
@@ -227,7 +227,7 @@ func (e *gitErr) Unwrap() error { return e.err }
 // The stderr fragment is stable across modern git versions; falling
 // back to substring match keeps us off the brittle exit-code path.
 func isNotAGitRepoErr(err error) bool {
-	slog.Debug("trace", "cmd", workerLogCmd, "operation", "agent.worker.isNotAGitRepoErr")
+	slog.Debug("trace", "cmd", harnessLogCmd, "operation", "agent.harness.isNotAGitRepoErr")
 	var ge *gitErr
 	if !errors.As(err, &ge) {
 		return false
@@ -244,7 +244,7 @@ func isNotAGitRepoErr(err error) bool {
 // (which would otherwise show up as "removed" pre-verify if execute
 // staged the rename, polluting the diff).
 func parsePorcelainZ(out string) map[string]struct{} {
-	slog.Debug("trace", "cmd", workerLogCmd, "operation", "agent.worker.parsePorcelainZ",
+	slog.Debug("trace", "cmd", harnessLogCmd, "operation", "agent.harness.parsePorcelainZ",
 		"len", len(out))
 	result := map[string]struct{}{}
 	if out == "" {

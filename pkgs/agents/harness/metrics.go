@@ -1,4 +1,4 @@
-package worker
+package harness
 
 import (
 	"log/slog"
@@ -7,7 +7,7 @@ import (
 	"github.com/AlexsanderHamir/T2A/pkgs/tasks/domain"
 )
 
-// RunMetrics is the optional Prometheus seam for the agent worker.
+// RunMetrics is the optional Prometheus seam for the agent harness.
 // cmd/taskapi wires an adapter that increments a counter and observes
 // a duration histogram; tests pass nil and every recordRun call
 // becomes a no-op.
@@ -63,60 +63,60 @@ type RunMetrics interface {
 // negative observation, and skip the record entirely when the worker
 // did not actually start the cycle (state.startedAt zero) so we do not
 // pollute the histogram with sub-millisecond garbage.
-func (w *Worker) recordRun(terminalStatus, runnerName, model string, started time.Time) {
-	slog.Debug("trace", "cmd", workerLogCmd, "operation", "agent.worker.Worker.recordRun",
+func (h *Harness) recordRun(terminalStatus, runnerName, model string, started time.Time) {
+	slog.Debug("trace", "cmd", harnessLogCmd, "operation", "agent.harness.Harness.recordRun",
 		"terminal_status", terminalStatus, "runner", runnerName, "model", model)
-	if w == nil || w.options.Metrics == nil {
+	if h == nil || h.opts.Metrics == nil {
 		return
 	}
 	if started.IsZero() {
 		return
 	}
-	d := w.options.Clock().Sub(started)
+	d := h.opts.Clock().Sub(started)
 	if d < 0 {
 		d = 0
 	}
-	w.options.Metrics.RecordRun(runnerName, model, terminalStatus, d)
+	h.opts.Metrics.RecordRun(runnerName, model, terminalStatus, d)
 }
 
 // recordVerifyVerdict fans the per-criterion verdict out to the
 // configured RunMetrics. No-op when Metrics is nil.
-func (w *Worker) recordVerifyVerdict(kind domain.VerifierKind, passed bool) {
-	slog.Debug("trace", "cmd", workerLogCmd, "operation", "agent.worker.Worker.recordVerifyVerdict",
+func (h *Harness) recordVerifyVerdict(kind domain.VerifierKind, passed bool) {
+	slog.Debug("trace", "cmd", harnessLogCmd, "operation", "agent.harness.Harness.recordVerifyVerdict",
 		"verifier_kind", string(kind), "passed", passed)
-	if w == nil || w.options.Metrics == nil {
+	if h == nil || h.opts.Metrics == nil {
 		return
 	}
-	w.options.Metrics.RecordVerifyVerdict(kind, passed)
+	h.opts.Metrics.RecordVerifyVerdict(kind, passed)
 }
 
 // observeVerifyDuration fans the verify-phase wall-clock observation
 // out to the configured RunMetrics. d is clamped to >= 0 so a backwards
 // fake clock cannot land a negative observation in the histogram.
-func (w *Worker) observeVerifyDuration(d time.Duration) {
-	slog.Debug("trace", "cmd", workerLogCmd, "operation", "agent.worker.Worker.observeVerifyDuration",
+func (h *Harness) observeVerifyDuration(d time.Duration) {
+	slog.Debug("trace", "cmd", harnessLogCmd, "operation", "agent.harness.Harness.observeVerifyDuration",
 		"duration_ms", d.Milliseconds())
-	if w == nil || w.options.Metrics == nil {
+	if h == nil || h.opts.Metrics == nil {
 		return
 	}
 	if d < 0 {
 		d = 0
 	}
-	w.options.Metrics.ObserveVerifyDuration(d)
+	h.opts.Metrics.ObserveVerifyDuration(d)
 }
 
 // observeVerifyRetries records the per-cycle retry count. Called once
 // from terminateCycle — same single funnel pattern as recordRun so
 // adding a new TerminateCycle call site cannot accidentally skip
 // metrics.
-func (w *Worker) observeVerifyRetries(n int) {
-	slog.Debug("trace", "cmd", workerLogCmd, "operation", "agent.worker.Worker.observeVerifyRetries",
+func (h *Harness) observeVerifyRetries(n int) {
+	slog.Debug("trace", "cmd", harnessLogCmd, "operation", "agent.harness.Harness.observeVerifyRetries",
 		"retries", n)
-	if w == nil || w.options.Metrics == nil {
+	if h == nil || h.opts.Metrics == nil {
 		return
 	}
 	if n < 0 {
 		n = 0
 	}
-	w.options.Metrics.ObserveVerifyRetries(n)
+	h.opts.Metrics.ObserveVerifyRetries(n)
 }

@@ -5,280 +5,50 @@ import (
 	"errors"
 	"fmt"
 	"log/slog"
-	"os"
-	"path/filepath"
-	"sync"
-	"sync/atomic"
-	"time"
 
 	"github.com/AlexsanderHamir/T2A/pkgs/agents"
+	"github.com/AlexsanderHamir/T2A/pkgs/agents/harness"
 	"github.com/AlexsanderHamir/T2A/pkgs/agents/runner"
 	"github.com/AlexsanderHamir/T2A/pkgs/tasks/store"
 )
 
-// worker.go is the package's public surface: tunable constants,
-// optional callback interfaces (CycleChangeNotifier — RunMetrics
-// lives in metrics.go), Options, the Worker struct, NewWorker, and
-// the Run loop. The per-task lifecycle (process.go), recovery paths
-// (cleanup.go), and payload helpers (meta.go) live in sibling files
-// per backend-engineering-bar.mdc §2 (the original single file had
-// grown past the yellow tier).
-
 const workerLogCmd = "taskapi"
 
-// CancelledByOperatorReason is the cycle/phase termination reason
-// recorded when an operator hits "Cancel current run" from the
-// settings page (POST /settings/cancel-current-run). Distinct from
-// ShutdownReason (parent ctx cancelled by process shutdown) and
-// "runner_timeout" (RunTimeout fired) so the audit trail can
-// distinguish all three causes of a cancelled context.
-const CancelledByOperatorReason = "cancelled_by_operator"
-
-// DefaultShutdownAbortTimeout bounds the post-cancel best-effort writes
-// (CompletePhase + TerminateCycle + Update task) that run on a
-// non-cancelled background context after the parent ctx fires. See
-// docs/architecture.md "Lifecycle of one task" for the shutdown path.
-const DefaultShutdownAbortTimeout = 5 * time.Second
-
-// PanicReason is the cycle/phase termination reason recorded when the
-// recover path fires after a runner or store panic.
-const PanicReason = "panic"
-
-// DefaultReportDirSubdir is the leaf directory the worker manages
-// under os.TempDir() for the agent <-> worker side-channel report
-// files (criteria-report.json, verify-report.json) when the operator
-// does not override the location via Options.ReportDir. The directory
-// is created on first use and per-cycle subdirectories are GC'd at
-// terminateCycle time. See pkgs/agents/worker/criteria_parse.go for
-// the full path helpers and docs/data-model.md "Report file contracts"
-// for the on-disk layout.
-//
-// The path lives outside the operator's RepoRoot so customer working
-// trees stay clean — the previous .t2a/<cycleID>/ layout leaked files
-// into the repo, had no GC, and complicated the integrity-check
-// allowlist; PR1 of the verdicts-on-the-database plan moves the files
-// here and PR2 mirrors the verdicts to the database for durability.
-const DefaultReportDirSubdir = "t2a-worker"
-
-// ShutdownReason is the termination reason written when the parent
-// context cancels mid-run.
-const ShutdownReason = "shutdown"
-
-// completePhaseFailedReason is the cycle termination reason written when
-// the worker successfully ran the runner but failed to persist the
-// terminal status onto the execute phase row (CompletePhase returned an
-// error). The cycle row is forced to `failed` so the task does not stay
-// pinned in `running` waiting for the next-restart orphan sweep, and
-// the reason is distinct from "shutdown"/"panic"/"runner_*" so the
-// audit trail makes the rare write-failure mode greppable.
-const completePhaseFailedReason = "complete_phase_failed"
-
-// checklistCompletionFailedReason is the cycle termination reason
-// written when the runner reported success but the worker could not
-// mark the task's checklist criteria as done (a precondition for the
-// final transition to StatusDone — see ValidateCanMarkDoneInTx). The
-// run is degraded to failed so the task does not sit half-transitioned
-// in `running`; the reason is distinct from runner_* so post-mortems
-// can tell "runner failed" from "runner ok but bookkeeping broke".
-const checklistCompletionFailedReason = "checklist_completion_failed"
-
-// CycleChangeNotifier is the optional SSE seam. cmd/taskapi wires an
-// adapter that calls hub.Publish(handler.TaskCycleChanged{...}); tests
-// pass nil and every PublishCycleChange call becomes a no-op.
-//
-// Implementations MUST NOT block: the worker invokes PublishCycleChange
-// synchronously after each cycle/phase write.
-type CycleChangeNotifier interface {
-	PublishCycleChange(taskID, cycleID string)
-}
-
-// ProgressNotifier is the optional live-progress SSE seam. Progress is
-// best-effort and ephemeral; cycle/phase rows remain the durable audit trail.
-//
-// Implementations MUST NOT block: the worker invokes PublishRunProgress from
-// the runner callback while the child process is still executing.
-type ProgressNotifier interface {
-	PublishRunProgress(taskID, cycleID string, phaseSeq int64, ev runner.ProgressEvent)
-}
-
-// Options bundles the per-Worker tunables. Zero values pick documented
-// defaults so cmd/taskapi can construct a Worker without filling in
-// every field.
-type Options struct {
-	// RunTimeout caps one runner.Run invocation. <=0 means "no
-	// timeout" — the worker does not wrap runner.Run with a deadline
-	// and the only way to interrupt a run is via the parent ctx
-	// (process shutdown) or CancelCurrentRun (operator-initiated).
-	// Replaces the prior 5-minute default; the supervisor now sources
-	// this from AppSettings.MaxRunDurationSeconds (default 0 = "No
-	// limit").
-	RunTimeout time.Duration
-	// ShutdownAbortTimeout bounds the best-effort cycle/phase/task
-	// writes performed on a background context after the parent ctx is
-	// cancelled. Defaults to DefaultShutdownAbortTimeout.
-	ShutdownAbortTimeout time.Duration
-	// WorkingDir is forwarded to runner.Request.WorkingDir verbatim.
-	// V1 uses one shared directory across sequential runs; V2 will
-	// move to per-cycle isolation (see Notes / followups).
-	WorkingDir string
-	// ReportDir is the worker-managed root for the agent <-> worker
-	// side-channel report files (criteria-report.json,
-	// verify-report.json). Empty means "use os.TempDir() +
-	// DefaultReportDirSubdir"; NewWorker resolves the default before
-	// the worker starts so the rest of the codepath can rely on a
-	// non-empty value.
-	//
-	// The directory MUST be writable by the worker process and is
-	// internal-only — operators do not interact with it. Files land
-	// under <ReportDir>/<cycleID>/ and the per-cycle subdirectory is
-	// removed by cleanupReportDir at terminateCycle time so disk use
-	// stays bounded regardless of cycle volume. Lives outside RepoRoot
-	// so customer working trees never see worker scratch files; the
-	// integrity check now treats any RepoRoot mutation during verify
-	// as tampering with no allowlist.
-	ReportDir string
-	// Notifier, when non-nil, receives one PublishCycleChange call after
-	// each successful StartCycle / StartPhase / CompletePhase /
-	// TerminateCycle. Nil disables fan-out (used in unit tests).
-	Notifier CycleChangeNotifier
-	// ProgressNotifier, when non-nil, receives throttled live runner
-	// progress for the currently running execute phase. Nil disables
-	// progress fan-out (used in unit tests).
-	ProgressNotifier ProgressNotifier
-	// VerifyRunner, when non-nil, is the runner used for the LLM
-	// verify pass instead of the execute runner. Nil means "reuse the
-	// execute runner" — preserves V1 behaviour. The supervisor builds
-	// this from app_settings.VerifyRunnerName (and probes it) before
-	// constructing the Worker; a build/probe failure demotes verify
-	// to the execute runner with a loud warn rather than blocking the
-	// worker (see cmd/taskapi/run_agentworker.go::applySettings).
-	//
-	// Adversarial separation matters because a verifier graded on the
-	// same weights as the agent that produced the work is functionally
-	// just self-attestation — the docs (data-model.md) document
-	// `verifier_kind=verify_agent` as "Adversarial verify phase
-	// accepted the criterion", and that claim is only honest when this
-	// field points at a different runner adapter / model.
-	VerifyRunner runner.Runner
-	// Metrics, when non-nil, receives one RecordRun call after every
-	// TerminateCycle write (happy path, panic, shutdown abort, and
-	// best-effort intermediate failures). Nil disables observation
-	// (used in unit tests). cmd/taskapi wires a Prometheus adapter.
-	Metrics RunMetrics
-	// Clock, when non-nil, replaces time.Now().UTC() for duration
-	// logging. Tests can stub a deterministic clock here.
-	Clock func() time.Time
-}
-
 // Worker is the single-goroutine in-process consumer of the
-// MemoryQueue (contract: docs/architecture.md). Construct it with
-// NewWorker and drive it with Run; the Run loop is single-goroutine.
-//
-// CancelCurrentRun is safe to call from any goroutine (typically the
-// HTTP handler for POST /settings/cancel-current-run): it grabs the
-// per-run cancel func under a mutex and invokes it. The Run loop
-// observes the cancellation via the cancelled context the runner
-// passed; classifyOperatorCancel then maps the resulting error to
-// CancelledByOperatorReason instead of "runner_timeout" or
-// "shutdown".
+// MemoryQueue (contract: docs/architecture.md). It handles queue
+// admission and delegates cycle choreography to pkgs/agents/harness.
 type Worker struct {
 	store   *store.Store
 	queue   *agents.MemoryQueue
-	runner  runner.Runner
-	options Options
-
-	mu               sync.Mutex
-	currentRunCancel context.CancelFunc
-	// cancelByOperator is set by CancelCurrentRun before the cancel
-	// func is invoked so the Run loop can distinguish operator cancels
-	// from RunTimeout fires (both surface as a cancelled ctx). Atomic
-	// so the Run loop can read without taking the mutex; the Run loop
-	// resets it back to false after consuming.
-	cancelByOperator atomic.Bool
+	harness *harness.Harness
+	opts    Options
 }
 
 // NewWorker constructs a Worker with sensible defaults applied to opts.
-// st, q, and r MUST be non-nil; callers that want a no-op runner pass
-// runnerfake.New().
-//
-// Note: opts.RunTimeout is NOT defaulted. <=0 means "no per-run cap"
-// (the supervisor's documented default). Callers that need a hard cap
-// pass an explicit positive duration.
 func NewWorker(st *store.Store, q *agents.MemoryQueue, r runner.Runner, opts Options) *Worker {
-	slog.Debug("trace", "cmd", workerLogCmd, "operation", "agent.worker.NewWorker")
 	if opts.ShutdownAbortTimeout <= 0 {
 		opts.ShutdownAbortTimeout = DefaultShutdownAbortTimeout
 	}
-	if opts.Clock == nil {
-		opts.Clock = func() time.Time {
-			return time.Now().UTC()
-		}
-	}
-	if opts.ReportDir == "" {
-		opts.ReportDir = filepath.Join(os.TempDir(), DefaultReportDirSubdir)
-	}
-	return &Worker{store: st, queue: q, runner: r, options: opts}
+	h := harness.New(st, r, opts)
+	return &Worker{store: st, queue: q, harness: h, opts: opts}
 }
 
-// CancelCurrentRun cancels the in-flight runner.Run, if any. Returns
-// true when there was an in-flight run to cancel. Safe to call from
-// any goroutine; idempotent (a no-op when nothing is running).
-//
-// The cancellation is observed by the Run loop, which records the
-// cycle as failed with reason CancelledByOperatorReason (distinct
-// from RunTimeout's "runner_timeout" and shutdown's "shutdown") so
-// the audit trail captures who killed the run.
+// CancelCurrentRun cancels the in-flight runner.Run, if any.
 func (w *Worker) CancelCurrentRun() bool {
-	slog.Debug("trace", "cmd", workerLogCmd, "operation", "agent.worker.Worker.CancelCurrentRun")
-	if w == nil {
+	if w == nil || w.harness == nil {
 		return false
 	}
-	w.mu.Lock()
-	cancel := w.currentRunCancel
-	w.mu.Unlock()
-	if cancel == nil {
-		return false
-	}
-	w.cancelByOperator.Store(true)
-	cancel()
-	slog.Info("agent worker run cancelled by operator", "cmd", workerLogCmd,
-		"operation", "agent.worker.Worker.CancelCurrentRun.fired")
-	return true
+	return w.harness.CancelCurrentRun()
 }
 
-// setCurrentRunCancel installs the cancel func for the in-flight run.
-// Called by invokeRunner (process.go) before runner.Run; cleared on
-// return. Both calls happen on the Run loop goroutine, so the mutex
-// only serializes against external CancelCurrentRun callers.
-func (w *Worker) setCurrentRunCancel(cancel context.CancelFunc) {
-	slog.Debug("trace", "cmd", workerLogCmd, "operation", "agent.worker.Worker.setCurrentRunCancel",
-		"installed", cancel != nil)
-	w.mu.Lock()
-	w.currentRunCancel = cancel
-	w.mu.Unlock()
-}
-
-// consumeOperatorCancel reports whether the most recent run was
-// cancelled by an operator and clears the flag. Run loop calls this
-// after invokeRunner returns to decide whether to override the
-// classifier's "runner_timeout" mapping with CancelledByOperatorReason.
-func (w *Worker) consumeOperatorCancel() bool {
-	slog.Debug("trace", "cmd", workerLogCmd, "operation", "agent.worker.Worker.consumeOperatorCancel")
-	return w.cancelByOperator.Swap(false)
-}
-
-// Run blocks on the queue and processes one task at a time until ctx
-// cancels. A cancelled parent ctx is the documented shutdown signal and
-// produces a nil error return so the cmd/taskapi shutdown path does not
-// log it as a failure. Any non-cancellation error returned by
-// MemoryQueue.Receive (today: nil store, nil queue) is propagated.
+// Run blocks on the queue and processes one task at a time until ctx cancels.
 func (w *Worker) Run(ctx context.Context) error {
 	slog.Debug("trace", "cmd", workerLogCmd, "operation", "agent.worker.Worker.Run")
 	if w == nil {
 		return errors.New("agent worker: nil receiver")
 	}
-	if w.store == nil || w.queue == nil || w.runner == nil {
-		return errors.New("agent worker: store, queue, and runner are required")
+	if w.store == nil || w.queue == nil || w.harness == nil {
+		return errors.New("agent worker: store, queue, and harness are required")
 	}
 	for {
 		task, err := w.queue.Receive(ctx)
@@ -288,36 +58,8 @@ func (w *Worker) Run(ctx context.Context) error {
 					"operation", "agent.worker.Worker.Run.shutdown", "err", err)
 				return nil
 			}
-			// Bar §4: never log AND return the same error. The cmd/taskapi
-			// goroutine wrapping Run logs at Error level on non-nil return
-			// (taskapi.agent_worker.exit_err) so we propagate without
-			// double-logging here.
 			return fmt.Errorf("agent worker receive: %w", err)
 		}
 		w.processOne(ctx, task)
 	}
-}
-
-// publish notifies the SSE adapter (when wired). Nil notifier is the
-// supported test default and produces no fan-out. Lives on the public
-// surface because every per-task path (process.go, cleanup.go) needs
-// it; keeping it here avoids a circular "which sibling owns publish?"
-// debate.
-func (w *Worker) publish(taskID, cycleID string) {
-	slog.Debug("trace", "cmd", workerLogCmd, "operation", "agent.worker.Worker.publish",
-		"task_id", taskID, "cycle_id", cycleID)
-	if w.options.Notifier == nil {
-		return
-	}
-	w.options.Notifier.PublishCycleChange(taskID, cycleID)
-}
-
-func (w *Worker) publishProgress(taskID, cycleID string, phaseSeq int64, ev runner.ProgressEvent) {
-	slog.Debug("trace", "cmd", workerLogCmd, "operation", "agent.worker.Worker.publishProgress",
-		"task_id", taskID, "cycle_id", cycleID, "phase_seq", phaseSeq,
-		"kind", ev.Kind, "subtype", ev.Subtype)
-	if w.options.ProgressNotifier == nil || ev.Kind == "" {
-		return
-	}
-	w.options.ProgressNotifier.PublishRunProgress(taskID, cycleID, phaseSeq, ev)
 }

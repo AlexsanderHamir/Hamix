@@ -1,4 +1,4 @@
-package worker_test
+package harness_test
 
 import (
 	"context"
@@ -13,7 +13,7 @@ import (
 
 	"github.com/AlexsanderHamir/T2A/pkgs/agents/runner"
 	"github.com/AlexsanderHamir/T2A/pkgs/agents/runner/runnerfake"
-	"github.com/AlexsanderHamir/T2A/pkgs/agents/worker"
+	"github.com/AlexsanderHamir/T2A/pkgs/agents/harness"
 	"github.com/AlexsanderHamir/T2A/pkgs/tasks/domain"
 	"github.com/AlexsanderHamir/T2A/pkgs/tasks/store"
 )
@@ -148,7 +148,7 @@ func TestWorker_VerifyPhase_opensWhileExecuteIsTerminal(t *testing.T) {
 	// Use a temp WorkingDir so the worker's .t2a/<cycle>/ paths land
 	// somewhere isolated and parseCriteriaReport hits ErrCriteriaReportMissing
 	// deterministically (no stray files from earlier test runs).
-	_, done := h.startWorker(ctx, r, worker.Options{WorkingDir: t.TempDir()})
+	_, done := h.startWorker(ctx, r, harness.Options{WorkingDir: t.TempDir()})
 	final := h.waitTaskStatus(ctx, tsk.ID, domain.StatusFailed)
 	cancel()
 	if err := <-done; err != nil {
@@ -272,7 +272,7 @@ func TestWorker_VerifyPhase_usesSeparateRunnerWhenConfigured(t *testing.T) {
 	verifyRunner.Script(tsk.ID, domain.PhaseVerify, runner.NewResult(
 		domain.PhaseStatusSucceeded, "verify ok", nil, ""))
 
-	_, done := h.startWorker(ctx, execHook, worker.Options{
+	_, done := h.startWorker(ctx, execHook, harness.Options{
 		WorkingDir:   workDir,
 		ReportDir:    reportDir,
 		VerifyRunner: verifyHook,
@@ -353,7 +353,7 @@ func TestWorker_VerifyPhase_failsCycleWhenVerifyTampers(t *testing.T) {
 	verifyRunner.Script(tsk.ID, domain.PhaseVerify, runner.NewResult(
 		domain.PhaseStatusSucceeded, "verify ok", nil, ""))
 
-	_, done := h.startWorker(ctx, execHook, worker.Options{
+	_, done := h.startWorker(ctx, execHook, harness.Options{
 		WorkingDir:   workDir,
 		ReportDir:    reportDir,
 		VerifyRunner: verifyHook,
@@ -455,7 +455,7 @@ func TestWorker_VerifyPhase_persistsAndPublishesProgressEventsUnderVerifyPhaseSe
 	verifyRunner.Script(tsk.ID, domain.PhaseVerify, runner.NewResult(
 		domain.PhaseStatusSucceeded, "verify ok", nil, ""))
 
-	_, done := h.startWorker(ctx, execHook, worker.Options{
+	_, done := h.startWorker(ctx, execHook, harness.Options{
 		WorkingDir:   workDir,
 		ReportDir:    reportDir,
 		VerifyRunner: verifyHook,
@@ -626,7 +626,7 @@ func TestWorker_VerifyPhase_carriesPassesAcrossRetries(t *testing.T) {
 	verifyRunner.Script(tsk.ID, domain.PhaseVerify, runner.NewResult(
 		domain.PhaseStatusSucceeded, "verify ok", nil, ""))
 
-	_, done := h.startWorker(ctx, execHook, worker.Options{
+	_, done := h.startWorker(ctx, execHook, harness.Options{
 		WorkingDir:   workDir,
 		ReportDir:    reportDir,
 		VerifyRunner: verifyHook,
@@ -745,7 +745,7 @@ func TestWorker_VerifyPhase_finalFailureWritesNoCompletions(t *testing.T) {
 	verifyRunner.Script(tsk.ID, domain.PhaseVerify, runner.NewResult(
 		domain.PhaseStatusSucceeded, "verify ok", nil, ""))
 
-	_, done := h.startWorker(ctx, execHook, worker.Options{
+	_, done := h.startWorker(ctx, execHook, harness.Options{
 		WorkingDir:   workDir,
 		ReportDir:    reportDir,
 		VerifyRunner: verifyHook,
@@ -816,7 +816,7 @@ func TestWorker_VerifyPhase_recordsDisagreementAsAgentSelfFailed(t *testing.T) {
 		domain.PhaseStatusSucceeded, "exec ok", nil, ""))
 
 	metrics := &recordingMetrics{}
-	_, done := h.startWorker(ctx, hook, worker.Options{WorkingDir: workDir, ReportDir: reportDir, Metrics: metrics})
+	_, done := h.startWorker(ctx, hook, harness.Options{WorkingDir: workDir, ReportDir: reportDir, Metrics: metrics})
 	h.waitTaskStatus(ctx, tsk.ID, domain.StatusFailed)
 	cancel()
 	if err := <-done; err != nil {
@@ -905,7 +905,7 @@ func TestWorker_VerifyPhase_terminateReasonIncludesFailingIDs(t *testing.T) {
 	verifyRunner.Script(tsk.ID, domain.PhaseVerify, runner.NewResult(
 		domain.PhaseStatusSucceeded, "verify ok", nil, ""))
 
-	_, done := h.startWorker(ctx, execHook, worker.Options{
+	_, done := h.startWorker(ctx, execHook, harness.Options{
 		WorkingDir:   workDir,
 		ReportDir:    reportDir,
 		VerifyRunner: verifyHook,
@@ -1004,7 +1004,7 @@ func TestWorker_VerifyPhase_repoRootStaysCleanThroughoutCycle(t *testing.T) {
 	verifyRunner.Script(tsk.ID, domain.PhaseVerify, runner.NewResult(
 		domain.PhaseStatusSucceeded, "verify ok", nil, ""))
 
-	_, done := h.startWorker(ctx, execHook, worker.Options{
+	_, done := h.startWorker(ctx, execHook, harness.Options{
 		WorkingDir:   workDir,
 		ReportDir:    reportDir,
 		VerifyRunner: verifyHook,
@@ -1077,7 +1077,7 @@ func TestWorker_terminateCycle_cleansReportDir(t *testing.T) {
 	verifyRunner.Script(tsk.ID, domain.PhaseVerify, runner.NewResult(
 		domain.PhaseStatusSucceeded, "verify ok", nil, ""))
 
-	_, done := h.startWorker(ctx, execHook, worker.Options{
+	_, done := h.startWorker(ctx, execHook, harness.Options{
 		WorkingDir:   workDir,
 		ReportDir:    reportDir,
 		VerifyRunner: verifyHook,
@@ -1152,7 +1152,7 @@ func TestWorker_VerifyPhase_repoRootMutationStillTampered(t *testing.T) {
 	verifyRunner.Script(tsk.ID, domain.PhaseVerify, runner.NewResult(
 		domain.PhaseStatusSucceeded, "verify ok", nil, ""))
 
-	_, done := h.startWorker(ctx, execHook, worker.Options{
+	_, done := h.startWorker(ctx, execHook, harness.Options{
 		WorkingDir:   workDir,
 		ReportDir:    reportDir,
 		VerifyRunner: verifyHook,

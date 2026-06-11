@@ -1,4 +1,4 @@
-package worker_test
+package harness_test
 
 import (
 	"bytes"
@@ -8,7 +8,7 @@ import (
 
 	"github.com/AlexsanderHamir/T2A/pkgs/agents/runner"
 	"github.com/AlexsanderHamir/T2A/pkgs/agents/runner/runnerfake"
-	"github.com/AlexsanderHamir/T2A/pkgs/agents/worker"
+	"github.com/AlexsanderHamir/T2A/pkgs/agents/harness"
 	"github.com/AlexsanderHamir/T2A/pkgs/tasks/domain"
 )
 
@@ -65,7 +65,7 @@ func TestRegression_Worker_normalizes_non_object_runner_details(t *testing.T) {
 				Details: tc.details,
 			})
 
-			_, done := h.startWorker(ctx, r, worker.Options{})
+			_, done := h.startWorker(ctx, r, harness.Options{})
 			final := h.waitTaskStatus(ctx, tsk.ID, domain.StatusDone)
 			cancel()
 			if err := <-done; err != nil {
@@ -124,7 +124,7 @@ func TestRegression_Worker_object_details_pass_through_unchanged(t *testing.T) {
 		Details: original,
 	})
 
-	_, done := h.startWorker(ctx, r, worker.Options{})
+	_, done := h.startWorker(ctx, r, harness.Options{})
 	final := h.waitTaskStatus(ctx, tsk.ID, domain.StatusDone)
 	cancel()
 	<-done

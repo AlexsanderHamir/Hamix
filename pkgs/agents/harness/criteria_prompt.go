@@ -1,4 +1,4 @@
-package worker
+package harness
 
 import (
 	"fmt"
@@ -23,7 +23,7 @@ import (
 // dirties the operator's repo. cycleID is retained for the trace log
 // only; it is no longer baked into a relative path.
 func injectCriteria(prompt string, items []store.ChecklistVerifyItem, cycleID, reportPath string, alreadyVerified map[string]criterionVerdict) string {
-	slog.Debug("trace", "cmd", workerLogCmd, "operation", "agent.worker.injectCriteria",
+	slog.Debug("trace", "cmd", harnessLogCmd, "operation", "agent.harness.injectCriteria",
 		"cycle_id", cycleID, "items", len(items), "already_verified", len(alreadyVerified))
 	if len(items) == 0 {
 		return prompt

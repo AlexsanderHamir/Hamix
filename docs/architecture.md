@@ -148,31 +148,35 @@ In-memory ring buffer keyed by monotonic event id. Each `Publish` allocates a ne
 - Heartbeat: a `: heartbeat` comment line every 15s so proxies do not idle-kill the connection.
 - Coalescing: identical `{type,id}` frames inside a 50ms window are dropped. `task_cycle_changed` and `agent_run_progress` are intentionally never coalesced.
 
-## Agent worker
+## Agent worker and harness
 
-`pkgs/agents/worker` is the single in-process consumer of `pkgs/agents.MemoryQueue`. It is enabled by default whenever `app_settings.repo_root` is set; toggle from the SPA Settings page. Disabled by default if no workspace is configured.
+`pkgs/agents/worker` is the single in-process consumer of `pkgs/agents.MemoryQueue`. It handles queue admission (reload, readiness, ready→running, ack ordering) and delegates cycle choreography to `pkgs/agents/harness`. The worker is enabled by default whenever `app_settings.repo_root` is set; toggle from the SPA Settings page. Disabled by default if no workspace is configured.
+
+The **harness** (`pkgs/agents/harness`) is everything wrapped around `runner.Run`: execute/verify phase loop, criteria injection, report-file contracts, adversarial verification, git integrity checks, and crash/shutdown recovery of in-flight cycle state. See [ADR-0005](./adr/ADR-0005-extract-agent-harness.md).
 
 ### Lifecycle of one task
 
 ```mermaid
 sequenceDiagram
   participant Q as MemoryQueue
-  participant W as Worker.processOne
+  participant W as Worker
+  participant H as Harness
   participant S as Store
   participant R as runner.Runner
 
   Q->>W: Receive(task)
   W->>S: Update(task, status=running)
-  W->>S: StartCycle(task, meta)
-  W->>S: StartPhase(execute)
-  W->>R: Run(ctx, Request{Prompt, WorkingDir, Timeout})
-  R-->>W: Result or typed error
+  W->>H: Run(task)
+  H->>S: StartCycle(task, meta)
+  H->>S: StartPhase(execute)
+  H->>R: Run(ctx, Request{Prompt, WorkingDir, Timeout})
+  R-->>H: Result or typed error
   opt task has done criteria
-    W->>W: parse criteria-report.json, gate claimed_done, StartPhase(verify), parse verify-report.json
+    H->>H: parse criteria-report.json, gate claimed_done, StartPhase(verify), parse verify-report.json
   end
-  W->>S: CompletePhase(execute, succeeded or failed)
-  W->>S: TerminateCycle(succeeded|failed|aborted)
-  W->>S: Update(task, status=done|failed)
+  H->>S: CompletePhase(execute, succeeded or failed)
+  H->>S: TerminateCycle(succeeded|failed|aborted)
+  H->>S: Update(task, status=done|failed)
   W->>Q: AckAfterRecv (LIFO last)
 ```
 
@@ -200,7 +204,7 @@ type Request struct {
 }
 ```
 
-Errors must wrap one of `runner.ErrTimeout`, `runner.ErrNonZeroExit`, `runner.ErrInvalidOutput`, or be a generic adapter failure. The worker's `classifyRunOutcome` maps each to a `cycle_failed` mirror with a fixed `reason` string (`runner_timeout`, `runner_non_zero_exit`, `runner_invalid_output`, `runner_error`).
+Errors must wrap one of `runner.ErrTimeout`, `runner.ErrNonZeroExit`, `runner.ErrInvalidOutput`, or be a generic adapter failure. The harness's `classifyRunOutcome` maps each to a `cycle_failed` mirror with a fixed `reason` string (`runner_timeout`, `runner_non_zero_exit`, `runner_invalid_output`, `runner_error`).
 
 `Name()` and `Version()` go into `task_cycles.meta_json` once per cycle. `prompt_hash` is `sha256(initial_prompt)` — never the body.
 

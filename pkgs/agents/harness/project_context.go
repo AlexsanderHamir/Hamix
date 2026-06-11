@@ -1,4 +1,4 @@
-package worker
+package harness
 
 import (
 	"context"
@@ -16,19 +16,19 @@ type renderedProjectContext struct {
 	SnapshotJSON  json.RawMessage
 }
 
-func (w *Worker) selectedProjectContext(ctx context.Context, task *domain.Task, cycle *domain.TaskCycle) (renderedProjectContext, error) {
+func (h *Harness) selectedProjectContext(ctx context.Context, task *domain.Task, cycle *domain.TaskCycle) (renderedProjectContext, error) {
 	if task.ProjectID == nil || strings.TrimSpace(*task.ProjectID) == "" || len(task.ProjectContextItemIDs) == 0 {
 		return renderedProjectContext{}, nil
 	}
-	project, err := w.store.GetProject(ctx, *task.ProjectID)
+	project, err := h.store.GetProject(ctx, *task.ProjectID)
 	if err != nil {
 		return renderedProjectContext{}, fmt.Errorf("get project: %w", err)
 	}
-	items, err := w.store.ListProjectContextByIDs(ctx, project.ID, task.ProjectContextItemIDs)
+	items, err := h.store.ListProjectContextByIDs(ctx, project.ID, task.ProjectContextItemIDs)
 	if err != nil {
 		return renderedProjectContext{}, fmt.Errorf("list selected context: %w", err)
 	}
-	edges, err := w.store.ListProjectContextEdges(ctx, project.ID, task.ProjectContextItemIDs)
+	edges, err := h.store.ListProjectContextEdges(ctx, project.ID, task.ProjectContextItemIDs)
 	if err != nil {
 		return renderedProjectContext{}, fmt.Errorf("list selected context edges: %w", err)
 	}
@@ -47,7 +47,7 @@ func (w *Worker) selectedProjectContext(ctx context.Context, task *domain.Task, 
 	if err != nil {
 		return renderedProjectContext{}, fmt.Errorf("marshal context snapshot: %w", err)
 	}
-	_, err = w.store.CreateTaskContextSnapshot(ctx, store.CreateTaskContextSnapshotInput{
+	_, err = h.store.CreateTaskContextSnapshot(ctx, store.CreateTaskContextSnapshotInput{
 		TaskID:          task.ID,
 		CycleID:         cycle.ID,
 		ProjectID:       project.ID,

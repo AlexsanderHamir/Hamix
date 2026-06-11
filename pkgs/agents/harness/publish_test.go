@@ -1,4 +1,4 @@
-package worker_test
+package harness_test
 
 import (
 	"context"
@@ -8,7 +8,7 @@ import (
 
 	"github.com/AlexsanderHamir/T2A/pkgs/agents/runner"
 	"github.com/AlexsanderHamir/T2A/pkgs/agents/runner/runnerfake"
-	"github.com/AlexsanderHamir/T2A/pkgs/agents/worker"
+	"github.com/AlexsanderHamir/T2A/pkgs/agents/harness"
 	"github.com/AlexsanderHamir/T2A/pkgs/tasks/domain"
 	"github.com/AlexsanderHamir/T2A/pkgs/tasks/store"
 )
@@ -110,7 +110,7 @@ func TestWorker_HappyPath_emitsTrailingPublishAfterTerminalStatus(t *testing.T) 
 		json.RawMessage(`{"ok":true}`), "",
 	))
 
-	_, done := h.startWorker(ctx, r, worker.Options{Notifier: snap})
+	_, done := h.startWorker(ctx, r, harness.Options{Notifier: snap})
 	final := h.waitTaskStatus(ctx, tsk.ID, domain.StatusDone)
 	cancel()
 	if err := <-done; err != nil {
@@ -158,7 +158,7 @@ func TestWorker_PublishesRunnerProgressWithCycleAndPhaseContext(t *testing.T) {
 		close(r.release)
 	}
 
-	_, done := h.startWorker(ctx, r, worker.Options{ProgressNotifier: progress})
+	_, done := h.startWorker(ctx, r, harness.Options{ProgressNotifier: progress})
 	h.waitTaskStatus(ctx, tsk.ID, domain.StatusDone)
 	cancel()
 	if err := <-done; err != nil {

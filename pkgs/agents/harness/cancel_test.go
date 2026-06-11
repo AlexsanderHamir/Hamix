@@ -1,4 +1,4 @@
-package worker_test
+package harness_test
 
 import (
 	"context"
@@ -8,7 +8,7 @@ import (
 
 	"github.com/AlexsanderHamir/T2A/pkgs/agents/runner"
 	"github.com/AlexsanderHamir/T2A/pkgs/agents/runner/runnerfake"
-	"github.com/AlexsanderHamir/T2A/pkgs/agents/worker"
+	"github.com/AlexsanderHamir/T2A/pkgs/agents/harness"
 	"github.com/AlexsanderHamir/T2A/pkgs/tasks/domain"
 )
 
@@ -23,7 +23,7 @@ func TestWorker_CancelCurrentRun_idleIsNoOp(t *testing.T) {
 	defer cancel()
 
 	r := runnerfake.New()
-	w, done := h.startWorker(ctx, r, worker.Options{})
+	w, done := h.startWorker(ctx, r, harness.Options{})
 
 	if w.CancelCurrentRun() {
 		t.Error("CancelCurrentRun() = true, want false (idle)")
@@ -58,7 +58,7 @@ func TestWorker_CancelCurrentRun_failsCycleWithOperatorReason(t *testing.T) {
 	tsk := h.createReadyTask(ctx, "cancel-me")
 
 	br := newBlockingRunner()
-	w, done := h.startWorker(ctx, br, worker.Options{
+	w, done := h.startWorker(ctx, br, harness.Options{
 		RunTimeout: 0,
 	})
 
@@ -87,14 +87,14 @@ func TestWorker_CancelCurrentRun_failsCycleWithOperatorReason(t *testing.T) {
 		if e.Type != domain.EventCycleFailed {
 			continue
 		}
-		if strings.Contains(string(e.Data), worker.CancelledByOperatorReason) {
+		if strings.Contains(string(e.Data), harness.CancelledByOperatorReason) {
 			sawOperatorReason = true
 			break
 		}
 	}
 	if !sawOperatorReason {
 		t.Fatalf("no cycle_failed event carried %q reason; events=%+v cycle=%s",
-			worker.CancelledByOperatorReason, events, cycle.ID)
+			harness.CancelledByOperatorReason, events, cycle.ID)
 	}
 
 	cancel()
@@ -124,7 +124,7 @@ func TestWorker_NoCapRunTimeout_doesNotFireOnLongRun(t *testing.T) {
 	br := newBlockingRunner()
 	br.result = runner.NewResult(domain.PhaseStatusSucceeded, "released", nil, "")
 
-	_, done := h.startWorker(ctx, br, worker.Options{RunTimeout: 0})
+	_, done := h.startWorker(ctx, br, harness.Options{RunTimeout: 0})
 
 	select {
 	case <-br.starts:
@@ -159,7 +159,7 @@ func TestWorker_PositiveRunTimeout_stillFiresAsTimeout(t *testing.T) {
 	tsk := h.createReadyTask(ctx, "timeout")
 
 	br := newBlockingRunner()
-	_, done := h.startWorker(ctx, br, worker.Options{RunTimeout: 50 * time.Millisecond})
+	_, done := h.startWorker(ctx, br, harness.Options{RunTimeout: 50 * time.Millisecond})
 
 	final := h.waitTaskStatus(ctx, tsk.ID, domain.StatusFailed)
 	if final.Status != domain.StatusFailed {
@@ -179,7 +179,7 @@ func TestWorker_PositiveRunTimeout_stillFiresAsTimeout(t *testing.T) {
 		if strings.Contains(body, "runner_timeout") {
 			sawTimeoutReason = true
 		}
-		if strings.Contains(body, worker.CancelledByOperatorReason) {
+		if strings.Contains(body, harness.CancelledByOperatorReason) {
 			sawOperatorReason = true
 		}
 	}
@@ -187,7 +187,7 @@ func TestWorker_PositiveRunTimeout_stillFiresAsTimeout(t *testing.T) {
 		t.Errorf("expected cycle_failed event with reason=runner_timeout; events=%+v", events)
 	}
 	if sawOperatorReason {
-		t.Errorf("cycle_failed carried %q reason without an operator cancel", worker.CancelledByOperatorReason)
+		t.Errorf("cycle_failed carried %q reason without an operator cancel", harness.CancelledByOperatorReason)
 	}
 
 	cancel()

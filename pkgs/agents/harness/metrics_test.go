@@ -1,4 +1,4 @@
-package worker_test
+package harness_test
 
 import (
 	"context"
@@ -11,7 +11,7 @@ import (
 
 	"github.com/AlexsanderHamir/T2A/pkgs/agents/runner"
 	"github.com/AlexsanderHamir/T2A/pkgs/agents/runner/runnerfake"
-	"github.com/AlexsanderHamir/T2A/pkgs/agents/worker"
+	"github.com/AlexsanderHamir/T2A/pkgs/agents/harness"
 	"github.com/AlexsanderHamir/T2A/pkgs/tasks/domain"
 )
 
@@ -114,7 +114,7 @@ func TestWorker_RunMetrics_observesHappyPathOnce(t *testing.T) {
 	))
 
 	metrics := &recordingMetrics{}
-	_, done := h.startWorker(ctx, r, worker.Options{Metrics: metrics})
+	_, done := h.startWorker(ctx, r, harness.Options{Metrics: metrics})
 
 	h.waitTaskStatus(ctx, tsk.ID, domain.StatusDone)
 	cancel()
@@ -156,7 +156,7 @@ func TestWorker_RunMetrics_observesRunnerFailure(t *testing.T) {
 		fmt.Errorf("cli exit: %w", runner.ErrNonZeroExit))
 
 	metrics := &recordingMetrics{}
-	_, done := h.startWorker(ctx, r, worker.Options{Metrics: metrics})
+	_, done := h.startWorker(ctx, r, harness.Options{Metrics: metrics})
 
 	h.waitTaskStatus(ctx, tsk.ID, domain.StatusFailed)
 	cancel()
@@ -197,7 +197,7 @@ func TestWorker_RunMetrics_observesShutdownAbort(t *testing.T) {
 	br.result = runner.NewResult(domain.PhaseStatusSucceeded, "", nil, "")
 
 	metrics := &recordingMetrics{}
-	_, done := h.startWorker(ctx, br, worker.Options{Metrics: metrics})
+	_, done := h.startWorker(ctx, br, harness.Options{Metrics: metrics})
 
 	if err := <-done; err != nil && !errors.Is(err, context.Canceled) {
 		t.Fatalf("worker exit err: %v", err)
@@ -247,7 +247,7 @@ func TestWorker_RunMetrics_recordsEffectiveModelLabel(t *testing.T) {
 				json.RawMessage(`{"ok":true}`), ""))
 
 			metrics := &recordingMetrics{}
-			_, done := h.startWorker(ctx, r, worker.Options{Metrics: metrics})
+			_, done := h.startWorker(ctx, r, harness.Options{Metrics: metrics})
 			h.waitTaskStatus(ctx, tsk.ID, domain.StatusDone)
 			cancel()
 			if err := <-done; err != nil {
@@ -284,7 +284,7 @@ func TestWorker_RunMetrics_nilMetricsIsNoop(t *testing.T) {
 	r.Script(tsk.ID, domain.PhaseExecute, runner.NewResult(
 		domain.PhaseStatusSucceeded, "ok", json.RawMessage(`{"ok":true}`), ""))
 
-	_, done := h.startWorker(ctx, r, worker.Options{})
+	_, done := h.startWorker(ctx, r, harness.Options{})
 	h.waitTaskStatus(ctx, tsk.ID, domain.StatusDone)
 	cancel()
 	if err := <-done; err != nil {

@@ -146,7 +146,7 @@ var skipSlogRequirement = map[string]struct{}{
 	"github.com/AlexsanderHamir/T2A/pkgs/tasks/logctx\tlogSeqFromContext":              {},
 	"github.com/AlexsanderHamir/T2A/pkgs/tasks/logctx\tWrapSlogHandlerWithLogSequence": {},
 
-	// pkgs/agents/worker: error/Stringer interface methods called on
+	// pkgs/agents/harness: error/Stringer interface methods called on
 	// every wrapped error (Error, Unwrap) and a tiny int-to-string
 	// helper used inside summariseTamperedPaths. Logging here would
 	// fire on every error.Error() call (formatter, comparison,
@@ -154,10 +154,10 @@ var skipSlogRequirement = map[string]struct{}{
 	// surrounding integrity-check entry point (checkVerifyIntegrity)
 	// already logs decisions and tampering verdicts at a stable
 	// operation key.
-	"github.com/AlexsanderHamir/T2A/pkgs/agents/worker\t*verifyTamperedError.Error": {},
-	"github.com/AlexsanderHamir/T2A/pkgs/agents/worker\t*gitErr.Error":              {},
-	"github.com/AlexsanderHamir/T2A/pkgs/agents/worker\t*gitErr.Unwrap":             {},
-	"github.com/AlexsanderHamir/T2A/pkgs/agents/worker\titoa":                       {},
+	"github.com/AlexsanderHamir/T2A/pkgs/agents/harness\t*verifyTamperedError.Error": {},
+	"github.com/AlexsanderHamir/T2A/pkgs/agents/harness\t*gitErr.Error":              {},
+	"github.com/AlexsanderHamir/T2A/pkgs/agents/harness\t*gitErr.Unwrap":             {},
+	"github.com/AlexsanderHamir/T2A/pkgs/agents/harness\titoa":                       {},
 
 	// pkgs/tasks/domain: per-row hot path. Every database/sql Scan and Value
 	// call goes through one of the typed Scan/Value pairs below; logging on
@@ -394,31 +394,41 @@ var skipSlogRequirement = map[string]struct{}{
 	"github.com/AlexsanderHamir/T2A/pkgs/tasks/store/internal/tasks\tnormalizeCreateTaskModelFields": {},
 	"github.com/AlexsanderHamir/T2A/pkgs/tasks/handler\tgateFieldPatchToStore":                       {},
 
-	"github.com/AlexsanderHamir/T2A/pkgs/agents/worker\t*Worker.selectedProjectContext": {},
-	"github.com/AlexsanderHamir/T2A/pkgs/agents/worker\trenderProjectContext":           {},
-	"github.com/AlexsanderHamir/T2A/pkgs/agents/worker\testimateTokens":                 {},
-	"github.com/AlexsanderHamir/T2A/pkgs/agents/worker\tpromptWithProjectContext":       {},
+	"github.com/AlexsanderHamir/T2A/pkgs/agents/harness\t*Harness.selectedProjectContext": {},
+	"github.com/AlexsanderHamir/T2A/pkgs/agents/harness\trenderProjectContext":           {},
+	"github.com/AlexsanderHamir/T2A/pkgs/agents/harness\testimateTokens":                 {},
+	"github.com/AlexsanderHamir/T2A/pkgs/agents/harness\tpromptWithProjectContext":       {},
 	// Criteria verification guardrail: pure helpers and thin wrappers; pipeline
 	// entry points (runVerificationPipeline, runVerifyChecks, runLLMVerifyAgent,
 	// applyVerifiedCompletions, completeChecklistLegacy) emit the canonical trace.
 	"github.com/AlexsanderHamir/T2A/pkgs/tasks/domain\tValidVerifierKind":                         {},
 	"github.com/AlexsanderHamir/T2A/pkgs/tasks/store/internal/checklist\tisTaskCycleRunningInTx":  {},
 	"github.com/AlexsanderHamir/T2A/pkgs/tasks/store/internal/checklist\tvalidateEvidencePayload": {},
-	"github.com/AlexsanderHamir/T2A/pkgs/agents/worker\ttruncateBytes":                            {},
-	"github.com/AlexsanderHamir/T2A/pkgs/agents/worker\tcriteriaReportPath":                       {},
-	"github.com/AlexsanderHamir/T2A/pkgs/agents/worker\tverifyReportPath":                         {},
-	"github.com/AlexsanderHamir/T2A/pkgs/agents/worker\treportCycleDir":                           {},
-	"github.com/AlexsanderHamir/T2A/pkgs/agents/worker\tensureReportCycleDir":                     {},
-	"github.com/AlexsanderHamir/T2A/pkgs/agents/worker\tcleanupReportDir":                         {},
-	"github.com/AlexsanderHamir/T2A/pkgs/agents/worker\tscrubCycleArtifacts":                      {},
-	"github.com/AlexsanderHamir/T2A/pkgs/agents/worker\treadJSONFile":                             {},
-	"github.com/AlexsanderHamir/T2A/pkgs/agents/worker\tparseCriteriaReport":                      {},
-	"github.com/AlexsanderHamir/T2A/pkgs/agents/worker\tparseVerifyReport":                        {},
-	"github.com/AlexsanderHamir/T2A/pkgs/agents/worker\tinjectCriteria":                           {},
-	"github.com/AlexsanderHamir/T2A/pkgs/agents/worker\tappendVerifyFeedback":                     {},
-	"github.com/AlexsanderHamir/T2A/pkgs/agents/worker\t*Worker.invokeRunnerWithTask":             {},
-	"github.com/AlexsanderHamir/T2A/pkgs/agents/worker\tgitDiff":                                  {},
-	"github.com/AlexsanderHamir/T2A/pkgs/agents/worker\tencodeCriteriaSnapshot":                   {},
+	"github.com/AlexsanderHamir/T2A/pkgs/agents/harness\ttruncateBytes":                            {},
+	"github.com/AlexsanderHamir/T2A/pkgs/agents/harness\tcriteriaReportPath":                       {},
+	"github.com/AlexsanderHamir/T2A/pkgs/agents/harness\tverifyReportPath":                         {},
+	"github.com/AlexsanderHamir/T2A/pkgs/agents/harness\treportCycleDir":                           {},
+	"github.com/AlexsanderHamir/T2A/pkgs/agents/harness\tensureReportCycleDir":                     {},
+	"github.com/AlexsanderHamir/T2A/pkgs/agents/harness\tcleanupReportDir":                         {},
+	"github.com/AlexsanderHamir/T2A/pkgs/agents/harness\tscrubCycleArtifacts":                      {},
+	"github.com/AlexsanderHamir/T2A/pkgs/agents/harness\treadJSONFile":                             {},
+	"github.com/AlexsanderHamir/T2A/pkgs/agents/harness\tparseCriteriaReport":                      {},
+	"github.com/AlexsanderHamir/T2A/pkgs/agents/harness\tparseVerifyReport":                        {},
+	"github.com/AlexsanderHamir/T2A/pkgs/agents/harness\tinjectCriteria":                           {},
+	"github.com/AlexsanderHamir/T2A/pkgs/agents/harness\tappendVerifyFeedback":                     {},
+	"github.com/AlexsanderHamir/T2A/pkgs/agents/harness\t*Harness.invokeRunnerWithTask":             {},
+	"github.com/AlexsanderHamir/T2A/pkgs/agents/harness\tgitDiff":                                  {},
+	"github.com/AlexsanderHamir/T2A/pkgs/agents/harness\tencodeCriteriaSnapshot":                   {},
+	// pkgs/agents/worker: thin queue-consumer wiring; harness owns cycle trace.
+	"github.com/AlexsanderHamir/T2A/pkgs/agents/worker\tNewWorker":                    {},
+	"github.com/AlexsanderHamir/T2A/pkgs/agents/worker\t*Worker.CancelCurrentRun":       {},
+	"github.com/AlexsanderHamir/T2A/pkgs/agents/worker\t*Worker.clock":                 {},
+	// pkgs/agents/harness: constructor and SSE/cancel plumbing without I/O.
+	"github.com/AlexsanderHamir/T2A/pkgs/agents/harness\tNew":                         {},
+	"github.com/AlexsanderHamir/T2A/pkgs/agents/harness\t*Harness.setCurrentRunCancel":  {},
+	"github.com/AlexsanderHamir/T2A/pkgs/agents/harness\t*Harness.consumeOperatorCancel": {},
+	"github.com/AlexsanderHamir/T2A/pkgs/agents/harness\t*Harness.publish":             {},
+	"github.com/AlexsanderHamir/T2A/pkgs/agents/harness\t*Harness.publishProgress":    {},
 	"github.com/AlexsanderHamir/T2A/pkgs/agents/runner/adapterkit\tCombineStreams":                {},
 	"github.com/AlexsanderHamir/T2A/pkgs/agents/runner/adapterkit\tClipRunes":                     {},
 	"github.com/AlexsanderHamir/T2A/pkgs/agents/runner/adapterkit\tRedactedTail":                  {},

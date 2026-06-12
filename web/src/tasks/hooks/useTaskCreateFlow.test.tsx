@@ -345,6 +345,10 @@ describe("useTaskCreateFlow", () => {
     });
 
     await waitFor(() => {
+      expect(result.current.createModalOpen).toBe(false);
+    });
+
+    await waitFor(() => {
       expect(mockedCreateTask).toHaveBeenCalledTimes(3);
     });
 
@@ -364,6 +368,64 @@ describe("useTaskCreateFlow", () => {
     );
     expect(mockedPatchTask).toHaveBeenCalledWith("child-b", {
       depends_on: ["parent-1", "child-a"],
+    });
+  });
+
+  it("closes the create modal after the parent POST, before nested subtasks finish", async () => {
+    let releaseSubtask!: () => void;
+    const subtaskGate = new Promise<void>((resolve) => {
+      releaseSubtask = resolve;
+    });
+    mockedCreateTask.mockImplementation(async (input) => {
+      if (!input.parent_id) {
+        return makeTask({ id: "parent-1", title: "Parent" });
+      }
+      await subtaskGate;
+      return makeTask({
+        id: "child-a",
+        title: input.title,
+        parent_id: "parent-1",
+      });
+    });
+
+    const { Wrapper } = makeWrapper();
+    const { result } = renderHook(() => useTaskCreateFlow(), {
+      wrapper: Wrapper,
+    });
+
+    await waitFor(() => {
+      expect(result.current.draftListLoading).toBe(false);
+    });
+
+    act(() => {
+      result.current.openCreateModal();
+      result.current.setNewTitle("Parent");
+      result.current.setNewPriority("medium");
+      result.current.addPendingSubtask({
+        title: "A",
+        initial_prompt: "",
+        priority: "medium",
+        task_type: "general",
+        checklistItems: [],
+        checklist_inherit: false,
+        depends_on_sibling_indices: [],
+      });
+    });
+
+    act(() => {
+      result.current.submitCreate({
+        preventDefault: vi.fn(),
+      } as unknown as FormEvent);
+    });
+
+    await waitFor(() => {
+      expect(result.current.createModalOpen).toBe(false);
+      expect(result.current.createPending).toBe(false);
+    });
+    expect(mockedCreateTask).toHaveBeenCalledTimes(2);
+
+    await act(async () => {
+      releaseSubtask();
     });
   });
 
@@ -424,6 +486,10 @@ describe("useTaskCreateFlow", () => {
       result.current.submitCreate({
         preventDefault: vi.fn(),
       } as unknown as FormEvent);
+    });
+
+    await waitFor(() => {
+      expect(result.current.createModalOpen).toBe(false);
     });
 
     await waitFor(() => {

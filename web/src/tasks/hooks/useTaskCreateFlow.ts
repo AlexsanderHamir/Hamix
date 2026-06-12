@@ -25,6 +25,7 @@ import {
   toApiTaskType,
 } from "../task-drafts";
 import { errorMessage } from "@/lib/errorMessage";
+import { useOptionalToast } from "@/shared/toast";
 import {
   DEFAULT_NEW_TASK_STATUS,
   DEFAULT_NEW_TASK_TYPE,
@@ -38,12 +39,98 @@ import { TASK_DRAFTS, TASK_TIMINGS } from "@/constants/tasks";
 
 const DRAFT_AUTOSAVE_DEBOUNCE_MS = TASK_TIMINGS.draftAutosaveDebounceMs;
 
+type CreateTaskMutationInput = {
+  title: string;
+  initial_prompt: string;
+  status: Status;
+  priority: Priority;
+  task_type: TaskType;
+  checklistItems: string[];
+  pendingSubtasks: PendingSubtaskDraft[];
+  subtasks_wait_for_parent: boolean;
+  draft_id: string;
+  runner: string;
+  cursor_model: string;
+  pickup_not_before: string | null;
+  project_id: string;
+  project_context_item_ids: string[];
+  tags: string[];
+  milestone?: string;
+  depends_on: string[];
+};
+
+async function addChecklistItems(taskId: string, items: string[]) {
+  const rows = items.map((raw) => raw.trim()).filter(Boolean);
+  await Promise.all(rows.map((text) => addChecklistItem(taskId, text)));
+}
+
+/** Checklist rows, nested subtasks, and sibling dep patches — after the parent exists. */
+async function finishTaskCreateExtras(
+  task: { id: string },
+  input: CreateTaskMutationInput,
+) {
+  await addChecklistItems(task.id, input.checklistItems);
+
+  const entries = input.pendingSubtasks
+    .map((st, draftIndex) => ({ st, draftIndex }))
+    .filter(({ st }) => Boolean(st.title.trim()));
+
+  const siblingIdsByIndex = new Map<number, string>();
+  // Sequential, not parallel: each subtask create appends a subtask_added
+  // event on the parent via SELECT … FOR UPDATE on the parent row; parallel
+  // POSTs deadlock on Postgres (see taskapi logs).
+  const created: Array<{
+    draftIndex: number;
+    id: string;
+    st: (typeof entries)[number]["st"];
+  }> = [];
+  for (const { st, draftIndex } of entries) {
+    const childInherit = st.checklist_inherit === true;
+    const postDepends =
+      input.subtasks_wait_for_parent && task.id ? [task.id] : undefined;
+    const child = await apiCreate({
+      title: st.title.trim(),
+      initial_prompt: st.initial_prompt,
+      status: input.status,
+      priority: st.priority,
+      task_type: st.task_type,
+      parent_id: task.id,
+      ...(input.project_id ? { project_id: input.project_id } : {}),
+      runner: input.runner,
+      cursor_model: input.cursor_model,
+      ...(childInherit ? { checklist_inherit: true } : {}),
+      ...(postDepends ? { depends_on: postDepends } : {}),
+    });
+    if (!childInherit) {
+      await addChecklistItems(child.id, st.checklistItems);
+    }
+    siblingIdsByIndex.set(draftIndex, child.id);
+    created.push({ draftIndex, id: child.id, st });
+  }
+
+  await Promise.all(
+    created
+      .filter(({ st }) => st.depends_on_sibling_indices.length > 0)
+      .map(async ({ draftIndex, id, st }) => {
+        const deps = materializeSubtaskDependsOn({
+          waitForParent: input.subtasks_wait_for_parent,
+          parentId: task.id,
+          siblingIndices: st.depends_on_sibling_indices,
+          siblingIdsByIndex,
+          selfIndex: draftIndex,
+        });
+        await apiPatchTask(id, { depends_on: deps });
+      }),
+  );
+}
+
 /**
  * Create-task modal, draft autosave, draft picker, and related mutations.
  * Composed by `useTasksApp`.
  */
 export function useTaskCreateFlow() {
   const queryClient = useQueryClient();
+  const toast = useOptionalToast();
 
   const [newTitle, setNewTitle] = useState("");
   const [newPrompt, setNewPrompt] = useState("");
@@ -313,41 +400,7 @@ export function useTaskCreateFlow() {
   );
 
   const createMutation = useMutation({
-    mutationFn: async (input: {
-      title: string;
-      initial_prompt: string;
-      status: Status;
-      priority: Priority;
-      task_type: TaskType;
-      checklistItems: string[];
-      pendingSubtasks: PendingSubtaskDraft[];
-      subtasks_wait_for_parent: boolean;
-      draft_id: string;
-      runner: string;
-      cursor_model: string;
-      /**
-       * RFC3339 UTC ISO string forwarded to `POST /tasks` as
-       * `pickup_not_before`. `null` (the operator left the
-       * `SchedulePicker` empty) means "no schedule"; the server then
-       * applies the global `agent_pickup_delay_seconds` if set, or
-       * picks the task up immediately. A non-null value bypasses
-       * that global delay (per Stage 2 of the task scheduling plan).
-       *
-       * Subtasks are intentionally **not** carried across — pending
-       * subtasks today have no schedule field of their own; if Stage 5
-       * adds one we'll plumb it through this same shape.
-       */
-      pickup_not_before: string | null;
-      project_id: string;
-      project_context_item_ids: string[];
-      tags: string[];
-      milestone?: string;
-      depends_on: string[];
-    }) => {
-      const addChecklistItems = async (taskId: string, items: string[]) => {
-        const rows = items.map((raw) => raw.trim()).filter(Boolean);
-        await Promise.all(rows.map((text) => addChecklistItem(taskId, text)));
-      };
+    mutationFn: async (input: CreateTaskMutationInput) => {
       const task = await apiCreate({
         title: input.title,
         initial_prompt: input.initial_prompt,
@@ -368,82 +421,33 @@ export function useTaskCreateFlow() {
         ...(input.milestone ? { milestone: input.milestone } : {}),
         ...(input.depends_on.length > 0 ? { depends_on: input.depends_on } : {}),
       });
-      await addChecklistItems(task.id, input.checklistItems);
-
-      const entries = input.pendingSubtasks
-        .map((st, draftIndex) => ({ st, draftIndex }))
-        .filter(({ st }) => Boolean(st.title.trim()));
-
-      const siblingIdsByIndex = new Map<number, string>();
-      // Sequential, not parallel: each subtask create appends a subtask_added
-      // event on the parent via SELECT … FOR UPDATE on the parent row; parallel
-      // POSTs deadlock on Postgres (see taskapi logs).
-      const created: Array<{
-        draftIndex: number;
-        id: string;
-        st: (typeof entries)[number]["st"];
-      }> = [];
-      for (const { st, draftIndex } of entries) {
-        const childInherit = st.checklist_inherit === true;
-        const postDepends =
-          input.subtasks_wait_for_parent && task.id ? [task.id] : undefined;
-        const child = await apiCreate({
-          title: st.title.trim(),
-          initial_prompt: st.initial_prompt,
-          status: input.status,
-          priority: st.priority,
-          task_type: st.task_type,
-          parent_id: task.id,
-          ...(input.project_id ? { project_id: input.project_id } : {}),
-          runner: input.runner,
-          cursor_model: input.cursor_model,
-          ...(childInherit ? { checklist_inherit: true } : {}),
-          ...(postDepends ? { depends_on: postDepends } : {}),
-        });
-        if (!childInherit) {
-          await addChecklistItems(child.id, st.checklistItems);
-        }
-        siblingIdsByIndex.set(draftIndex, child.id);
-        created.push({ draftIndex, id: child.id, st });
-      }
-
-      await Promise.all(
-        created
-          .filter(({ st }) => st.depends_on_sibling_indices.length > 0)
-          .map(async ({ draftIndex, id, st }) => {
-            const deps = materializeSubtaskDependsOn({
-              waitForParent: input.subtasks_wait_for_parent,
-              parentId: task.id,
-              siblingIndices: st.depends_on_sibling_indices,
-              siblingIdsByIndex,
-              selfIndex: draftIndex,
-            });
-            await apiPatchTask(id, { depends_on: deps });
-          }),
-      );
-      return task;
+      return { task, input };
     },
-    onSuccess: async (_task, variables) => {
-      // Server-truth invalidations always fire: the new task is real
-      // regardless of which draft the user is now editing in the create
-      // modal, so list / stats / drafts caches must reflect it.
-      await queryClient.invalidateQueries({ queryKey: taskQueryKeys.all });
-      await queryClient.invalidateQueries({ queryKey: taskQueryKeys.stats() });
-      await queryClient.invalidateQueries({ queryKey: taskQueryKeys.drafts() });
-      // Defensive id-aware guard. Today the create modal's `Modal
-      // busy={pending}` lock blocks ESC / backdrop close while
-      // `createMutation.isPending`, so the user *cannot* switch drafts
-      // mid-create and this branch is effectively unconditional. But
-      // the moment that lock loosens (or somebody adds an out-of-modal
-      // "submit and continue editing" path), an unconditional
-      // `closeCreateModal()` here would slam shut a draft the user has
-      // since switched to. Read from `newDraftIDRef` so a resolution
-      // that lands in the same microtask as a draft switch still sees
-      // the freshest id (same shape as `evaluateDraftMutation` /
-      // `saveDraftMutation` in this file).
+    onSuccess: ({ task, input }, variables) => {
+      // Close as soon as the parent row exists — checklist rows and nested
+      // subtasks can take several round-trips (Neon latency × sequential
+      // subtask creates). SSE already puts the parent in the list behind the
+      // modal; keeping the sheet open until every child POST finishes felt
+      // broken even though the task was already live.
       if (newDraftIDRef.current === variables.draft_id) {
         closeCreateModal();
       }
+      void queryClient.invalidateQueries({ queryKey: taskQueryKeys.all });
+      void queryClient.invalidateQueries({ queryKey: taskQueryKeys.stats() });
+      void queryClient.invalidateQueries({ queryKey: taskQueryKeys.drafts() });
+
+      void finishTaskCreateExtras(task, input)
+        .then(() => {
+          void queryClient.invalidateQueries({ queryKey: taskQueryKeys.all });
+          void queryClient.invalidateQueries({ queryKey: taskQueryKeys.stats() });
+        })
+        .catch((err: unknown) => {
+          toast.error(
+            `Task created, but some follow-up steps failed: ${errorMessage(err)}`,
+          );
+          void queryClient.invalidateQueries({ queryKey: taskQueryKeys.all });
+          void queryClient.invalidateQueries({ queryKey: taskQueryKeys.stats() });
+        });
     },
   });
 

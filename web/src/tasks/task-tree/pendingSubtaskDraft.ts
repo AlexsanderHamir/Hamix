@@ -8,4 +8,21 @@ export type PendingSubtaskDraft = {
   task_type: TaskType;
   checklistItems: string[];
   checklist_inherit: boolean;
+  /** Draft-local indices of other pending subtasks that must complete first. */
+  depends_on_sibling_indices: number[];
 };
+
+export function createEmptyPendingSubtaskDraft(
+  overrides: Partial<PendingSubtaskDraft> = {},
+): PendingSubtaskDraft {
+  return {
+    title: "",
+    initial_prompt: "",
+    priority: "medium",
+    task_type: "general",
+    checklistItems: [],
+    checklist_inherit: false,
+    depends_on_sibling_indices: [],
+    ...overrides,
+  };
+}

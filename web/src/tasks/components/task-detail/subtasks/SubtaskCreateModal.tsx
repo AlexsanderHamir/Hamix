@@ -4,6 +4,10 @@ import { FieldRequirementBadge } from "@/shared/FieldLabel";
 import { Modal } from "../../../../shared/Modal";
 import { MutationErrorBanner } from "../../../../shared/MutationErrorBanner";
 import { TaskComposeFields } from "../../task-compose";
+import {
+  SubtaskSchedulingFields,
+  type SubtaskSiblingOption,
+} from "../../task-compose/fields/SubtaskSchedulingFields";
 
 type Props = {
   taskId: string;
@@ -16,6 +20,11 @@ type Props = {
   taskType: TaskType;
   checklistItems: string[];
   checklistInherit: boolean;
+  waitForParent: boolean;
+  onWaitForParentChange: (v: boolean) => void;
+  siblingOptions: SubtaskSiblingOption[];
+  dependsOnSiblingIds: string[];
+  onDependsOnSiblingIdsChange: (ids: string[]) => void;
   onTitleChange: (v: string) => void;
   onPromptChange: (v: string) => void;
   onPriorityChange: (p: PriorityChoice) => void;
@@ -49,6 +58,11 @@ export function SubtaskCreateModal({
   taskType,
   checklistItems,
   checklistInherit,
+  waitForParent,
+  onWaitForParentChange,
+  siblingOptions,
+  dependsOnSiblingIds,
+  onDependsOnSiblingIdsChange,
   onTitleChange,
   onPromptChange,
   onPriorityChange,
@@ -123,6 +137,15 @@ export function SubtaskCreateModal({
               <FieldRequirementBadge requirement="optional" />
             </span>
           </label>
+          <SubtaskSchedulingFields
+            idsPrefix="task-subtask-modal"
+            disabled={disabled}
+            waitForParent={waitForParent}
+            onWaitForParentChange={onWaitForParentChange}
+            siblingOptions={siblingOptions}
+            selectedSiblingIds={dependsOnSiblingIds}
+            onSelectedSiblingIdsChange={onDependsOnSiblingIdsChange}
+          />
           <MutationErrorBanner
             error={error}
             fallback="Could not create subtask."

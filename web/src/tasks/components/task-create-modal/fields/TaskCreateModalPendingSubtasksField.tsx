@@ -3,6 +3,8 @@ import type { PendingSubtaskDraft } from "../../../task-tree";
 
 type Props = {
   pendingSubtasks: PendingSubtaskDraft[];
+  subtasksWaitForParent: boolean;
+  onSubtasksWaitForParentChange: (v: boolean) => void;
   disabled: boolean;
   onOpenNestedNew: () => void;
   onOpenNestedEdit: (index: number) => void;
@@ -13,6 +15,8 @@ const SUBTASKS_HEADING_ID = "task-new-subtasks-heading";
 
 export function TaskCreateModalPendingSubtasksField({
   pendingSubtasks,
+  subtasksWaitForParent,
+  onSubtasksWaitForParentChange,
   disabled,
   onOpenNestedNew,
   onOpenNestedEdit,
@@ -38,7 +42,19 @@ export function TaskCreateModalPendingSubtasksField({
         </button>
       </div>
       {pendingSubtasks.length > 0 ? (
-        <ul className="task-checklist-list" aria-labelledby={SUBTASKS_HEADING_ID}>
+        <>
+          <label className="checkbox-label task-subtask-scheduling__row">
+            <input
+              type="checkbox"
+              checked={subtasksWaitForParent}
+              onChange={(ev) => onSubtasksWaitForParentChange(ev.target.checked)}
+              disabled={disabled}
+            />
+            <span className="checkbox-label-body">
+              Start subtasks after parent completes
+            </span>
+          </label>
+          <ul className="task-checklist-list" aria-labelledby={SUBTASKS_HEADING_ID}>
           {pendingSubtasks.map((d, index) => (
             <li
               key={`${index}-${d.title}`}
@@ -65,7 +81,8 @@ export function TaskCreateModalPendingSubtasksField({
               </div>
             </li>
           ))}
-        </ul>
+          </ul>
+        </>
       ) : (
         // Empty hint: gives the section a calm presence instead of a bare
         // heading + button + dead space. Tone matches the SchedulePicker

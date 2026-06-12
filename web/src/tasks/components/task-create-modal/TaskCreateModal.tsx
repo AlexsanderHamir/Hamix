@@ -44,6 +44,8 @@ type Props = {
   onUpdateChecklistRow: (index: number, text: string) => void;
   onRemoveChecklistRow: (index: number) => void;
   pendingSubtasks: PendingSubtaskDraft[];
+  subtasksWaitForParent: boolean;
+  onSubtasksWaitForParentChange: (v: boolean) => void;
   onAddPendingSubtask: (d: PendingSubtaskDraft) => void;
   onUpdatePendingSubtask: (index: number, d: PendingSubtaskDraft) => void;
   onRemovePendingSubtask: (index: number) => void;
@@ -158,6 +160,8 @@ export function TaskCreateModal({
   onUpdateChecklistRow,
   onRemoveChecklistRow,
   pendingSubtasks,
+  subtasksWaitForParent,
+  onSubtasksWaitForParentChange,
   onAddPendingSubtask,
   onUpdatePendingSubtask,
   onRemovePendingSubtask,
@@ -215,6 +219,7 @@ export function TaskCreateModal({
     nestedOpen,
     nestedInstanceKey,
     nestedInitial,
+    nestedEditIndex,
     openNestedNew,
     openNestedEdit,
     handleNestedClose,
@@ -311,6 +316,8 @@ export function TaskCreateModal({
             {!dmapMode ? (
               <TaskCreateModalPendingSubtasksField
                 pendingSubtasks={pendingSubtasks}
+                subtasksWaitForParent={subtasksWaitForParent}
+                onSubtasksWaitForParentChange={onSubtasksWaitForParentChange}
                 disabled={disabled}
                 onOpenNestedNew={openNestedNew}
                 onOpenNestedEdit={openNestedEdit}
@@ -416,6 +423,8 @@ export function TaskCreateModal({
         open={nestedOpen}
         instanceKey={nestedInstanceKey}
         initialDraft={nestedInitial}
+        pendingSubtasks={pendingSubtasks}
+        selfIndex={nestedEditIndex}
         onClose={handleNestedClose}
         onSave={handleNestedSave}
       />

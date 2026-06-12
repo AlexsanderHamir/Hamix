@@ -44,6 +44,21 @@ The JSON resource has **no** `created_at` / `updated_at` fields. Timestamps live
 - Self-deps and cycles return `400 invalid input`.
 - API: incremental via `GET/POST/DELETE /tasks/{id}/dependencies`; full replace via `depends_on` on `PATCH /tasks/{id}`.
 
+### Subtask scheduling (opt-in)
+
+`parent_id` is organizational (tree UI, checklist inheritance). It does **not** defer the worker. Optional execution order among a parent and its subtasks is expressed only via `depends_on`:
+
+| UI opt-in | Materialized as | Worker behavior |
+|---|---|---|
+| Start subtasks after parent completes | `depends_on` includes `parent_id` | Subtask runs only after parent `status = done` |
+| Start after selected sibling subtasks | `depends_on` includes sibling task ids | Subtask runs only after **all** selected siblings are `done` (AND) |
+
+Both default **off** (subtasks are independent ready tasks, FIFO among eligible work). Behaviors compose: a subtask may depend on the parent and multiple siblings in one `depends_on` list.
+
+Create flow (parent + pending subtasks): the web client POSTs each subtask with a parent dependency when the batch toggle is on, then PATCHes sibling dependencies once all subtask ids exist. Detail-page add-subtask: a single POST with the composed `depends_on`.
+
+Predecessors must reach `status = done`. A predecessor in `failed` or `on_hold` keeps dependents blocked until the operator fixes status or edits dependencies. No special worker rules for subtasks vs other tasks.
+
 ## Gate
 
 ```json

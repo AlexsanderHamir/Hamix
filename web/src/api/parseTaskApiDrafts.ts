@@ -101,8 +101,22 @@ function parseDraftPayload(value: unknown): TaskDraftPayload {
           parseString(x, `payload.pending_subtasks[${i}].checklist_items[${j}]`),
         ),
         checklist_inherit: s.checklist_inherit === true,
+        ...(Array.isArray(s.depends_on_sibling_indices)
+          ? {
+              depends_on_sibling_indices: s.depends_on_sibling_indices.map(
+                (idx, j) =>
+                  parseFiniteNumber(
+                    idx,
+                    `payload.pending_subtasks[${i}].depends_on_sibling_indices[${j}]`,
+                  ),
+              ),
+            }
+          : {}),
       };
     }),
+    ...(value.subtasks_wait_for_parent === true
+      ? { subtasks_wait_for_parent: true }
+      : {}),
     ...(isRecord(value.latest_evaluation)
       ? {
           latest_evaluation: {

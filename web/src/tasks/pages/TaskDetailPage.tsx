@@ -67,6 +67,10 @@ export function TaskDetailPage({ app }: Props) {
     subtaskChecklistItems,
     subtaskInherit,
     setSubtaskInherit,
+    subtaskWaitForParent,
+    setSubtaskWaitForParent,
+    subtaskDependsOnSiblingIds,
+    setSubtaskDependsOnSiblingIds,
     openSubtaskModal,
     closeSubtaskModal,
     appendSubtaskChecklistCriterion,
@@ -452,6 +456,14 @@ export function TaskDetailPage({ app }: Props) {
             taskType={subtaskTaskType}
             checklistItems={subtaskChecklistItems}
             checklistInherit={subtaskInherit}
+            waitForParent={subtaskWaitForParent}
+            onWaitForParentChange={setSubtaskWaitForParent}
+            siblingOptions={(task.children ?? []).map((child) => ({
+              id: child.id,
+              label: child.title.trim() || "Untitled subtask",
+            }))}
+            dependsOnSiblingIds={subtaskDependsOnSiblingIds}
+            onDependsOnSiblingIdsChange={setSubtaskDependsOnSiblingIds}
             onTitleChange={setSubtaskTitle}
             onPromptChange={setSubtaskPrompt}
             onPriorityChange={setSubtaskPriority}

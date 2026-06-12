@@ -37,6 +37,7 @@ export function useTaskCreateModalNestedDraft({
         task_type: d.task_type,
         checklistItems: [...d.checklistItems],
         checklist_inherit: d.checklist_inherit,
+        depends_on_sibling_indices: [...d.depends_on_sibling_indices],
       });
       setNestedInstanceKey((k) => k + 1);
       setNestedOpen(true);
@@ -64,6 +65,7 @@ export function useTaskCreateModalNestedDraft({
     nestedOpen,
     nestedInstanceKey,
     nestedInitial,
+    nestedEditIndex,
     openNestedNew,
     openNestedEdit,
     handleNestedClose,

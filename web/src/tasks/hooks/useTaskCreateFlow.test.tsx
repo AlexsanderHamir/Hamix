@@ -14,6 +14,7 @@ vi.mock("../../api", () => ({
   evaluateDraftTask: vi.fn(),
   getTaskDraft: vi.fn(),
   listTaskDrafts: vi.fn(),
+  patchTask: vi.fn(),
   saveTaskDraft: vi.fn(),
 }));
 
@@ -21,6 +22,7 @@ import {
   createTask,
   getTaskDraft,
   listTaskDrafts,
+  patchTask,
   saveTaskDraft,
 } from "../../api";
 
@@ -28,6 +30,7 @@ const mockedCreateTask = vi.mocked(createTask);
 const mockedListDrafts = vi.mocked(listTaskDrafts);
 const mockedSaveDraft = vi.mocked(saveTaskDraft);
 const mockedGetDraft = vi.mocked(getTaskDraft);
+const mockedPatchTask = vi.mocked(patchTask);
 
 function makeTask(overrides: Partial<Task> = {}): Task {
   return {
@@ -253,6 +256,80 @@ describe("useTaskCreateFlow", () => {
       "ctx-r1",
       "ctx-r2",
     ]);
+  });
+
+  it("POSTs parent dep on subtask create and PATCHes sibling deps after ids exist", async () => {
+    mockedCreateTask
+      .mockResolvedValueOnce(makeTask({ id: "parent-1", title: "Parent" }))
+      .mockResolvedValueOnce(
+        makeTask({ id: "child-a", title: "A", parent_id: "parent-1" }),
+      )
+      .mockResolvedValueOnce(
+        makeTask({ id: "child-b", title: "B", parent_id: "parent-1" }),
+      );
+    mockedPatchTask.mockResolvedValue(makeTask({ id: "child-b" }));
+
+    const { Wrapper } = makeWrapper();
+    const { result } = renderHook(() => useTaskCreateFlow(), {
+      wrapper: Wrapper,
+    });
+
+    await waitFor(() => {
+      expect(result.current.draftListLoading).toBe(false);
+    });
+
+    act(() => {
+      result.current.openCreateModal();
+      result.current.setNewTitle("Parent");
+      result.current.setNewPriority("medium");
+      result.current.setSubtasksWaitForParent(true);
+      result.current.addPendingSubtask({
+        title: "A",
+        initial_prompt: "",
+        priority: "medium",
+        task_type: "general",
+        checklistItems: [],
+        checklist_inherit: false,
+        depends_on_sibling_indices: [],
+      });
+      result.current.addPendingSubtask({
+        title: "B",
+        initial_prompt: "",
+        priority: "medium",
+        task_type: "general",
+        checklistItems: [],
+        checklist_inherit: false,
+        depends_on_sibling_indices: [0],
+      });
+    });
+
+    act(() => {
+      result.current.submitCreate({
+        preventDefault: vi.fn(),
+      } as unknown as FormEvent);
+    });
+
+    await waitFor(() => {
+      expect(mockedCreateTask).toHaveBeenCalledTimes(3);
+    });
+
+    expect(mockedCreateTask).toHaveBeenNthCalledWith(
+      2,
+      expect.objectContaining({
+        parent_id: "parent-1",
+        depends_on: ["parent-1"],
+      }),
+    );
+    expect(mockedCreateTask).toHaveBeenNthCalledWith(
+      3,
+      expect.objectContaining({
+        parent_id: "parent-1",
+        depends_on: ["parent-1"],
+      }),
+    );
+    expect(mockedPatchTask).toHaveBeenCalledWith("child-b", {
+      depends_on: ["parent-1", "child-a"],
+    });
   });
 
   it("sets createModalAssignmentLocked when opening with lockProjectAssignment", async () => {

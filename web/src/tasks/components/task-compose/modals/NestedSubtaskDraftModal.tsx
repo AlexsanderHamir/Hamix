@@ -3,11 +3,15 @@ import { DEFAULT_NEW_TASK_TYPE, type PriorityChoice, type TaskType } from "@/typ
 import { FieldRequirementBadge } from "@/shared/FieldLabel";
 import { Modal } from "../../../../shared/Modal";
 import type { PendingSubtaskDraft } from "../../../task-tree";
+import { PendingSubtaskSiblingPicker } from "../fields/SubtaskSchedulingFields";
 import { TaskComposeFields } from "../fields/TaskComposeFields";
 
 type Props = {
   instanceKey: number;
   initialDraft: PendingSubtaskDraft | null;
+  pendingSubtasks: PendingSubtaskDraft[];
+  /** Draft index when editing; null when adding a new pending subtask. */
+  selfIndex: number | null;
   onClose: () => void;
   onSave: (draft: PendingSubtaskDraft) => void;
 };
@@ -15,6 +19,8 @@ type Props = {
 export function NestedSubtaskDraftModal({
   instanceKey,
   initialDraft,
+  pendingSubtasks,
+  selfIndex,
   onClose,
   onSave,
 }: Props) {
@@ -24,6 +30,9 @@ export function NestedSubtaskDraftModal({
   const [taskType, setTaskType] = useState<TaskType>(DEFAULT_NEW_TASK_TYPE);
   const [checklistItems, setChecklistItems] = useState<string[]>([]);
   const [checklistInherit, setChecklistInherit] = useState(false);
+  const [dependsOnSiblingIndices, setDependsOnSiblingIndices] = useState<
+    number[]
+  >([]);
 
   useEffect(() => {
     if (initialDraft) {
@@ -35,6 +44,7 @@ export function NestedSubtaskDraftModal({
       setChecklistItems(
         initialDraft.checklist_inherit ? [] : [...initialDraft.checklistItems],
       );
+      setDependsOnSiblingIndices([...initialDraft.depends_on_sibling_indices]);
     } else {
       setTitle("");
       setPrompt("");
@@ -42,6 +52,7 @@ export function NestedSubtaskDraftModal({
       setTaskType(DEFAULT_NEW_TASK_TYPE);
       setChecklistInherit(false);
       setChecklistItems([]);
+      setDependsOnSiblingIndices([]);
     }
   }, [instanceKey, initialDraft]);
 
@@ -74,6 +85,7 @@ export function NestedSubtaskDraftModal({
       task_type: taskType,
       checklistItems: checklistItems.map((x) => x.trim()).filter(Boolean),
       checklist_inherit: checklistInherit,
+      depends_on_sibling_indices: dependsOnSiblingIndices,
     });
   }
 
@@ -126,6 +138,13 @@ export function NestedSubtaskDraftModal({
               <FieldRequirementBadge requirement="optional" />
             </span>
           </label>
+          <PendingSubtaskSiblingPicker
+            idsPrefix={idsPrefix}
+            pendingSubtasks={pendingSubtasks}
+            selfIndex={selfIndex}
+            selectedIndices={dependsOnSiblingIndices}
+            onSelectedIndicesChange={setDependsOnSiblingIndices}
+          />
           <div className="row stack-row-actions task-subtask-modal-actions">
             <button type="button" className="secondary" onClick={onClose}>
               Cancel

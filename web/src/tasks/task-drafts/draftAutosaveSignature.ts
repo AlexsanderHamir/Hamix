@@ -43,6 +43,7 @@ export type DraftAutosaveSignatureInput = {
   checklistInherit: boolean;
   checklistItems: string[];
   pendingSubtasks: PendingSubtaskDraft[];
+  subtasksWaitForParent: boolean;
   latestEvaluation: {
     overallScore: number;
     overallSummary: string;
@@ -89,7 +90,9 @@ export function draftAutosaveSignature(
         task_type: st.task_type,
         checklist_items: st.checklistItems,
         checklist_inherit: st.checklist_inherit,
+        depends_on_sibling_indices: st.depends_on_sibling_indices,
       })),
+      subtasks_wait_for_parent: input.subtasksWaitForParent,
       latest_evaluation: input.latestEvaluation,
       dmap_config: input.dmapConfig,
     },

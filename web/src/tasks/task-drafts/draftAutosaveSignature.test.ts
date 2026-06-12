@@ -22,6 +22,7 @@ function baseInput(): DraftAutosaveSignatureInput {
     checklistInherit: false,
     checklistItems: [],
     pendingSubtasks: [],
+    subtasksWaitForParent: false,
     latestEvaluation: null,
     dmapConfig: { commitLimit: "1", domain: "", description: "" },
   };
@@ -84,6 +85,7 @@ describe("draftAutosaveSignature", () => {
       task_type: "general" as const,
       checklistItems: ["a"],
       checklist_inherit: false,
+      depends_on_sibling_indices: [] as number[],
     };
     const a = draftAutosaveSignature({
       ...baseInput(),
@@ -108,6 +110,7 @@ describe("draftAutosaveSignature", () => {
           task_type: "feature",
           checklistItems: ["x", "y"],
           checklist_inherit: true,
+          depends_on_sibling_indices: [],
         },
       ],
     });
@@ -133,9 +136,11 @@ describe("draftAutosaveSignature", () => {
             priority: "high",
             task_type: "feature",
             checklist_items: ["x", "y"],
-            checklist_inherit: true,
-          },
-        ],
+          checklist_inherit: true,
+          depends_on_sibling_indices: [],
+        },
+      ],
+      subtasks_wait_for_parent: false,
         latest_evaluation: null,
         dmap_config: { commitLimit: "1", domain: "", description: "" },
       },

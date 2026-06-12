@@ -8,6 +8,7 @@ import {
   type Task,
   type TaskType,
 } from "@/types";
+import { materializeSubtaskDependsOn } from "../task-tree";
 import {
   rumMutationOptimisticApplied,
   rumMutationRolledBack,
@@ -44,6 +45,10 @@ export function useTaskDetailSubtasks(taskId: string) {
     [],
   );
   const [subtaskInherit, setSubtaskInherit] = useState(false);
+  const [subtaskWaitForParent, setSubtaskWaitForParent] = useState(false);
+  const [subtaskDependsOnSiblingIds, setSubtaskDependsOnSiblingIds] = useState<
+    string[]
+  >([]);
   const [subtaskModalOpen, setSubtaskModalOpen] = useState(false);
 
   /**
@@ -74,6 +79,8 @@ export function useTaskDetailSubtasks(taskId: string) {
     setSubtaskTaskType(DEFAULT_NEW_TASK_TYPE);
     setSubtaskChecklistItems([]);
     setSubtaskInherit(false);
+    setSubtaskWaitForParent(false);
+    setSubtaskDependsOnSiblingIds([]);
   }, []);
 
   const closeSubtaskModal = useCallback(() => {
@@ -123,6 +130,8 @@ export function useTaskDetailSubtasks(taskId: string) {
       task_type: TaskType;
       checklist_inherit: boolean;
       checklistItems: string[];
+      waitForParent: boolean;
+      dependsOnSiblingIds: string[];
       /**
        * Per-submission token captured synchronously at `submitNewSubtask`
        * time and compared against `submissionTokenRef.current` in
@@ -137,6 +146,11 @@ export function useTaskDetailSubtasks(taskId: string) {
       const parent = queryClient.getQueryData<Task>(
         taskQueryKeys.detail(taskId),
       );
+      const dependsOn = materializeSubtaskDependsOn({
+        waitForParent: input.waitForParent,
+        parentId: taskId,
+        siblingIds: input.dependsOnSiblingIds,
+      });
       const child = await createTask({
         title: input.title,
         initial_prompt: input.initial_prompt,
@@ -144,6 +158,7 @@ export function useTaskDetailSubtasks(taskId: string) {
         task_type: input.task_type,
         parent_id: taskId,
         checklist_inherit: input.checklist_inherit,
+        ...(dependsOn.length > 0 ? { depends_on: dependsOn } : {}),
         ...(parent
           ? {
               runner: parent.runner,
@@ -263,6 +278,8 @@ export function useTaskDetailSubtasks(taskId: string) {
         task_type: subtaskTaskType,
         checklist_inherit: subtaskInherit,
         checklistItems: subtaskInherit ? [] : subtaskChecklistItems,
+        waitForParent: subtaskWaitForParent,
+        dependsOnSiblingIds: subtaskDependsOnSiblingIds,
         submissionToken,
       });
     },
@@ -273,6 +290,8 @@ export function useTaskDetailSubtasks(taskId: string) {
       subtaskTaskType,
       subtaskInherit,
       subtaskChecklistItems,
+      subtaskWaitForParent,
+      subtaskDependsOnSiblingIds,
       createSubtaskMutation,
     ],
   );
@@ -290,6 +309,10 @@ export function useTaskDetailSubtasks(taskId: string) {
     subtaskChecklistItems,
     subtaskInherit,
     setSubtaskInherit,
+    subtaskWaitForParent,
+    setSubtaskWaitForParent,
+    subtaskDependsOnSiblingIds,
+    setSubtaskDependsOnSiblingIds,
     openSubtaskModal,
     closeSubtaskModal,
     appendSubtaskChecklistCriterion,

@@ -70,6 +70,8 @@ export function TaskCreateModalsLayer({ app }: Props) {
           onUpdateChecklistRow={app.updateNewChecklistRow}
           onRemoveChecklistRow={app.removeNewChecklistRow}
           pendingSubtasks={app.pendingSubtasks}
+          subtasksWaitForParent={app.subtasksWaitForParent}
+          onSubtasksWaitForParentChange={app.setSubtasksWaitForParent}
           onAddPendingSubtask={app.addPendingSubtask}
           onUpdatePendingSubtask={app.updatePendingSubtask}
           onRemovePendingSubtask={app.removePendingSubtask}

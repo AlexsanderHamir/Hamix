@@ -50,7 +50,7 @@ Model semantics (tags, milestone, `depends_on`, gate, `parent_id` depth-1, worke
 
 | Method | Path | Notes |
 |---|---|---|
-| POST | `/tasks` | Create. Title required; `priority` required. Optional `id`, `draft_id`, `project_id`, `parent_id`, `task_type`, `checklist_inherit`, `pickup_not_before`, `cursor_model`, `tags`, `milestone`, `depends_on`. Returns full task tree. `409` on duplicate `id`. Publishes `task_created` (and `task_updated` for the parent when `parent_id` is set). |
+| POST | `/tasks` | Create. Title required; `priority` required. Optional `id`, `draft_id`, `project_id`, `parent_id`, `task_type`, `checklist_inherit`, `pickup_not_before`, `cursor_model`, `tags`, `milestone`, `depends_on`. Subtasks may set `depends_on` to `[parent_id]` and/or sibling ids for opt-in execution order (see [data-model.md](./data-model.md) — Subtask scheduling). Returns full task tree. `409` on duplicate `id`. Publishes `task_created` (and `task_updated` for the parent when `parent_id` is set). |
 | POST | `/tasks/evaluate` | Score a draft payload; persist snapshot. Never publishes on SSE. |
 | GET | `/tasks` | List root tasks. Pagination: `?limit` (0–200, default 50) + `?offset` (≥ 0) **or** `?after_id` (keyset, mutually exclusive with offset). Envelope `{ tasks, limit, offset, has_more }`. |
 | GET | `/tasks/stats` | Counters: `total`, `ready`, `critical`, `scheduled`, `by_status`, `by_priority`, `by_scope`, `cycles`, `phases`, `runner`, `recent_failures`. |

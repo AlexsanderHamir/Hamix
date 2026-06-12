@@ -8,10 +8,13 @@ import {
   evaluateDraftTask as apiEvaluateDraft,
   getTaskDraft as apiGetDraft,
   listTaskDrafts as apiListDrafts,
+  patchTask as apiPatchTask,
   saveTaskDraft as apiSaveDraft,
 } from "../../api";
 import {
   type PendingSubtaskDraft,
+  materializeSubtaskDependsOn,
+  remapPendingSubtaskSiblingIndices,
 } from "../task-tree";
 import { plainTextToInitialHtml } from "../task-prompt";
 import { settingsQueryKeys, taskQueryKeys } from "../task-query";
@@ -139,6 +142,8 @@ export function useTaskCreateFlow() {
   const [pendingSubtasks, setPendingSubtasks] = useState<PendingSubtaskDraft[]>(
     [],
   );
+  /** When true, every pending subtask gets `depends_on: [parent.id]` on create. */
+  const [subtasksWaitForParent, setSubtasksWaitForParent] = useState(false);
   const [createModalOpen, setCreateModalOpen] = useState(false);
 
   const autosaveTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -215,6 +220,7 @@ export function useTaskCreateFlow() {
     setNewDependsOn([]);
     setNewChecklistItems([]);
     setPendingSubtasks([]);
+    setSubtasksWaitForParent(false);
     setLatestDraftEvaluation(null);
     setNewDraftID(generatedID);
     setLastDraftSavedAt(null);
@@ -234,6 +240,7 @@ export function useTaskCreateFlow() {
         checklistInherit: false,
         checklistItems: [],
         pendingSubtasks: [],
+        subtasksWaitForParent: false,
         latestEvaluation: null,
         dmapConfig: {
           commitLimit: TASK_DRAFTS.initialDmapCommitLimit,
@@ -314,6 +321,7 @@ export function useTaskCreateFlow() {
       task_type: TaskType;
       checklistItems: string[];
       pendingSubtasks: PendingSubtaskDraft[];
+      subtasks_wait_for_parent: boolean;
       draft_id: string;
       runner: string;
       cursor_model: string;
@@ -361,26 +369,52 @@ export function useTaskCreateFlow() {
         ...(input.depends_on.length > 0 ? { depends_on: input.depends_on } : {}),
       });
       await addChecklistItems(task.id, input.checklistItems);
+
+      const entries = input.pendingSubtasks
+        .map((st, draftIndex) => ({ st, draftIndex }))
+        .filter(({ st }) => Boolean(st.title.trim()));
+
+      const siblingIdsByIndex = new Map<number, string>();
+      const created = await Promise.all(
+        entries.map(async ({ st, draftIndex }) => {
+          const childInherit = st.checklist_inherit === true;
+          const postDepends =
+            input.subtasks_wait_for_parent && task.id
+              ? [task.id]
+              : undefined;
+          const child = await apiCreate({
+            title: st.title.trim(),
+            initial_prompt: st.initial_prompt,
+            status: input.status,
+            priority: st.priority,
+            task_type: st.task_type,
+            parent_id: task.id,
+            ...(input.project_id ? { project_id: input.project_id } : {}),
+            runner: input.runner,
+            cursor_model: input.cursor_model,
+            ...(childInherit ? { checklist_inherit: true } : {}),
+            ...(postDepends ? { depends_on: postDepends } : {}),
+          });
+          if (!childInherit) {
+            await addChecklistItems(child.id, st.checklistItems);
+          }
+          siblingIdsByIndex.set(draftIndex, child.id);
+          return { draftIndex, id: child.id, st };
+        }),
+      );
+
       await Promise.all(
-        input.pendingSubtasks
-          .filter((st) => Boolean(st.title.trim()))
-          .map(async (st) => {
-            const childInherit = st.checklist_inherit === true;
-            const child = await apiCreate({
-              title: st.title.trim(),
-              initial_prompt: st.initial_prompt,
-              status: input.status,
-              priority: st.priority,
-              task_type: st.task_type,
-              parent_id: task.id,
-              ...(input.project_id ? { project_id: input.project_id } : {}),
-              runner: input.runner,
-              cursor_model: input.cursor_model,
-              ...(childInherit ? { checklist_inherit: true } : {}),
+        created
+          .filter(({ st }) => st.depends_on_sibling_indices.length > 0)
+          .map(async ({ draftIndex, id, st }) => {
+            const deps = materializeSubtaskDependsOn({
+              waitForParent: input.subtasks_wait_for_parent,
+              parentId: task.id,
+              siblingIndices: st.depends_on_sibling_indices,
+              siblingIdsByIndex,
+              selfIndex: draftIndex,
             });
-            if (!childInherit) {
-              await addChecklistItems(child.id, st.checklistItems);
-            }
+            await apiPatchTask(id, { depends_on: deps });
           }),
       );
       return task;
@@ -602,6 +636,7 @@ export function useTaskCreateFlow() {
         checklistInherit: false,
         checklistItems: newChecklistItems,
         pendingSubtasks,
+        subtasksWaitForParent,
         latestEvaluation: latestDraftEvaluation,
         runner: newTaskRunner,
         cursorModel: newTaskCursorModel,
@@ -627,6 +662,7 @@ export function useTaskCreateFlow() {
       newProjectID,
       newProjectContextItemIDs,
       pendingSubtasks,
+      subtasksWaitForParent,
     ],
   );
 
@@ -656,7 +692,9 @@ export function useTaskCreateFlow() {
           task_type: st.task_type,
           checklist_items: st.checklistItems,
           checklist_inherit: st.checklist_inherit,
+          depends_on_sibling_indices: st.depends_on_sibling_indices,
         })),
+        ...(subtasksWaitForParent ? { subtasks_wait_for_parent: true } : {}),
         ...(latestDraftEvaluation
           ? {
               latest_evaluation: {
@@ -693,6 +731,7 @@ export function useTaskCreateFlow() {
     newProjectID,
     newProjectContextItemIDs,
     pendingSubtasks,
+    subtasksWaitForParent,
   ]);
 
   const saveDraftNow = useCallback(() => {
@@ -811,6 +850,7 @@ export function useTaskCreateFlow() {
       draft_id: newDraftID,
       checklistItems: newChecklistItems,
       pendingSubtasks,
+      subtasks_wait_for_parent: subtasksWaitForParent,
       runner: newTaskRunner.trim() || "cursor",
       cursor_model: newTaskCursorModel.trim(),
       project_id: newProjectID.trim(),
@@ -858,6 +898,7 @@ export function useTaskCreateFlow() {
       task_type: st.task_type,
       checklistItems: st.checklist_items,
       checklist_inherit: st.checklist_inherit,
+      depends_on_sibling_indices: st.depends_on_sibling_indices ?? [],
     }));
     const latestEvaluation = draft.payload.latest_evaluation
       ? {
@@ -905,6 +946,7 @@ export function useTaskCreateFlow() {
     // as empty/false.
     setNewChecklistItems(draft.payload.checklist_items ?? []);
     setPendingSubtasks(pendingSubtasks);
+    setSubtasksWaitForParent(draft.payload.subtasks_wait_for_parent === true);
     setLatestDraftEvaluation(latestEvaluation);
     // Project + selected context items are optional on legacy drafts; fall
     // back to the default project / empty selection so the REFERENCES block
@@ -948,6 +990,7 @@ export function useTaskCreateFlow() {
         checklistInherit: false,
         checklistItems: draft.payload.checklist_items ?? [],
         pendingSubtasks,
+        subtasksWaitForParent: draft.payload.subtasks_wait_for_parent === true,
         latestEvaluation,
         dmapConfig: {
           commitLimit: String(
@@ -1031,7 +1074,17 @@ export function useTaskCreateFlow() {
   );
 
   const removePendingSubtask = useCallback((index: number) => {
-    setPendingSubtasks((prev) => prev.filter((_, i) => i !== index));
+    setPendingSubtasks((prev) =>
+      prev
+        .filter((_, i) => i !== index)
+        .map((st) => ({
+          ...st,
+          depends_on_sibling_indices: remapPendingSubtaskSiblingIndices(
+            st.depends_on_sibling_indices,
+            index,
+          ),
+        })),
+    );
   }, []);
 
   const createPending = createMutation.isPending;
@@ -1132,6 +1185,8 @@ export function useTaskCreateFlow() {
     newChecklistItems,
     latestDraftEvaluation,
     pendingSubtasks,
+    subtasksWaitForParent,
+    setSubtasksWaitForParent,
     addPendingSubtask,
     updatePendingSubtask,
     removePendingSubtask,

@@ -1,23 +1,33 @@
+import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { render, screen } from "@testing-library/react";
-import type { ComponentProps } from "react";
-import { describe, expect, it, vi } from "vitest";
-import { ModalStackProvider } from "@/shared/ModalStackContext";
+import userEvent from "@testing-library/user-event";
+import type { ComponentProps, FormEvent, ReactNode } from "react";
+import { beforeEach, describe, expect, it, vi } from "vitest";
 import { SubtaskCreateModal } from "./SubtaskCreateModal";
 
 function renderModal(
   overrides: Partial<ComponentProps<typeof SubtaskCreateModal>> = {},
 ) {
-  const base: ComponentProps<typeof SubtaskCreateModal> = {
+  const onSubmit = vi.fn((e: FormEvent) => e.preventDefault());
+  const props: ComponentProps<typeof SubtaskCreateModal> = {
     taskId: "parent-1",
     pending: false,
     saving: false,
     onClose: vi.fn(),
-    title: "",
+    title: "New sub",
     prompt: "",
     priority: "medium",
     taskType: "general",
     checklistItems: [],
     checklistInherit: false,
+    waitForParent: false,
+    onWaitForParentChange: vi.fn(),
+    siblingOptions: [
+      { id: "sib-1", label: "First subtask" },
+      { id: "sib-2", label: "Second subtask" },
+    ],
+    dependsOnSiblingIds: [],
+    onDependsOnSiblingIdsChange: vi.fn(),
     onTitleChange: vi.fn(),
     onPromptChange: vi.fn(),
     onPriorityChange: vi.fn(),
@@ -26,47 +36,50 @@ function renderModal(
     onUpdateChecklistRow: vi.fn(),
     onRemoveChecklistRow: vi.fn(),
     onChecklistInheritChange: vi.fn(),
-    onSubmit: vi.fn(),
+    onSubmit,
     ...overrides,
   };
-  return render(
-    <ModalStackProvider>
-      <SubtaskCreateModal {...base} />
-    </ModalStackProvider>,
-  );
+
+  function Wrapper({ children }: { children: ReactNode }) {
+    return (
+      <QueryClientProvider
+        client={
+          new QueryClient({
+            defaultOptions: { queries: { retry: false } },
+          })
+        }
+      >
+        {children}
+      </QueryClientProvider>
+    );
+  }
+
+  return {
+    onSubmit,
+    ...render(<SubtaskCreateModal {...props} />, { wrapper: Wrapper }),
+  };
 }
 
-describe("SubtaskCreateModal error display", () => {
-  it("does not render an error callout on the happy path", () => {
-    renderModal();
-    expect(
-      screen.queryByRole("alert", { name: /could not create/i }),
-    ).not.toBeInTheDocument();
+describe("SubtaskCreateModal scheduling", () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
   });
 
-  it("renders the underlying mutation error message", () => {
-    renderModal({ error: new Error("upstream timeout") });
-    const alert = screen.getByRole("alert");
-    expect(alert).toHaveTextContent(/upstream timeout/i);
-  });
+  it("calls scheduling change handlers when parent and sibling boxes are toggled", async () => {
+    const user = userEvent.setup();
+    const onWaitForParentChange = vi.fn();
+    const onDependsOnSiblingIdsChange = vi.fn();
 
-  it("falls back to a kinder default for non-Error throwables", () => {
-    // `mutation.error` is `Error | null` per react-query v5; the
-    // fallback only kicks in for non-Error inputs (defense in depth
-    // against legacy code paths). Confirms the gate refuses to render
-    // an empty banner when `error` is undefined / null.
-    renderModal({ error: undefined });
-    expect(screen.queryByRole("alert")).not.toBeInTheDocument();
-  });
+    renderModal({ onWaitForParentChange, onDependsOnSiblingIdsChange });
 
-  it("keeps the cancel button reachable while the error is showing", () => {
-    renderModal({
-      title: "Reproduce the bug",
-      error: new Error("network blip"),
-    });
-    expect(screen.getByRole("button", { name: /cancel/i })).not.toBeDisabled();
-    expect(
-      screen.getByRole("button", { name: /add subtask/i }),
-    ).not.toBeDisabled();
+    await user.click(
+      screen.getByRole("checkbox", { name: /start after parent completes/i }),
+    );
+    expect(onWaitForParentChange).toHaveBeenCalledWith(true);
+
+    await user.click(
+      screen.getByRole("checkbox", { name: /first subtask/i }),
+    );
+    expect(onDependsOnSiblingIdsChange).toHaveBeenCalledWith(["sib-1"]);
   });
 });

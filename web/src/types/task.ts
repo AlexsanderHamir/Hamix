@@ -405,7 +405,11 @@ export type TaskDraftPayload = {
     task_type: TaskType;
     checklist_items: string[];
     checklist_inherit: boolean;
+    /** Draft-local indices of other pending subtasks (create flow). */
+    depends_on_sibling_indices?: number[];
   }>;
+  /** When true, every pending subtask waits for the parent task to complete. */
+  subtasks_wait_for_parent?: boolean;
   /**
    * Optional in older drafts. When present, the draft restores the project
    * the operator was composing against on save. Empty string means "no

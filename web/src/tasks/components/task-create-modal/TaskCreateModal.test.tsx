@@ -43,6 +43,8 @@ function renderModal(props?: Partial<ComponentProps<typeof TaskCreateModal>>) {
     onUpdateChecklistRow: vi.fn(),
     onRemoveChecklistRow: vi.fn(),
     pendingSubtasks: [],
+    subtasksWaitForParent: false,
+    onSubtasksWaitForParentChange: vi.fn(),
     onAddPendingSubtask: vi.fn(),
     onUpdatePendingSubtask: vi.fn(),
     onRemovePendingSubtask: vi.fn(),

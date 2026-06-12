@@ -123,3 +123,83 @@ select {
   padding-right: 2rem;
 }
 
+.task-subtask-scheduling-disclosure {
+  margin: 0.65rem 0 0.75rem;
+  border: 1px solid var(--border-hairline);
+  border-radius: var(--radius-md);
+  background: var(--bg-subtle);
+}
+
+.task-subtask-scheduling-disclosure__summary {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.35rem 0.5rem;
+  padding: 0.55rem 0.75rem;
+  font-size: var(--text-help);
+  font-weight: 500;
+  letter-spacing: -0.01em;
+  color: var(--text-secondary);
+  cursor: pointer;
+  list-style: none;
+  transition: color var(--duration-normal) var(--ease-out);
+}
+
+.task-subtask-scheduling-disclosure__summary::-webkit-details-marker {
+  display: none;
+}
+
+.task-subtask-scheduling-disclosure__summary::before {
+  content: "";
+  width: 0.35rem;
+  height: 0.35rem;
+  margin-right: 0.15rem;
+  border-right: 1.5px solid var(--text-tertiary);
+  border-bottom: 1.5px solid var(--text-tertiary);
+  transform: rotate(-45deg);
+  transition: transform var(--duration-normal) var(--ease-out);
+}
+
+.task-subtask-scheduling-disclosure[open] .task-subtask-scheduling-disclosure__summary::before {
+  transform: rotate(45deg);
+}
+
+.task-subtask-scheduling-disclosure__summary:focus-visible {
+  outline: none;
+  box-shadow: inset 0 0 0 2px var(--focus-ring);
+  border-radius: var(--radius-md);
+}
+
+.task-subtask-scheduling-disclosure__body {
+  display: flex;
+  flex-direction: column;
+  gap: 0.65rem;
+  padding: 0 0.75rem 0.75rem;
+  border-top: 1px solid var(--border-hairline);
+}
+
+.task-subtask-scheduling__row {
+  margin: 0;
+}
+
+.task-subtask-scheduling__hint {
+  margin: 0 0 0.35rem;
+  font-size: var(--text-xs);
+  color: var(--text-tertiary);
+}
+
+.task-subtask-scheduling__list {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .task-subtask-scheduling-disclosure__summary::before {
+    transition: none;
+  }
+}
+

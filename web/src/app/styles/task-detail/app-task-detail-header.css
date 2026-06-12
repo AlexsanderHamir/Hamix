@@ -54,6 +54,10 @@
   max-width: min(100%, 28rem);
 }
 
+.task-detail-meta .task-list-priority-dot {
+  flex-shrink: 0;
+}
+
 /* Runtime identity chip in the header — cap width for long model names. */
 .task-detail-runtime-chip {
   max-width: min(100%, 18rem);

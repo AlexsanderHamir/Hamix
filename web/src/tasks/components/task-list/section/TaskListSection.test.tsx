@@ -133,9 +133,6 @@ describe("TaskListSection", () => {
     // is caught here.
     expect(screen.getByText(/no tasks yet/i)).toBeInTheDocument();
     expect(
-      screen.getByText(/create your first task to get started/i),
-    ).toBeInTheDocument();
-    expect(
       screen.getByRole("region", { name: /^all tasks$/i }),
     ).toBeInTheDocument();
     expect(

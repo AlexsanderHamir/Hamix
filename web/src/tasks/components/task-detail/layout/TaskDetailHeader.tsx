@@ -1,10 +1,11 @@
 import { Link } from "react-router-dom";
 import { cycleRunnerChipClass, runnerLabel } from "@/observability";
+import { Badge } from "@/components/ui";
 import type { Task } from "@/types";
 import {
-  priorityPillClass,
+  priorityDotClass,
+  statusListLabel,
   statusNeedsUserInput,
-  statusPillClass,
 } from "../../../task-display";
 
 type TaskDetailHeaderTask = Pick<
@@ -51,15 +52,17 @@ export function TaskDetailHeader({ task }: Props) {
           <span>{task.title}</span>
         </h2>
         <div className="task-detail-meta">
-          <span
-            className={statusPillClass(task.status)}
+          <Badge
+            status={task.status}
             data-needs-user={needsUser ? "true" : undefined}
           >
-            {task.status}
-          </span>
-          <span className={priorityPillClass(task.priority)}>
-            {task.priority}
-          </span>
+            {statusListLabel(task.status)}
+          </Badge>
+          <span
+            className={priorityDotClass(task.priority)}
+            title={task.priority}
+            aria-label={`Priority: ${task.priority}`}
+          />
           <span
             className={`cell-pill ${cycleRunnerChipClass()} task-detail-runtime-chip`}
             data-testid="task-detail-runtime"

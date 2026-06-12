@@ -37,52 +37,68 @@ export function SubtaskSchedulingFields({
     onSelectedSiblingIdsChange(selectedSiblingIds.filter((x) => x !== id));
   }
 
+  const hasSiblings = siblingOptions.length > 0;
+  if (!showWaitForParent && !hasSiblings) {
+    return null;
+  }
+
   return (
-    <fieldset className="task-subtask-scheduling" disabled={disabled}>
-      <legend className="task-subtask-scheduling__legend">
-        Execution order
+    <details className="task-subtask-scheduling-disclosure">
+      <summary className="task-subtask-scheduling-disclosure__summary">
+        Advanced scheduling
         <FieldRequirementBadge requirement="optional" />
-      </legend>
-      {showWaitForParent ? (
-        <label className="checkbox-label task-subtask-scheduling__row">
-          <input
-            type="checkbox"
-            checked={waitForParent}
-            onChange={(ev) => onWaitForParentChange(ev.target.checked)}
-            disabled={disabled}
-          />
-          <span className="checkbox-label-body">
-            Start after parent criteria pass
-          </span>
-        </label>
-      ) : null}
-      {siblingOptions.length > 0 ? (
-        <div
-          className="task-subtask-scheduling__siblings"
-          role="group"
-          aria-labelledby={groupId}
-        >
-          <p id={groupId} className="task-subtask-scheduling__hint">
-            Start after these subtasks complete
-          </p>
-          <ul className="task-subtask-scheduling__list">
-            {siblingOptions.map((opt) => (
-              <li key={opt.id}>
-                <label className="checkbox-label task-subtask-scheduling__row">
-                  <input
-                    type="checkbox"
-                    checked={selectedSiblingIds.includes(opt.id)}
-                    onChange={(ev) => toggleSibling(opt.id, ev.target.checked)}
-                    disabled={disabled}
-                  />
-                  <span className="checkbox-label-body">{opt.label}</span>
-                </label>
-              </li>
-            ))}
-          </ul>
-        </div>
-      ) : null}
-    </fieldset>
+      </summary>
+      <div
+        className="task-subtask-scheduling-disclosure__body task-subtask-scheduling"
+        role="group"
+        aria-labelledby={`${idsPrefix}-scheduling-label`}
+      >
+        <p id={`${idsPrefix}-scheduling-label`} className="visually-hidden">
+          Advanced scheduling options
+        </p>
+        {showWaitForParent ? (
+          <label className="checkbox-label task-subtask-scheduling__row">
+            <input
+              type="checkbox"
+              checked={waitForParent}
+              onChange={(ev) => onWaitForParentChange(ev.target.checked)}
+              disabled={disabled}
+            />
+            <span className="checkbox-label-body">
+              Start after parent criteria pass
+            </span>
+          </label>
+        ) : null}
+        {hasSiblings ? (
+          <div
+            className="task-subtask-scheduling__siblings"
+            role="group"
+            aria-labelledby={groupId}
+          >
+            <p id={groupId} className="task-subtask-scheduling__hint">
+              Start after these subtasks complete
+            </p>
+            <ul className="task-subtask-scheduling__list">
+              {siblingOptions.map((opt) => (
+                <li key={opt.id}>
+                  <label className="checkbox-label task-subtask-scheduling__row">
+                    <input
+                      type="checkbox"
+                      checked={selectedSiblingIds.includes(opt.id)}
+                      onChange={(ev) =>
+                        toggleSibling(opt.id, ev.target.checked)
+                      }
+                      disabled={disabled}
+                    />
+                    <span className="checkbox-label-body">{opt.label}</span>
+                  </label>
+                </li>
+              ))}
+            </ul>
+          </div>
+        ) : null}
+      </div>
+    </details>
   );
 }
 
@@ -106,43 +122,55 @@ export function PendingSubtaskSiblingPicker({
 }: DraftIndexProps) {
   const groupId = `${idsPrefix}-pending-sibling-deps`;
   const options = pendingSubtasks
-    .map((st, index) => ({ index, label: st.title.trim() || `Subtask ${index + 1}` }))
+    .map((st, index) => ({
+      index,
+      label: st.title.trim() || `Subtask ${index + 1}`,
+    }))
     .filter((opt) => selfIndex === null || opt.index !== selfIndex);
 
   if (options.length === 0) return null;
 
   function toggle(index: number, checked: boolean) {
     if (checked) {
-      onSelectedIndicesChange([...selectedIndices, index].sort((a, b) => a - b));
+      onSelectedIndicesChange(
+        [...selectedIndices, index].sort((a, b) => a - b),
+      );
       return;
     }
     onSelectedIndicesChange(selectedIndices.filter((i) => i !== index));
   }
 
   return (
-    <div
-      className="task-subtask-scheduling__siblings"
-      role="group"
-      aria-labelledby={groupId}
-    >
-      <p id={groupId} className="task-subtask-scheduling__hint">
-        Start after these subtasks complete
-      </p>
-      <ul className="task-subtask-scheduling__list">
-        {options.map((opt) => (
-          <li key={opt.index}>
-            <label className="checkbox-label task-subtask-scheduling__row">
-              <input
-                type="checkbox"
-                checked={selectedIndices.includes(opt.index)}
-                onChange={(ev) => toggle(opt.index, ev.target.checked)}
-                disabled={disabled}
-              />
-              <span className="checkbox-label-body">{opt.label}</span>
-            </label>
-          </li>
-        ))}
-      </ul>
-    </div>
+    <details className="task-subtask-scheduling-disclosure">
+      <summary className="task-subtask-scheduling-disclosure__summary">
+        Advanced scheduling
+      </summary>
+      <div className="task-subtask-scheduling-disclosure__body">
+        <div
+          className="task-subtask-scheduling__siblings"
+          role="group"
+          aria-labelledby={groupId}
+        >
+          <p id={groupId} className="task-subtask-scheduling__hint">
+            Start after these subtasks complete
+          </p>
+          <ul className="task-subtask-scheduling__list">
+            {options.map((opt) => (
+              <li key={opt.index}>
+                <label className="checkbox-label task-subtask-scheduling__row">
+                  <input
+                    type="checkbox"
+                    checked={selectedIndices.includes(opt.index)}
+                    onChange={(ev) => toggle(opt.index, ev.target.checked)}
+                    disabled={disabled}
+                  />
+                  <span className="checkbox-label-body">{opt.label}</span>
+                </label>
+              </li>
+            ))}
+          </ul>
+        </div>
+      </div>
+    </details>
   );
 }

@@ -1,6 +1,7 @@
 import { useEffect, useMemo } from "react";
 import { useSearchParams } from "react-router-dom";
 import { useDocumentTitle } from "@/shared/useDocumentTitle";
+import { Button } from "@/components/ui";
 import { TaskListSection } from "../components/task-list";
 import { useTasksApp } from "../hooks/useTasksApp";
 import { useProjects } from "@/projects";
@@ -71,14 +72,14 @@ export function TaskHome({ app }: Props) {
 
   const listActions = useMemo(
     () => (
-      <button
-        type="button"
+      <Button
+        variant="primary"
         className="task-home-new-task-btn"
         onClick={() => openCreateModal()}
         disabled={createModalOpen}
       >
         New task
-      </button>
+      </Button>
     ),
     [openCreateModal, createModalOpen],
   );

@@ -169,7 +169,7 @@
   padding: var(--layout-panel-padding-y) var(--layout-gutter-x);
   margin-bottom: var(--layout-gutter-x);
   border: 1px solid var(--border-hairline);
-  box-shadow: var(--shadow-card);
+  box-shadow: none;
   transition: border-color var(--duration-normal) var(--ease-out);
 }
 

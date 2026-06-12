@@ -43,50 +43,56 @@ export function TaskCreateModalPendingSubtasksField({
       </div>
       {pendingSubtasks.length > 0 ? (
         <>
-          <label className="checkbox-label task-subtask-scheduling__row">
-            <input
-              type="checkbox"
-              checked={subtasksWaitForParent}
-              onChange={(ev) => onSubtasksWaitForParentChange(ev.target.checked)}
-              disabled={disabled}
-            />
-            <span className="checkbox-label-body">
-            Start subtasks after parent criteria pass
-            </span>
-          </label>
+          <details className="task-subtask-scheduling-disclosure">
+            <summary className="task-subtask-scheduling-disclosure__summary">
+              Advanced scheduling
+            </summary>
+            <div className="task-subtask-scheduling-disclosure__body">
+              <label className="checkbox-label task-subtask-scheduling__row">
+                <input
+                  type="checkbox"
+                  checked={subtasksWaitForParent}
+                  onChange={(ev) =>
+                    onSubtasksWaitForParentChange(ev.target.checked)
+                  }
+                  disabled={disabled}
+                />
+                <span className="checkbox-label-body">
+                  Start subtasks after parent criteria pass
+                </span>
+              </label>
+            </div>
+          </details>
           <ul className="task-checklist-list" aria-labelledby={SUBTASKS_HEADING_ID}>
-          {pendingSubtasks.map((d, index) => (
-            <li
-              key={`${index}-${d.title}`}
-              className="task-checklist-row task-create-pending-subtask-row"
-            >
-              <span className="task-checklist-label">{d.title}</span>
-              <div className="task-create-pending-subtask-actions">
-                <button
-                  type="button"
-                  className="task-detail-checklist-add-btn"
-                  disabled={disabled}
-                  onClick={() => onOpenNestedEdit(index)}
-                >
-                  Edit
-                </button>
-                <button
-                  type="button"
-                  className="task-create-checklist-remove"
-                  disabled={disabled}
-                  onClick={() => onRemovePendingSubtask(index)}
-                >
-                  Remove
-                </button>
-              </div>
-            </li>
-          ))}
+            {pendingSubtasks.map((d, index) => (
+              <li
+                key={`${index}-${d.title}`}
+                className="task-checklist-row task-create-pending-subtask-row"
+              >
+                <span className="task-checklist-label">{d.title}</span>
+                <div className="task-create-pending-subtask-actions">
+                  <button
+                    type="button"
+                    className="task-detail-checklist-add-btn"
+                    disabled={disabled}
+                    onClick={() => onOpenNestedEdit(index)}
+                  >
+                    Edit
+                  </button>
+                  <button
+                    type="button"
+                    className="task-create-checklist-remove"
+                    disabled={disabled}
+                    onClick={() => onRemovePendingSubtask(index)}
+                  >
+                    Remove
+                  </button>
+                </div>
+              </li>
+            ))}
           </ul>
         </>
       ) : (
-        // Empty hint: gives the section a calm presence instead of a bare
-        // heading + button + dead space. Tone matches the SchedulePicker
-        // "Picks up immediately…" caption.
         <p
           className="task-create-subtasks-empty muted"
           aria-describedby={SUBTASKS_HEADING_ID}

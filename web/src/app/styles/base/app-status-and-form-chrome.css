@@ -1,6 +1,6 @@
 /* Composed system-status chip used in the app header. */
 .system-status-chip {
-  margin-left: auto;
+  margin-left: 0;
   color: inherit;
 }
 .system-status-chip-main {

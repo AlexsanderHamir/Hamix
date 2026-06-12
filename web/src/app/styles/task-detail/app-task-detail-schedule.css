@@ -47,6 +47,11 @@
   box-shadow: 0 0 0 2px var(--info-soft);
 }
 
+.task-detail-schedule-badge--phase .task-detail-schedule-badge-dot {
+  background: var(--success);
+  box-shadow: 0 0 0 2px var(--success-soft);
+}
+
 .task-detail-schedule-empty {
   font-size: var(--text-sm);
 }

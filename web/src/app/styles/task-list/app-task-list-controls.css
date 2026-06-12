@@ -14,10 +14,10 @@
   display: flex;
   flex-direction: column;
   margin-bottom: var(--space-5);
-  border: 1px solid var(--border-hairline);
-  border-radius: var(--radius-lg);
-  background: var(--surface-1);
-  overflow: hidden;
+  border: none;
+  border-radius: 0;
+  background: transparent;
+  overflow: visible;
 }
 
 .task-list-section-head {
@@ -27,7 +27,7 @@
   justify-content: space-between;
   gap: var(--space-3) var(--space-4);
   margin-bottom: 0;
-  padding: var(--space-4) var(--space-5);
+  padding: 0 0 var(--space-4);
   border-bottom: 1px solid var(--border-hairline);
 }
 
@@ -55,22 +55,23 @@
 }
 
 .task-list-section-actions .task-home-new-task-btn {
+  /* Primary CTA — near-black per redesign.mdc (not brand purple) */
   min-height: 2.25rem;
   padding: 0.4rem 0.85rem;
-  color: var(--text-on-brand);
-  background: var(--brand);
-  border: 1px solid var(--brand-border-cta);
+  color: var(--control-primary-fg);
+  background: var(--control-primary-bg);
+  border: 1px solid transparent;
 }
 
 .task-list-section-actions .task-home-new-task-btn:not(:disabled):hover {
-  background: var(--brand-hover);
+  background: var(--control-primary-hover-bg);
 }
 
 /* —— Inline scoreboard (TaskListStatsStrip). Single scan line: value + label. —— */
 
 .task-list-stats-strip {
   margin-bottom: 0;
-  padding: var(--space-2) var(--space-5);
+  padding: var(--space-2) 0;
   border-bottom: 1px solid var(--border-hairline);
   background: transparent;
 }
@@ -148,10 +149,10 @@
   align-items: center;
   gap: var(--space-3) var(--space-4);
   margin-bottom: 0;
-  padding: var(--space-3) var(--space-5);
+  padding: var(--space-3) 0;
   border: none;
   border-radius: 0;
-  background: var(--bg-subtle);
+  background: transparent;
 }
 
 .task-list-filters__controls {

@@ -99,15 +99,22 @@
   position: sticky;
   top: 0;
   z-index: 1;
-  padding: 0.55rem 0.75rem;
+  padding: var(--table-header-padding-y-top) var(--table-cell-padding-x)
+    var(--table-header-padding-y-bottom);
   font-size: var(--text-xs);
   font-weight: 600;
-  text-transform: none;
-  letter-spacing: 0.01em;
+  text-transform: uppercase;
+  letter-spacing: var(--data-caps-letter-spacing);
   color: var(--text-secondary);
   background: var(--bg-elevated);
   border-bottom: 1px solid var(--border-hairline);
   white-space: nowrap;
+}
+
+@media (hover: hover) {
+  .task-list-table tbody tr.task-list-row--navigable:hover {
+    background: var(--bg-subtle);
+  }
 }
 
 .task-list-table tbody td {

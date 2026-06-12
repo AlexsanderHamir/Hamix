@@ -1,5 +1,6 @@
 /* App styles split by area; edit grouped partials under ./styles/. */
 @import "./styles/app-design-tokens.css";
+@import "../components/ui/ui.css";
 @import "./styles/app-base.css";
 @import "./styles/app-task-create-and-fields.css";
 @import "./styles/app-custom-select.css";

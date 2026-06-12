@@ -77,4 +77,22 @@ describe("TaskDetailSchedule (read-only)", () => {
     expect(screen.getByTestId("task-detail-schedule-badge")).toBeInTheDocument();
     expect(screen.queryByRole("button")).not.toBeInTheDocument();
   });
+
+  it("shows phase complete timestamp when criteria_satisfied_at is set", () => {
+    const { Wrapper } = createWrapper();
+    render(
+      <Wrapper>
+        <TaskDetailSchedule
+          task={{
+            status: "done",
+            pickup_not_before: undefined,
+            criteria_satisfied_at: "2026-04-22T13:00:00Z",
+          }}
+        />
+      </Wrapper>,
+    );
+    const badge = screen.getByTestId("task-detail-phase-complete");
+    expect(badge).toHaveTextContent(/phase complete/i);
+    expect(badge).toHaveTextContent(/09:00/);
+  });
 });

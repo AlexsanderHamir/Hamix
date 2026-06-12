@@ -384,7 +384,9 @@ describe("TaskDetailPage", () => {
       await screen.findByRole("heading", { name: /^blocked task$/i }),
     ).toBeInTheDocument();
     expect(await screen.findByText(/the agent is blocked/i)).toBeInTheDocument();
-    expect(screen.getByText("blocked")).toHaveAttribute(
+    expect(
+      screen.getByText("Blocked", { selector: ".ui-badge" }),
+    ).toHaveAttribute(
       "data-needs-user",
       "true",
     );

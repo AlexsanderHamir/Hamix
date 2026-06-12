@@ -1,6 +1,7 @@
 import { Link } from "react-router-dom";
+import { Badge } from "@/components/ui";
 import type { TaskDependencySummary } from "../../../task-query/resolveTaskDependencySummaries";
-import { statusPillClass } from "../../../task-display";
+import { statusListLabel } from "../../../task-display";
 
 type Props = {
   dependencies: TaskDependencySummary[];
@@ -40,7 +41,7 @@ export function TaskDependenciesPanel({ dependencies }: Props) {
               >
                 {dep.title}
               </Link>
-              <span className={statusPillClass(dep.status)}>{dep.status}</span>
+              <Badge status={dep.status}>{statusListLabel(dep.status)}</Badge>
             </li>
           ))}
         </ul>

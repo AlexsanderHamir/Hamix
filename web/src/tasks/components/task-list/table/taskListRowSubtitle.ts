@@ -1,4 +1,4 @@
-import type { Status } from "@/types";
+export { statusListLabel } from "../../../task-display/statusListLabel";
 
 /**
  * Secondary line under the task title: subtask scope or a one-line prompt
@@ -31,23 +31,4 @@ export function taskListRowSubtitle(input: {
     return tail;
   }
   return undefined;
-}
-
-export function statusListLabel(status: Status): string {
-  switch (status) {
-    case "ready":
-      return "Ready";
-    case "running":
-      return "In progress";
-    case "blocked":
-      return "Blocked";
-    case "review":
-      return "Review";
-    case "done":
-      return "Done";
-    case "failed":
-      return "Failed";
-    case "on_hold":
-      return "On hold";
-  }
 }

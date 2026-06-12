@@ -238,7 +238,7 @@ button.task-detail-btn-delete:focus-visible {
    page height proportionally — the eye now has a clear "this is a new
    section" cue every time. */
 .task-detail-section {
-  padding: var(--space-6) 0 var(--space-4);
+  padding: var(--space-8) 0 var(--space-4);
   border-top: 1px solid var(--border-hairline);
 }
 

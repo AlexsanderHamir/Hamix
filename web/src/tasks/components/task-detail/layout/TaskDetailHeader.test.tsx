@@ -21,8 +21,8 @@ describe("TaskDetailHeader", () => {
     );
 
     expect(screen.getByRole("heading", { name: /^my task$/i })).toBeInTheDocument();
-    expect(screen.getByText("ready")).toBeInTheDocument();
-    expect(screen.getByText("high")).toBeInTheDocument();
+    expect(screen.getByText("Ready")).toBeInTheDocument();
+    expect(screen.getByLabelText("Priority: high")).toBeInTheDocument();
     expect(screen.getByRole("link", { name: /^all tasks$/i })).toHaveAttribute(
       "href",
       "/",
@@ -48,7 +48,9 @@ describe("TaskDetailHeader", () => {
       </MemoryRouter>,
     );
 
-    expect(screen.getByText("blocked")).toHaveAttribute("data-needs-user", "true");
+    expect(
+      screen.getByText("Blocked", { selector: ".ui-badge" }),
+    ).toHaveAttribute("data-needs-user", "true");
     // The old standalone stance line is gone — guard against its return.
     expect(screen.queryByText("Agent needs input")).not.toBeInTheDocument();
     expect(screen.queryByText("Informational")).not.toBeInTheDocument();

@@ -5,11 +5,8 @@ import { useTaskDetailPrefetcher } from "@/app/hooks/usePrefetchOnIntent";
 import type { Task } from "@/types";
 import type { TaskWithDepth } from "../../../task-tree";
 import type { DeleteTargetInput } from "../../../hooks/useTaskDeleteFlow";
-import {
-  priorityPillClass,
-  statusNeedsUserInput,
-  statusPillClass,
-} from "../../../task-display";
+import { priorityDotClass, statusNeedsUserInput } from "../../../task-display";
+import { Badge } from "@/components/ui";
 import { TaskListDeleteGlyph, TaskListEditGlyph } from "./TaskListRowActionIcons";
 import { statusListLabel, taskListRowSubtitle } from "./taskListRowSubtitle";
 import { previewTextFromPrompt } from "../../../task-prompt";
@@ -355,7 +352,8 @@ export function TaskListDataTable({
                 <EmptyState
                   className="empty-state--in-table empty-state--task-list-fresh"
                   title="No tasks yet"
-                  description="Create your first task to get started."
+                  description=""
+                  hideIcon
                   action={emptyListAction}
                 />
               </td>
@@ -367,7 +365,8 @@ export function TaskListDataTable({
                   className="empty-state--in-table"
                   icon={<EmptyStateFilterGlyph />}
                   title="No matching tasks"
-                  description="Adjust filters or clear search."
+                  description=""
+                  hideIcon={false}
                 />
               </td>
             </tr>
@@ -481,21 +480,21 @@ export function TaskListDataTable({
                     </Link>
                   </td>
                   <td className="cell-status">
-                    <span
-                      className={`${statusPillClass(t.status)} cell-pill--status-table`}
+                    <Badge
+                      status={t.status}
                       data-needs-user={
                         statusNeedsUserInput(t.status) ? "true" : undefined
                       }
                     >
                       {statusListLabel(t.status)}
-                    </span>
+                    </Badge>
                   </td>
                   <td className="cell-priority">
                     <span
-                      className={`${priorityPillClass(t.priority)} cell-pill--priority-table`}
-                    >
-                      {t.priority}
-                    </span>
+                      className={priorityDotClass(t.priority)}
+                      title={t.priority}
+                      aria-label={`Priority: ${t.priority}`}
+                    />
                   </td>
                   <td className="cell-project">
                     {projectLabel ? (

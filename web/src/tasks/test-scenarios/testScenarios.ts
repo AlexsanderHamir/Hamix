@@ -78,6 +78,28 @@ export type TestScenario = {
   priority: Priority;
   /** Done criteria written into the form's checklist on apply. */
   checklist: string[];
+  /**
+   * When set, toggles “Start subtasks after parent completes” on the create
+   * modal. Omit to leave the operator's current toggle unchanged.
+   */
+  subtasksWaitForParent?: boolean;
+  /**
+   * Pending subtasks to pre-fill on apply. Omit to leave any existing pending
+   * subtasks unchanged. When present, replaces the whole pending-subtask list.
+   */
+  pendingSubtasks?: TestScenarioPendingSubtask[];
+};
+
+/** One pending subtask row in a scheduling-focused test scenario. */
+export type TestScenarioPendingSubtask = {
+  title: string;
+  prompt?: string;
+  priority?: Priority;
+  taskType?: TaskType;
+  checklist?: string[];
+  checklistInherit?: boolean;
+  /** Draft-local indices of other pending subtasks in the same scenario. */
+  dependsOnSiblingIndices?: number[];
 };
 
 /**
@@ -129,6 +151,172 @@ export const TEST_SCENARIOS: TestScenario[] = [
       "TODO_REPORT.md exists at the repository root.",
       "Vendored / generated code is excluded.",
       "Each entry has a file path, a line number, and a summary.",
+    ],
+  },
+
+  // -------- Trivial — T2A subtask scheduling probes --------
+  {
+    id: "trivial.subtask-parent-gate",
+    difficulty: "trivial",
+    title: "Probe: parent gates subtasks",
+    description:
+      "Parent plus two subtasks with “wait for parent” enabled — subtasks should not run until the parent is done.",
+    prompt: [
+      "This is a T2A scheduling probe, not a codebase audit.",
+      "Complete this parent task as quickly as possible: create or update a file at `.agent/subtask-probes/parent-gate-parent.txt` containing a single line `parent done`.",
+      "After submit, watch the task list / detail page: the two subtasks must stay blocked (not picked up by the worker) until this parent task reaches status `done`.",
+    ].join("\n\n"),
+    taskType: "general",
+    priority: "medium",
+    subtasksWaitForParent: true,
+    pendingSubtasks: [
+      {
+        title: "Subtask A (waits on parent)",
+        prompt:
+          "Scheduling probe: write `.agent/subtask-probes/parent-gate-a.txt` with one line `subtask a done`. You should only run after the parent probe is `done`.",
+        priority: "medium",
+        taskType: "general",
+        checklist: ["parent-gate-a.txt exists with the expected line."],
+      },
+      {
+        title: "Subtask B (waits on parent)",
+        prompt:
+          "Scheduling probe: write `.agent/subtask-probes/parent-gate-b.txt` with one line `subtask b done`. You should only run after the parent probe is `done`.",
+        priority: "medium",
+        taskType: "general",
+        checklist: ["parent-gate-b.txt exists with the expected line."],
+      },
+    ],
+    checklist: [
+      "Parent probe file exists under `.agent/subtask-probes/`.",
+      "Both subtasks were created with depends_on including the parent id.",
+      "Worker did not dequeue either subtask until the parent reached `done`.",
+    ],
+  },
+  {
+    id: "trivial.subtask-sibling-chain",
+    difficulty: "trivial",
+    title: "Probe: sibling dependency chain",
+    description:
+      "Three subtasks in a linear A → B → C chain — each waits for the previous sibling to finish.",
+    prompt: [
+      "This is a T2A scheduling probe. The parent completes immediately; ordering is entirely between subtasks.",
+      "Create `.agent/subtask-probes/sibling-chain-parent.txt` with one line `parent done` and mark this parent task complete.",
+      "Do not configure subtasks to wait on the parent — only the sibling chain matters here.",
+    ].join("\n\n"),
+    taskType: "general",
+    priority: "medium",
+    subtasksWaitForParent: false,
+    pendingSubtasks: [
+      {
+        title: "Chain step 1",
+        prompt:
+          "Write `.agent/subtask-probes/sibling-chain-1.txt` with `step 1 done`. No sibling predecessors.",
+        priority: "medium",
+        taskType: "general",
+        checklist: ["sibling-chain-1.txt exists."],
+      },
+      {
+        title: "Chain step 2",
+        prompt:
+          "Write `.agent/subtask-probes/sibling-chain-2.txt` with `step 2 done`. Run only after step 1 is `done`.",
+        priority: "medium",
+        taskType: "general",
+        dependsOnSiblingIndices: [0],
+        checklist: ["sibling-chain-2.txt exists.", "Step 2 ran after step 1."],
+      },
+      {
+        title: "Chain step 3",
+        prompt:
+          "Write `.agent/subtask-probes/sibling-chain-3.txt` with `step 3 done`. Run only after step 2 is `done`.",
+        priority: "medium",
+        taskType: "general",
+        dependsOnSiblingIndices: [1],
+        checklist: ["sibling-chain-3.txt exists.", "Step 3 ran after step 2."],
+      },
+    ],
+    checklist: [
+      "Subtasks were created in order with sibling depends_on edges 1→0 and 2→1.",
+      "Worker ran step 1, then step 2, then step 3 — never out of order.",
+    ],
+  },
+  {
+    id: "trivial.subtask-parent-and-sibling",
+    difficulty: "trivial",
+    title: "Probe: parent gate + sibling gate",
+    description:
+      "Batch parent wait plus subtask B waiting on subtask A — B needs both gates cleared.",
+    prompt: [
+      "T2A combined scheduling probe.",
+      "Create `.agent/subtask-probes/combo-parent.txt` with `parent done`. Subtasks wait for this parent AND subtask B also waits on subtask A.",
+      "Verify subtask B is the last to run.",
+    ].join("\n\n"),
+    taskType: "general",
+    priority: "medium",
+    subtasksWaitForParent: true,
+    pendingSubtasks: [
+      {
+        title: "Combo subtask A",
+        prompt:
+          "Write `.agent/subtask-probes/combo-a.txt` with `combo a done`. Waits on parent only.",
+        priority: "medium",
+        taskType: "general",
+        checklist: ["combo-a.txt exists."],
+      },
+      {
+        title: "Combo subtask B",
+        prompt:
+          "Write `.agent/subtask-probes/combo-b.txt` with `combo b done`. Waits on parent AND subtask A.",
+        priority: "medium",
+        taskType: "general",
+        dependsOnSiblingIndices: [0],
+        checklist: [
+          "combo-b.txt exists.",
+          "B ran only after parent and A were both `done`.",
+        ],
+      },
+    ],
+    checklist: [
+      "Batch “wait for parent” was enabled on create.",
+      "Subtask B depends_on includes both parent id and subtask A id.",
+      "Worker order was: parent → A → B.",
+    ],
+  },
+  {
+    id: "trivial.subtask-parallel-baseline",
+    difficulty: "trivial",
+    title: "Probe: parallel subtasks (no deps)",
+    description:
+      "Control case — two independent subtasks with no scheduling gates; worker FIFO among eligible tasks.",
+    prompt: [
+      "T2A baseline probe: no parent or sibling scheduling gates.",
+      "Create `.agent/subtask-probes/parallel-parent.txt` with `parent done`.",
+      "Both subtasks should be eligible as soon as they are created (subject to single-worker FIFO).",
+    ].join("\n\n"),
+    taskType: "general",
+    priority: "medium",
+    subtasksWaitForParent: false,
+    pendingSubtasks: [
+      {
+        title: "Parallel subtask 1",
+        prompt:
+          "Write `.agent/subtask-probes/parallel-1.txt` with `parallel 1 done`.",
+        priority: "medium",
+        taskType: "general",
+        checklist: ["parallel-1.txt exists."],
+      },
+      {
+        title: "Parallel subtask 2",
+        prompt:
+          "Write `.agent/subtask-probes/parallel-2.txt` with `parallel 2 done`.",
+        priority: "medium",
+        taskType: "general",
+        checklist: ["parallel-2.txt exists."],
+      },
+    ],
+    checklist: [
+      "Neither subtask has depends_on edges to parent or siblings.",
+      "Both subtasks became worker-eligible without waiting on the parent.",
     ],
   },
 

@@ -375,33 +375,37 @@ export function useTaskCreateFlow() {
         .filter(({ st }) => Boolean(st.title.trim()));
 
       const siblingIdsByIndex = new Map<number, string>();
-      const created = await Promise.all(
-        entries.map(async ({ st, draftIndex }) => {
-          const childInherit = st.checklist_inherit === true;
-          const postDepends =
-            input.subtasks_wait_for_parent && task.id
-              ? [task.id]
-              : undefined;
-          const child = await apiCreate({
-            title: st.title.trim(),
-            initial_prompt: st.initial_prompt,
-            status: input.status,
-            priority: st.priority,
-            task_type: st.task_type,
-            parent_id: task.id,
-            ...(input.project_id ? { project_id: input.project_id } : {}),
-            runner: input.runner,
-            cursor_model: input.cursor_model,
-            ...(childInherit ? { checklist_inherit: true } : {}),
-            ...(postDepends ? { depends_on: postDepends } : {}),
-          });
-          if (!childInherit) {
-            await addChecklistItems(child.id, st.checklistItems);
-          }
-          siblingIdsByIndex.set(draftIndex, child.id);
-          return { draftIndex, id: child.id, st };
-        }),
-      );
+      // Sequential, not parallel: each subtask create appends a subtask_added
+      // event on the parent via SELECT … FOR UPDATE on the parent row; parallel
+      // POSTs deadlock on Postgres (see taskapi logs).
+      const created: Array<{
+        draftIndex: number;
+        id: string;
+        st: (typeof entries)[number]["st"];
+      }> = [];
+      for (const { st, draftIndex } of entries) {
+        const childInherit = st.checklist_inherit === true;
+        const postDepends =
+          input.subtasks_wait_for_parent && task.id ? [task.id] : undefined;
+        const child = await apiCreate({
+          title: st.title.trim(),
+          initial_prompt: st.initial_prompt,
+          status: input.status,
+          priority: st.priority,
+          task_type: st.task_type,
+          parent_id: task.id,
+          ...(input.project_id ? { project_id: input.project_id } : {}),
+          runner: input.runner,
+          cursor_model: input.cursor_model,
+          ...(childInherit ? { checklist_inherit: true } : {}),
+          ...(postDepends ? { depends_on: postDepends } : {}),
+        });
+        if (!childInherit) {
+          await addChecklistItems(child.id, st.checklistItems);
+        }
+        siblingIdsByIndex.set(draftIndex, child.id);
+        created.push({ draftIndex, id: child.id, st });
+      }
 
       await Promise.all(
         created
@@ -1018,10 +1022,9 @@ export function useTaskCreateFlow() {
    * dispatch a real agent run with zero typing — the whole point of the
    * test-scenarios affordance.
    *
-   * Leaves project / context / runner / model / schedule / pending
-   * subtasks alone so an operator who has already configured those for
-   * their test rig (e.g. "always run against project X with model Y")
-   * does not have those wiped by picking a scenario.
+   * Leaves project / context / runner / model / schedule alone unless the
+   * scenario defines `subtasksWaitForParent` / `pendingSubtasks` (scheduling
+   * probes pre-fill those; generic scenarios leave them unchanged).
    *
    * Same imports kept inline so the test-scenarios module is only pulled
    * into the bundle when this hook is loaded (it already is, since the
@@ -1038,6 +1041,26 @@ export function useTaskCreateFlow() {
           .map((item) => item.trim())
           .filter((item) => item.length > 0),
       );
+      if (scenario.subtasksWaitForParent !== undefined) {
+        setSubtasksWaitForParent(scenario.subtasksWaitForParent);
+      }
+      if (scenario.pendingSubtasks !== undefined) {
+        setPendingSubtasks(
+          scenario.pendingSubtasks.map((st) => ({
+            title: st.title,
+            initial_prompt: st.prompt
+              ? plainTextToInitialHtml(st.prompt)
+              : "",
+            priority: st.priority ?? "medium",
+            task_type: st.taskType ?? "general",
+            checklistItems: (st.checklist ?? [])
+              .map((item) => item.trim())
+              .filter(Boolean),
+            checklist_inherit: st.checklistInherit ?? false,
+            depends_on_sibling_indices: st.dependsOnSiblingIndices ?? [],
+          })),
+        );
+      }
       // DMAP fields stay at their defaults; scenarios don't target the
       // DMAP runner today (they're all general / refactor / docs / etc.).
     },

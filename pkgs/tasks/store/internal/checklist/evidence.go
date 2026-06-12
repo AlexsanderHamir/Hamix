@@ -86,7 +86,7 @@ func SetDoneWithEvidenceInTx(
 	if err := kernel.AppendEvent(tx, subjectTaskID, seq, domain.EventChecklistItemToggled, by, b); err != nil {
 		return CriteriaFlagChange{}, err
 	}
-	return syncCriteriaSatisfiedAtInTx(tx, subjectTaskID)
+	return syncCriteriaSatisfiedAtInTx(tx, subjectTaskID, by)
 }
 
 func validateEvidencePayload(evidence string, verifier domain.VerifierKind, reasoning string) error {

@@ -47,4 +47,8 @@ describe("statusListLabel", () => {
   it("maps running to in-progress copy", () => {
     expect(statusListLabel("running")).toBe("In progress");
   });
+
+  it("maps awaiting_subtasks to subtasks in progress copy", () => {
+    expect(statusListLabel("awaiting_subtasks")).toBe("Subtasks in progress");
+  });
 });

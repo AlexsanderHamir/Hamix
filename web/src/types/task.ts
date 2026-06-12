@@ -5,7 +5,8 @@ export type Status =
   | "review"
   | "done"
   | "failed"
-  | "on_hold";
+  | "on_hold"
+  | "awaiting_subtasks";
 
 export type { GateCriterion, GateStatus, TaskGate } from "./gate";
 import type { TaskGate } from "./gate";
@@ -231,7 +232,13 @@ export const STATUSES: Status[] = [
   "done",
   "failed",
   "on_hold",
+  "awaiting_subtasks",
 ];
+
+/** Status values operators may set via create/PATCH; system-owned statuses excluded. */
+export const CLIENT_WRITABLE_STATUSES: Status[] = STATUSES.filter(
+  (s) => s !== "awaiting_subtasks",
+);
 
 export const PRIORITIES: Priority[] = [
   "low",

@@ -15,6 +15,10 @@ const (
 	// rows simply never become eligible. The user resumes the task by
 	// flipping it back to StatusReady from the detail page.
 	StatusOnHold Status = "on_hold"
+	// StatusAwaitingSubtasks is set by the agent harness (or checklist
+	// sync) when parent criteria are verified but descendant subtasks
+	// remain open. Not writable by operators on POST/PATCH.
+	StatusAwaitingSubtasks Status = "awaiting_subtasks"
 )
 
 type Priority string

@@ -76,3 +76,28 @@ func TryAutoCompleteParent(ctx context.Context, db *gorm.DB, childID string, by 
 	}
 	return "", nil
 }
+
+// BackfillAwaitingSubtasksStatus sets status=awaiting_subtasks for legacy
+// parent rows that already passed criteria but still have open subtasks while
+// status=ready. Idempotent migration helper; does not append audit events.
+func BackfillAwaitingSubtasksStatus(ctx context.Context, db *gorm.DB) error {
+	slog.Debug("trace", "cmd", logCmd, "operation", "tasks.store.tasks.BackfillAwaitingSubtasksStatus")
+	res := db.WithContext(ctx).Exec(`
+UPDATE tasks
+SET status = ?
+WHERE criteria_satisfied_at IS NOT NULL
+  AND status = ?
+  AND EXISTS (
+    SELECT 1 FROM tasks AS child
+    WHERE child.parent_id = tasks.id AND child.status <> ?
+  )`, domain.StatusAwaitingSubtasks, domain.StatusReady, domain.StatusDone)
+	if res.Error != nil {
+		return fmt.Errorf("backfill awaiting_subtasks status: %w", res.Error)
+	}
+	if res.RowsAffected > 0 {
+		slog.Info("backfilled awaiting_subtasks status",
+			"cmd", logCmd, "operation", "tasks.store.tasks.BackfillAwaitingSubtasksStatus",
+			"rows", res.RowsAffected)
+	}
+	return nil
+}

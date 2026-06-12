@@ -1,5 +1,5 @@
 import type { FormEvent, ReactNode } from "react";
-import { STATUSES, type Priority, type Status, type TaskType } from "@/types";
+import { CLIENT_WRITABLE_STATUSES, type Priority, type Status, type TaskType } from "@/types";
 import { FieldLabel, FieldRequirementBadge } from "@/shared/FieldLabel";
 import { Modal } from "../../../../shared/Modal";
 import { MutationErrorBanner } from "../../../../shared/MutationErrorBanner";
@@ -176,8 +176,11 @@ export function TaskEditForm({
               value={status}
               onChange={(ev) => onStatusChange(ev.target.value as Status)}
             >
-              {STATUSES.map((s) => (
-                <option key={s} value={s}>
+              {(CLIENT_WRITABLE_STATUSES.includes(status)
+                ? CLIENT_WRITABLE_STATUSES
+                : [...CLIENT_WRITABLE_STATUSES, status]
+              ).map((s) => (
+                <option key={s} value={s} disabled={s === "awaiting_subtasks"}>
                   {s}
                 </option>
               ))}

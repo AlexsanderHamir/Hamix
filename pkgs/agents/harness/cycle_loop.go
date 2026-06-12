@@ -169,7 +169,7 @@ func (h *Harness) runCycleLoop(parentCtx context.Context, task *domain.Task, cyc
 					"operation", "agent.harness.Harness.runCycleLoop.subtask_check_err",
 					"task_id", task.ID, "err", err)
 			} else if openSubtasks {
-				taskStatus = domain.StatusReady
+				taskStatus = domain.StatusAwaitingSubtasks
 			}
 		}
 		if !h.transitionTask(parentCtx, task.ID, taskStatus, "final_task_transition") {

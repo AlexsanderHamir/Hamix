@@ -75,6 +75,9 @@ func TestEpicLifecycle_criteriaUnlockSubtasksThenParentAutoDone(t *testing.T) {
 	if parentAfter.CriteriaSatisfiedAt == nil {
 		t.Fatal("parent criteria_satisfied_at should be set")
 	}
+	if parentAfter.Status != domain.StatusAwaitingSubtasks {
+		t.Fatalf("parent should await open subtasks after criteria pass, got %s", parentAfter.Status)
+	}
 
 	done := domain.StatusDone
 	if _, err := st.Update(ctx, parent.ID, store.UpdateTaskInput{Status: &done}, domain.ActorUser); err == nil {

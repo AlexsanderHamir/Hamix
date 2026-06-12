@@ -241,6 +241,12 @@
   border-color: var(--brand-border-soft);
 }
 
+.cell-pill--status-awaiting_subtasks {
+  background: var(--brand-muted);
+  color: var(--brand-deep);
+  border-color: var(--brand-border-soft);
+}
+
 .cell-pill--status-blocked {
   background: var(--warning-surface);
   color: var(--warning-ink);

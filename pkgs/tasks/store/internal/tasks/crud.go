@@ -179,7 +179,7 @@ func buildCreateTaskFromInput(in CreateInput, by domain.Actor) (t *domain.Task, 
 	if st == "" {
 		st = domain.StatusReady
 	}
-	if !kernel.ValidStatus(st) {
+	if !kernel.ValidClientWritableStatus(st) {
 		return nil, "", nil, "", fmt.Errorf("%w: status", domain.ErrInvalidInput)
 	}
 	pr := in.Priority

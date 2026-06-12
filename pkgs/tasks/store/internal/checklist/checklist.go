@@ -419,7 +419,7 @@ func SetDone(ctx context.Context, db *gorm.DB, subjectTaskID, itemID string, don
 		if err := kernel.AppendEvent(tx, subjectTaskID, seq, domain.EventChecklistItemToggled, by, b); err != nil {
 			return err
 		}
-		_, err = syncCriteriaSatisfiedAtInTx(tx, subjectTaskID)
+		_, err = syncCriteriaSatisfiedAtInTx(tx, subjectTaskID, by)
 		return err
 	})
 }

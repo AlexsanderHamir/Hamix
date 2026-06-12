@@ -20,7 +20,7 @@ Work hierarchy is **Project → Task**. Tasks may have:
 | `id` | string (UUID) | Server-assigned when omitted. |
 | `title` | string | Required after trim. |
 | `initial_prompt` | string (HTML) | TipTap rich text; validated for `@`-mentions when `app_settings.repo_root` is set. |
-| `status` | enum | `ready` / `running` / `blocked` / `review` / `done` / `failed` / `on_hold`. Default `ready`. `on_hold` is operator-set: pickup is gated on `status = ready` so an `on_hold` task is intentionally kept out of the worker's queue until the operator flips it back to `ready` (PATCH `/tasks/{id}`). |
+| `status` | enum | `ready` / `running` / `blocked` / `review` / `done` / `failed` / `on_hold` / `awaiting_subtasks`. Default `ready`. `on_hold` is operator-set: pickup is gated on `status = ready` so an `on_hold` task is intentionally kept out of the worker's queue until the operator flips it back to `ready` (PATCH `/tasks/{id}`). `awaiting_subtasks` is system-owned: parent criteria are verified but open subtasks remain; the harness or checklist sync sets it and clients cannot POST/PATCH it. |
 | `priority` | enum | `low` / `medium` / `high` / `critical`. Required at create. |
 | `task_type` | enum | `general` / `bug_fix` / `feature` / `refactor` / `docs`. Default `general`. |
 | `project_id` | string \| null | Optional project membership. |
@@ -56,7 +56,7 @@ The JSON resource has **no** `created_at` / `updated_at` fields. Timestamps live
 
 Both default **off** (subtasks are independent ready tasks, FIFO among eligible work). Behaviors compose: a subtask may depend on the parent and multiple siblings in one `depends_on` list.
 
-**Parent completion vs subtasks:** A parent reaches `status=done` when **its own done criteria are complete and every subtask is `done`**. After criteria pass with open subtasks, the parent transitions to `ready` but is **not** re-dequeued (`ParentAwaitingSubtasks` guard) until subtasks finish. When the last subtask reaches `done`, the parent auto-completes.
+**Parent completion vs subtasks:** A parent reaches `status=done` when **its own done criteria are complete and every subtask is `done`**. After criteria pass with open subtasks, the parent transitions to `awaiting_subtasks` (UI: "Subtasks in progress") and is **not** re-dequeued; `ParentAwaitingSubtasks` remains a defense-in-depth guard for legacy `ready` rows until backfill runs. When the last subtask reaches `done`, the parent auto-completes.
 
 **Parent criteria requirement:** A root task (`parent_id` null) with one or more subtasks must define **at least one** owned done criterion before subtasks can be linked. API error: `parent task with subtasks requires at least one done criterion` (`400` on `POST /tasks` with `parent_id`, or when deleting the parent's last criterion while subtasks exist).
 
@@ -86,7 +86,7 @@ Predecessors for `satisfies: done` edges must reach `status = done`. A predecess
 2. `pickup_not_before` is null or `<= now()`
 3. All `depends_on` edge predicates satisfied (`done` or `criteria_complete` per edge)
 4. `gate` is null or `gate.status = released`
-5. Not `ParentAwaitingSubtasks` (criteria complete but open subtasks remain)
+5. Not `ParentAwaitingSubtasks` (legacy rows: criteria complete but open subtasks while still `status=ready`; primary exclusion is `status != ready` once on `awaiting_subtasks`)
 
 If a task is dequeued but fails (3) or (4) on reload, the worker sets `pickup_not_before` ~60s ahead and skips the run.
 

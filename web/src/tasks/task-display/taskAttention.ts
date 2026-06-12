@@ -1,4 +1,4 @@
-import type { Task } from "@/types";
+import type { Status, Task } from "@/types";
 
 /**
  * Whether agents are waiting on a person soon, from task status and server `approval_pending` on events.
@@ -38,7 +38,18 @@ export function userAttention(
         headline: "Task failed",
         body: "The agent reported a failure. Review what happened and decide whether to retry or change scope.",
       };
+    case "awaiting_subtasks":
+      return {
+        show: true,
+        headline: "Subtasks in progress",
+        body: "Parent criteria are complete; subtasks are still running.",
+      };
     default:
       return { show: false, headline: "", body: "" };
   }
+}
+
+/** True when the parent finished criteria and descendants are still running. */
+export function statusIsEpicInProgress(status: Status): boolean {
+  return status === "awaiting_subtasks";
 }

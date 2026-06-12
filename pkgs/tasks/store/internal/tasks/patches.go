@@ -383,8 +383,19 @@ func applyStatusPatch(tx *gorm.DB, taskID string, cur *domain.Task, st *domain.S
 	if st == nil {
 		return nil
 	}
+	target, err := resolveStatusPatchTarget(tx, taskID, cur.Status, *st)
+	if err != nil {
+		return err
+	}
+	*st = target
 	if !kernel.ValidStatus(*st) {
 		return fmt.Errorf("%w: status", domain.ErrInvalidInput)
+	}
+	if *st == domain.StatusAwaitingSubtasks && by != domain.ActorAgent {
+		return fmt.Errorf("%w: status", domain.ErrInvalidInput)
+	}
+	if cur.Status == domain.StatusAwaitingSubtasks && *st == domain.StatusReady {
+		return fmt.Errorf("%w: cannot return to ready while subtasks are open", domain.ErrInvalidInput)
 	}
 	if *st == cur.Status {
 		return nil
@@ -404,4 +415,25 @@ func applyStatusPatch(tx *gorm.DB, taskID string, cur *domain.Task, st *domain.S
 	*seq++
 	cur.Status = *st
 	return nil
+}
+
+func resolveStatusPatchTarget(tx *gorm.DB, taskID string, cur, requested domain.Status) (domain.Status, error) {
+	if cur == domain.StatusOnHold && requested == domain.StatusReady {
+		var t domain.Task
+		if err := tx.Where("id = ?", taskID).First(&t).Error; err != nil {
+			return "", fmt.Errorf("load task for status resume: %w", err)
+		}
+		if t.CriteriaSatisfiedAt != nil {
+			var n int64
+			if err := tx.Model(&domain.Task{}).
+				Where("parent_id = ? AND status <> ?", taskID, domain.StatusDone).
+				Count(&n).Error; err != nil {
+				return "", fmt.Errorf("count open subtasks: %w", err)
+			}
+			if n > 0 {
+				return domain.StatusAwaitingSubtasks, nil
+			}
+		}
+	}
+	return requested, nil
 }

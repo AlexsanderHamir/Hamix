@@ -78,13 +78,13 @@ func TestHTTP_idempotency_post_second_replays_from_cache(t *testing.T) {
 		t.Fatal(err)
 	}
 	ctx := t.Context()
-	roots, _, err := st.ListRootForest(ctx, 200, 0)
+	roots, _, err := st.ListFlatPage(ctx, 200, 0, nil)
 	if err != nil {
 		t.Fatal(err)
 	}
 	var count int
 	for _, n := range roots {
-		if n.Task.Title == "idem-cache" {
+		if n.Title == "idem-cache" {
 			count++
 		}
 	}
@@ -130,13 +130,13 @@ func TestHTTP_idempotency_disabled_allows_duplicate_post(t *testing.T) {
 	}
 
 	ctx := t.Context()
-	roots, _, err := st.ListRootForest(ctx, 200, 0)
+	roots, _, err := st.ListFlatPage(ctx, 200, 0, nil)
 	if err != nil {
 		t.Fatal(err)
 	}
 	var count int
 	for _, n := range roots {
-		if n.Task.Title == "idem-off" {
+		if n.Title == "idem-off" {
 			count++
 		}
 	}
@@ -179,13 +179,13 @@ func TestHTTP_idempotency_different_body_same_key_creates_two(t *testing.T) {
 	post("b")
 
 	ctx := t.Context()
-	roots, _, err := st.ListRootForest(ctx, 200, 0)
+	roots, _, err := st.ListFlatPage(ctx, 200, 0, nil)
 	if err != nil {
 		t.Fatal(err)
 	}
 	titles := make(map[string]int)
 	for _, n := range roots {
-		titles[n.Task.Title]++
+		titles[n.Title]++
 	}
 	if titles["a"] != 1 || titles["b"] != 1 {
 		t.Fatalf("titles: %v", titles)
@@ -233,13 +233,13 @@ func TestHTTP_idempotency_concurrent_post_single_row(t *testing.T) {
 	wg.Wait()
 
 	ctx := t.Context()
-	roots, _, err := st.ListRootForest(ctx, 200, 0)
+	roots, _, err := st.ListFlatPage(ctx, 200, 0, nil)
 	if err != nil {
 		t.Fatal(err)
 	}
 	var count int
 	for _, n := range roots {
-		if n.Task.Title == "idem-concurrent" {
+		if n.Title == "idem-concurrent" {
 			count++
 		}
 	}

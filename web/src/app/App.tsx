@@ -38,11 +38,6 @@ const TaskEventDetailPage = lazy(() =>
     default: m.TaskEventDetailPage,
   })),
 );
-const TaskGraphPage = lazy(() =>
-  import("@/tasks/pages/TaskGraphPage").then((m) => ({
-    default: m.TaskGraphPage,
-  })),
-);
 const SettingsPage = lazy(() =>
   import("@/settings/SettingsPage").then((m) => ({
     default: m.SettingsPage,
@@ -196,7 +191,6 @@ function AppShell({ app }: { app: ReturnType<typeof useTasksApp> }) {
           {app.deleteTarget ? (
             <DeleteConfirmDialog
               taskTitle={app.deleteTarget.title}
-              subtaskCount={app.deleteTarget.subtaskCount}
               saving={app.saving}
               deletePending={app.deletePending}
               error={app.deleteError}
@@ -213,7 +207,6 @@ function AppShell({ app }: { app: ReturnType<typeof useTasksApp> }) {
               priority={app.editPriority}
               taskType={app.editTaskType}
               status={app.editStatus}
-              checklistInherit={app.editChecklistInherit}
               taskRunner={app.editing.runner}
               cursorModel={app.editCursorModel}
               onCursorModelChange={app.setEditCursorModel}
@@ -242,7 +235,6 @@ function AppShell({ app }: { app: ReturnType<typeof useTasksApp> }) {
                 </section>
               }
               promptProjectContext={editPromptProjectContext ?? undefined}
-              canInheritChecklist={Boolean(app.editing.parent_id)}
               tagsCsv={app.editTagsCsv}
               milestone={app.editMilestone}
               pickupSchedule={app.editPickupSchedule}
@@ -257,7 +249,6 @@ function AppShell({ app }: { app: ReturnType<typeof useTasksApp> }) {
               onPriorityChange={app.setEditPriority}
               onTaskTypeChange={app.setEditTaskType}
               onStatusChange={app.setEditStatus}
-              onChecklistInheritChange={app.setEditChecklistInherit}
               onSubmit={(e) => void app.submitEdit(e)}
               onCancel={app.closeEdit}
             />
@@ -337,7 +328,6 @@ export default function App() {
             path="tasks/:taskId/cycles/:cycleId"
             element={<TaskCycleDetailPage />}
           />
-          <Route path="tasks/:taskId/graph" element={<TaskGraphPage />} />
           <Route path="tasks/:taskId" element={<TaskDetailPage app={app} />} />
           <Route path="*" element={<NotFoundPage />} />
         </Route>

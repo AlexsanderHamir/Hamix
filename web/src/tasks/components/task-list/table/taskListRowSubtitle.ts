@@ -1,31 +1,21 @@
 export { statusListLabel } from "../../../task-display/statusListLabel";
 
 /**
- * Secondary line under the task title: subtask scope or a one-line prompt
- * preview. When `hasProject` is true, the project name lives in the
- * Project column — this string must not repeat it.
+ * Secondary line under the task title: a one-line prompt preview.
+ * When `hasProject` is true, the project name lives in the Project column —
+ * this string must not repeat it.
  */
 export function taskListRowSubtitle(input: {
-  depth: number;
   /** True when `project_id` is set and the project label resolves (badge column). */
   hasProject: boolean;
   promptPreview: string;
 }): string | undefined {
-  const { depth, hasProject, promptPreview } = input;
+  const { hasProject, promptPreview } = input;
   const pv = promptPreview.replace(/\s+/g, " ").trim();
   const tail = pv.length > 80 ? `${pv.slice(0, 77)}…` : pv;
 
-  if (hasProject && depth > 0) {
-    return "Subtask";
-  }
   if (hasProject) {
     return undefined;
-  }
-  if (depth > 0 && tail) {
-    return `Subtask · ${tail}`;
-  }
-  if (depth > 0) {
-    return "Subtask";
   }
   if (tail) {
     return tail;

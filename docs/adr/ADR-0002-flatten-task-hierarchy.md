@@ -1,7 +1,7 @@
 # ADR-0002: Flatten Task Hierarchy
 
 **Date:** 2026-05-26
-**Status:** Accepted
+**Status:** Superseded by [ADR-0010](ADR-0010-remove-subtasks.md) (subtask-related rows)
 **Deciders:** T2A maintainers
 
 ## Context

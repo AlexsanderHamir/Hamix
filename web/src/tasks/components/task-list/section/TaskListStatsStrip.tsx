@@ -41,7 +41,6 @@ export function TaskListStatsStrip({ stats }: Props) {
     const scheduled = stats.scheduled ?? 0;
     const review = stats.by_status?.review ?? 0;
     const blocked = stats.by_status?.blocked ?? 0;
-    const awaitingSubtasks = stats.by_status?.awaiting_subtasks ?? 0;
     const next: Pill[] = [
       { key: "total", value: stats.total, label: "Total", tone: "default" },
       { key: "ready", value: ready, label: "Ready", tone: "ready" },
@@ -76,14 +75,6 @@ export function TaskListStatsStrip({ stats }: Props) {
         value: blocked,
         label: "Blocked",
         tone: "warn",
-      });
-    }
-    if (awaitingSubtasks > 0) {
-      next.push({
-        key: "awaiting_subtasks",
-        value: awaitingSubtasks,
-        label: "Subtasks in progress",
-        tone: "schedule",
       });
     }
     return next;

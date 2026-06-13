@@ -1,7 +1,7 @@
 # ADR-0008: Dependency Edge Satisfies + Epic Completion Rollup
 
 **Date:** 2026-06-12
-**Status:** Accepted
+**Status:** Superseded by [ADR-0010](ADR-0010-remove-subtasks.md)
 **Supersedes:** [ADR-0007](ADR-0007-parent-completion-via-criteria.md)
 **Deciders:** T2A maintainers
 

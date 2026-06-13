@@ -21,9 +21,8 @@ Projects will be implemented inside the existing `taskapi` boundary, using the
 same Go/GORM/Postgres store, REST contracts, SSE hints, and SPA architecture as
 tasks.
 
-A project is not a task parent. Tasks keep their existing subtask tree through
-`parent_id`, while project membership is represented separately through
-`project_id`.
+A project is not a task parent. Project membership is represented separately through
+`project_id` on each task.
 
 Project context is canonical at the project level. When an agent runs a
 project-linked task, the worker persists a cycle-scoped snapshot of the exact
@@ -57,7 +56,7 @@ memory, or a separate memory service.
 
 | Alternative | Reason Rejected |
 | --- | --- |
-| Use parent tasks as projects | Subtasks already mean task decomposition. Overloading `parent_id` would make project membership and task ownership ambiguous. |
+| Use parent tasks as projects | Overloading task hierarchy for project membership would make shared context and task ownership ambiguous. |
 | Add a vector database immediately | It adds operational complexity before T2A has a validated project-memory workflow. |
 | Store project context only in task prompts | Prompts are execution-local and hard to audit across months of work. They do not provide a shared, editable memory surface. |
 | Create a separate project service | The current product is a single-process control plane. A second service would violate the current simplicity and deployment constraints. |

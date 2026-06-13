@@ -236,8 +236,6 @@ export async function createTask(input: {
   draft_id?: string;
   project_id?: string;
   project_context_item_ids?: string[];
-  parent_id?: string;
-  checklist_inherit?: boolean;
   runner?: string;
   cursor_model?: string;
   /**
@@ -280,13 +278,6 @@ export async function createTask(input: {
   }
   if (input.project_context_item_ids !== undefined) {
     body.project_context_item_ids = input.project_context_item_ids;
-  }
-  const parentId = assertOptionalTaskPathId(input.parent_id, "parent_id");
-  if (parentId !== undefined) {
-    body.parent_id = parentId;
-  }
-  if (input.checklist_inherit === true) {
-    body.checklist_inherit = true;
   }
   if (input.pickup_not_before !== undefined) {
     body.pickup_not_before = input.pickup_not_before;
@@ -332,13 +323,6 @@ export async function evaluateDraftTask(
   }
   if (input.task_type) {
     payload.task_type = input.task_type;
-  }
-  const ep = assertOptionalTaskPathId(input.parent_id, "parent_id");
-  if (ep !== undefined) {
-    payload.parent_id = ep;
-  }
-  if (input.checklist_inherit !== undefined) {
-    payload.checklist_inherit = input.checklist_inherit;
   }
   if (input.checklist_items) {
     payload.checklist_items = input.checklist_items;
@@ -420,8 +404,6 @@ export async function patchTask(
     task_type?: TaskType;
     project_id?: string | null;
     project_context_item_ids?: string[];
-    parent_id?: string | null;
-    checklist_inherit?: boolean;
     /**
      * Schedule wire encoding (see docs/data-model.md):
      *  - omit/undefined: do not touch the column on PATCH.
@@ -455,15 +437,6 @@ export async function patchTask(
   }
   if (patch.project_context_item_ids !== undefined) {
     body.project_context_item_ids = patch.project_context_item_ids;
-  }
-  if (patch.parent_id !== undefined) {
-    body.parent_id =
-      patch.parent_id === null
-        ? null
-        : assertTaskPathId(patch.parent_id, "parent_id");
-  }
-  if (patch.checklist_inherit !== undefined) {
-    body.checklist_inherit = patch.checklist_inherit;
   }
   if (patch.pickup_not_before !== undefined) {
     body.pickup_not_before = patch.pickup_not_before;
@@ -503,8 +476,7 @@ function parseDependsOnList(raw: unknown): TaskDependencyEdge[] {
     }
     if (edge !== null && typeof edge === "object" && !Array.isArray(edge)) {
       const obj = edge as Record<string, unknown>;
-      const satisfies =
-        obj.satisfies === "criteria_complete" ? ("criteria_complete" as const) : ("done" as const);
+      const satisfies = "done" as const;
       return {
         task_id: parseNonEmptyString(obj.task_id, `depends_on[${i}].task_id`),
         satisfies,

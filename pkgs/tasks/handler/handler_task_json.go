@@ -20,8 +20,6 @@ type taskCreateJSON struct {
 	TaskType              domain.TaskType `json:"task_type"`
 	ProjectID             *string         `json:"project_id"`
 	ProjectContextItemIDs []string        `json:"project_context_item_ids"`
-	ParentID              *string         `json:"parent_id"`
-	ChecklistInherit      *bool           `json:"checklist_inherit"`
 	Runner                *string         `json:"runner"`
 	CursorModel           *string         `json:"cursor_model"`
 	// PickupNotBefore is an optional RFC3339 instant. When provided,
@@ -38,15 +36,13 @@ type taskCreateJSON struct {
 }
 
 type taskEvaluateJSON struct {
-	ID               string                                  `json:"id"`
-	Title            string                                  `json:"title"`
-	InitialPrompt    string                                  `json:"initial_prompt"`
-	Status           domain.Status                           `json:"status"`
-	Priority         domain.Priority                         `json:"priority"`
-	TaskType         domain.TaskType                         `json:"task_type"`
-	ParentID         *string                                 `json:"parent_id"`
-	ChecklistInherit *bool                                   `json:"checklist_inherit"`
-	ChecklistItems   []store.EvaluateDraftChecklistItemInput `json:"checklist_items"`
+	ID             string                                  `json:"id"`
+	Title          string                                  `json:"title"`
+	InitialPrompt  string                                  `json:"initial_prompt"`
+	Status         domain.Status                           `json:"status"`
+	Priority       domain.Priority                         `json:"priority"`
+	TaskType       domain.TaskType                         `json:"task_type"`
+	ChecklistItems []store.EvaluateDraftChecklistItemInput `json:"checklist_items"`
 }
 
 type taskDraftSaveJSON struct {
@@ -63,8 +59,6 @@ type taskPatchJSON struct {
 	TaskType              *domain.TaskType          `json:"task_type"`
 	ProjectID             patchProjectField         `json:"project_id"`
 	ProjectContextItemIDs *[]string                 `json:"project_context_item_ids"`
-	ParentID              patchParentField          `json:"parent_id"`
-	ChecklistInherit      *bool                     `json:"checklist_inherit"`
 	PickupNotBefore       patchPickupNotBeforeField `json:"pickup_not_before"`
 	// CursorModel sets tasks.cursor_model when the key is present (including
 	// the empty string, which clears per-task override). JSON null is decoded
@@ -90,10 +84,10 @@ type taskDependencyCreateJSON struct {
 }
 
 type listResponse struct {
-	Tasks   []store.TaskNode `json:"tasks"`
-	Limit   int              `json:"limit"`
-	Offset  int              `json:"offset"`
-	HasMore bool             `json:"has_more"`
+	Tasks   []domain.Task `json:"tasks"`
+	Limit   int           `json:"limit"`
+	Offset  int           `json:"offset"`
+	HasMore bool          `json:"has_more"`
 }
 
 type taskStatsResponse struct {

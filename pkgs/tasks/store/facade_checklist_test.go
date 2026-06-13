@@ -230,27 +230,6 @@ func TestStore_UpdateChecklistItemText_rejects_done_item(t *testing.T) {
 	}
 }
 
-func TestStore_UpdateChecklistItemText_rejects_checklist_inherit(t *testing.T) {
-	s := NewStore(tasktestdb.OpenSQLite(t))
-	ctx := context.Background()
-	parent, err := s.Create(ctx, CreateTaskInput{Priority: domain.PriorityMedium, Title: "p"}, domain.ActorUser)
-	if err != nil {
-		t.Fatal(err)
-	}
-	it, err := s.AddChecklistItem(ctx, parent.ID, "c", domain.ActorUser)
-	if err != nil {
-		t.Fatal(err)
-	}
-	child, err := s.Create(ctx, CreateTaskInput{Title: "c", ParentID: &parent.ID, ChecklistInherit: true, Priority: domain.PriorityMedium}, domain.ActorUser)
-	if err != nil {
-		t.Fatal(err)
-	}
-	err = s.UpdateChecklistItemText(ctx, child.ID, it.ID, "nope", domain.ActorUser)
-	if !errors.Is(err, domain.ErrInvalidInput) {
-		t.Fatalf("got %v want ErrInvalidInput", err)
-	}
-}
-
 // TestStore_DeleteChecklistItem_rejects_done_item pins the rule that
 // a checklist criterion can no longer be removed once the agent has
 // marked it done, mirroring the equivalent guard on UpdateText.

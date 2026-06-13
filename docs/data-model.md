@@ -7,11 +7,10 @@ Tasks, projects, execution cycles/phases, checklists, dependencies, and gates. H
 Work hierarchy is **Project → Task**. Tasks may have:
 
 - `project_id` (optional) — shared-context membership. Projects are long-lived containers for memory across many tasks.
-- `parent_id` (optional, **depth-1 only**) — the parent must itself be a root task.
 - `tags` and `milestone` — flat labels for organization within a project.
 - `depends_on` — directed acyclic graph of task-level dependencies.
 
-`project_id` answers "which long-running body of work shares context with this task?" `parent_id` answers "which task owns this subtask?" They are independent. A project is not a task parent; subtasks are not project children. See [adr/ADR-0002-flatten-task-hierarchy.md](./adr/ADR-0002-flatten-task-hierarchy.md) for the migration decision.
+`project_id` answers "which long-running body of work shares context with this task?" A project is not a task parent. Multi-step work is modeled as sibling tasks linked by `depends_on`. See [adr/ADR-0010-remove-subtasks.md](./adr/ADR-0010-remove-subtasks.md).
 
 ## Task fields
 
@@ -20,49 +19,30 @@ Work hierarchy is **Project → Task**. Tasks may have:
 | `id` | string (UUID) | Server-assigned when omitted. |
 | `title` | string | Required after trim. |
 | `initial_prompt` | string (HTML) | TipTap rich text; validated for `@`-mentions when `app_settings.repo_root` is set. |
-| `status` | enum | `ready` / `running` / `blocked` / `review` / `done` / `failed` / `on_hold` / `awaiting_subtasks`. Default `ready`. `on_hold` is operator-set: pickup is gated on `status = ready` so an `on_hold` task is intentionally kept out of the worker's queue until the operator flips it back to `ready` (PATCH `/tasks/{id}`). `awaiting_subtasks` is system-owned: parent criteria are verified but open subtasks remain; the harness or checklist sync sets it and clients cannot POST/PATCH it. |
+| `status` | enum | `ready` / `running` / `blocked` / `review` / `done` / `failed` / `on_hold`. Default `ready`. `on_hold` is operator-set: pickup is gated on `status = ready` so an `on_hold` task is intentionally kept out of the worker's queue until the operator flips it back to `ready` (PATCH `/tasks/{id}`). |
 | `priority` | enum | `low` / `medium` / `high` / `critical`. Required at create. |
 | `task_type` | enum | `general` / `bug_fix` / `feature` / `refactor` / `docs`. Default `general`. |
 | `project_id` | string \| null | Optional project membership. |
-| `parent_id` | string \| null | Optional parent (depth-1). |
 | `project_context_item_ids` | string[] | Explicit allowlist of project context items for runner snapshots. Cleared on `project_id` change. |
 | `tags` | string[] | Free-form, `^[a-z0-9][a-z0-9._-]{0,31}$`. |
 | `milestone` | string \| null | Single anchor per task, `^[a-zA-Z0-9][a-zA-Z0-9 ._-]{0,63}$` when set. |
-| `depends_on` | object[] | Hydrated from `task_dependencies`: `{ task_id, satisfies }` where `satisfies` is `done` (default) or `criteria_complete`. |
-| `criteria_satisfied_at` | RFC3339 UTC \| null | Set when all inherited checklist items are verified complete; cache for queue predicates. |
+| `depends_on` | object[] | Hydrated from `task_dependencies`: `{ task_id, satisfies }` where `satisfies` is `done` (default and only value). |
+| `criteria_satisfied_at` | RFC3339 UTC \| null | Set when all checklist items are verified complete; informational cache on the task row (dependency edges use predecessor `status = done`). |
 | `gate` | object \| null | Per-task dequeue pause (see below). |
 | `pickup_not_before` | RFC3339 UTC \| null | Defer when the worker may dequeue. |
 | `cursor_model` | string | Optional model override at runtime. |
-| `checklist_inherit` | bool | When true, definitions live on the nearest ancestor that does not inherit; requires `parent_id`. |
 
 The JSON resource has **no** `created_at` / `updated_at` fields. Timestamps live on `task_events`.
 
 ## Dependencies
 
-- Storage: `task_dependencies(task_id, depends_on_task_id, satisfies)` with FK cascade. `satisfies` ∈ `done` | `criteria_complete` (default `done`).
-- A task in `ready` is worker-eligible only when every predecessor satisfies its edge predicate (`done` → predecessor `status = done`; `criteria_complete` → predecessor `criteria_satisfied_at` set).
-- Unblocking a predecessor (reach `done`, or criteria become complete) notifies dependents whose edges are now satisfied.
+- Storage: `task_dependencies(task_id, depends_on_task_id, satisfies)` with FK cascade. `satisfies` is `done` (default when omitted).
+- A task in `ready` is worker-eligible only when every predecessor has `status = done`.
+- Unblocking a predecessor (reach `done`) notifies dependents whose edges are now satisfied.
 - Self-deps and cycles return `400 invalid input`.
-- API: incremental via `GET/POST/DELETE /tasks/{id}/dependencies`; full replace via `depends_on` on `PATCH /tasks/{id}`.
+- API: incremental via `GET/POST/DELETE /tasks/{id}/dependencies`; full replace via `depends_on` on `PATCH /tasks/{id}`. Wire format accepts legacy `string[]` (each id maps to `satisfies: done`) or structured `{ task_id, satisfies }[]`.
 
-### Subtask scheduling (opt-in)
-
-`parent_id` is organizational (tree UI, checklist inheritance). It does **not** defer the worker. Optional execution order among a parent and its subtasks is expressed only via `depends_on`:
-
-| UI opt-in | Materialized as | Worker behavior |
-|---|---|---|
-| Start subtasks after parent criteria pass | `depends_on` includes `{ task_id: parent_id, satisfies: criteria_complete }` | Subtask runs after parent checklist is verified complete |
-| Start after selected sibling subtasks | `depends_on` includes `{ task_id, satisfies: done }` for each sibling | Subtask runs only after **all** selected siblings are `done` (AND) |
-
-Both default **off** (subtasks are independent ready tasks, FIFO among eligible work). Behaviors compose: a subtask may depend on the parent and multiple siblings in one `depends_on` list.
-
-**Parent completion vs subtasks:** A parent reaches `status=done` when **its own done criteria are complete and every subtask is `done`**. After criteria pass with open subtasks, the parent transitions to `awaiting_subtasks` (UI: "Subtasks in progress") and is **not** re-dequeued; `ParentAwaitingSubtasks` remains a defense-in-depth guard for legacy `ready` rows until backfill runs. When the last subtask reaches `done`, the parent auto-completes.
-
-**Parent criteria requirement:** A root task (`parent_id` null) with one or more subtasks must define **at least one** owned done criterion before subtasks can be linked. API error: `parent task with subtasks requires at least one done criterion` (`400` on `POST /tasks` with `parent_id`, or when deleting the parent's last criterion while subtasks exist).
-
-Create flow (parent + pending subtasks): the web client POSTs each subtask with a `criteria_complete` parent edge when the batch toggle is on, then PATCHes sibling dependencies once all subtask ids exist. Detail-page add-subtask: a single POST with the composed `depends_on`.
-
-Predecessors for `satisfies: done` edges must reach `status = done`. A predecessor in `failed` or `on_hold` keeps dependents blocked until the operator fixes status or edits dependencies.
+Predecessors must reach `status = done`. A predecessor in `failed` or `on_hold` keeps dependents blocked until the operator fixes status or edits dependencies.
 
 ## Gate
 
@@ -84,9 +64,8 @@ Predecessors for `satisfies: done` edges must reach `status = done`. A predecess
 
 1. `status = ready`
 2. `pickup_not_before` is null or `<= now()`
-3. All `depends_on` edge predicates satisfied (`done` or `criteria_complete` per edge)
+3. All `depends_on` predecessors have `status = done`
 4. `gate` is null or `gate.status = released`
-5. Not `ParentAwaitingSubtasks` (legacy rows: criteria complete but open subtasks while still `status=ready`; primary exclusion is `status != ready` once on `awaiting_subtasks`)
 
 If a task is dequeued but fails (3) or (4) on reload, the worker sets `pickup_not_before` ~60s ahead and skips the run.
 
@@ -218,9 +197,7 @@ Keys are additive only; consumers must ignore unknown keys. Values are always st
 
 Per-task acceptance requirements. Stored in `task_checklist_items` (definitions: `id`, `task_id`, `sort_order`, `text`) and `task_checklist_completions` (per-subject ledger: `task_id`, `item_id`, `at`, `done_by`, `evidence`, `verified_by`, `verifier_reasoning`, `cycle_id`). Operators may describe verification commands in criterion text; the worker does not execute them.
 
-**Inheritance:** When `checklist_inherit` is true on a task, definitions live on the nearest ancestor that does not inherit. `done` is tracked per subject task.
-
-**Parent vs subtask completion:** Marking a task `done` requires its inherited checklist to be complete when criteria exist **and** every direct subtask to be `done`. Subtask ordering uses per-edge `satisfies` on `depends_on` (see Dependencies — Subtask scheduling).
+**Completion:** Marking a task `done` requires its checklist to be complete when criteria exist. Execution order among related tasks is expressed only via `depends_on` (see Dependencies).
 
 | `verified_by` value | Meaning |
 |---|---|
@@ -306,4 +283,4 @@ Out of scope today: embeddings / vector search, autonomous memory pruning, summa
 
 ## Audit log (`task_events`)
 
-Append-only. Event type strings are `domain.EventType` values (`task_created`, `status_changed`, `prompt_appended`, `message_added`, `subtask_added`, etc., plus the seven cycle/phase mirror types listed above). Per-task monotonic `seq`. Used for history and debugging; events are not replayed into the SSE hub.
+Append-only. Event type strings are `domain.EventType` values (`task_created`, `status_changed`, `prompt_appended`, `message_added`, checklist events, etc., plus the seven cycle/phase mirror types listed above). Per-task monotonic `seq`. Used for history and debugging; events are not replayed into the SSE hub.

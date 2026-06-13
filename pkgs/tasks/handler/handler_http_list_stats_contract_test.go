@@ -236,12 +236,9 @@ func TestHTTP_statsEnvelopeShape(t *testing.T) {
 	assertStatsEnvelopeKeys(t, raw)
 }
 
-// TestHTTP_statsByScopeAlwaysHasBothKeys pins the documented invariant that
-// `by_scope` is the two-key object `{parent, subtask}` even on an empty
-// database (and that both keys are 0 then). The handler initializes both keys
-// in store.TaskStats; this test catches a future refactor that switches to
-// a sparse map populated only by SQL aggregation.
-func TestHTTP_statsByScopeAlwaysHasBothKeys(t *testing.T) {
+// TestHTTP_statsByScopeAlwaysHasTaskKey pins the documented invariant that
+// `by_scope` is the single-key object `{task}` even on an empty database.
+func TestHTTP_statsByScopeAlwaysHasTaskKey(t *testing.T) {
 	srv := newTaskTestServer(t)
 	defer srv.Close()
 
@@ -251,7 +248,7 @@ func TestHTTP_statsByScopeAlwaysHasBothKeys(t *testing.T) {
 		if err := json.Unmarshal(raw, &got); err != nil {
 			t.Fatal(err)
 		}
-		assertByScopeKeys(t, got.ByScope, 0, 0)
+		assertByScopeKeys(t, got.ByScope, 0)
 		if len(got.ByStatus) != 0 {
 			t.Fatalf("by_status=%v want {} on empty DB", got.ByStatus)
 		}
@@ -267,37 +264,28 @@ func TestHTTP_statsByScopeAlwaysHasBothKeys(t *testing.T) {
 		assertRecentFailuresEmptyArray(t, raw, got)
 	})
 
-	t.Run("populatedRootAndSubtask", func(t *testing.T) {
-		const root = "40000000-0000-4000-8000-000000000001"
-		mustCreateTaskBody(t, srv.URL, `{"id":"`+root+`","title":"r","priority":"medium"}`)
-		ensureParentHasCriterionHTTP(t, srv.URL, root)
-		mustCreateTaskBody(t, srv.URL,
-			`{"title":"c","priority":"medium","parent_id":"`+root+`"}`)
+	t.Run("populatedTasks", func(t *testing.T) {
+		mustCreateTaskBody(t, srv.URL, `{"title":"r","priority":"medium"}`)
+		mustCreateTaskBody(t, srv.URL, `{"title":"c","priority":"medium"}`)
 
 		raw, _ := mustGetJSON(t, srv.URL, "/tasks/stats")
 		var got statsResponseRaw
 		if err := json.Unmarshal(raw, &got); err != nil {
 			t.Fatal(err)
 		}
-		assertByScopeKeys(t, got.ByScope, 1, 1)
+		assertByScopeKeys(t, got.ByScope, 2)
 	})
 }
 
-// TestHTTP_statsArithmeticInvariant pins the documented arithmetic invariant
-// `total == parent + subtask == sum(by_status) == sum(by_priority)`. Drives
-// four tasks across two statuses and three priorities so the sums are
-// non-trivial.
+// TestHTTP_statsArithmeticInvariant pins `total == by_scope.task == sum(by_status)`.
 func TestHTTP_statsArithmeticInvariant(t *testing.T) {
 	srv := newTaskTestServer(t)
 	defer srv.Close()
 
-	const root = "50000000-0000-4000-8000-000000000001"
-	mustCreateTaskBody(t, srv.URL, `{"id":"`+root+`","title":"ready-low","priority":"low","status":"ready"}`)
+	mustCreateTaskBody(t, srv.URL, `{"title":"ready-low","priority":"low","status":"ready"}`)
 	mustCreateTaskBody(t, srv.URL, `{"title":"running-medium","priority":"medium","status":"running"}`)
 	mustCreateTaskBody(t, srv.URL, `{"title":"running-critical","priority":"critical","status":"running"}`)
-	ensureParentHasCriterionHTTP(t, srv.URL, root)
-	mustCreateTaskBody(t, srv.URL,
-		`{"title":"sub-ready-medium","priority":"medium","status":"ready","parent_id":"`+root+`"}`)
+	mustCreateTaskBody(t, srv.URL, `{"title":"ready-medium","priority":"medium","status":"ready"}`)
 
 	raw, _ := mustGetJSON(t, srv.URL, "/tasks/stats")
 	var got statsResponseRaw
@@ -308,26 +296,20 @@ func TestHTTP_statsArithmeticInvariant(t *testing.T) {
 	if got.Total != 4 {
 		t.Fatalf("total=%d want 4", got.Total)
 	}
-	scopeSum := got.ByScope["parent"] + got.ByScope["subtask"]
-	if scopeSum != got.Total {
-		t.Fatalf("parent(%d)+subtask(%d)=%d != total(%d) (docs/api.md invariant)",
-			got.ByScope["parent"], got.ByScope["subtask"], scopeSum, got.Total)
+	if got.ByScope["task"] != got.Total {
+		t.Fatalf("by_scope[task]=%d != total(%d)", got.ByScope["task"], got.Total)
 	}
 	if sum := sumIntMap(got.ByStatus); sum != got.Total {
-		t.Fatalf("sum(by_status)=%d != total(%d) (docs/api.md invariant): %+v", sum, got.Total, got.ByStatus)
+		t.Fatalf("sum(by_status)=%d != total(%d): %+v", sum, got.Total, got.ByStatus)
 	}
 	if sum := sumIntMap(got.ByPriority); sum != got.Total {
-		t.Fatalf("sum(by_priority)=%d != total(%d) (docs/api.md invariant): %+v", sum, got.Total, got.ByPriority)
+		t.Fatalf("sum(by_priority)=%d != total(%d): %+v", sum, got.Total, got.ByPriority)
 	}
 	if got.Ready != got.ByStatus["ready"] {
 		t.Fatalf("ready convenience=%d != by_status[ready]=%d", got.Ready, got.ByStatus["ready"])
 	}
 	if got.Critical != got.ByPriority["critical"] {
 		t.Fatalf("critical convenience=%d != by_priority[critical]=%d", got.Critical, got.ByPriority["critical"])
-	}
-	// Spot-check the parent/subtask split: 3 roots, 1 subtask.
-	if got.ByScope["parent"] != 3 || got.ByScope["subtask"] != 1 {
-		t.Fatalf("by_scope=%+v want {parent:3, subtask:1}", got.ByScope)
 	}
 }
 
@@ -397,19 +379,16 @@ func assertStatsEnvelopeKeys(t *testing.T, raw []byte) {
 	}
 }
 
-func assertByScopeKeys(t *testing.T, byScope map[string]int64, wantParent, wantSubtask int64) {
+func assertByScopeKeys(t *testing.T, byScope map[string]int64, wantTask int64) {
 	t.Helper()
 	if byScope == nil {
-		t.Fatalf("by_scope is null; want two-key object even on empty DB (docs/api.md)")
+		t.Fatalf("by_scope is null; want task-key object even on empty DB")
 	}
-	if len(byScope) != 2 {
-		t.Fatalf("by_scope has %d keys (%v) want exactly 2 (parent, subtask)", len(byScope), byScope)
+	if len(byScope) != 1 {
+		t.Fatalf("by_scope has %d keys (%v) want exactly 1 (task)", len(byScope), byScope)
 	}
-	if got, ok := byScope["parent"]; !ok || got != wantParent {
-		t.Fatalf("by_scope[parent]=%d ok=%v want %d", got, ok, wantParent)
-	}
-	if got, ok := byScope["subtask"]; !ok || got != wantSubtask {
-		t.Fatalf("by_scope[subtask]=%d ok=%v want %d", got, ok, wantSubtask)
+	if got, ok := byScope["task"]; !ok || got != wantTask {
+		t.Fatalf("by_scope[task]=%d ok=%v want %d", got, ok, wantTask)
 	}
 }
 

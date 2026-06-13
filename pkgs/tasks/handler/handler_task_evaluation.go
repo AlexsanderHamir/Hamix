@@ -29,15 +29,13 @@ func (h *Handler) evaluateDraft(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	out, err := h.store.EvaluateDraftTask(r.Context(), store.EvaluateDraftTaskInput{
-		DraftID:          body.ID,
-		Title:            body.Title,
-		InitialPrompt:    body.InitialPrompt,
-		Status:           body.Status,
-		Priority:         body.Priority,
-		TaskType:         body.TaskType,
-		ParentID:         body.ParentID,
-		ChecklistInherit: body.ChecklistInherit,
-		ChecklistItems:   body.ChecklistItems,
+		DraftID:        body.ID,
+		Title:          body.Title,
+		InitialPrompt:  body.InitialPrompt,
+		Status:         body.Status,
+		Priority:       body.Priority,
+		TaskType:       body.TaskType,
+		ChecklistItems: body.ChecklistItems,
 	}, actorFromRequest(r))
 	if err != nil {
 		writeStoreError(w, r, op, err)

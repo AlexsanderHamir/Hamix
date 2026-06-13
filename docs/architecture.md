@@ -7,7 +7,7 @@ How `taskapi` is shaped: data flow, the persistence layer, the agent worker, and
 - Lots of tasks in flight; humans, scripts, and agents act through the same REST API.
 - Postgres is the single source of truth: projects, tasks, execution cycles, context snapshots, and an append-only `task_events` audit trail.
 - Browsers and runners subscribe to lightweight "something changed" SSE hints and refetch JSON from REST.
-- Long-running work preserves shared context across tasks (`project_id`) without collapsing the subtask tree (`parent_id`). The two answer different questions.
+- Long-running work preserves shared context across tasks via optional `project_id`. Multi-step execution order is expressed with flat tasks and `depends_on`.
 
 ## System
 
@@ -126,7 +126,7 @@ GORM + Postgres. Schema migration is `AutoMigrate` only — no versioned migrati
 
 | Table | Purpose |
 |---|---|
-| `tasks` | Tasks (optional `project_id`, optional `parent_id`, flat tags + milestone, gate JSON, `depends_on` via `task_dependencies`). |
+| `tasks` | Tasks (optional `project_id`, flat tags + milestone, gate JSON, `depends_on` via `task_dependencies`). |
 | `task_events` | Append-only audit log. Every cycle/phase mutation appends a mirror row in the same SQL transaction. |
 | `task_cycles` / `task_cycle_phases` | Typed execution-cycle substrate (see [data-model.md](./data-model.md)). |
 | `task_cycle_stream_events` | Durable normalized Cursor `stream-json` progress for one attempt. |

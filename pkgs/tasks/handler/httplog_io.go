@@ -92,10 +92,6 @@ func taskCreateInputFields(body *taskCreateJSON, actor string) []any {
 	if body == nil {
 		return nil
 	}
-	inherit := false
-	if body.ChecklistInherit != nil {
-		inherit = *body.ChecklistInherit
-	}
 	out := []any{
 		"body_task_id", strings.TrimSpace(body.ID),
 		"body_draft_id", strings.TrimSpace(body.DraftID),
@@ -107,15 +103,10 @@ func taskCreateInputFields(body *taskCreateJSON, actor string) []any {
 		"body_initial_prompt_len", len(body.InitialPrompt),
 		"body_initial_prompt_preview", truncateRunes(body.InitialPrompt, maxHTTPLogPromptRunes),
 		"body_project_id_set", body.ProjectID != nil,
-		"body_parent_id_set", body.ParentID != nil,
-		"body_checklist_inherit", inherit,
 		"actor", actor,
 	}
 	if body.ProjectID != nil {
 		out = append(out, "body_project_id", strings.TrimSpace(*body.ProjectID))
-	}
-	if body.ParentID != nil {
-		out = append(out, "body_parent_id", strings.TrimSpace(*body.ParentID))
 	}
 	if body.PickupNotBefore != nil {
 		out = append(out, "body_pickup_not_before", strings.TrimSpace(*body.PickupNotBefore), "body_pickup_not_before_set", true)
@@ -154,16 +145,6 @@ func taskPatchInputFields(body *taskPatchJSON) []any {
 			out = append(out, "patch_project_id", "clear")
 		} else {
 			out = append(out, "patch_project_id", body.ProjectID.SetID)
-		}
-	}
-	if body.ChecklistInherit != nil {
-		out = append(out, "patch_checklist_inherit", *body.ChecklistInherit)
-	}
-	if body.ParentID.Defined {
-		if body.ParentID.Clear {
-			out = append(out, "patch_parent_id", "clear")
-		} else {
-			out = append(out, "patch_parent_id", body.ParentID.SetID)
 		}
 	}
 	if body.PickupNotBefore.Defined {

@@ -33,20 +33,8 @@ func (h *Handler) create(w http.ResponseWriter, r *http.Request) {
 	by := actorFromRequest(r)
 	debugHTTPRequest(r, op, taskCreateInputFields(&body, string(by))...)
 	if err := h.validatePromptMentionsIfRepo(r, body.InitialPrompt); err != nil {
-		// repo.ValidatePromptMentions wraps every reject with
-		// domain.ErrInvalidInput (via repo.wrapMention / wrapMentionMsg),
-		// so route through writeStoreError to launder the
-		// "tasks: invalid input: " prefix the same way every other
-		// store-side error path does. Going through writeJSONError
-		// with err.Error() leaked that internal prefix into the SPA
-		// "fix the mention" banner — see
-		// TestHTTP_repo_search_and_create_rejects_bad_file_mention.
 		writeStoreError(w, r, op, err)
 		return
-	}
-	inherit := false
-	if body.ChecklistInherit != nil {
-		inherit = *body.ChecklistInherit
 	}
 	settings, err := h.store.GetSettings(r.Context())
 	if err != nil {
@@ -78,8 +66,6 @@ func (h *Handler) create(w http.ResponseWriter, r *http.Request) {
 		TaskType:              body.TaskType,
 		ProjectID:             body.ProjectID,
 		ProjectContextItemIDs: body.ProjectContextItemIDs,
-		ParentID:              body.ParentID,
-		ChecklistInherit:      inherit,
 		Runner:                runner,
 		CursorModel:           cursorModel,
 		PickupNotBefore:       pickupNotBefore,
@@ -92,23 +78,20 @@ func (h *Handler) create(w http.ResponseWriter, r *http.Request) {
 		writeStoreError(w, r, op, err)
 		return
 	}
-	tree, err := h.store.GetTaskTree(r.Context(), t.ID)
+	task, err := h.store.Get(r.Context(), t.ID)
 	if err != nil {
 		writeStoreError(w, r, op, err)
 		return
 	}
-	h.notifyTaskChanged(TaskCreated, t.ID, tree)
+	h.notifyTaskChanged(TaskCreated, t.ID, task)
 	if t.Gate != nil {
 		h.notifyChange(TaskGateChanged, t.ID)
 	}
 	if len(t.DependsOn) > 0 {
 		h.notifyChange(TaskDependencyChanged, t.ID)
 	}
-	if t.ParentID != nil && *t.ParentID != "" {
-		h.notifyChange(TaskUpdated, *t.ParentID)
-	}
 	taskapiDomainTasksCreatedTotal.Inc()
-	writeJSON(w, r, op, http.StatusCreated, tree)
+	writeJSON(w, r, op, http.StatusCreated, task)
 }
 
 func (h *Handler) get(w http.ResponseWriter, r *http.Request) {
@@ -121,7 +104,7 @@ func (h *Handler) get(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	debugHTTPRequest(r, op, "task_id", id)
-	t, err := h.store.GetTaskTree(r.Context(), id)
+	t, err := h.store.Get(r.Context(), id)
 	if err != nil {
 		writeStoreError(w, r, op, err)
 		return
@@ -157,13 +140,13 @@ func (h *Handler) list(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	debugHTTPRequest(r, op, "limit", limit, "offset", offset, "after_id", afterID)
-	var tasks []store.TaskNode
+	var tasks []domain.Task
 	var hasMore bool
 	if afterID != "" {
-		tasks, hasMore, err = h.store.ListRootForestAfter(r.Context(), limit, afterID)
+		tasks, hasMore, err = h.store.ListFlatAfter(r.Context(), limit, afterID)
 		offset = 0
 	} else {
-		tasks, hasMore, err = h.store.ListRootForest(r.Context(), limit, offset)
+		tasks, hasMore, err = h.store.ListFlatPage(r.Context(), limit, offset, nil)
 	}
 	if err != nil {
 		mode := "offset"
@@ -223,7 +206,6 @@ func (h *Handler) patch(w http.ResponseWriter, r *http.Request) {
 		TaskType:              body.TaskType,
 		Project:               projectFieldPatchToStore(body.ProjectID),
 		ProjectContextItemIDs: body.ProjectContextItemIDs,
-		ChecklistInherit:      body.ChecklistInherit,
 		PickupNotBefore:       pickupNotBeforePatchToStore(body.PickupNotBefore),
 		CursorModel:           body.CursorModel,
 		Tags:                  body.Tags,
@@ -231,20 +213,8 @@ func (h *Handler) patch(w http.ResponseWriter, r *http.Request) {
 		Gate:                  gateFieldPatchToStore(body.Gate),
 		DependsOn:             dependsOnPatch,
 	}
-	if body.ParentID.Defined {
-		if body.ParentID.Clear {
-			in.Parent = &store.ParentFieldPatch{Clear: true}
-		} else {
-			in.Parent = &store.ParentFieldPatch{ID: body.ParentID.SetID}
-		}
-	}
 	if body.InitialPrompt != nil {
 		if err := h.validatePromptMentionsIfRepo(r, *body.InitialPrompt); err != nil {
-			// Same prefix-leak symmetry as POST /tasks above:
-			// validatePromptMentionsIfRepo's wrap targets
-			// domain.ErrInvalidInput, so writeStoreError gives the
-			// same clean "mention @path: file does not exist" wire
-			// shape clients already see for the create flow.
 			writeStoreError(w, r, op, err)
 			return
 		}
@@ -255,12 +225,12 @@ func (h *Handler) patch(w http.ResponseWriter, r *http.Request) {
 		writeStoreError(w, r, op, err)
 		return
 	}
-	tree, err := h.store.GetTaskTree(r.Context(), id)
+	task, err := h.store.Get(r.Context(), id)
 	if err != nil {
 		writeStoreError(w, r, op, err)
 		return
 	}
-	h.notifyTaskChanged(TaskUpdated, id, tree)
+	h.notifyTaskChanged(TaskUpdated, id, task)
 	if body.Gate.Defined {
 		h.notifyChange(TaskGateChanged, id)
 	}
@@ -268,7 +238,7 @@ func (h *Handler) patch(w http.ResponseWriter, r *http.Request) {
 		h.notifyChange(TaskDependencyChanged, id)
 	}
 	taskapiDomainTasksUpdatedTotal.Inc()
-	writeJSON(w, r, op, http.StatusOK, tree)
+	writeJSON(w, r, op, http.StatusOK, task)
 }
 
 func (h *Handler) delete(w http.ResponseWriter, r *http.Request) {
@@ -282,7 +252,7 @@ func (h *Handler) delete(w http.ResponseWriter, r *http.Request) {
 	}
 	debugHTTPRequest(r, op, "task_id", id)
 	by := actorFromRequest(r)
-	deletedIDs, parentNotify, err := h.store.Delete(r.Context(), id, by)
+	deletedIDs, err := h.store.Delete(r.Context(), id, by)
 	if err != nil {
 		writeStoreError(w, r, op, err)
 		return
@@ -290,9 +260,6 @@ func (h *Handler) delete(w http.ResponseWriter, r *http.Request) {
 	for _, deletedID := range deletedIDs {
 		h.notifyChange(TaskDeleted, deletedID)
 		taskapiDomainTasksDeletedTotal.Inc()
-	}
-	if parentNotify != "" {
-		h.notifyChange(TaskUpdated, parentNotify)
 	}
 	debugHTTPOut(r.Context(), op, http.StatusNoContent,
 		"task_id", id,
@@ -369,11 +336,6 @@ func parseListParams(ctx context.Context, q url.Values) (limit, offset int, afte
 	return limit, offset, afterID, nil
 }
 
-// validatePromptMentionsIfRepo runs ValidatePromptMentions only when
-// the active workspace can be opened. When the repo root is not yet
-// configured (or fails to open) we skip validation so task creation
-// keeps working from an empty install; the agent worker enforces the
-// same check at run-time once the SPA Settings page wires a root.
 func (h *Handler) validatePromptMentionsIfRepo(r *http.Request, prompt string) error {
 	slog.Debug("trace", "cmd", calltrace.LogCmd, "operation", "handler.Handler.validatePromptMentionsIfRepo")
 	if h.repoProv == nil {

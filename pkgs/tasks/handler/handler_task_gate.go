@@ -34,12 +34,12 @@ func (h *Handler) patchTaskGate(w http.ResponseWriter, r *http.Request) {
 		writeStoreError(w, r, op, err)
 		return
 	}
-	tree, err := h.store.GetTaskTree(r.Context(), id)
+	task, err := h.store.Get(r.Context(), id)
 	if err != nil {
 		writeStoreError(w, r, op, err)
 		return
 	}
 	h.notifyChange(TaskGateChanged, id)
 	h.notifyChange(TaskUpdated, id)
-	writeJSON(w, r, op, http.StatusOK, tree)
+	writeJSON(w, r, op, http.StatusOK, task)
 }

@@ -4,7 +4,6 @@ import type { NavigateFunction } from "react-router-dom";
 import { useTaskDetailDeleteNavigate } from "./useTaskDetailDeleteNavigate";
 
 const TASK_ID = "11111111-1111-4111-8111-111111111111";
-const PARENT_ID = "22222222-2222-4222-8222-222222222222";
 const TASK_B = "33333333-3333-4333-8333-333333333333";
 
 describe("useTaskDetailDeleteNavigate", () => {
@@ -38,23 +37,7 @@ describe("useTaskDetailDeleteNavigate", () => {
     expect(navigate).not.toHaveBeenCalled();
   });
 
-  it("navigates to parent task when parent_id is set", async () => {
-    const navigate = vi.fn();
-    renderHook(() =>
-      useTaskDetailDeleteNavigate(TASK_ID, navigate as NavigateFunction, true, {
-        id: TASK_ID,
-        parent_id: PARENT_ID,
-      }),
-    );
-    await waitFor(() => {
-      expect(navigate).toHaveBeenCalledWith(
-        `/tasks/${encodeURIComponent(PARENT_ID)}`,
-        { replace: true },
-      );
-    });
-  });
-
-  it("navigates home when there is no parent", async () => {
+  it("navigates home after successful delete", async () => {
     const navigate = vi.fn();
     renderHook(() =>
       useTaskDetailDeleteNavigate(TASK_ID, navigate as NavigateFunction, true, {

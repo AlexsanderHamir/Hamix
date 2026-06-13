@@ -1,5 +1,4 @@
 import type { PriorityChoice, TaskType } from "@/types";
-import type { PendingSubtaskDraft } from "../task-tree";
 
 /**
  * Treat editor-empty TipTap markup as the empty string when computing the
@@ -30,7 +29,6 @@ export type DraftAutosaveSignatureInput = {
   taskType: TaskType;
   runner: string;
   cursorModel: string;
-  parentId: string;
   /**
    * Project the operator is composing against. Empty string means "no
    * project bound". Folded into the autosave signature so changing the
@@ -40,10 +38,7 @@ export type DraftAutosaveSignatureInput = {
   projectId: string;
   /** User-selected project context item ids. Order matters and is preserved. */
   projectContextItemIds: string[];
-  checklistInherit: boolean;
   checklistItems: string[];
-  pendingSubtasks: PendingSubtaskDraft[];
-  subtasksWaitForParent: boolean;
   latestEvaluation: {
     overallScore: number;
     overallSummary: string;
@@ -78,21 +73,9 @@ export function draftAutosaveSignature(
       task_type: input.taskType,
       runner: input.runner,
       cursor_model: input.cursorModel,
-      parent_id: input.parentId,
       project_id: input.projectId,
       project_context_item_ids: input.projectContextItemIds,
-      checklist_inherit: input.checklistInherit,
       checklist_items: input.checklistItems,
-      pending_subtasks: input.pendingSubtasks.map((st) => ({
-        title: st.title,
-        initial_prompt: st.initial_prompt,
-        priority: st.priority,
-        task_type: st.task_type,
-        checklist_items: st.checklistItems,
-        checklist_inherit: st.checklist_inherit,
-        depends_on_sibling_indices: st.depends_on_sibling_indices,
-      })),
-      subtasks_wait_for_parent: input.subtasksWaitForParent,
       latest_evaluation: input.latestEvaluation,
       dmap_config: input.dmapConfig,
     },

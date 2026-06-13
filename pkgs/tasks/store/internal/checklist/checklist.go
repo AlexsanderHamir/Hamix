@@ -53,28 +53,14 @@ func DefinitionSourceTaskIDInTx(tx *gorm.DB, taskID string) (string, error) {
 	if taskID == "" {
 		return "", fmt.Errorf("%w: id", domain.ErrInvalidInput)
 	}
-	cur := taskID
-	seen := make(map[string]bool)
-	for {
-		if seen[cur] {
-			return "", fmt.Errorf("%w: parent cycle", domain.ErrInvalidInput)
-		}
-		seen[cur] = true
-		var t domain.Task
-		if err := tx.Where("id = ?", cur).First(&t).Error; err != nil {
-			if errors.Is(err, gorm.ErrRecordNotFound) {
-				return "", domain.ErrNotFound
-			}
-			return "", fmt.Errorf("load task: %w", err)
-		}
-		if !t.ChecklistInherit {
-			return t.ID, nil
-		}
-		if t.ParentID == nil || *t.ParentID == "" {
-			return "", fmt.Errorf("%w: checklist_inherit requires a parent task", domain.ErrInvalidInput)
-		}
-		cur = *t.ParentID
+	var n int64
+	if err := tx.Model(&domain.Task{}).Where("id = ?", taskID).Count(&n).Error; err != nil {
+		return "", fmt.Errorf("load task: %w", err)
 	}
+	if n == 0 {
+		return "", domain.ErrNotFound
+	}
+	return taskID, nil
 }
 
 // List returns definition items for taskID with done flags for that
@@ -161,9 +147,7 @@ func Add(ctx context.Context, db *gorm.DB, taskID, text string, by domain.Actor)
 		if err != nil {
 			return err
 		}
-		if t.ChecklistInherit {
-			return fmt.Errorf("%w: cannot add checklist items while checklist_inherit is true", domain.ErrInvalidInput)
-		}
+		_ = t
 		var maxOrder int
 		row := tx.Model(&domain.TaskChecklistItem{}).Select("COALESCE(MAX(sort_order), 0)").Where("task_id = ?", taskID)
 		if err := row.Scan(&maxOrder).Error; err != nil {
@@ -214,9 +198,7 @@ func Delete(ctx context.Context, db *gorm.DB, taskID, itemID string, by domain.A
 		if err != nil {
 			return err
 		}
-		if t.ChecklistInherit {
-			return fmt.Errorf("%w: cannot delete inherited checklist definitions from this task", domain.ErrInvalidInput)
-		}
+		_ = t
 		var it domain.TaskChecklistItem
 		if err := tx.Where("id = ? AND task_id = ?", itemID, taskID).First(&it).Error; err != nil {
 			if errors.Is(err, gorm.ErrRecordNotFound) {
@@ -251,9 +233,6 @@ func Delete(ctx context.Context, db *gorm.DB, taskID, itemID string, by domain.A
 		}
 		if doneCount > 0 {
 			return fmt.Errorf("%w: cannot remove a criterion that has already been marked done", domain.ErrInvalidInput)
-		}
-		if err := ValidateParentCanRemoveLastCriterionInTx(tx, taskID); err != nil {
-			return err
 		}
 		seq, err := kernel.NextEventSeq(tx, taskID)
 		if err != nil {
@@ -291,9 +270,7 @@ func UpdateText(ctx context.Context, db *gorm.DB, taskID, itemID, text string, b
 		if err != nil {
 			return err
 		}
-		if t.ChecklistInherit {
-			return fmt.Errorf("%w: cannot update inherited checklist definitions from this task", domain.ErrInvalidInput)
-		}
+		_ = t
 		var it domain.TaskChecklistItem
 		if err := tx.Where("id = ? AND task_id = ?", itemID, taskID).First(&it).Error; err != nil {
 			if errors.Is(err, gorm.ErrRecordNotFound) {

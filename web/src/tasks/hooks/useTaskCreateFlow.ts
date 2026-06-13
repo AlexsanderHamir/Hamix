@@ -8,14 +8,8 @@ import {
   evaluateDraftTask as apiEvaluateDraft,
   getTaskDraft as apiGetDraft,
   listTaskDrafts as apiListDrafts,
-  patchTask as apiPatchTask,
   saveTaskDraft as apiSaveDraft,
 } from "../../api";
-import {
-  type PendingSubtaskDraft,
-  materializeSubtaskDependsOn,
-  remapPendingSubtaskSiblingIndices,
-} from "../task-tree";
 import { plainTextToInitialHtml } from "../task-prompt";
 import { settingsQueryKeys, taskQueryKeys } from "../task-query";
 import {
@@ -47,8 +41,6 @@ type CreateTaskMutationInput = {
   priority: Priority;
   task_type: TaskType;
   checklistItems: string[];
-  pendingSubtasks: PendingSubtaskDraft[];
-  subtasks_wait_for_parent: boolean;
   draft_id: string;
   runner: string;
   cursor_model: string;
@@ -65,66 +57,12 @@ async function addChecklistItems(taskId: string, items: string[]) {
   await Promise.all(rows.map((text) => addChecklistItem(taskId, text)));
 }
 
-/** Checklist rows, nested subtasks, and sibling dep patches — after the parent exists. */
+/** Checklist rows after the task row exists. */
 async function finishTaskCreateExtras(
   task: { id: string },
   input: CreateTaskMutationInput,
 ) {
   await addChecklistItems(task.id, input.checklistItems);
-
-  const entries = input.pendingSubtasks
-    .map((st, draftIndex) => ({ st, draftIndex }))
-    .filter(({ st }) => Boolean(st.title.trim()));
-
-  const siblingIdsByIndex = new Map<number, string>();
-  // Sequential, not parallel: each subtask create appends a subtask_added
-  // event on the parent via SELECT … FOR UPDATE on the parent row; parallel
-  // POSTs deadlock on Postgres (see taskapi logs).
-  const created: Array<{
-    draftIndex: number;
-    id: string;
-    st: (typeof entries)[number]["st"];
-  }> = [];
-  for (const { st, draftIndex } of entries) {
-    const childInherit = st.checklist_inherit === true;
-    const postDepends = materializeSubtaskDependsOn({
-      waitForParent: input.subtasks_wait_for_parent,
-      parentId: task.id,
-    });
-    const child = await apiCreate({
-      title: st.title.trim(),
-      initial_prompt: st.initial_prompt,
-      status: input.status,
-      priority: st.priority,
-      task_type: st.task_type,
-      parent_id: task.id,
-      ...(input.project_id ? { project_id: input.project_id } : {}),
-      runner: input.runner,
-      cursor_model: input.cursor_model,
-      ...(childInherit ? { checklist_inherit: true } : {}),
-      ...(postDepends.length > 0 ? { depends_on: postDepends } : {}),
-    });
-    if (!childInherit) {
-      await addChecklistItems(child.id, st.checklistItems);
-    }
-    siblingIdsByIndex.set(draftIndex, child.id);
-    created.push({ draftIndex, id: child.id, st });
-  }
-
-  await Promise.all(
-    created
-      .filter(({ st }) => st.depends_on_sibling_indices.length > 0)
-      .map(async ({ draftIndex, id, st }) => {
-        const deps = materializeSubtaskDependsOn({
-          waitForParent: input.subtasks_wait_for_parent,
-          parentId: task.id,
-          siblingIndices: st.depends_on_sibling_indices,
-          siblingIdsByIndex,
-          selfIndex: draftIndex,
-        });
-        await apiPatchTask(id, { depends_on: deps });
-      }),
-  );
 }
 
 /**
@@ -229,12 +167,6 @@ export function useTaskCreateFlow() {
     overallSummary: string;
     sections: Array<{ key: string; score: number }>;
   } | null>(null);
-  /** Child tasks (full draft) created after the parent task on the home flow. */
-  const [pendingSubtasks, setPendingSubtasks] = useState<PendingSubtaskDraft[]>(
-    [],
-  );
-  /** When true, every pending subtask gets a criteria_complete parent edge on create. */
-  const [subtasksWaitForParent, setSubtasksWaitForParent] = useState(false);
   const [createModalOpen, setCreateModalOpen] = useState(false);
 
   const autosaveTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -311,8 +243,6 @@ export function useTaskCreateFlow() {
     setNewDependsOn([]);
     setNewChecklistItems([]);
     setCreateFormError(null);
-    setPendingSubtasks([]);
-    setSubtasksWaitForParent(false);
     setLatestDraftEvaluation(null);
     setNewDraftID(generatedID);
     setLastDraftSavedAt(null);
@@ -326,13 +256,9 @@ export function useTaskCreateFlow() {
         taskType: DEFAULT_NEW_TASK_TYPE,
         runner: (s?.runner ?? "cursor").trim() || "cursor",
         cursorModel: s?.cursor_model ?? "",
-        parentId: "",
         projectId: DEFAULT_PROJECT_ID,
         projectContextItemIds: [],
-        checklistInherit: false,
         checklistItems: [],
-        pendingSubtasks: [],
-        subtasksWaitForParent: false,
         latestEvaluation: null,
         dmapConfig: {
           commitLimit: TASK_DRAFTS.initialDmapCommitLimit,
@@ -429,11 +355,10 @@ export function useTaskCreateFlow() {
       return { task, input };
     },
     onSuccess: ({ task, input }, variables) => {
-      // Close as soon as the parent row exists — checklist rows and nested
-      // subtasks can take several round-trips (Neon latency × sequential
-      // subtask creates). SSE already puts the parent in the list behind the
-      // modal; keeping the sheet open until every child POST finishes felt
-      // broken even though the task was already live.
+      // Close as soon as the task row exists — checklist rows may take an
+      // extra round-trip. SSE already puts the task in the list behind the
+      // modal; keeping the sheet open until every checklist POST finishes
+      // felt broken even though the task was already live.
       if (newDraftIDRef.current === variables.draft_id) {
         closeCreateModal();
       }
@@ -514,19 +439,9 @@ export function useTaskCreateFlow() {
         task_type: TaskType;
         runner: string;
         cursor_model: string;
-        parent_id: string;
         project_id: string;
         project_context_item_ids: string[];
-        checklist_inherit: boolean;
         checklist_items: string[];
-        pending_subtasks: Array<{
-          title: string;
-          initial_prompt: string;
-          priority: Priority;
-          task_type: TaskType;
-          checklist_items: string[];
-          checklist_inherit: boolean;
-        }>;
         latest_evaluation?: {
           overall_score: number;
           overall_summary: string;
@@ -640,16 +555,9 @@ export function useTaskCreateFlow() {
         prompt: newPrompt,
         priority: newPriority,
         taskType: newTaskType,
-        // The create modal can no longer parent or inherit-from a parent,
-        // but the wire format still has these fields so the autosave
-        // signature mirrors what the server persists.
-        parentId: "",
         projectId: newProjectID,
         projectContextItemIds: newProjectContextItemIDs,
-        checklistInherit: false,
         checklistItems: newChecklistItems,
-        pendingSubtasks,
-        subtasksWaitForParent,
         latestEvaluation: latestDraftEvaluation,
         runner: newTaskRunner,
         cursorModel: newTaskCursorModel,
@@ -674,8 +582,6 @@ export function useTaskCreateFlow() {
       newTaskCursorModel,
       newProjectID,
       newProjectContextItemIDs,
-      pendingSubtasks,
-      subtasksWaitForParent,
     ],
   );
 
@@ -690,24 +596,12 @@ export function useTaskCreateFlow() {
         task_type: newTaskType,
         runner: newTaskRunner,
         cursor_model: newTaskCursorModel,
-        parent_id: "",
         // Persist the operator's project + context selection on the draft
         // so closing and resuming restores the same REFERENCES block in the
         // prompt editor (and the same `project_context_item_ids` on submit).
         project_id: newProjectID,
         project_context_item_ids: newProjectContextItemIDs,
-        checklist_inherit: false,
         checklist_items: newChecklistItems,
-        pending_subtasks: pendingSubtasks.map((st) => ({
-          title: st.title,
-          initial_prompt: st.initial_prompt,
-          priority: st.priority,
-          task_type: st.task_type,
-          checklist_items: st.checklistItems,
-          checklist_inherit: st.checklist_inherit,
-          depends_on_sibling_indices: st.depends_on_sibling_indices,
-        })),
-        ...(subtasksWaitForParent ? { subtasks_wait_for_parent: true } : {}),
         ...(latestDraftEvaluation
           ? {
               latest_evaluation: {
@@ -743,8 +637,6 @@ export function useTaskCreateFlow() {
     newTaskCursorModel,
     newProjectID,
     newProjectContextItemIDs,
-    pendingSubtasks,
-    subtasksWaitForParent,
   ]);
 
   const saveDraftNow = useCallback(() => {
@@ -838,18 +730,6 @@ export function useTaskCreateFlow() {
     if (!newTitle.trim() || !newPriority) return;
     const dmapDomain = newDmapDomain.trim();
     if (newTaskType === "dmap" && !dmapDomain) return;
-    const hasPendingSubtasks = pendingSubtasks.some((st) =>
-      Boolean(st.title.trim()),
-    );
-    const hasParentCriteria = newChecklistItems.some((text) =>
-      Boolean(text.trim()),
-    );
-    if (hasPendingSubtasks && !hasParentCriteria) {
-      setCreateFormError(
-        "Add at least one done criterion on the parent task before creating subtasks.",
-      );
-      return;
-    }
     setCreateFormError(null);
     // Autonomy off => create the task in on_hold so the agent worker
     // skips it on dequeue (ReadyForAgentPickup gates on Status==Ready,
@@ -875,8 +755,6 @@ export function useTaskCreateFlow() {
       task_type: toApiTaskType(newTaskType),
       draft_id: newDraftID,
       checklistItems: newChecklistItems,
-      pendingSubtasks,
-      subtasks_wait_for_parent: subtasksWaitForParent,
       runner: newTaskRunner.trim() || "cursor",
       cursor_model: newTaskCursorModel.trim(),
       project_id: newProjectID.trim(),
@@ -917,15 +795,6 @@ export function useTaskCreateFlow() {
       // `apiGetDraft` is a read, not a mutation.
       return;
     }
-    const pendingSubtasks = (draft.payload.pending_subtasks ?? []).map((st) => ({
-      title: st.title,
-      initial_prompt: st.initial_prompt,
-      priority: st.priority,
-      task_type: st.task_type,
-      checklistItems: st.checklist_items,
-      checklist_inherit: st.checklist_inherit,
-      depends_on_sibling_indices: st.depends_on_sibling_indices ?? [],
-    }));
     const latestEvaluation = draft.payload.latest_evaluation
       ? {
           overallScore: draft.payload.latest_evaluation.overall_score,
@@ -964,15 +833,7 @@ export function useTaskCreateFlow() {
     );
     setNewDmapDomain(draft.payload.dmap_config?.domain ?? "");
     setNewDmapDescription(draft.payload.dmap_config?.description ?? "");
-    // The create modal no longer hosts a parent picker or the
-    // inherit-from-parent toggle (subtasks are created from inside
-    // the parent task's own page now). Drop those fields silently
-    // when resuming a legacy draft so the form represents what the
-    // user can actually edit; the next autosave will persist them
-    // as empty/false.
     setNewChecklistItems(draft.payload.checklist_items ?? []);
-    setPendingSubtasks(pendingSubtasks);
-    setSubtasksWaitForParent(draft.payload.subtasks_wait_for_parent === true);
     setLatestDraftEvaluation(latestEvaluation);
     // Project + selected context items are optional on legacy drafts; fall
     // back to the default project / empty selection so the REFERENCES block
@@ -1007,16 +868,9 @@ export function useTaskCreateFlow() {
         taskType: draft.payload.task_type ?? DEFAULT_NEW_TASK_TYPE,
         runner: resumedRunner,
         cursorModel: resumedModel,
-        // Match the always-empty baseline from `currentDraftAutosaveSignature`:
-        // resuming a legacy draft with `parent_id` set must not flip the
-        // dirty bit (the next autosave intentionally clears those fields).
-        parentId: "",
         projectId: resumedProjectID,
         projectContextItemIds: resumedProjectContextIds,
-        checklistInherit: false,
         checklistItems: draft.payload.checklist_items ?? [],
-        pendingSubtasks,
-        subtasksWaitForParent: draft.payload.subtasks_wait_for_parent === true,
         latestEvaluation,
         dmapConfig: {
           commitLimit: String(
@@ -1044,9 +898,7 @@ export function useTaskCreateFlow() {
    * dispatch a real agent run with zero typing — the whole point of the
    * test-scenarios affordance.
    *
-   * Leaves project / context / runner / model / schedule alone unless the
-   * scenario defines `subtasksWaitForParent` / `pendingSubtasks` (scheduling
-   * probes pre-fill those; generic scenarios leave them unchanged).
+   * Leaves project / context / runner / model / schedule alone.
    *
    * Same imports kept inline so the test-scenarios module is only pulled
    * into the bundle when this hook is loaded (it already is, since the
@@ -1063,26 +915,6 @@ export function useTaskCreateFlow() {
           .map((item) => item.trim())
           .filter((item) => item.length > 0),
       );
-      if (scenario.subtasksWaitForParent !== undefined) {
-        setSubtasksWaitForParent(scenario.subtasksWaitForParent);
-      }
-      if (scenario.pendingSubtasks !== undefined) {
-        setPendingSubtasks(
-          scenario.pendingSubtasks.map((st) => ({
-            title: st.title,
-            initial_prompt: st.prompt
-              ? plainTextToInitialHtml(st.prompt)
-              : "",
-            priority: st.priority ?? "medium",
-            task_type: st.taskType ?? "general",
-            checklistItems: (st.checklist ?? [])
-              .map((item) => item.trim())
-              .filter(Boolean),
-            checklist_inherit: st.checklistInherit ?? false,
-            depends_on_sibling_indices: st.dependsOnSiblingIndices ?? [],
-          })),
-        );
-      }
       // DMAP fields stay at their defaults; scenarios don't target the
       // DMAP runner today (they're all general / refactor / docs / etc.).
     },
@@ -1103,33 +935,6 @@ export function useTaskCreateFlow() {
     const t = raw.trim();
     if (!t) return;
     setNewChecklistItems((prev) => prev.map((x, i) => (i === index ? t : x)));
-  }, []);
-
-  const addPendingSubtask = useCallback((d: PendingSubtaskDraft) => {
-    setPendingSubtasks((prev) => [...prev, d]);
-  }, []);
-
-  const updatePendingSubtask = useCallback(
-    (index: number, d: PendingSubtaskDraft) => {
-      setPendingSubtasks((prev) =>
-        prev.map((x, i) => (i === index ? d : x)),
-      );
-    },
-    [],
-  );
-
-  const removePendingSubtask = useCallback((index: number) => {
-    setPendingSubtasks((prev) =>
-      prev
-        .filter((_, i) => i !== index)
-        .map((st) => ({
-          ...st,
-          depends_on_sibling_indices: remapPendingSubtaskSiblingIndices(
-            st.depends_on_sibling_indices,
-            index,
-          ),
-        })),
-    );
   }, []);
 
   const createPending = createMutation.isPending;
@@ -1230,12 +1035,6 @@ export function useTaskCreateFlow() {
     setNewDependsOn,
     newChecklistItems,
     latestDraftEvaluation,
-    pendingSubtasks,
-    subtasksWaitForParent,
-    setSubtasksWaitForParent,
-    addPendingSubtask,
-    updatePendingSubtask,
-    removePendingSubtask,
     appendNewChecklistCriterion,
     updateNewChecklistRow,
     removeNewChecklistRow,

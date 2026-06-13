@@ -22,7 +22,6 @@ func TestHTTP_evaluate_task_draft_creates_persisted_evaluation(t *testing.T) {
 		"initial_prompt":"Handle nested mentions and malformed ranges with clear errors.",
 		"priority":"high",
 		"status":"ready",
-		"checklist_inherit":false,
 		"checklist_items":[{"text":"Add parser tests"},{"text":"Document edge cases"}]
 	}`
 	res, err := http.Post(srv.URL+"/tasks/evaluate", "application/json", strings.NewReader(body))

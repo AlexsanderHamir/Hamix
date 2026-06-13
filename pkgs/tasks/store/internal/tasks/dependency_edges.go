@@ -47,10 +47,5 @@ func EdgeSatisfied(predecessor *domain.Task, satisfies domain.DependencySatisfie
 	if predecessor == nil {
 		return false
 	}
-	switch domain.NormalizeDependencySatisfies(satisfies) {
-	case domain.DependencySatisfiesCriteriaComplete:
-		return predecessor.CriteriaSatisfiedAt != nil
-	default:
-		return predecessor.Status == domain.StatusDone
-	}
+	return predecessor.Status == domain.StatusDone
 }

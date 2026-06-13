@@ -1,7 +1,7 @@
 # ADR-0009: `awaiting_subtasks` Status for Parent Epic Lifecycle
 
 **Date:** 2026-06-12
-**Status:** Accepted
+**Status:** Superseded by [ADR-0010](ADR-0010-remove-subtasks.md)
 **Supersedes:** [ADR-0008](ADR-0008-dependency-satisfies-epic-scheduling.md) item #6 (harness transition)
 **Deciders:** T2A maintainers
 

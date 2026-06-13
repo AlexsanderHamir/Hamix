@@ -347,7 +347,6 @@ export function demoTaskStatsWire(): unknown {
     scheduled: 2,
     by_status: byStatus,
     by_priority: { low: 4, medium: total - 8, high: 4, critical: 4 },
-    by_scope: { parent: Math.ceil(total * 0.65), subtask: Math.floor(total * 0.35) },
     ...cyclesPhasesEmpty,
   };
 }

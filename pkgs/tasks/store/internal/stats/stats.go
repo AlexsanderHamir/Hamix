@@ -91,8 +91,7 @@ func Get(ctx context.Context, db *gorm.DB) (TaskStats, error) {
 		ByStatus:   map[domain.Status]int64{},
 		ByPriority: map[domain.Priority]int64{},
 		ByScope: map[string]int64{
-			"parent":  r.ParentTotal,
-			"subtask": r.SubtaskTotal,
+			"task": r.Total,
 		},
 		Cycles: CycleStats{
 			ByStatus:      map[domain.CycleStatus]int64{},

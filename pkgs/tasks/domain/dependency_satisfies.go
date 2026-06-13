@@ -9,15 +9,12 @@ type DependencySatisfies string
 const (
 	// DependencySatisfiesDone requires predecessor status=done (default).
 	DependencySatisfiesDone DependencySatisfies = "done"
-	// DependencySatisfiesCriteriaComplete requires the predecessor's
-	// inherited checklist to be fully verified (criteria_satisfied_at set).
-	DependencySatisfiesCriteriaComplete DependencySatisfies = "criteria_complete"
 )
 
 // ValidDependencySatisfies reports whether s is a known edge predicate.
 func ValidDependencySatisfies(s DependencySatisfies) bool {
 	switch s {
-	case DependencySatisfiesDone, DependencySatisfiesCriteriaComplete, "":
+	case DependencySatisfiesDone, "":
 		return true
 	default:
 		return false

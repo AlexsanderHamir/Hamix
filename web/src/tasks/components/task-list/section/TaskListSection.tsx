@@ -36,7 +36,7 @@ import {
 
 type Props = {
   tasks: TaskWithDepth[];
-  /** Root tasks returned for this list page (for pager copy; rows may include nested subtasks). */
+  /** Tasks returned for this list page (for pager copy). */
   rootTasksOnPage: number;
   loading: boolean;
   /** Background refetch in progress (list still visible). */
@@ -65,9 +65,7 @@ type Props = {
   onEdit: (t: Task) => void;
   /**
    * Opens in-app delete confirmation (do not call `window.confirm` from the
-   * table). The table forwards the row's pre-computed `descendantCount` via
-   * `subtaskCount` so the confirm dialog can warn about the cascade — see
-   * docs/api.md "DELETE /tasks/{id}".
+   * table).
    */
   onRequestDelete: (t: DeleteTargetInput) => void;
   /** Primary action when the server returned no tasks (e.g. open create modal). */
@@ -179,7 +177,6 @@ export const TaskListSection = memo(function TaskListSection({
       .map((t) => ({
         id: t.id,
         title: t.title,
-        descendantCount: t.descendantCount,
       }));
   }, [filteredTasks, selection.selectedVisibleIds]);
 

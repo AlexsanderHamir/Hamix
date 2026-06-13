@@ -1,16 +1,12 @@
 import { useRef, useState, type FormEvent, type ReactNode } from "react";
 import type { PriorityChoice, TaskType } from "@/types";
-import type { PendingSubtaskDraft } from "../../task-tree";
 import type { RichPromptEditorProjectContextProps } from "../rich-prompt";
 import type { TestScenario } from "@/tasks/test-scenarios";
 import { Modal } from "../../../shared/Modal";
 import { MutationErrorBanner } from "../../../shared/MutationErrorBanner";
 import { TaskCreateModalPrimaryFields } from "./fields/TaskCreateModalPrimaryFields";
-import { TaskCreateModalPendingSubtasksField } from "./fields/TaskCreateModalPendingSubtasksField";
 import { taskCreateModalBusyLabel } from "./taskCreateModalBusyLabel";
 import { taskCreateModalDmapReady } from "./dmap/taskCreateModalDmapReady";
-import { TaskCreateModalNestedSubtaskModal } from "./nested/TaskCreateModalNestedSubtaskModal";
-import { useTaskCreateModalNestedDraft } from "./nested/useTaskCreateModalNestedDraft";
 import { TaskCreateModalFooterActions } from "./fields/TaskCreateModalFooterActions";
 import { TaskCreateModalAgentSection } from "./fields/TaskCreateModalAgentSection";
 import { TaskCreateModalAutonomyToggle } from "./fields/TaskCreateModalAutonomyToggle";
@@ -43,12 +39,6 @@ type Props = {
   onAppendChecklistCriterion: (text: string) => void;
   onUpdateChecklistRow: (index: number, text: string) => void;
   onRemoveChecklistRow: (index: number) => void;
-  pendingSubtasks: PendingSubtaskDraft[];
-  subtasksWaitForParent: boolean;
-  onSubtasksWaitForParentChange: (v: boolean) => void;
-  onAddPendingSubtask: (d: PendingSubtaskDraft) => void;
-  onUpdatePendingSubtask: (index: number, d: PendingSubtaskDraft) => void;
-  onRemovePendingSubtask: (index: number) => void;
   evaluatePending: boolean;
   evaluation: TaskCreateModalEvaluation | null;
   dmapCommitLimit: string;
@@ -62,83 +52,25 @@ type Props = {
   onTaskRunnerChange: (runner: string) => void;
   onTaskCursorModelChange: (v: string) => void;
   projectAssignment?: ReactNode;
-  /**
-   * Forwarded into the rich prompt editor so the operator can type `#` to
-   * reference project context nodes for the active project. Pass
-   * `undefined` while the project list is still loading or no project is
-   * selected — the editor falls back to its repo-only `@` mention behavior.
-   */
   promptProjectContext?: RichPromptEditorProjectContextProps;
-  /**
-   * Future pickup time as an RFC3339 UTC ISO string, or `null` when
-   * the operator wants the task picked up immediately. Plumbed
-   * straight into the `SchedulePicker` rendered inside the modal.
-   * The modal owns no schedule state of its own — `useTasksApp`
-   * holds the canonical source so the same value survives a
-   * close+reopen of the same draft and resets cleanly on a fresh
-   * draft.
-   */
   schedule: string | null;
   onScheduleChange: (next: string | null) => void;
-  /**
-   * `true` (default) creates the task as `ready` (the agent worker can
-   * pick it up). `false` creates it as `on_hold` so the agent never
-   * dequeues it; the operator resumes the task later from the detail
-   * page. The toggle's helper text explains which side of that choice
-   * the user is currently on.
-   */
   autonomyEnabled: boolean;
   onAutonomyChange: (enabled: boolean) => void;
   tagsCsv: string;
   milestone: string;
-  /**
-   * Project the new task is being scoped to. Forwarded to the
-   * dependency picker so it filters task lookups by `project_id`.
-   * Empty string means "no project bound" — the picker reads as
-   * disabled chrome.
-   */
   projectId: string;
   dependsOn: string[];
   onTagsCsvChange: (value: string) => void;
   onMilestoneChange: (value: string) => void;
   onDependsOnChange: (value: string[]) => void;
-  /**
-   * IANA timezone the picker should render its wall-clock literal
-   * + caption in. Forwarded as a prop (rather than read from a hook
-   * inside the picker) so the modal owns the "look up the operator
-   * timezone" decision once and the picker stays trivially testable.
-   */
   appTimezone: string;
   onSaveDraft: () => void;
   onEvaluate: () => void;
   onSubmit: (e: FormEvent) => void;
-  /**
-   * Error from the most recent `createMutation` (POST `/tasks`).
-   * Surfaced as a `.err role="alert"` callout above the footer
-   * actions so the user sees the failure inside the modal — without
-   * this, the modal stays open with no feedback after a failed
-   * submit because the global `app.error` banner is hidden behind
-   * the modal backdrop. Pass `createMutation.error` directly (typed
-   * as `Error | null` per react-query v5).
-   */
   createError?: Error | null;
-  /** Client-side validation (e.g. parent criteria required when subtasks exist). */
   createFormError?: string | null;
-  /**
-   * Error from the most recent `evaluateDraftMutation`. Same gap as
-   * `createError`: the global banner is hidden behind the modal,
-   * so without this prop a failed evaluation produces a click that
-   * appears to do nothing. Surfaced near the evaluation summary
-   * so the user understands which action failed.
-   */
   evaluateError?: Error | null;
-  /**
-   * Apply a `TestScenario` from `web/src/tasks/test-scenarios` to the form.
-   * The trigger button + popover only render when this callback is wired,
-   * which keeps the affordance scoped to the create flow (the same modal
-   * isn't reused for editing existing tasks today, but the gating leaves
-   * the door open if it ever is).
-   */
   onApplyTestScenario?: (scenario: TestScenario) => void;
 };
 
@@ -161,12 +93,6 @@ export function TaskCreateModal({
   onAppendChecklistCriterion,
   onUpdateChecklistRow,
   onRemoveChecklistRow,
-  pendingSubtasks,
-  subtasksWaitForParent,
-  onSubtasksWaitForParentChange,
-  onAddPendingSubtask,
-  onUpdatePendingSubtask,
-  onRemovePendingSubtask,
   evaluatePending,
   evaluation,
   dmapCommitLimit,
@@ -203,7 +129,6 @@ export function TaskCreateModal({
 }: Props) {
   const disabled = pending || saving;
   const dmapMode = taskType === "dmap";
-  const hasPendingSubtasks = pendingSubtasks.some((st) => Boolean(st.title.trim()));
   const dmapReady = taskCreateModalDmapReady(
     dmapMode,
     dmapCommitLimit,
@@ -219,22 +144,7 @@ export function TaskCreateModal({
     scenariosTriggerRef.current?.focus();
   };
 
-  const {
-    nestedOpen,
-    nestedInstanceKey,
-    nestedInitial,
-    nestedEditIndex,
-    openNestedNew,
-    openNestedEdit,
-    handleNestedClose,
-    handleNestedSave,
-  } = useTaskCreateModalNestedDraft({
-    pendingSubtasks,
-    onAddPendingSubtask,
-    onUpdatePendingSubtask,
-  });
-
-  const busyLabel = taskCreateModalBusyLabel(pendingSubtasks.length);
+  const busyLabel = taskCreateModalBusyLabel();
 
   return (
     <>
@@ -244,17 +154,6 @@ export function TaskCreateModal({
         size="wide"
         busy={pending}
         busyLabel={busyLabel}
-        // While `createMutation` is pending the spinner overlay still
-        // gives in-flight feedback, but the user can step away from
-        // the modal (Escape / backdrop) without losing context. Safe
-        // because `useTasksApp.createMutation.onSuccess` gates its
-        // `closeCreateModal()` call on `newDraftIDRef.current ===
-        // variables.draft_id` and `resetNewTaskForm` clears
-        // `requestedResumeRef`, so a stale create resolution can no
-        // longer slam shut a draft the user has switched to. Server-
-        // truth invalidations (`taskQueryKeys.all`, `task-stats`,
-        // `task-drafts`) still fire so the new task appears in the
-        // list even if the modal was already closed by the user.
         dismissibleWhileBusy
       >
         <section className="panel modal-sheet modal-sheet--edit task-create-modal-sheet task-create">
@@ -308,7 +207,7 @@ export function TaskCreateModal({
               prompt={prompt}
               checklistItems={checklistItems}
               hideComposeChecklist={false}
-              checklistRequirement={hasPendingSubtasks ? "required" : "optional"}
+              checklistRequirement="optional"
               onPromptChange={onPromptChange}
               onAppendChecklistCriterion={onAppendChecklistCriterion}
               onUpdateChecklistRow={onUpdateChecklistRow}
@@ -317,18 +216,6 @@ export function TaskCreateModal({
             />
 
             {projectAssignment}
-
-            {!dmapMode ? (
-              <TaskCreateModalPendingSubtasksField
-                pendingSubtasks={pendingSubtasks}
-                subtasksWaitForParent={subtasksWaitForParent}
-                onSubtasksWaitForParentChange={onSubtasksWaitForParentChange}
-                disabled={disabled}
-                onOpenNestedNew={openNestedNew}
-                onOpenNestedEdit={openNestedEdit}
-                onRemovePendingSubtask={onRemovePendingSubtask}
-              />
-            ) : null}
 
             <TaskCreateModalAutonomyToggle
               enabled={autonomyEnabled}
@@ -428,16 +315,6 @@ export function TaskCreateModal({
           onClose={() => setScenariosOpen(false)}
         />
       ) : null}
-
-      <TaskCreateModalNestedSubtaskModal
-        open={nestedOpen}
-        instanceKey={nestedInstanceKey}
-        initialDraft={nestedInitial}
-        pendingSubtasks={pendingSubtasks}
-        selfIndex={nestedEditIndex}
-        onClose={handleNestedClose}
-        onSave={handleNestedSave}
-      />
     </>
   );
 }

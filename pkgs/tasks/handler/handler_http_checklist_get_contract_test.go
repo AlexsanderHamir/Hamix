@@ -182,55 +182,6 @@ func TestHTTP_getChecklist_404OnUnknownTask(t *testing.T) {
 }
 
 // TestHTTP_getChecklist_inheritanceAndPerSubjectDone pins the most subtle
-// documented behavior: an inheriting child returns its parent's definitions
-// (resolved through `checklist_inherit`), but `done` is filtered to the
-// **child's** completion rows. So when the child agent-marks one definition
-// done, the child's GET shows it done while the parent's GET shows the same
-// definition still undone — independent per-subject done state.
-func TestHTTP_getChecklist_inheritanceAndPerSubjectDone(t *testing.T) {
-	srv, st := newTaskTestServerWithStore(t)
-	defer srv.Close()
-	ctx := context.Background()
-	parentID := mustCreateChecklistTask(t, srv, "chk-inh-parent")
-	a, err := st.AddChecklistItem(ctx, parentID, "shared-A", domain.ActorUser)
-	if err != nil {
-		t.Fatal(err)
-	}
-	b, err := st.AddChecklistItem(ctx, parentID, "shared-B", domain.ActorUser)
-	if err != nil {
-		t.Fatal(err)
-	}
-	childID := mustCreateChildInheriting(t, srv, parentID, "chk-inh-child")
-
-	if err := st.SetChecklistItemDone(ctx, childID, a.ID, true, domain.ActorAgent); err != nil {
-		t.Fatal(err)
-	}
-
-	checkChildGET := func(t *testing.T) {
-		t.Helper()
-		got := getChecklistAsMap(t, srv.URL, childID)
-		if !got[a.ID] {
-			t.Errorf("child GET: %q must be done (set on child)", a.ID)
-		}
-		if got[b.ID] {
-			t.Errorf("child GET: %q must NOT be done", b.ID)
-		}
-	}
-	checkParentGET := func(t *testing.T) {
-		t.Helper()
-		got := getChecklistAsMap(t, srv.URL, parentID)
-		if got[a.ID] {
-			t.Errorf("parent GET: %q must NOT be done — completion was recorded against child only (per-subject done)", a.ID)
-		}
-		if got[b.ID] {
-			t.Errorf("parent GET: %q must NOT be done", b.ID)
-		}
-	}
-
-	t.Run("childInheritsAndOwnsDoneState", checkChildGET)
-	t.Run("parentRowsRemainUndone", checkParentGET)
-}
-
 func getChecklistAsMap(t *testing.T, baseURL, taskID string) map[string]bool {
 	t.Helper()
 	res, err := http.Get(baseURL + "/tasks/" + taskID + "/checklist")

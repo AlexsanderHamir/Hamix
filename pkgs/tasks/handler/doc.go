@@ -23,19 +23,19 @@
 //
 //   - GET    /events          — Server-Sent Events stream (text/event-stream); JSON lines with
 //     type task_created | task_updated | task_deleted and id (UUID)
-//   - POST   /tasks           — create; 201 + JSON task tree (same shape as GET)
+//   - POST   /tasks           — create; 201 + JSON task (same shape as GET)
 //   - POST   /tasks/evaluate  — evaluate task-creation draft payload; 201 + JSON score breakdown
-//   - GET    /tasks           — list root tasks only (parent_id null); query limit (0–200, default 50), offset (≥ 0) or keyset after_id (UUID, mutually exclusive with offset); limit/offset capped at 32 bytes, after_id at 128 bytes; response includes has_more; each element includes nested children[]
-//   - GET    /tasks/stats     — global counters across all tasks; 200 + JSON { total, ready, critical, by_status, by_priority, by_scope }
-//   - GET    /tasks/{id}/checklist — 200 + JSON { items: [{ id, sort_order, text, done }] } for this task (definition from self or inherited ancestor)
-//   - POST   /tasks/{id}/checklist/items — body { text }; 201 + checklist item row; 400 if checklist_inherit
-//   - PATCH  /tasks/{id}/checklist/items/{itemId} — exactly one of { text } (non-empty) or { done: bool }; 200 + full { items }; done requires X-Actor agent; text allowed for user or agent; 400 if checklist_inherit
-//   - DELETE /tasks/{id}/checklist/items/{itemId} — 204; 400 if checklist_inherit
+//   - GET    /tasks           — flat paginated list; query limit (0–200, default 50), offset (≥ 0) or keyset after_id (UUID, mutually exclusive with offset); limit/offset capped at 32 bytes, after_id at 128 bytes; response includes has_more
+//   - GET    /tasks/stats     — global counters across all tasks; 200 + JSON { total, ready, critical, by_status, by_priority }
+//   - GET    /tasks/{id}/checklist — 200 + JSON { items: [{ id, sort_order, text, done }] } for this task
+//   - POST   /tasks/{id}/checklist/items — body { text }; 201 + checklist item row
+//   - PATCH  /tasks/{id}/checklist/items/{itemId} — exactly one of { text } (non-empty) or { done: bool }; 200 + full { items }; done requires X-Actor agent; text allowed for user or agent
+//   - DELETE /tasks/{id}/checklist/items/{itemId} — 204
 //   - GET    /tasks/{id}/events/{seq} — 200 + JSON { task_id, seq, at, type, by, data }; 404 if no such row; 400 if seq invalid or path segment over 32 bytes
 //   - GET    /tasks/{id}/events — 200 + JSON { task_id, events[], approval_pending }; optional query limit (0–200) with keyset cursors before_seq / after_seq (positive ints, mutually exclusive) for paging (newest first; stable under concurrent inserts); each of limit/before_seq/after_seq capped at 32 bytes. offset is rejected. Unpaged full list when limit, before_seq, and after_seq are all omitted; 404 if task missing
-//   - GET    /tasks/{id}      — 200 + task tree (nested children[])
-//   - PATCH  /tasks/{id}      — partial update; 200 + task tree
-//   - DELETE /tasks/{id}      — 204, no body; 400 if the task still has subtasks
+//   - GET    /tasks/{id}      — 200 + task JSON
+//   - PATCH  /tasks/{id}      — partial update; 200 + task JSON
+//   - DELETE /tasks/{id}      — 204, no body
 //   - GET    /repo/search     — optional; JSON paths (q=); 409 repo_root_not_configured if app_settings.repo_root unset
 //   - GET    /repo/file       — optional; JSON file preview for path= (UTF-8 text or binary); 503 if unset
 //   - GET    /repo/validate-range — optional; JSON ok/warning (path, start, end); 503 if unset
@@ -53,11 +53,9 @@
 //
 // POST body: id (optional; default new UUID), draft_id (optional; links pre-create draft evaluations),
 // title (required, non-empty after trim),
-// initial_prompt, status, priority (see domain package for enums; defaults ready; priority required),
-// optional parent_id (existing task UUID), optional checklist_inherit (bool; requires parent_id when true).
+// initial_prompt, status, priority (see domain package for enums; defaults ready; priority required).
 //
-// PATCH body: optional title, initial_prompt, status, priority, checklist_inherit, parent_id
-// (JSON null clears parent). At least one field must be present. See store.UpdateTaskInput.
+// PATCH body: optional title, initial_prompt, status, priority. At least one field must be present. See store.UpdateTaskInput.
 //
 // Errors: domain.ErrNotFound → 404, domain.ErrInvalidInput → 400, domain.ErrConflict → 409 (duplicate client id on POST /tasks);
 // other store errors → 500. Response bodies are JSON {"error":"..."} (same shape as writeJSONError). Failures are logged once

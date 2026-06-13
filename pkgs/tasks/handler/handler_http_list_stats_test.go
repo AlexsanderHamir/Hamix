@@ -69,9 +69,8 @@ func TestHTTP_list_keyset_after_id(t *testing.T) {
 func TestHTTP_tasks_stats_global_counts(t *testing.T) {
 	srv := newTaskTestServer(t)
 	defer srv.Close()
-	const rootID = "20000000-0000-4000-8000-000000000001"
 	for _, body := range []string{
-		`{"id":"` + rootID + `","title":"ready one","priority":"medium","status":"ready"}`,
+		`{"title":"ready one","priority":"medium","status":"ready"}`,
 		`{"title":"critical one","priority":"critical","status":"running"}`,
 		`{"title":"critical ready","priority":"critical","status":"ready"}`,
 	} {
@@ -84,18 +83,7 @@ func TestHTTP_tasks_stats_global_counts(t *testing.T) {
 			t.Fatalf("create status %d", res.StatusCode)
 		}
 	}
-	ensureParentHasCriterionHTTP(t, srv.URL, rootID)
-	res, err := http.Post(srv.URL+"/tasks", "application/json", strings.NewReader(
-		`{"title":"subtask","priority":"low","status":"ready","parent_id":"`+rootID+`"}`))
-	if err != nil {
-		t.Fatal(err)
-	}
-	_ = res.Body.Close()
-	if res.StatusCode != http.StatusCreated {
-		t.Fatalf("create subtask status %d", res.StatusCode)
-	}
-
-	res, err = http.Get(srv.URL + "/tasks/stats")
+	res, err := http.Get(srv.URL + "/tasks/stats")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -114,16 +102,16 @@ func TestHTTP_tasks_stats_global_counts(t *testing.T) {
 	if err := json.NewDecoder(res.Body).Decode(&got); err != nil {
 		t.Fatal(err)
 	}
-	if got.Total != 4 || got.Ready != 3 || got.Critical != 2 {
+	if got.Total != 3 || got.Ready != 2 || got.Critical != 2 {
 		t.Fatalf("stats %+v", got)
 	}
-	if got.ByStatus["ready"] != 3 || got.ByStatus["running"] != 1 {
+	if got.ByStatus["ready"] != 2 || got.ByStatus["running"] != 1 {
 		t.Fatalf("stats by_status %+v", got.ByStatus)
 	}
 	if got.ByPriority["critical"] != 2 || got.ByPriority["medium"] != 1 {
 		t.Fatalf("stats by_priority %+v", got.ByPriority)
 	}
-	if got.ByScope["parent"] != 3 || got.ByScope["subtask"] != 1 {
+	if got.ByScope["task"] != 3 {
 		t.Fatalf("stats by_scope %+v", got.ByScope)
 	}
 }

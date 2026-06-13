@@ -21,31 +21,19 @@ import type { Task, TaskListResponse } from "@/types";
 export type DeleteTargetInput = {
   id: string;
   title: string;
-  parent_id?: string | null;
-  /**
-   * Optional total descendant count (children + grandchildren …) so the
-   * confirm dialog can warn the user that DELETE cascades. Server-side
-   * `DELETE /tasks/{id}` always cascades regardless of this hint
-   * (docs/api.md "DELETE /tasks/{id}"); the field is presentation-only
-   * and defaults to 0 when omitted (callers without a tree in hand stay
-   * source-compatible, the dialog simply omits the cascade warning line).
-   */
-  subtaskCount?: number;
 };
 
 export type DeleteTarget = {
   id: string;
   title: string;
-  parent_id?: string;
-  subtaskCount: number;
 };
 
-export type DeleteVariables = { id: string; parent_id?: string };
+export type DeleteVariables = { id: string };
 
 export type UseTaskDeleteFlowResult = {
   /** Currently-confirming target, or null when the dialog is closed. */
   deleteTarget: DeleteTarget | null;
-  /** Open the confirmation dialog for `t`. Trims the `parent_id`. */
+  /** Open the confirmation dialog for `t`. */
   requestDelete: (t: DeleteTargetInput) => void;
   /** Close the confirmation dialog without deleting. */
   cancelDelete: () => void;
@@ -91,34 +79,14 @@ interface DeleteSnapshot {
   startedAtMs: number;
 }
 
-/** Remove the task with id `removeId` from a cached TaskListResponse,
- * walking nested children. Returns null when the id wasn't found so
- * callers can skip the cache write. */
+/** Remove the task with id `removeId` from a cached TaskListResponse.
+ * Returns null when the id wasn't found so callers can skip the cache write. */
 function removeTaskFromList(
   list: TaskListResponse,
   removeId: string,
 ): TaskListResponse | null {
-  let removed = false;
-  function visit(tasks: Task[]): Task[] {
-    const next: Task[] = [];
-    for (const t of tasks) {
-      if (t.id === removeId) {
-        removed = true;
-        continue;
-      }
-      if (t.children?.length) {
-        const childNext = visit(t.children);
-        if (childNext !== t.children) {
-          next.push({ ...t, children: childNext });
-          continue;
-        }
-      }
-      next.push(t);
-    }
-    return next;
-  }
-  const nextTasks = visit(list.tasks);
-  if (!removed) return null;
+  const nextTasks = list.tasks.filter((t) => t.id !== removeId);
+  if (nextTasks.length === list.tasks.length) return null;
   return { ...list, tasks: nextTasks };
 }
 
@@ -217,13 +185,9 @@ export function useTaskDeleteFlow(opts: {
   });
 
   const requestDelete = useCallback((t: DeleteTargetInput) => {
-    const pid = t.parent_id?.trim();
-    const count = Math.max(0, Math.trunc(t.subtaskCount ?? 0));
     setDeleteTarget({
       id: t.id,
       title: t.title,
-      subtaskCount: count,
-      ...(pid ? { parent_id: pid } : {}),
     });
   }, []);
 
@@ -235,9 +199,6 @@ export function useTaskDeleteFlow(opts: {
     if (!deleteTarget) return;
     mutation.mutate({
       id: deleteTarget.id,
-      ...(deleteTarget.parent_id
-        ? { parent_id: deleteTarget.parent_id }
-        : {}),
     });
   }, [deleteTarget, mutation]);
 

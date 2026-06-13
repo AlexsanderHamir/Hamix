@@ -4,7 +4,6 @@ import (
 	"encoding/json"
 	"io"
 	"net/http"
-	"sort"
 	"strings"
 	"testing"
 	"time"
@@ -138,40 +137,6 @@ func TestHTTP_deleteTask_unknownIDIs404(t *testing.T) {
 	}
 }
 
-// TestHTTP_deleteTask_cascadesToSubtasks pins the documented cascade
-// contract: a single DELETE /tasks/{id} on a task with descendants
-// removes the entire subtree (root + every direct child; depth-1 create rejects grandchildren)
-// in one call, returning 204. After the call every id in the subtree
-// must respond 404 to a follow-up GET.
-//
-// This replaces the prior `delete subtasks first` 400 rejection: the
-// store-side guard was removed in favour of a recursive cascade so
-// users no longer have to descend the tree by hand from the SPA. See
-// docs/api.md "DELETE /tasks/{id}" for the wire-level note.
-func TestHTTP_deleteTask_cascadesToSubtasks(t *testing.T) {
-	srv := newTaskTestServer(t)
-	defer srv.Close()
-
-	parent := mustCreateTask(t, srv.URL, `{"title":"p","priority":"medium"}`)
-	child := mustCreateSubtask(t, srv.URL, parent)
-	res, raw := deleteTask(t, srv.URL, parent)
-	if res.StatusCode != http.StatusNoContent {
-		t.Fatalf("status %d (want 204 — cascade) body=%s", res.StatusCode, raw)
-	}
-	if len(raw) != 0 {
-		t.Fatalf("body=%q want empty (DELETE cascade still returns 204 + empty body)", raw)
-	}
-
-	for _, id := range []string{parent, child} {
-		resGet, _ := http.Get(srv.URL + "/tasks/" + id)
-		_ = resGet.Body.Close()
-		if resGet.StatusCode != http.StatusNotFound {
-			t.Fatalf("GET %s after cascade status %d (want 404 — every descendant must be gone)",
-				id, resGet.StatusCode)
-		}
-	}
-}
-
 // TestHTTP_deleteTask_publishesTaskDeleted pins the row-level SSE cross
 // reference for the DELETE row in docs/api.md. Session 4's trigger
 // surface (sse_trigger_surface_test.go) covers this in the table-driven
@@ -182,7 +147,7 @@ func TestHTTP_deleteTask_publishesTaskDeleted(t *testing.T) {
 	srv, _, hub := newSSETriggerServer(t)
 	defer srv.Close()
 
-	t.Run("noParent_emitsTaskDeleted", func(t *testing.T) {
+	t.Run("emitsTaskDeleted", func(t *testing.T) {
 		id := mustCreateTask(t, srv.URL, `{"title":"orphan","priority":"medium"}`)
 		ch, unsub := hub.Subscribe()
 		defer unsub()
@@ -191,45 +156,7 @@ func TestHTTP_deleteTask_publishesTaskDeleted(t *testing.T) {
 			t.Fatalf("delete status %d body=%s", res.StatusCode, raw)
 		}
 		got := summarize(drainSSE(t, ch, 1, 2*time.Second))
-		mustEqualEvents(t, "DELETE /tasks/{id} (no parent)", got,
+		mustEqualEvents(t, "DELETE /tasks/{id}", got,
 			[]string{string(TaskDeleted) + ":" + id})
-	})
-
-	t.Run("withParent_emitsTaskDeletedPlusParentTaskUpdated", func(t *testing.T) {
-		parent := mustCreateTask(t, srv.URL, `{"title":"p","priority":"medium"}`)
-		child := mustCreateSubtask(t, srv.URL, parent)
-		ch, unsub := hub.Subscribe()
-		defer unsub()
-
-		if res, raw := deleteTask(t, srv.URL, child); res.StatusCode != http.StatusNoContent {
-			t.Fatalf("delete child status %d body=%s", res.StatusCode, raw)
-		}
-		got := summarize(drainSSE(t, ch, 2, 2*time.Second))
-		// summarize() sorts alphabetically: "task_deleted" < "task_updated".
-		mustEqualEvents(t, "DELETE /tasks/{id} (with parent)", got, []string{
-			string(TaskDeleted) + ":" + child,
-			string(TaskUpdated) + ":" + parent,
-		})
-	})
-
-	// Cascade pin: deleting a parent with a child emits task_deleted for
-	// both rows plus task_updated for the surviving root parent.
-	t.Run("cascade_emitsOneTaskDeletedPerRowPlusParentUpdated", func(t *testing.T) {
-		root := mustCreateTask(t, srv.URL, `{"title":"gp","priority":"medium"}`)
-		ensureParentHasCriterionHTTP(t, srv.URL, root)
-		parent := mustCreateSubtask(t, srv.URL, root)
-		ch, unsub := hub.Subscribe()
-		defer unsub()
-
-		if res, raw := deleteTask(t, srv.URL, parent); res.StatusCode != http.StatusNoContent {
-			t.Fatalf("delete parent (cascade) status %d body=%s", res.StatusCode, raw)
-		}
-		got := summarize(drainSSE(t, ch, 2, 2*time.Second))
-		want := []string{
-			string(TaskDeleted) + ":" + parent,
-			string(TaskUpdated) + ":" + root,
-		}
-		sort.Strings(want)
-		mustEqualEvents(t, "DELETE /tasks/{id} (cascade)", got, want)
 	})
 }

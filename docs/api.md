@@ -46,18 +46,18 @@ Data model semantics: [data-model.md](./data-model.md). Configuration: [configur
 
 ## Tasks
 
-Model semantics (tags, milestone, `depends_on`, gate, `parent_id` depth-1, worker readiness): [data-model.md](./data-model.md).
+Model semantics (tags, milestone, `depends_on`, gate, worker readiness): [data-model.md](./data-model.md).
 
 | Method | Path | Notes |
 |---|---|---|
-| POST | `/tasks` | Create. Title required; `priority` required. Optional `id`, `draft_id`, `project_id`, `parent_id`, `task_type`, `checklist_inherit`, `pickup_not_before`, `cursor_model`, `tags`, `milestone`, `depends_on` (string[] legacy or `{ task_id, satisfies }[]`). Subtasks may set parent edge with `satisfies: criteria_complete` and sibling edges with `satisfies: done` (see [data-model.md](./data-model.md) — Subtask scheduling). Returns full task tree. `409` on duplicate `id`. `400` with `parent task with subtasks requires at least one done criterion` when `parent_id` is set and the root parent has no owned checklist items. Publishes `task_created` (and `task_updated` for the parent when `parent_id` is set). |
+| POST | `/tasks` | Create. Title required; `priority` required. Optional `id`, `draft_id`, `project_id`, `task_type`, `pickup_not_before`, `cursor_model`, `tags`, `milestone`, `depends_on` (string[] legacy or `{ task_id, satisfies }[]` with `satisfies: done`). Returns flat `domain.Task`. `409` on duplicate `id`. Publishes `task_created`. |
 | POST | `/tasks/evaluate` | Score a draft payload; persist snapshot. Never publishes on SSE. |
-| GET | `/tasks` | List root tasks. Pagination: `?limit` (0–200, default 50) + `?offset` (≥ 0) **or** `?after_id` (keyset, mutually exclusive with offset). Envelope `{ tasks, limit, offset, has_more }`. |
-| GET | `/tasks/stats` | Counters: `total`, `ready`, `critical`, `scheduled`, `by_status`, `by_priority`, `by_scope`, `cycles`, `phases`, `runner`, `recent_failures`. |
+| GET | `/tasks` | List all tasks (flat). Pagination: `?limit` (0–200, default 50) + `?offset` (≥ 0) **or** `?after_id` (keyset, mutually exclusive with offset). Envelope `{ tasks, limit, offset, has_more }`. Each element is a flat `domain.Task` (no nested `children`). |
+| GET | `/tasks/stats` | Counters: `total`, `ready`, `critical`, `scheduled`, `by_status`, `by_priority`, `cycles`, `phases`, `runner`, `recent_failures`. |
 | GET | `/tasks/cycle-failures` | Paginated terminal cycle failures. `?limit`, `?offset`, `?sort ∈ at_desc | at_asc | reason_asc | reason_desc`. |
-| GET | `/tasks/{id}` | Full task tree (`store.TaskNode`: `domain.Task` + optional `children`). |
-| PATCH | `/tasks/{id}` | At least one of: `title`, `initial_prompt`, `status`, `priority`, `task_type`, `project_id`, `checklist_inherit`, `parent_id`, `project_context_item_ids`, `pickup_not_before`, `cursor_model`, `tags`, `milestone`, `gate`, `depends_on`. Publishes `task_updated` (+ `task_gate_changed` / `task_dependency_changed` when those fields change). Writable `status` values for `X-Actor: user`: `ready`, `running`, `blocked`, `review`, `done`, `failed`, `on_hold`. `awaiting_subtasks` is system-owned (`400` on user create/PATCH). See [data-model.md](./data-model.md). |
-| DELETE | `/tasks/{id}` | `204` empty body. Cascades to descendants (one SSE `task_deleted` per row + `task_updated` for the surviving parent). |
+| GET | `/tasks/{id}` | Single flat `domain.Task`. |
+| PATCH | `/tasks/{id}` | At least one of: `title`, `initial_prompt`, `status`, `priority`, `task_type`, `project_id`, `project_context_item_ids`, `pickup_not_before`, `cursor_model`, `tags`, `milestone`, `gate`, `depends_on`. Publishes `task_updated` (+ `task_gate_changed` / `task_dependency_changed` when those fields change). Writable `status` values for `X-Actor: user`: `ready`, `running`, `blocked`, `review`, `done`, `failed`, `on_hold`. See [data-model.md](./data-model.md). |
+| DELETE | `/tasks/{id}` | `204` empty body. Publishes `task_deleted`. |
 | GET | `/tasks/{id}/events` | Audit log. Default: ascending all rows. With `limit` / `before_seq` / `after_seq`: keyset-paged newest-first slice with `range_*`, `has_more_*`, `approval_pending`. |
 | GET | `/tasks/{id}/events/{seq}` | Single event row. |
 | PATCH | `/tasks/{id}/events/{seq}` | Append a user-response message (max 10 000 bytes after trim, thread cap 200). Only for `approval_requested` and `task_failed`. Publishes `task_updated`. |
@@ -71,9 +71,9 @@ Model semantics (tags, milestone, `depends_on`, gate, `parent_id` depth-1, worke
 | Method | Path | Notes |
 |---|---|---|
 | GET | `/tasks/{id}/checklist` | `{ items: [...] }` ordered by `sort_order`. |
-| POST | `/tasks/{id}/checklist/items` | Body `{ text }`. Rejected `409` when cycle is running or `400` when inheriting. Publishes `task_updated`. |
+| POST | `/tasks/{id}/checklist/items` | Body `{ text }`. Rejected `409` when cycle is running. Publishes `task_updated`. |
 | PATCH | `/tasks/{id}/checklist/items/{itemId}` | Body: exactly one of `{ text }` or `{ done: true|false }`. `done:true` requires `X-Actor: agent` plus `evidence` + optional `verified_by`. Publishes `task_updated`. |
-| DELETE | `/tasks/{id}/checklist/items/{itemId}` | `204`. `400` with `parent task with subtasks requires at least one done criterion` when removing the last owned criterion on a root parent that still has subtasks. Publishes `task_updated`. |
+| DELETE | `/tasks/{id}/checklist/items/{itemId}` | `204`. Publishes `task_updated`. |
 
 ### Task drafts
 
@@ -139,9 +139,9 @@ Lossless reconnects via `Last-Event-ID`: a ring buffer (default 1024 entries) re
 
 | Type | When | Payload |
 |---|---|---|
-| `task_created` | `POST /tasks` succeeds. | `{ type, id, data: <task tree> }` |
-| `task_updated` | Any task mutation (PATCH, checklist, event response, etc.). `data` carries the full task tree for `PATCH /tasks/{id}`; other publishers emit hint-only frames (no `data`). | `{ type, id, data?: <task tree> }` |
-| `task_deleted` | `DELETE /tasks/{id}` for each removed row (BFS-ordered). | `{ type, id }` |
+| `task_created` | `POST /tasks` succeeds. | `{ type, id, data: <task> }` |
+| `task_updated` | Any task mutation (PATCH, checklist, event response, etc.). `data` carries the full flat task for `PATCH /tasks/{id}`; other publishers emit hint-only frames (no `data`). | `{ type, id, data?: <task> }` |
+| `task_deleted` | `DELETE /tasks/{id}`. | `{ type, id }` |
 | `task_dependency_changed` | Dependency add/remove/replace. | `{ type, id }` |
 | `task_gate_changed` | Gate create/patch/action. | `{ type, id }` |
 | `task_cycle_changed` | Cycle/phase mutation. | `{ type, id, cycle_id, data?: <cycle detail> }` |

@@ -96,9 +96,6 @@ func migrateIfRequested(db *gorm.DB, want bool) error {
 	if err := store.BackfillCriteriaSatisfiedAt(migrateCtx, db); err != nil {
 		return fmt.Errorf("backfill criteria_satisfied_at: %w", err)
 	}
-	if err := store.BackfillAwaitingSubtasksStatus(migrateCtx, db); err != nil {
-		return fmt.Errorf("backfill awaiting_subtasks status: %w", err)
-	}
 	return nil
 }
 

@@ -39,7 +39,6 @@ function renderList(items: TaskChecklistItemView[], overrides?: Partial<{
   render(
     <TaskDetailChecklistItemList
       items={items}
-      checklistInherit={false}
       editCriterionPending={overrides?.editCriterionPending ?? false}
       removeItemPending={overrides?.removeItemPending ?? false}
       addCriterionPending={overrides?.addCriterionPending ?? false}

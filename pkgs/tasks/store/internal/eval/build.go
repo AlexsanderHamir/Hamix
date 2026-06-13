@@ -19,7 +19,7 @@ func buildResult(in DraftTaskInput, rng *rand.Rand) *Result {
 	titleScore := scoreTitle(strings.TrimSpace(in.Title))
 	promptScore := scorePrompt(strings.TrimSpace(in.InitialPrompt))
 	priorityScore := scorePriority(in.Priority)
-	structureScore := scoreStructure(in.ParentID, in.ChecklistInherit, in.ChecklistItems)
+	structureScore := scoreStructure(in.ChecklistItems)
 	cohesionScore := scoreCohesion(titleScore, promptScore, priorityScore, structureScore, in)
 	overall := clampScore(int(math.Round((float64(titleScore) + float64(promptScore) + float64(priorityScore) + float64(structureScore) + float64(cohesionScore)) / 5.0)))
 

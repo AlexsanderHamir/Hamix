@@ -52,7 +52,6 @@ export function useTasksApp({ sseLive, dataEnabled = true }: UseTasksAppOptions)
   const [editPriority, setEditPriority] = useState<Priority>("medium");
   const [editTaskType, setEditTaskType] = useState<TaskType>(DEFAULT_NEW_TASK_TYPE);
   const [editStatus, setEditStatus] = useState<Status>(DEFAULT_NEW_TASK_STATUS);
-  const [editChecklistInherit, setEditChecklistInherit] = useState(false);
   const [editProjectID, setEditProjectID] = useState(DEFAULT_PROJECT_ID);
   const [editProjectContextItemIDs, setEditProjectContextItemIDs] = useState<string[]>([]);
   const [editTagsCsv, setEditTagsCsv] = useState("");
@@ -212,7 +211,6 @@ export function useTasksApp({ sseLive, dataEnabled = true }: UseTasksAppOptions)
     setEditPriority(t.priority);
     setEditTaskType(t.task_type ?? DEFAULT_NEW_TASK_TYPE);
     setEditStatus(t.status);
-    setEditChecklistInherit(t.checklist_inherit === true);
     setEditProjectID(t.project_id || DEFAULT_PROJECT_ID);
     setEditProjectContextItemIDs(t.project_context_item_ids ?? []);
     setEditTagsCsv((t.tags ?? []).join(", "));
@@ -249,7 +247,6 @@ export function useTasksApp({ sseLive, dataEnabled = true }: UseTasksAppOptions)
       status: t.status,
       priority: t.priority,
       task_type: t.task_type ?? DEFAULT_NEW_TASK_TYPE,
-      checklist_inherit: t.checklist_inherit === true,
       project_id: t.project_id ?? null,
       project_context_item_ids: t.project_context_item_ids ?? [],
       cursor_model: changeModelDraft.trim(),
@@ -271,7 +268,6 @@ export function useTasksApp({ sseLive, dataEnabled = true }: UseTasksAppOptions)
       status: editStatus,
       priority: editPriority,
       task_type: editTaskType,
-      checklist_inherit: editChecklistInherit,
       project_id: editProjectID.trim() || null,
       project_context_item_ids: editProjectContextItemIDs,
       tags: editTagsCsv
@@ -327,8 +323,6 @@ export function useTasksApp({ sseLive, dataEnabled = true }: UseTasksAppOptions)
     setEditTaskType,
     editStatus,
     setEditStatus,
-    editChecklistInherit,
-    setEditChecklistInherit,
     editProjectID,
     setEditProjectID,
     editProjectContextItemIDs,

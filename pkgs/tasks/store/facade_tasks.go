@@ -29,39 +29,20 @@ func ShouldNotifyReadyNow(pickupNotBefore *time.Time, now time.Time) bool {
 	if pickupNotBefore == nil {
 		return true
 	}
-	// strict After: a pickup time exactly equal to `now` is treated
-	// as "ready" — the SQL filter uses `<= now()` and we mirror it.
 	return !pickupNotBefore.After(now)
 }
 
-// CreateTaskInput is the public re-export of the task creation
-// payload. The alias keeps every existing call-site unchanged while
-// the implementation lives in internal/tasks.
+// CreateTaskInput is the public re-export of the task creation payload.
 type CreateTaskInput = tasks.CreateInput
 
 // UpdateTaskInput is the public re-export of the task patch payload.
 type UpdateTaskInput = tasks.UpdateInput
 
-// ParentFieldPatch is the public re-export of the parent-id patch
-// helper used by UpdateTaskInput.Parent.
-type ParentFieldPatch = tasks.ParentFieldPatch
-
-// ProjectFieldPatch is the public re-export of the project-id patch
-// helper used by UpdateTaskInput.Project.
+// ProjectFieldPatch is the public re-export of the project-id patch helper.
 type ProjectFieldPatch = tasks.ProjectFieldPatch
 
-// PickupNotBeforePatch is the public re-export of the
-// pickup_not_before patch helper used by UpdateTaskInput.PickupNotBefore.
-// See docs/data-model.md.
+// PickupNotBeforePatch is the public re-export of the pickup_not_before patch helper.
 type PickupNotBeforePatch = tasks.PickupNotBeforePatch
-
-// TaskNode is a task row plus nested children for API tree responses. It
-// re-exports internal/tasks.Node.
-type TaskNode = tasks.Node
-
-// MaxTaskTreeDepth bounds the nesting depth for tree responses. It
-// must stay aligned with web/src/api/parseTaskApi.ts maxTaskParseDepth.
-const MaxTaskTreeDepth = tasks.MaxTreeDepth
 
 // Get loads a task by id. See tasks.Get for the full contract.
 func (s *Store) Get(ctx context.Context, id string) (*domain.Task, error) {
@@ -69,11 +50,9 @@ func (s *Store) Get(ctx context.Context, id string) (*domain.Task, error) {
 	return tasks.Get(ctx, s.db, id)
 }
 
-// Create inserts a new task row, links any draft evaluations,
-// removes the source draft, appends task_created (and parent
-// subtask_added), and runs the checklist guard when the initial
-// status is StatusDone — all in one transaction. Fires the
-// ready-task notifier when the freshly created task is StatusReady.
+// Create inserts a new task row, links draft evaluations, removes the
+// source draft, appends task_created, and runs the checklist guard when
+// the initial status is StatusDone — all in one transaction.
 func (s *Store) Create(ctx context.Context, in CreateTaskInput, by domain.Actor) (*domain.Task, error) {
 	slog.Debug("trace", "cmd", storeLogCmd, "operation", "tasks.store.Create")
 	t, err := tasks.Create(ctx, s.db, in, by)
@@ -94,13 +73,7 @@ func (s *Store) Create(ctx context.Context, in CreateTaskInput, by domain.Actor)
 	return t, nil
 }
 
-// Update applies the patch and notifies the ready-task channel when
-// the task transitions into StatusReady. Also notifies when a Ready
-// task's pickup_not_before patch makes it eligible right now (e.g.
-// operator cleared the schedule or pulled it into the past) — the
-// in-memory queue would otherwise stay empty until the next periodic
-// reconcile tick. See tasks.Update for the per-field rules and
-// docs/data-model.md for the two-queues invariant.
+// Update applies the patch and notifies the ready-task channel when appropriate.
 func (s *Store) Update(ctx context.Context, id string, in UpdateTaskInput, by domain.Actor) (*domain.Task, error) {
 	slog.Debug("trace", "cmd", storeLogCmd, "operation", "tasks.store.Update")
 	updated, prev, err := tasks.Update(ctx, s.db, id, in, by)
@@ -113,11 +86,6 @@ func (s *Store) Update(ctx context.Context, id string, in UpdateTaskInput, by do
 
 	if updated.Status == domain.StatusDone && prev != domain.StatusDone {
 		s.notifyUnblockedDependents(ctx, updated.ID)
-		if parentID, autoErr := tasks.TryAutoCompleteParent(ctx, s.db, updated.ID, by); autoErr != nil {
-			slog.Warn("auto-complete parent after subtask done", "task_id", updated.ID, "err", autoErr)
-		} else if parentID != "" {
-			s.notifyUnblockedDependents(ctx, parentID)
-		}
 	}
 
 	if updated.Status != domain.StatusReady {
@@ -160,69 +128,49 @@ func (s *Store) notifyUnblockedDependents(ctx context.Context, predecessorID str
 	}
 }
 
-// NotifyUnblockedDependents wakes dependents whose dependency edges are
-// now satisfied. Used after checklist criteria become complete.
+// NotifyUnblockedDependents wakes dependents whose dependency edges are now satisfied.
 func (s *Store) NotifyUnblockedDependents(ctx context.Context, predecessorID string) {
 	s.notifyUnblockedDependents(ctx, predecessorID)
 }
 
-// HasIncompleteSubtasks reports whether taskID has direct children not done.
-func (s *Store) HasIncompleteSubtasks(ctx context.Context, taskID string) (bool, error) {
-	return tasks.HasIncompleteSubtasks(ctx, s.db, taskID)
-}
-
-// Delete removes the task at id and every descendant in one
-// transaction. Returns the full set of removed task ids (root first,
-// then BFS descendants) and the surviving grandparent id (or "" when
-// the requested root had no parent) so the caller can fan out one
-// task_deleted SSE event per id and one task_updated event for the
-// surviving parent. See tasks.Delete for the full contract.
-func (s *Store) Delete(ctx context.Context, id string, by domain.Actor) ([]string, string, error) {
+// Delete removes the task at id. Returns the deleted id on success.
+func (s *Store) Delete(ctx context.Context, id string, by domain.Actor) ([]string, error) {
 	slog.Debug("trace", "cmd", storeLogCmd, "operation", "tasks.store.Delete")
-	deletedIDs, parent, err := tasks.Delete(ctx, s.db, id, by)
+	deletedIDs, err := tasks.Delete(ctx, s.db, id, by)
 	if err != nil {
-		return nil, "", err
+		return nil, err
 	}
 	for _, tid := range deletedIDs {
 		s.cancelPickupWake(tid)
 	}
-	return deletedIDs, parent, nil
+	return deletedIDs, nil
 }
 
 // ListFilter is the public re-export for optional flat-list filters.
 type ListFilter = tasks.ListFilter
 
-// ListFlat returns tasks ordered by id ASC with limit/offset over
-// all rows (no tree). See tasks.ListFlat for clamp rules.
+// ListFlat returns tasks ordered by id ASC with limit/offset.
 func (s *Store) ListFlat(ctx context.Context, limit, offset int, filter *ListFilter) ([]domain.Task, error) {
 	slog.Debug("trace", "cmd", storeLogCmd, "operation", "tasks.store.ListFlat")
 	return tasks.ListFlat(ctx, s.db, limit, offset, filter)
+}
+
+// ListFlatPage returns a flat page with hasMore.
+func (s *Store) ListFlatPage(ctx context.Context, limit, offset int, filter *ListFilter) ([]domain.Task, bool, error) {
+	slog.Debug("trace", "cmd", storeLogCmd, "operation", "tasks.store.ListFlatPage")
+	return tasks.ListFlatPage(ctx, s.db, limit, offset, filter)
+}
+
+// ListFlatAfter is the keyset-pagination variant of ListFlat.
+func (s *Store) ListFlatAfter(ctx context.Context, limit int, afterID string) ([]domain.Task, bool, error) {
+	slog.Debug("trace", "cmd", storeLogCmd, "operation", "tasks.store.ListFlatAfter")
+	return tasks.ListFlatAfter(ctx, s.db, limit, afterID)
 }
 
 // List is an alias for ListFlat. Prefer ListFlat in new code.
 func (s *Store) List(ctx context.Context, limit, offset int) ([]domain.Task, error) {
 	slog.Debug("trace", "cmd", storeLogCmd, "operation", "tasks.store.List")
 	return tasks.ListFlat(ctx, s.db, limit, offset, nil)
-}
-
-// ListRootForest pages root tasks and attaches the full descendant
-// subtree per root.
-func (s *Store) ListRootForest(ctx context.Context, limit, offset int) ([]TaskNode, bool, error) {
-	slog.Debug("trace", "cmd", storeLogCmd, "operation", "tasks.store.ListRootForest")
-	return tasks.ListRootForest(ctx, s.db, limit, offset)
-}
-
-// ListRootForestAfter is the keyset-pagination variant of
-// ListRootForest.
-func (s *Store) ListRootForestAfter(ctx context.Context, limit int, afterID string) ([]TaskNode, bool, error) {
-	slog.Debug("trace", "cmd", storeLogCmd, "operation", "tasks.store.ListRootForestAfter")
-	return tasks.ListRootForestAfter(ctx, s.db, limit, afterID)
-}
-
-// GetTaskTree returns one task and every descendant nested under it.
-func (s *Store) GetTaskTree(ctx context.Context, id string) (TaskNode, error) {
-	slog.Debug("trace", "cmd", storeLogCmd, "operation", "tasks.store.GetTaskTree")
-	return tasks.GetTree(ctx, s.db, id)
 }
 
 func (s *Store) AddTaskDependency(ctx context.Context, taskID, dependsOnTaskID string, satisfies domain.DependencySatisfies) error {

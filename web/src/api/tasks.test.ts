@@ -30,7 +30,6 @@ describe("listTasks", () => {
               status: "ready",
               priority: "medium",
               task_type: "general",
-              checklist_inherit: false,
             },
           ],
           limit: 50,
@@ -178,7 +177,6 @@ describe("getTaskStats", () => {
           critical: 1,
           by_status: { ready: 3, running: 4, done: 3 },
           by_priority: { low: 1, medium: 6, high: 2, critical: 1 },
-          by_scope: { parent: 6, subtask: 4 },
           ...cyclesPhasesEmpty,
         }),
         {
@@ -198,7 +196,6 @@ describe("getTaskStats", () => {
       scheduled: 0,
       by_status: { ready: 3, running: 4, done: 3 },
       by_priority: { low: 1, medium: 6, high: 2, critical: 1 },
-      by_scope: { parent: 6, subtask: 4 },
       ...cyclesPhasesEmpty,
     });
     expect(fetch).toHaveBeenCalledWith(
@@ -254,7 +251,6 @@ describe("createTask", () => {
           status: "ready",
           priority: "medium",
           task_type: "general",
-          checklist_inherit: false,
         }),
         { status: 201, headers: { "Content-Type": "application/json" } },
       ),
@@ -300,7 +296,6 @@ describe("createTask", () => {
           status: "ready",
           priority: "medium",
           task_type: "general",
-          checklist_inherit: false,
         }),
         { status: 201, headers: { "Content-Type": "application/json" } },
       ),
@@ -386,7 +381,6 @@ describe("patchTask", () => {
           status: "done",
           priority: "low",
           task_type: "general",
-          checklist_inherit: false,
         }),
         { status: 200, headers: { "Content-Type": "application/json" } },
       ),

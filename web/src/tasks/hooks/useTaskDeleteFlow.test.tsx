@@ -55,7 +55,6 @@ function makeTask(overrides: Partial<Task> = {}): Task {
     task_type: "general",
     runner: "cursor",
     cursor_model: "",
-    checklist_inherit: false,
     ...overrides,
   };
 }
@@ -82,66 +81,18 @@ describe("useTaskDeleteFlow", () => {
     expect(result.current.deleteVariables).toBeUndefined();
   });
 
-  it("requestDelete captures id + title and trims an empty parent_id away", () => {
+  it("requestDelete captures id and title", () => {
     const { Wrapper } = makeWrapper();
     const { result } = renderHook(() => useTaskDeleteFlow(), {
       wrapper: Wrapper,
     });
     act(() => {
-      result.current.requestDelete({ id: "t1", title: "Hello", parent_id: "  " });
+      result.current.requestDelete({ id: "t1", title: "Hello" });
     });
     expect(result.current.deleteTarget).toEqual({
       id: "t1",
       title: "Hello",
-      subtaskCount: 0,
     });
-  });
-
-  it("requestDelete preserves a non-empty trimmed parent_id", () => {
-    const { Wrapper } = makeWrapper();
-    const { result } = renderHook(() => useTaskDeleteFlow(), {
-      wrapper: Wrapper,
-    });
-    act(() => {
-      result.current.requestDelete({ id: "c1", title: "Child", parent_id: " p1 " });
-    });
-    expect(result.current.deleteTarget).toEqual({
-      id: "c1",
-      title: "Child",
-      parent_id: "p1",
-      subtaskCount: 0,
-    });
-  });
-
-  it("requestDelete carries a positive subtaskCount through to deleteTarget", () => {
-    const { Wrapper } = makeWrapper();
-    const { result } = renderHook(() => useTaskDeleteFlow(), {
-      wrapper: Wrapper,
-    });
-    act(() => {
-      result.current.requestDelete({ id: "p1", title: "Parent", subtaskCount: 3 });
-    });
-    expect(result.current.deleteTarget).toEqual({
-      id: "p1",
-      title: "Parent",
-      subtaskCount: 3,
-    });
-  });
-
-  it("requestDelete clamps a negative or fractional subtaskCount to a non-negative integer", () => {
-    const { Wrapper } = makeWrapper();
-    const { result } = renderHook(() => useTaskDeleteFlow(), {
-      wrapper: Wrapper,
-    });
-    act(() => {
-      result.current.requestDelete({ id: "x", title: "X", subtaskCount: -2 });
-    });
-    expect(result.current.deleteTarget?.subtaskCount).toBe(0);
-
-    act(() => {
-      result.current.requestDelete({ id: "x", title: "X", subtaskCount: 2.7 });
-    });
-    expect(result.current.deleteTarget?.subtaskCount).toBe(2);
   });
 
   it("cancelDelete clears the target without calling the API", () => {
@@ -179,7 +130,7 @@ describe("useTaskDeleteFlow", () => {
     });
 
     act(() => {
-      result.current.requestDelete({ id: "t1", title: "X", parent_id: "p1" });
+      result.current.requestDelete({ id: "t1", title: "X" });
     });
     act(() => {
       result.current.confirmDelete();
@@ -191,7 +142,7 @@ describe("useTaskDeleteFlow", () => {
 
     expect(mockedDelete).toHaveBeenCalledWith("t1");
     expect(result.current.deleteTarget).toBeNull();
-    expect(result.current.deleteVariables).toEqual({ id: "t1", parent_id: "p1" });
+    expect(result.current.deleteVariables).toEqual({ id: "t1" });
     expect(onDeleted).toHaveBeenCalledWith("t1");
     expect(invalidateSpy).toHaveBeenCalledWith({
       queryKey: ["tasks", "list"],
@@ -223,7 +174,6 @@ describe("useTaskDeleteFlow", () => {
     expect(result.current.deleteTarget).toEqual({
       id: "t1",
       title: "X",
-      subtaskCount: 0,
     });
     expect(onDeleted).not.toHaveBeenCalled();
   });
@@ -277,7 +227,7 @@ describe("useTaskDeleteFlow", () => {
     expect(mockedDelete).not.toHaveBeenCalled();
   });
 
-  it("omits parent_id from the API variables when the target has no parent", async () => {
+  it("omits parent_id from delete variables", async () => {
     mockedDelete.mockResolvedValueOnce(undefined as unknown as void);
     const { Wrapper } = makeWrapper();
     const { result } = renderHook(() => useTaskDeleteFlow(), {
@@ -332,7 +282,6 @@ describe("useTaskDeleteFlow", () => {
     expect(result.current.deleteTarget).toEqual({
       id: "B",
       title: "B",
-      subtaskCount: 0,
     });
 
     // Now A finishes successfully.
@@ -349,7 +298,6 @@ describe("useTaskDeleteFlow", () => {
     expect(result.current.deleteTarget).toEqual({
       id: "B",
       title: "B",
-      subtaskCount: 0,
     });
   });
 
@@ -389,53 +337,6 @@ describe("useTaskDeleteFlow", () => {
     });
     const cached = queryClient.getQueryData<TaskListResponse>(taskQueryKeys.list({ limit: 20, offset: 0 }));
     expect(cached?.tasks.map((t) => t.id)).toEqual(["t2"]);
-    act(() => {
-      resolveFn?.();
-    });
-    await waitFor(() => {
-      expect(result.current.deletePending).toBe(false);
-    });
-  });
-
-  // Walk into nested children: deleting a subtask leaves the parent
-  // cached row intact but removes the subtask from its children
-  // array. Pinning prevents a regression where the visit() helper
-  // forgets to recurse and only deletes top-level rows.
-  it("optimistically removes a nested subtask from its parent's children array", async () => {
-    let resolveFn: (() => void) | undefined;
-    mockedDelete.mockImplementationOnce(
-      () =>
-        new Promise<void>((resolve) => {
-          resolveFn = resolve;
-        }) as unknown as ReturnType<typeof deleteTask>,
-    );
-    const { Wrapper, queryClient } = makeWrapper();
-    const child = makeTask({ id: "child", parent_id: "parent" });
-    const parent = makeTask({ id: "parent" });
-    parent.children = [child];
-    const list: TaskListResponse = {
-      tasks: [parent],
-      limit: 50,
-      offset: 0,
-      has_more: false,
-    };
-    queryClient.setQueryData<TaskListResponse>(taskQueryKeys.list({ limit: 20, offset: 0 }), list);
-
-    const { result } = renderHook(() => useTaskDeleteFlow(), {
-      wrapper: Wrapper,
-    });
-    act(() => {
-      result.current.requestDelete({ id: "child", title: "child", parent_id: "parent" });
-    });
-    act(() => {
-      result.current.confirmDelete();
-    });
-    await waitFor(() => {
-      expect(result.current.deletePending).toBe(true);
-    });
-    const cached = queryClient.getQueryData<TaskListResponse>(taskQueryKeys.list({ limit: 20, offset: 0 }));
-    expect(cached?.tasks[0]?.id).toBe("parent");
-    expect(cached?.tasks[0]?.children).toEqual([]);
     act(() => {
       resolveFn?.();
     });

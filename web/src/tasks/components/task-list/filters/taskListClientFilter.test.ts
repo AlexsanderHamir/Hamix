@@ -9,7 +9,6 @@ function row(
 ): TaskWithDepth {
   return {
     initial_prompt: "",
-    checklist_inherit: false,
     depth: 0,
     ...partial,
     runner: partial.runner ?? TASK_TEST_DEFAULTS.runner,

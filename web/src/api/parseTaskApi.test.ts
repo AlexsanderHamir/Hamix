@@ -1,6 +1,5 @@
 import { describe, expect, it } from "vitest";
 import {
-  maxTaskParseDepth,
   parseTask,
   parseTaskCycle,
   parseTaskCycleDetail,
@@ -25,7 +24,6 @@ const validTask = {
   status: "ready",
   priority: "medium",
   task_type: "general",
-  checklist_inherit: false,
   tags: [] as string[],
   depends_on: [] as { task_id: string; satisfies?: string }[],
   ...TASK_TEST_DEFAULTS,
@@ -55,27 +53,6 @@ describe("parseTask", () => {
 
   it("rejects non-object", () => {
     expect(() => parseTask(null)).toThrow(/object/);
-  });
-
-  it("rejects children nested deeper than maxTaskParseDepth", () => {
-    const deepTask = (n: number): Record<string, unknown> => {
-      const base: Record<string, unknown> = {
-        id: `id-${n}`,
-        title: "t",
-        initial_prompt: "",
-        status: "ready",
-        priority: "medium",
-        task_type: "general",
-        checklist_inherit: false,
-        ...TASK_TEST_DEFAULTS,
-      };
-      if (n <= 0) {
-        return base;
-      }
-      return { ...base, children: [deepTask(n - 1)] };
-    };
-    expect(() => parseTask(deepTask(maxTaskParseDepth + 1))).toThrow(/too deep/);
-    expect(parseTask(deepTask(maxTaskParseDepth))).toBeDefined();
   });
 
   it("parses tags, milestone, depends_on, and gate", () => {
@@ -125,49 +102,6 @@ describe("parseTask", () => {
         },
       }),
     ).toThrow(/gate status/);
-  });
-
-  it("parses nested children and checklist_inherit", () => {
-    expect(
-      parseTask({
-        id: "root",
-        title: "R",
-        initial_prompt: "",
-        status: "ready",
-        priority: "medium",
-        task_type: "general",
-        checklist_inherit: false,
-        children: [
-          {
-            id: "c1",
-            title: "C",
-            initial_prompt: "",
-            status: "running",
-            priority: "low",
-            task_type: "bug_fix",
-            checklist_inherit: true,
-            parent_id: "root",
-            ...TASK_TEST_DEFAULTS,
-          },
-        ],
-      }),
-    ).toEqual({
-      ...validTask,
-      id: "root",
-      title: "R",
-      children: [
-        {
-          ...validTask,
-          id: "c1",
-          title: "C",
-          status: "running",
-          priority: "low",
-          task_type: "bug_fix",
-          checklist_inherit: true,
-          parent_id: "root",
-        },
-      ],
-    });
   });
 });
 
@@ -262,7 +196,6 @@ describe("parseTaskStatsResponse", () => {
         scheduled: 3,
         by_status: { ready: 7, running: 5 },
         by_priority: { critical: 2, high: 4 },
-        by_scope: { parent: 10, subtask: 12 },
         ...emptyExtras,
       }),
     ).toEqual({
@@ -272,7 +205,6 @@ describe("parseTaskStatsResponse", () => {
       scheduled: 3,
       by_status: { ready: 7, running: 5 },
       by_priority: { critical: 2, high: 4 },
-      by_scope: { parent: 10, subtask: 12 },
       ...emptyExtras,
     });
   });
@@ -285,7 +217,6 @@ describe("parseTaskStatsResponse", () => {
       // scheduled key intentionally absent — older backend
       by_status: { ready: 1 },
       by_priority: {},
-      by_scope: { parent: 1, subtask: 0 },
       ...emptyExtras,
     });
     expect(got.scheduled).toBe(0);
@@ -300,7 +231,6 @@ describe("parseTaskStatsResponse", () => {
         scheduled: "3",
         by_status: { ready: 1 },
         by_priority: {},
-        by_scope: { parent: 1, subtask: 0 },
         ...emptyExtras,
       }),
     ).toThrow(/scheduled/);
@@ -314,7 +244,6 @@ describe("parseTaskStatsResponse", () => {
         critical: 2,
         by_status: {},
         by_priority: {},
-        by_scope: { parent: 0, subtask: 0 },
         ...emptyExtras,
       }),
     ).toThrow(/total/);
@@ -328,7 +257,6 @@ describe("parseTaskStatsResponse", () => {
         critical: 2,
         by_status: { nope: 1 },
         by_priority: {},
-        by_scope: { parent: 10, subtask: 12 },
         ...emptyExtras,
       }),
     ).toThrow(/known status/);
@@ -340,24 +268,9 @@ describe("parseTaskStatsResponse", () => {
         critical: 2,
         by_status: {},
         by_priority: { urgent: 1 },
-        by_scope: { parent: 10, subtask: 12 },
         ...emptyExtras,
       }),
     ).toThrow(/known priority/);
-  });
-
-  it("requires parent/subtask scope counts", () => {
-    expect(() =>
-      parseTaskStatsResponse({
-        total: 22,
-        ready: 7,
-        critical: 2,
-        by_status: { ready: 7 },
-        by_priority: { critical: 2 },
-        by_scope: { parent: 10 },
-        ...emptyExtras,
-      }),
-    ).toThrow(/by_scope\.subtask/);
   });
 
   it("parses cycles aggregates and rejects unknown enums", () => {
@@ -367,7 +280,6 @@ describe("parseTaskStatsResponse", () => {
       critical: 0,
       by_status: {},
       by_priority: {},
-      by_scope: { parent: 0, subtask: 0 },
       ...emptyExtras,
       cycles: {
         by_status: { running: 1, succeeded: 4, failed: 2, aborted: 1 },
@@ -389,7 +301,6 @@ describe("parseTaskStatsResponse", () => {
         critical: 0,
         by_status: {},
         by_priority: {},
-        by_scope: { parent: 0, subtask: 0 },
         ...emptyExtras,
         cycles: {
           by_status: { weird: 1 },
@@ -411,7 +322,6 @@ describe("parseTaskStatsResponse", () => {
       critical: 0,
       by_status: {},
       by_priority: {},
-      by_scope: { parent: 0, subtask: 0 },
       ...emptyExtras,
       phases: {
         by_phase_status: {
@@ -436,7 +346,6 @@ describe("parseTaskStatsResponse", () => {
       critical: 0,
       by_status: {},
       by_priority: {},
-      by_scope: { parent: 0, subtask: 0 },
       ...emptyExtras,
       phases: {
         by_phase_status: {
@@ -464,7 +373,6 @@ describe("parseTaskStatsResponse", () => {
       critical: 0,
       by_status: {},
       by_priority: {},
-      by_scope: { parent: 0, subtask: 0 },
       ...emptyExtras,
       recent_failures: [
         {
@@ -488,7 +396,6 @@ describe("parseTaskStatsResponse", () => {
         critical: 0,
         by_status: {},
         by_priority: {},
-        by_scope: { parent: 0, subtask: 0 },
         ...emptyExtras,
         recent_failures: [
           {
@@ -538,7 +445,6 @@ describe("parseTaskStatsResponse", () => {
       critical: 0,
       by_status: {},
       by_priority: {},
-      by_scope: { parent: 0, subtask: 0 },
       ...emptyExtras,
       runner: {
         by_runner: {
@@ -589,7 +495,6 @@ describe("parseTaskStatsResponse", () => {
       critical: 0,
       by_status: {},
       by_priority: {},
-      by_scope: { parent: 0, subtask: 0 },
       ...emptyExtras,
       runner: {
         by_runner: {},
@@ -619,7 +524,6 @@ describe("parseTaskStatsResponse", () => {
         critical: 0,
         by_status: {},
         by_priority: {},
-        by_scope: { parent: 0, subtask: 0 },
         ...emptyExtras,
         runner: {
           by_runner: {
@@ -646,7 +550,6 @@ describe("parseTaskStatsResponse", () => {
         critical: 0,
         by_status: {},
         by_priority: {},
-        by_scope: { parent: 0, subtask: 0 },
         ...withoutRunner,
       }),
     ).toThrow(/runner must be an object/);
@@ -1189,7 +1092,6 @@ describe("parseTaskDraftDetail (payload.priority validation)", () => {
   // Regression: parseDraftPayload used to do
   //   priority: (value.priority as TaskDraftPayload["priority"]) ?? "",
   // which let arbitrary server values through unvalidated, even though
-  // sibling pending_subtasks priorities are properly validated by
   // parsePriority(). The downstream UI (PrioritySelect) silently drops
   // invalid values; the parser is the chokepoint that should reject them.
   const baseDraft = {
@@ -1202,10 +1104,7 @@ describe("parseTaskDraftDetail (payload.priority validation)", () => {
       initial_prompt: "p",
       priority: "medium",
       task_type: "general",
-      parent_id: "",
-      checklist_inherit: false,
       checklist_items: [],
-      pending_subtasks: [],
     },
   };
 

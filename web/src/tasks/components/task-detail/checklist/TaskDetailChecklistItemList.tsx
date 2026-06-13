@@ -5,7 +5,6 @@ import { ChecklistVerificationModal } from "./ChecklistVerificationModal";
 
 type Props = {
   items: TaskChecklistItemView[];
-  checklistInherit: boolean;
   editCriterionPending: boolean;
   removeItemPending: boolean;
   addCriterionPending: boolean;
@@ -15,7 +14,6 @@ type Props = {
 
 export function TaskDetailChecklistItemList({
   items,
-  checklistInherit,
   editCriterionPending,
   removeItemPending,
   addCriterionPending,
@@ -78,9 +76,8 @@ export function TaskDetailChecklistItemList({
                 </div>
               </div>
             </div>
-            {!checklistInherit ? (
-              <div className="task-checklist-row-actions">
-                <button
+            <div className="task-checklist-row-actions">
+              <button
                   type="button"
                   className="task-detail-checklist-edit"
                   // Done criteria are locked: editing the text after the
@@ -139,7 +136,6 @@ export function TaskDetailChecklistItemList({
                   Remove
                 </button>
               </div>
-            ) : null}
           </li>
           );
         })}

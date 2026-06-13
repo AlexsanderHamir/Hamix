@@ -1,6 +1,5 @@
 import { useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
-import type { CSSProperties } from "react";
 import { useTaskDetailPrefetcher } from "@/app/hooks/usePrefetchOnIntent";
 import type { Task } from "@/types";
 import type { TaskWithDepth } from "../../../task-tree";
@@ -37,8 +36,7 @@ function isTaskListRowNavExcluded(target: EventTarget | null): boolean {
 /**
  * Optional bulk-selection bindings. When omitted, the table renders
  * without the leftmost checkbox column (callers that don't want
- * bulk actions — e.g. embedded subtask widgets — get the
- * historical layout for free). When provided, the table renders
+ * bulk actions get the historical layout for free). When provided, the table renders
  * a header tri-state checkbox plus a per-row checkbox column;
  * the parent owns the state via `useTaskListSelection`.
  */
@@ -59,12 +57,6 @@ type Props = {
   saving: boolean;
   emptyListAction?: EmptyStateAction;
   onEdit: (t: Task) => void;
-  /**
-   * Receives the table row plus the pre-computed `subtaskCount` carried by
-   * `TaskWithDepth.descendantCount`. Forwarded to `useTaskDeleteFlow` so the
-   * confirm dialog can warn the user about the cascade documented in
-   * docs/api.md "DELETE /tasks/{id}".
-   */
   onRequestDelete: (t: DeleteTargetInput) => void;
   /**
    * Optional bulk-selection bindings (Stage 5 of task scheduling).
@@ -384,7 +376,6 @@ export function TaskListDataTable({
                   projectLabel !== "",
               );
               const titleSubtitle = taskListRowSubtitle({
-                depth: t.depth,
                 hasProject,
                 promptPreview,
               });
@@ -443,26 +434,13 @@ export function TaskListDataTable({
                       className={[
                         "cell-title-link",
                         "cell-title-link--cell",
-                        t.depth > 0 ? "cell-title-link--tree" : "",
                       ]
                         .filter(Boolean)
                         .join(" ")}
                       aria-label={`Open task details: ${t.title}`}
-                      style={
-                        t.depth > 0
-                          ? ({
-                              "--task-list-tree-depth": String(t.depth),
-                            } as CSSProperties)
-                          : undefined
-                      }
                     >
                       <div className="cell-title-stack">
                         <span className="cell-title-main">
-                          {t.depth > 0 ? (
-                            <span className="task-subtask-marker" aria-hidden>
-                              └{" "}
-                            </span>
-                          ) : null}
                           <span className="cell-title-text cell-title-text--primary">
                             {t.title}
                           </span>
@@ -525,12 +503,7 @@ export function TaskListDataTable({
                         type="button"
                         className="task-list-icon-btn task-list-icon-btn--delete"
                         aria-label={`Delete task "${t.title}"`}
-                        onClick={() =>
-                          onRequestDelete({
-                            ...t,
-                            subtaskCount: t.descendantCount ?? 0,
-                          })
-                        }
+                        onClick={() => onRequestDelete(t)}
                         disabled={saving || isExiting}
                       >
                         <TaskListDeleteGlyph />

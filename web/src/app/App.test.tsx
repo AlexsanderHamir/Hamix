@@ -517,19 +517,7 @@ describe("App", () => {
             initial_prompt: "Prefilled prompt",
             priority: "high",
             task_type: "feature",
-            parent_id: "",
-            checklist_inherit: false,
             checklist_items: ["Do step A"],
-            pending_subtasks: [
-              {
-                title: "Child A",
-                initial_prompt: "child prompt",
-                priority: "medium",
-                task_type: "general",
-                checklist_items: ["child criterion"],
-                checklist_inherit: false,
-              },
-            ],
             latest_evaluation: {
               overall_score: 87,
               overall_summary: "Good scope",
@@ -584,7 +572,6 @@ describe("App", () => {
     expect(within(dialog).queryByLabelText(/^draft name$/i)).not.toBeInTheDocument();
     expect(within(dialog).getByLabelText(/^title$/i)).toHaveValue("Prefilled title");
     expect(within(dialog).getByText("Do step A")).toBeInTheDocument();
-    expect(within(dialog).getByText("Child A")).toBeInTheDocument();
     expect(within(dialog).getByText(/Good scope/i)).toBeInTheDocument();
     expect(draftSaves).toHaveLength(0);
   });
@@ -1312,172 +1299,6 @@ describe("App", () => {
     ).not.toBeInTheDocument();
   });
 
-  it("creates a task with subtasks after the parent task", async () => {
-    const user = userEvent.setup();
-    let postCount = 0;
-    const taskPosts: Array<Record<string, unknown>> = [];
-
-    vi.spyOn(globalThis, "fetch").mockImplementation(async (input, init) => {
-      const url = requestUrl(input);
-      if (url.startsWith("/tasks?")) {
-        if (postCount === 0) {
-          return Response.json({ tasks: [], limit: 200, offset: 0 });
-        }
-        return Response.json({
-          tasks: [
-            {
-              id: "parent",
-              title: "Epic",
-              initial_prompt: "",
-              status: "ready",
-              priority: "medium",
-              checklist_inherit: false,
-              children: [
-                {
-                  id: "c1",
-                  title: "Step one",
-                  initial_prompt: "",
-                  status: "ready",
-                  priority: "medium",
-                  checklist_inherit: false,
-                },
-                {
-                  id: "c2",
-                  title: "Step two",
-                  initial_prompt: "",
-                  status: "ready",
-                  priority: "medium",
-                  checklist_inherit: false,
-                },
-              ],
-            },
-          ],
-          limit: 200,
-          offset: 0,
-        });
-      }
-      if (url.startsWith("/repo/")) {
-        return new Response(
-          JSON.stringify({ error: "repo not configured" }),
-          { status: 503 },
-        );
-      }
-      if (url === "/tasks" && init?.method === "POST") {
-        postCount++;
-        const body =
-          init?.body != null && typeof init.body === "string"
-            ? (JSON.parse(init.body) as Record<string, unknown>)
-            : {};
-        taskPosts.push(body);
-        if (postCount === 1) {
-          return new Response(
-            JSON.stringify({
-              id: "parent",
-              title: body.title,
-              initial_prompt: body.initial_prompt ?? "",
-              status: body.status ?? "ready",
-              priority: body.priority ?? "medium",
-              checklist_inherit: false,
-            }),
-            { status: 201, headers: { "Content-Type": "application/json" } },
-          );
-        }
-        const id = postCount === 2 ? "c1" : "c2";
-        return new Response(
-          JSON.stringify({
-            id,
-            title: body.title,
-            initial_prompt: "",
-            status: body.status ?? "ready",
-            priority: body.priority ?? "medium",
-            checklist_inherit: false,
-            parent_id: body.parent_id,
-          }),
-          { status: 201, headers: { "Content-Type": "application/json" } },
-        );
-      }
-      if (url === "/tasks/parent/checklist/items" && init?.method === "POST") {
-        return new Response(null, { status: 204 });
-      }
-      return new Response("not found", { status: 404 });
-    });
-
-    renderApp();
-    await screen.findByText("No tasks yet");
-
-    const outer = await openNewTaskModal(user);
-    await user.type(within(outer).getByLabelText(/^title$/i), "Epic");
-    await choosePriorityInDialog(user, outer);
-    await user.click(
-      within(outer).getByRole("button", { name: /new criterion/i }),
-    );
-    const parentCriterionDialog = await screen.findByRole("dialog", {
-      name: /new criterion/i,
-    });
-    await user.type(
-      within(parentCriterionDialog).getByLabelText(/^criterion$/i),
-      "Epic deliverable",
-    );
-    await user.click(
-      within(parentCriterionDialog).getByRole("button", {
-        name: /^add criterion$/i,
-      }),
-    );
-
-    await user.click(
-      within(outer).getByRole("button", { name: /open form to add a subtask/i }),
-    );
-    let dialogs = screen.getAllByRole("dialog");
-    expect(dialogs.length).toBe(2);
-    let nested = dialogs[1];
-    await user.type(within(nested).getByLabelText(/^title$/i), "Step one");
-    await choosePriorityInDialog(user, nested);
-    await user.click(
-      within(nested).getByRole("button", { name: /^add subtask$/i }),
-    );
-    await waitFor(() => {
-      expect(screen.getAllByRole("dialog")).toHaveLength(1);
-    });
-
-    await user.click(
-      within(outer).getByRole("button", { name: /open form to add a subtask/i }),
-    );
-    dialogs = screen.getAllByRole("dialog");
-    expect(dialogs.length).toBe(2);
-    nested = dialogs[1];
-    await user.type(within(nested).getByLabelText(/^title$/i), "Step two");
-    await choosePriorityInDialog(user, nested);
-    await user.click(
-      within(nested).getByRole("button", { name: /^add subtask$/i }),
-    );
-    await waitFor(() => {
-      expect(screen.getAllByRole("dialog")).toHaveLength(1);
-    });
-
-    await user.click(
-      within(outer).getByRole("button", { name: /^create$/i }),
-    );
-
-    expect(
-      await screen.findByRole("link", { name: /epic/i }),
-    ).toBeInTheDocument();
-    expect(taskPosts).toHaveLength(3);
-    expect(taskPosts[0].title).toBe("Epic");
-    expect(taskPosts[0].parent_id).toBeUndefined();
-    const childPosts = taskPosts.slice(1) as Array<{
-      parent_id?: unknown;
-      title?: unknown;
-    }>;
-    expect(childPosts).toHaveLength(2);
-    for (const child of childPosts) {
-      expect(child.parent_id).toBe("parent");
-    }
-    expect(childPosts.map((p) => p.title).sort()).toEqual([
-      "Step one",
-      "Step two",
-    ]);
-  });
-
   it("posts a top-level task with no parent_id from the home create modal", async () => {
     // The home modal is now top-level-only; verifies no parent_id
     // is ever attached even when parent tasks exist in the list.
@@ -1546,11 +1367,9 @@ describe("App", () => {
     });
     const posted = postBody as unknown as {
       parent_id?: unknown;
-      checklist_inherit?: unknown;
       title?: unknown;
     };
     expect(posted.title).toBe("Standalone task");
     expect(posted.parent_id).toBeUndefined();
-    expect(posted.checklist_inherit).toBeUndefined();
   });
 });

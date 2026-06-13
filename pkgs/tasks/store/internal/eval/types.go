@@ -17,15 +17,13 @@ type ChecklistItemInput struct {
 // Re-aliased by the public store facade as
 // store.EvaluateDraftTaskInput so handler code stays unchanged.
 type DraftTaskInput struct {
-	DraftID          string
-	Title            string
-	InitialPrompt    string
-	Status           domain.Status
-	Priority         domain.Priority
-	TaskType         domain.TaskType
-	ParentID         *string
-	ChecklistInherit *bool
-	ChecklistItems   []ChecklistItemInput
+	DraftID        string
+	Title          string
+	InitialPrompt  string
+	Status         domain.Status
+	Priority       domain.Priority
+	TaskType       domain.TaskType
+	ChecklistItems []ChecklistItemInput
 }
 
 // Section is one rubric facet of the evaluation result. The Key is

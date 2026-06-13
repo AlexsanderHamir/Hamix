@@ -39,18 +39,6 @@ var samplePayloadByType = map[domain.EventType]func() ([]byte, error){
 			"steps": []string{"Sketch", "Implement", "Verify"},
 		})
 	},
-	domain.EventSubtaskAdded: func() ([]byte, error) {
-		return json.Marshal(map[string]string{
-			"child_task_id": "00000000-0000-0000-0000-000000000099",
-			"title":         "Child (synthetic id)",
-		})
-	},
-	domain.EventSubtaskRemoved: func() ([]byte, error) {
-		return json.Marshal(map[string]string{
-			"child_task_id": "00000000-0000-0000-0000-000000000099",
-			"title":         "Removed child (synthetic)",
-		})
-	},
 	domain.EventChecklistItemAdded: func() ([]byte, error) {
 		return json.Marshal(map[string]string{"item_id": "cli-dev-1", "text": "Run go test ./..."})
 	},
@@ -62,9 +50,6 @@ var samplePayloadByType = map[domain.EventType]func() ([]byte, error){
 	},
 	domain.EventChecklistItemRemoved: func() ([]byte, error) {
 		return json.Marshal(map[string]string{"item_id": "cli-dev-1", "text": "Removed criterion (synthetic)"})
-	},
-	domain.EventChecklistInheritChanged: func() ([]byte, error) {
-		return json.Marshal(map[string]bool{"from": false, "to": true})
 	},
 	domain.EventArtifactAdded: func() ([]byte, error) {
 		return json.Marshal(map[string]string{"name": "notes.md", "uri": "file:///tmp/t2a-devsim"})

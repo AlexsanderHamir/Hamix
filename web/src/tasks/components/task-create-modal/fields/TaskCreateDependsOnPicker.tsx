@@ -62,21 +62,12 @@ export function TaskCreateDependsOnPicker({
     staleTime: 30_000,
   });
 
-  // Flatten the root forest (root tasks + their nested children) into a
-  // single list so the picker can offer subtasks too — depends_on is a
-  // task-id wire field and the server happily accepts subtask ids.
+  // Project-scoped flat task list for dependency picking.
   const projectTasks = useMemo(() => {
     if (!hasProject) return [] as Task[];
-    const out: Task[] = [];
-    const seen = new Set<string>();
-    const walk = (node: Task) => {
-      if (seen.has(node.id)) return;
-      seen.add(node.id);
-      if (node.project_id === projectId) out.push(node);
-      for (const child of node.children ?? []) walk(child);
-    };
-    for (const t of tasksQuery.data?.tasks ?? []) walk(t);
-    return out;
+    return (tasksQuery.data?.tasks ?? []).filter(
+      (t) => t.project_id === projectId,
+    );
   }, [hasProject, projectId, tasksQuery.data?.tasks]);
 
   const labelLookup = useMemo(() => {

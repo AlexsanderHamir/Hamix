@@ -61,7 +61,7 @@ describe("DeleteConfirmDialog", () => {
     expect(onCancel).toHaveBeenCalledTimes(1);
   });
 
-  it("does not render the cascade callout when subtaskCount is 0/omitted", () => {
+  it("does not render a cascade callout", () => {
     render(
       <DeleteConfirmDialog
         taskTitle="leaf"
@@ -75,38 +75,6 @@ describe("DeleteConfirmDialog", () => {
     expect(
       screen.queryByText(/subtask.*will also be deleted/i),
     ).not.toBeInTheDocument();
-  });
-
-  it("renders the cascade callout when subtaskCount > 0 (singular phrasing)", () => {
-    render(
-      <DeleteConfirmDialog
-        taskTitle="parent"
-        subtaskCount={1}
-        saving={false}
-        deletePending={false}
-        onCancel={vi.fn()}
-        onConfirm={vi.fn()}
-      />,
-    );
-    const callout = screen.getByRole("note");
-    expect(callout).toBeInTheDocument();
-    expect(callout).toHaveTextContent(/1 subtask will also be deleted\./i);
-  });
-
-  it("renders the cascade callout when subtaskCount > 1 (plural phrasing)", () => {
-    render(
-      <DeleteConfirmDialog
-        taskTitle="parent"
-        subtaskCount={4}
-        saving={false}
-        deletePending={false}
-        onCancel={vi.fn()}
-        onConfirm={vi.fn()}
-      />,
-    );
-    const callout = screen.getByRole("note");
-    expect(callout).toBeInTheDocument();
-    expect(callout).toHaveTextContent(/4 subtasks will also be deleted\./i);
   });
 
   it("always renders the muted 'cannot be undone' footnote", () => {

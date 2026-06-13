@@ -81,10 +81,6 @@ export function parseTaskStatsResponse(value: unknown): TaskStatsResponse {
   if (!isRecord(byPriorityRaw)) {
     throw new Error("Invalid API response: by_priority must be an object");
   }
-  const byScopeRaw = value.by_scope;
-  if (!isRecord(byScopeRaw)) {
-    throw new Error("Invalid API response: by_scope must be an object");
-  }
   const by_status: Partial<Record<Status, number>> = {};
   for (const [key, rawCount] of Object.entries(byStatusRaw)) {
     if (!(STATUSES as readonly string[]).includes(key)) {
@@ -99,16 +95,6 @@ export function parseTaskStatsResponse(value: unknown): TaskStatsResponse {
     }
     by_priority[key as Priority] = parseFiniteNumber(rawCount, `by_priority.${key}`);
   }
-  if (!("parent" in byScopeRaw)) {
-    throw new Error("Invalid API response: by_scope.parent must be present");
-  }
-  if (!("subtask" in byScopeRaw)) {
-    throw new Error("Invalid API response: by_scope.subtask must be present");
-  }
-  const by_scope = {
-    parent: parseFiniteNumber(byScopeRaw.parent, "by_scope.parent"),
-    subtask: parseFiniteNumber(byScopeRaw.subtask, "by_scope.subtask"),
-  };
   const cycles = parseTaskStatsCycles(value.cycles);
   const phases = parseTaskStatsPhases(value.phases);
   const runner = parseTaskStatsRunner(value.runner);
@@ -123,7 +109,6 @@ export function parseTaskStatsResponse(value: unknown): TaskStatsResponse {
         : parseFiniteNumber(value.scheduled, "scheduled"),
     by_status,
     by_priority,
-    by_scope,
     cycles,
     phases,
     runner,
@@ -330,21 +315,6 @@ function parseTaskStatsRecentFailure(
   };
 }
 
-function parseChecklistInherit(v: unknown): boolean {
-  return v === true;
-}
-
-function parseOptionalParentId(
-  value: unknown,
-  field: string,
-): string | undefined {
-  if (value === undefined || value === null) return undefined;
-  const s = parseString(value, field);
-  return s.trim() === "" ? undefined : s;
-}
-
-export const maxTaskParseDepth = 64;
-
 function parseDependencySatisfies(
   value: unknown,
   field: string,
@@ -353,10 +323,10 @@ function parseDependencySatisfies(
     return "done";
   }
   const s = parseString(value, field);
-  if (s === "done" || s === "criteria_complete") {
+  if (s === "done") {
     return s;
   }
-  throw new Error(`Invalid API response: ${field} must be done or criteria_complete`);
+  throw new Error(`Invalid API response: ${field} must be done`);
 }
 
 function parseDependsOnEdge(raw: unknown, path: string): TaskDependencyEdge {
@@ -372,15 +342,8 @@ function parseDependsOnEdge(raw: unknown, path: string): TaskDependencyEdge {
   };
 }
 
-/** Validates a single task object from POST/PATCH responses (recursive `children`). */
+/** Validates a single task object from POST/PATCH responses. */
 export function parseTask(value: unknown): Task {
-  return parseTaskAtDepth(value, 0);
-}
-
-function parseTaskAtDepth(value: unknown, depth: number): Task {
-  if (depth > maxTaskParseDepth) {
-    throw new Error("Invalid API response: task tree is too deep");
-  }
   if (!isRecord(value)) {
     throw new Error("Invalid API response: task must be an object");
   }
@@ -394,7 +357,6 @@ function parseTaskAtDepth(value: unknown, depth: number): Task {
     initial_prompt: initial,
     status: parseStatus(value.status),
     priority: parsePriority(value.priority),
-    checklist_inherit: parseChecklistInherit(value.checklist_inherit),
     runner:
       value.runner !== undefined && value.runner !== null
         ? parseString(value.runner, "runner")
@@ -418,18 +380,16 @@ function parseTaskAtDepth(value: unknown, depth: number): Task {
   } else {
     base.task_type = "general";
   }
-  const projectID = parseOptionalParentId(value.project_id, "project_id");
-  if (projectID !== undefined) {
-    base.project_id = projectID;
+  if (value.project_id !== undefined && value.project_id !== null) {
+    const projectID = parseString(value.project_id, "project_id").trim();
+    if (projectID !== "") {
+      base.project_id = projectID;
+    }
   }
   if (Array.isArray(value.project_context_item_ids)) {
     base.project_context_item_ids = value.project_context_item_ids.map((raw, i) =>
       parseNonEmptyString(raw, `project_context_item_ids[${i}]`),
     );
-  }
-  const pid = parseOptionalParentId(value.parent_id, "parent_id");
-  if (pid !== undefined) {
-    base.parent_id = pid;
   }
   if (Array.isArray(value.tags)) {
     base.tags = value.tags.map((raw, i) => parseNonEmptyString(raw, `tags[${i}]`));
@@ -455,19 +415,6 @@ function parseTaskAtDepth(value: unknown, depth: number): Task {
   }
   if (value.gate !== undefined && value.gate !== null) {
     base.gate = parseTaskGate(value.gate);
-  }
-  const rawChildren = value.children;
-  if (rawChildren !== undefined) {
-    if (!Array.isArray(rawChildren)) {
-      throw new Error("Invalid API response: children must be an array");
-    }
-    base.children = rawChildren.map((item, i) => {
-      try {
-        return parseTaskAtDepth(item, depth + 1);
-      } catch (e) {
-        throw new Error(`Invalid API response: children[${i}]: ${errorMessage(e)}`);
-      }
-    });
   }
   return base;
 }

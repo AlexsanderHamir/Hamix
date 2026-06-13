@@ -17,7 +17,5 @@ export function statusListLabel(status: Status): string {
       return "Failed";
     case "on_hold":
       return "On hold";
-    case "awaiting_subtasks":
-      return "Subtasks in progress";
   }
 }

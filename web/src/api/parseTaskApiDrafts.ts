@@ -8,7 +8,6 @@ import {
   isRecord,
   parseFiniteNumber,
   parseNonEmptyString,
-  parsePriority,
   parsePriorityChoice,
   parseString,
   parseTaskType,
@@ -73,50 +72,12 @@ function parseDraftPayload(value: unknown): TaskDraftPayload {
   if (!Array.isArray(checklistRaw)) {
     throw new Error("Invalid API response: payload.checklist_items must be array");
   }
-  const subtasksRaw = value.pending_subtasks;
-  if (!Array.isArray(subtasksRaw)) {
-    throw new Error("Invalid API response: payload.pending_subtasks must be array");
-  }
   return {
     title: parseString(value.title, "payload.title"),
     initial_prompt: parseString(value.initial_prompt, "payload.initial_prompt"),
     priority: parsePriorityChoice(value.priority),
     task_type: parseTaskType(value.task_type ?? "general"),
-    parent_id: parseString(value.parent_id ?? "", "payload.parent_id"),
-    checklist_inherit: value.checklist_inherit === true,
     checklist_items: checklistRaw.map((s, i) => parseString(s, `payload.checklist_items[${i}]`)),
-    pending_subtasks: subtasksRaw.map((s, i) => {
-      if (!isRecord(s)) throw new Error(`Invalid API response: payload.pending_subtasks[${i}] must be object`);
-      const sChecklist = s.checklist_items;
-      if (!Array.isArray(sChecklist)) throw new Error(`Invalid API response: payload.pending_subtasks[${i}].checklist_items must be array`);
-      return {
-        title: parseString(s.title, `payload.pending_subtasks[${i}].title`),
-        initial_prompt: parseString(
-          s.initial_prompt,
-          `payload.pending_subtasks[${i}].initial_prompt`,
-        ),
-        priority: parsePriority(s.priority),
-        task_type: parseTaskType(s.task_type ?? "general"),
-        checklist_items: sChecklist.map((x, j) =>
-          parseString(x, `payload.pending_subtasks[${i}].checklist_items[${j}]`),
-        ),
-        checklist_inherit: s.checklist_inherit === true,
-        ...(Array.isArray(s.depends_on_sibling_indices)
-          ? {
-              depends_on_sibling_indices: s.depends_on_sibling_indices.map(
-                (idx, j) =>
-                  parseFiniteNumber(
-                    idx,
-                    `payload.pending_subtasks[${i}].depends_on_sibling_indices[${j}]`,
-                  ),
-              ),
-            }
-          : {}),
-      };
-    }),
-    ...(value.subtasks_wait_for_parent === true
-      ? { subtasks_wait_for_parent: true }
-      : {}),
     ...(isRecord(value.latest_evaluation)
       ? {
           latest_evaluation: {

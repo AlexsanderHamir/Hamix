@@ -1,4 +1,3 @@
-export function taskCreateModalBusyLabel(pendingSubtasksCount: number): string {
-  if (pendingSubtasksCount > 0) return "Creating task and subtasks…";
+export function taskCreateModalBusyLabel(): string {
   return "Creating task…";
 }

@@ -2,7 +2,6 @@ package store
 
 import (
 	"context"
-	"encoding/json"
 	"errors"
 	"fmt"
 	"testing"
@@ -228,36 +227,9 @@ func TestStore_Update_rejects_invalid_status_value(t *testing.T) {
 	}
 }
 
-func TestStore_Update_done_blockedWhenChildNotDone(t *testing.T) {
-	db := tasktestdb.OpenSQLite(t)
-	s := NewStore(db)
-	ctx := context.Background()
-	parent, err := s.Create(ctx, CreateTaskInput{Priority: domain.PriorityMedium, Title: "p"}, domain.ActorUser)
-	if err != nil {
-		t.Fatal(err)
-	}
-	pid := parent.ID
-	ensureParentHasCriterion(t, ctx, s, pid)
-	items, err := s.ListChecklistForSubject(ctx, pid)
-	if err != nil {
-		t.Fatal(err)
-	}
-	if err := s.SetChecklistItemDone(ctx, pid, items[0].ID, true, domain.ActorAgent); err != nil {
-		t.Fatal(err)
-	}
-	_, err = s.Create(ctx, CreateTaskInput{Priority: domain.PriorityMedium, Title: "c", ParentID: &pid}, domain.ActorUser)
-	if err != nil {
-		t.Fatal(err)
-	}
-	done := domain.StatusDone
-	if _, err = s.Update(ctx, parent.ID, UpdateTaskInput{Status: &done}, domain.ActorUser); !errors.Is(err, domain.ErrInvalidInput) {
-		t.Fatalf("parent with open subtask should be blocked: %v", err)
-	}
-}
-
 func TestStore_Delete_not_found(t *testing.T) {
 	s := NewStore(tasktestdb.OpenSQLite(t))
-	_, _, err := s.Delete(context.Background(), "00000000-0000-0000-0000-000000000077", domain.ActorUser)
+	_, err := s.Delete(context.Background(), "00000000-0000-0000-0000-000000000077", domain.ActorUser)
 	if !errors.Is(err, domain.ErrNotFound) {
 		t.Fatalf("got %v want ErrNotFound", err)
 	}
@@ -265,55 +237,29 @@ func TestStore_Delete_not_found(t *testing.T) {
 
 func TestStore_Delete_rejects_empty_id(t *testing.T) {
 	s := NewStore(tasktestdb.OpenSQLite(t))
-	_, _, err := s.Delete(context.Background(), "", domain.ActorUser)
+	_, err := s.Delete(context.Background(), "", domain.ActorUser)
 	if !errors.Is(err, domain.ErrInvalidInput) {
 		t.Fatalf("got %v want ErrInvalidInput", err)
 	}
 }
 
-// TestStore_Delete_cascadesSubtree pins the documented contract that
-// a single Delete on a parent removes the parent and every descendant
-// in BFS order. Replaces the prior `delete subtasks first` rejection
-// (see docs/api.md DELETE /tasks/{id}) so users no longer have
-// to descend the tree manually from the SPA.
-func TestStore_Delete_cascadesSubtree(t *testing.T) {
+func TestStore_Delete_removesTask(t *testing.T) {
 	db := tasktestdb.OpenSQLite(t)
 	s := NewStore(db)
 	ctx := context.Background()
-	parent, err := s.Create(ctx, CreateTaskInput{Priority: domain.PriorityMedium, Title: "p"}, domain.ActorUser)
+	tsk, err := s.Create(ctx, CreateTaskInput{Priority: domain.PriorityMedium, Title: "x"}, domain.ActorUser)
 	if err != nil {
 		t.Fatal(err)
 	}
-	pid := parent.ID
-	ensureParentHasCriterion(t, ctx, s, pid)
-	child, err := s.Create(ctx, CreateTaskInput{Priority: domain.PriorityMedium, Title: "c", ParentID: &pid}, domain.ActorUser)
+	deletedIDs, err := s.Delete(ctx, tsk.ID, domain.ActorUser)
 	if err != nil {
 		t.Fatal(err)
 	}
-	deletedIDs, parentNotify, err := s.Delete(ctx, parent.ID, domain.ActorUser)
-	if err != nil {
-		t.Fatalf("cascade delete: %v", err)
+	if len(deletedIDs) != 1 || deletedIDs[0] != tsk.ID {
+		t.Fatalf("deletedIDs=%v", deletedIDs)
 	}
-	if parentNotify != "" {
-		t.Fatalf("parentNotify=%q want empty (root has no parent)", parentNotify)
-	}
-	if len(deletedIDs) != 2 {
-		t.Fatalf("deletedIDs=%v want 2 ids (parent+child)", deletedIDs)
-	}
-	want := map[string]bool{parent.ID: true, child.ID: true}
-	for _, id := range deletedIDs {
-		if !want[id] {
-			t.Fatalf("unexpected id %q in deletedIDs=%v", id, deletedIDs)
-		}
-		delete(want, id)
-	}
-	if len(want) != 0 {
-		t.Fatalf("missing ids from cascade: %v (got %v)", want, deletedIDs)
-	}
-	for _, id := range []string{parent.ID, child.ID} {
-		if _, err := s.Get(ctx, id); !errors.Is(err, domain.ErrNotFound) {
-			t.Fatalf("Get(%s) after cascade err=%v want ErrNotFound", id, err)
-		}
+	if _, err := s.Get(ctx, tsk.ID); !errors.Is(err, domain.ErrNotFound) {
+		t.Fatalf("Get after delete err=%v want ErrNotFound", err)
 	}
 }
 
@@ -325,7 +271,7 @@ func TestStore_Delete_cascades_events(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if _, _, err := s.Delete(ctx, tsk.ID, domain.ActorUser); err != nil {
+	if _, err := s.Delete(ctx, tsk.ID, domain.ActorUser); err != nil {
 		t.Fatal(err)
 	}
 	err = db.Where("task_id = ?", tsk.ID).First(&domain.TaskEvent{}).Error
@@ -334,286 +280,83 @@ func TestStore_Delete_cascades_events(t *testing.T) {
 	}
 }
 
-func TestStore_Delete_child_appends_subtask_removed_on_parent(t *testing.T) {
-	s := NewStore(tasktestdb.OpenSQLite(t))
+// --- List paths ---------------------------------------------------
+
+func TestStore_ListFlatPage_empty_nonNilSlice(t *testing.T) {
+	db := tasktestdb.OpenSQLite(t)
+	s := NewStore(db)
+	got, hasMore, err := s.ListFlatPage(context.Background(), 10, 0, nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if hasMore {
+		t.Fatal("unexpected hasMore")
+	}
+	if got == nil {
+		t.Fatal("want empty non-nil slice so JSON encodes as [] not null")
+	}
+	if len(got) != 0 {
+		t.Fatalf("len %d", len(got))
+	}
+}
+
+func TestStore_ListFlatPage_hasMore_and_keyset(t *testing.T) {
+	db := tasktestdb.OpenSQLite(t)
+	s := NewStore(db)
 	ctx := context.Background()
-	parent, err := s.Create(ctx, CreateTaskInput{Priority: domain.PriorityMedium, Title: "p"}, domain.ActorUser)
-	if err != nil {
-		t.Fatal(err)
+	ids := []string{
+		"10000000-0000-4000-8000-000000000001",
+		"10000000-0000-4000-8000-000000000002",
+		"10000000-0000-4000-8000-000000000003",
 	}
-	pid := parent.ID
-	ensureParentHasCriterion(t, ctx, s, pid)
-	child, err := s.Create(ctx, CreateTaskInput{Priority: domain.PriorityMedium, Title: "kid", ParentID: &pid}, domain.ActorUser)
-	if err != nil {
-		t.Fatal(err)
-	}
-	deletedIDs, parentNotify, err := s.Delete(ctx, child.ID, domain.ActorUser)
-	if err != nil {
-		t.Fatal(err)
-	}
-	if parentNotify != parent.ID {
-		t.Fatalf("notify parent %q want %q", parentNotify, parent.ID)
-	}
-	if len(deletedIDs) != 1 || deletedIDs[0] != child.ID {
-		t.Fatalf("deletedIDs=%v want [%s]", deletedIDs, child.ID)
-	}
-	pEv, err := s.ListTaskEvents(ctx, parent.ID)
-	if err != nil {
-		t.Fatal(err)
-	}
-	var saw bool
-	for _, e := range pEv {
-		if e.Type == domain.EventSubtaskRemoved {
-			saw = true
-			break
+	for _, id := range ids {
+		if _, err := s.Create(ctx, CreateTaskInput{ID: id, Priority: domain.PriorityMedium, Title: "r"}, domain.ActorUser); err != nil {
+			t.Fatal(err)
 		}
 	}
-	if !saw {
-		t.Fatalf("parent events: want subtask_removed, got %#v", pEv)
+	got, hasMore, err := s.ListFlatPage(ctx, 2, 0, nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !hasMore || len(got) != 2 || got[0].ID != ids[0] || got[1].ID != ids[1] {
+		t.Fatalf("page1: len=%d hasMore=%v", len(got), hasMore)
+	}
+	got2, hasMore2, err := s.ListFlatAfter(ctx, 2, ids[1])
+	if err != nil {
+		t.Fatal(err)
+	}
+	if hasMore2 || len(got2) != 1 || got2[0].ID != ids[2] {
+		t.Fatalf("page2: len=%d hasMore=%v", len(got2), hasMore2)
 	}
 }
 
-// --- Parent/child + checklist-inherit append-events ----------------------
-
-func TestStore_Create_child_appends_subtask_event_on_parent(t *testing.T) {
-	s := NewStore(tasktestdb.OpenSQLite(t))
-	ctx := context.Background()
-	parent, err := s.Create(ctx, CreateTaskInput{Priority: domain.PriorityMedium, Title: "p"}, domain.ActorUser)
-	if err != nil {
-		t.Fatal(err)
-	}
-	pid := parent.ID
-	ensureParentHasCriterion(t, ctx, s, pid)
-	child, err := s.Create(ctx, CreateTaskInput{Priority: domain.PriorityMedium, Title: "kid", ParentID: &pid}, domain.ActorUser)
-	if err != nil {
-		t.Fatal(err)
-	}
-	chEv, err := s.ListTaskEvents(ctx, child.ID)
-	if err != nil {
-		t.Fatal(err)
-	}
-	if len(chEv) != 1 || chEv[0].Type != domain.EventTaskCreated {
-		t.Fatalf("child events: %+v", chEv)
-	}
-	pEv, err := s.ListTaskEvents(ctx, parent.ID)
-	if err != nil {
-		t.Fatal(err)
-	}
-	if len(pEv) != 3 || pEv[0].Type != domain.EventTaskCreated || pEv[1].Type != domain.EventChecklistItemAdded || pEv[2].Type != domain.EventSubtaskAdded {
-		t.Fatalf("parent events: %+v", pEv)
-	}
-}
-
-// findEventsByType filters a task event slice down to a single EventType. Used
-// by the parent-reparent regression suite below to make audit assertions
-// tolerant of unrelated events that may appear on the same task.
-func findEventsByType(evs []domain.TaskEvent, want domain.EventType) []domain.TaskEvent {
-	out := []domain.TaskEvent{}
-	for _, e := range evs {
-		if e.Type == want {
-			out = append(out, e)
+// TestStore_Get_wrappedRecordNotFoundStillMapsToErrNotFound pins the contract
+// that Get's sentinel check uses errors.Is and not fragile == comparison.
+func TestStore_Get_wrappedRecordNotFoundStillMapsToErrNotFound(t *testing.T) {
+	t.Parallel()
+	db := tasktestdb.OpenSQLite(t)
+	const cb = "test_wrap_tasks_record_not_found"
+	if err := db.Callback().Query().After("gorm:query").Register(cb, func(tx *gorm.DB) {
+		if tx.Statement != nil && tx.Statement.Table == "tasks" && errors.Is(tx.Error, gorm.ErrRecordNotFound) {
+			tx.Error = fmt.Errorf("wrapped: %w", tx.Error)
 		}
+	}); err != nil {
+		t.Fatalf("register callback: %v", err)
 	}
-	return out
-}
-
-// TestStore_Update_setParent_emits_subtaskAdded_on_new_parent_with_correct_payload
-// pins the audit contract documented in docs/api.md (line 205): the
-// `subtask_added` event is emitted on the **parent** task with payload
-// `{child_task_id, title}` whenever a child becomes its subtask. The Create
-// flow already follows this contract (see
-// TestStore_Create_child_appends_subtask_event_on_parent above); the PATCH
-// /tasks/{id} reparent flow used to instead emit a single `subtask_added` on
-// the **child** with payload `{parent_id, previous_parent_id}`, which broke
-// any consumer that subscribes to the parent's events to track its children
-// (notably the SSE invalidation in the SPA).
-func TestStore_Update_setParent_emits_subtaskAdded_on_new_parent_with_correct_payload(t *testing.T) {
-	s := NewStore(tasktestdb.OpenSQLite(t))
-	ctx := context.Background()
-	parent, err := s.Create(ctx, CreateTaskInput{Priority: domain.PriorityMedium, Title: "p"}, domain.ActorUser)
-	if err != nil {
-		t.Fatal(err)
-	}
-	child, err := s.Create(ctx, CreateTaskInput{Priority: domain.PriorityMedium, Title: "kid"}, domain.ActorUser)
-	if err != nil {
-		t.Fatal(err)
-	}
-	if _, err := s.Update(ctx, child.ID, UpdateTaskInput{Parent: &ParentFieldPatch{ID: parent.ID}}, domain.ActorUser); err != nil {
-		t.Fatal(err)
-	}
-	pEv, err := s.ListTaskEvents(ctx, parent.ID)
-	if err != nil {
-		t.Fatal(err)
-	}
-	added := findEventsByType(pEv, domain.EventSubtaskAdded)
-	if len(added) != 1 {
-		t.Fatalf("parent subtask_added events: got %d want 1; full=%+v", len(added), pEv)
-	}
-	var payload struct {
-		ChildTaskID string `json:"child_task_id"`
-		Title       string `json:"title"`
-	}
-	if err := json.Unmarshal(added[0].Data, &payload); err != nil {
-		t.Fatalf("unmarshal payload: %v raw=%s", err, string(added[0].Data))
-	}
-	if payload.ChildTaskID != child.ID {
-		t.Fatalf("child_task_id=%q want %q", payload.ChildTaskID, child.ID)
-	}
-	if payload.Title != "kid" {
-		t.Fatalf("title=%q want %q", payload.Title, "kid")
-	}
-	chEv, err := s.ListTaskEvents(ctx, child.ID)
-	if err != nil {
-		t.Fatal(err)
-	}
-	if got := findEventsByType(chEv, domain.EventSubtaskAdded); len(got) != 0 {
-		t.Fatalf("child must not receive subtask_added on reparent: %+v", got)
-	}
-}
-
-// TestStore_Update_clearParent_emits_subtaskRemoved_on_old_parent pins the
-// other half of the reparent audit contract: clearing parent_id (PATCH
-// `parent_id:null`) must emit `subtask_removed` on the **old parent**, not
-// `subtask_added` on the child. This is the symmetric companion to
-// docs/api.md line 205 ("`subtask_removed` on the parent when that child
-// is deleted") — orphaning via PATCH is logically equivalent to removing the
-// child from the parent's subtree.
-func TestStore_Update_clearParent_emits_subtaskRemoved_on_old_parent(t *testing.T) {
-	s := NewStore(tasktestdb.OpenSQLite(t))
-	ctx := context.Background()
-	parent, err := s.Create(ctx, CreateTaskInput{Priority: domain.PriorityMedium, Title: "p"}, domain.ActorUser)
-	if err != nil {
-		t.Fatal(err)
-	}
-	pid := parent.ID
-	ensureParentHasCriterion(t, ctx, s, pid)
-	child, err := s.Create(ctx, CreateTaskInput{Priority: domain.PriorityMedium, Title: "kid", ParentID: &pid}, domain.ActorUser)
-	if err != nil {
-		t.Fatal(err)
-	}
-	if _, err := s.Update(ctx, child.ID, UpdateTaskInput{Parent: &ParentFieldPatch{Clear: true}}, domain.ActorUser); err != nil {
-		t.Fatal(err)
-	}
-	pEv, err := s.ListTaskEvents(ctx, parent.ID)
-	if err != nil {
-		t.Fatal(err)
-	}
-	removed := findEventsByType(pEv, domain.EventSubtaskRemoved)
-	if len(removed) != 1 {
-		t.Fatalf("parent subtask_removed events: got %d want 1; full=%+v", len(removed), pEv)
-	}
-	var payload struct {
-		ChildTaskID string `json:"child_task_id"`
-		Title       string `json:"title"`
-	}
-	if err := json.Unmarshal(removed[0].Data, &payload); err != nil {
-		t.Fatalf("unmarshal payload: %v raw=%s", err, string(removed[0].Data))
-	}
-	if payload.ChildTaskID != child.ID {
-		t.Fatalf("child_task_id=%q want %q", payload.ChildTaskID, child.ID)
-	}
-	if payload.Title != "kid" {
-		t.Fatalf("title=%q want %q", payload.Title, "kid")
-	}
-	chEv, err := s.ListTaskEvents(ctx, child.ID)
-	if err != nil {
-		t.Fatal(err)
-	}
-	if got := findEventsByType(chEv, domain.EventSubtaskAdded); len(got) != 0 {
-		t.Fatalf("child must not receive subtask_added on clear-parent: %+v", got)
-	}
-	if got := findEventsByType(chEv, domain.EventSubtaskRemoved); len(got) != 0 {
-		t.Fatalf("child must not receive subtask_removed on clear-parent: %+v", got)
-	}
-}
-
-// TestStore_Update_changeParent_emits_remove_on_old_and_add_on_new pins the
-// reparent-across-parents audit contract: PATCHing `parent_id` from one
-// non-empty value to another non-empty value must emit `subtask_removed` on
-// the OLD parent and `subtask_added` on the NEW parent (in the same tx). This
-// keeps the "events on parent track its children list" invariant consistent
-// with the Create / Delete flows.
-func TestStore_Update_changeParent_emits_remove_on_old_and_add_on_new(t *testing.T) {
-	s := NewStore(tasktestdb.OpenSQLite(t))
-	ctx := context.Background()
-	oldParent, err := s.Create(ctx, CreateTaskInput{Priority: domain.PriorityMedium, Title: "old"}, domain.ActorUser)
-	if err != nil {
-		t.Fatal(err)
-	}
-	newParent, err := s.Create(ctx, CreateTaskInput{Priority: domain.PriorityMedium, Title: "new"}, domain.ActorUser)
-	if err != nil {
-		t.Fatal(err)
-	}
-	opid := oldParent.ID
-	ensureParentHasCriterion(t, ctx, s, opid)
-	child, err := s.Create(ctx, CreateTaskInput{Priority: domain.PriorityMedium, Title: "kid", ParentID: &opid}, domain.ActorUser)
-	if err != nil {
-		t.Fatal(err)
-	}
-	if _, err := s.Update(ctx, child.ID, UpdateTaskInput{Parent: &ParentFieldPatch{ID: newParent.ID}}, domain.ActorUser); err != nil {
-		t.Fatal(err)
-	}
-	oldEv, err := s.ListTaskEvents(ctx, oldParent.ID)
-	if err != nil {
-		t.Fatal(err)
-	}
-	if got := findEventsByType(oldEv, domain.EventSubtaskRemoved); len(got) != 1 {
-		t.Fatalf("old parent subtask_removed: got %d want 1; full=%+v", len(got), oldEv)
-	}
-	newEv, err := s.ListTaskEvents(ctx, newParent.ID)
-	if err != nil {
-		t.Fatal(err)
-	}
-	addedNew := findEventsByType(newEv, domain.EventSubtaskAdded)
-	if len(addedNew) != 1 {
-		t.Fatalf("new parent subtask_added: got %d want 1; full=%+v", len(addedNew), newEv)
-	}
-	var payload struct {
-		ChildTaskID string `json:"child_task_id"`
-		Title       string `json:"title"`
-	}
-	if err := json.Unmarshal(addedNew[0].Data, &payload); err != nil {
-		t.Fatalf("unmarshal: %v raw=%s", err, string(addedNew[0].Data))
-	}
-	if payload.ChildTaskID != child.ID || payload.Title != "kid" {
-		t.Fatalf("payload=%+v want child_task_id=%q title=%q", payload, child.ID, "kid")
-	}
-}
-
-func TestStore_Update_checklist_inherit_change_appends_event(t *testing.T) {
-	s := NewStore(tasktestdb.OpenSQLite(t))
-	ctx := context.Background()
-	parent, err := s.Create(ctx, CreateTaskInput{Priority: domain.PriorityMedium, Title: "p"}, domain.ActorUser)
-	if err != nil {
-		t.Fatal(err)
-	}
-	pid := parent.ID
-	ensureParentHasCriterion(t, ctx, s, pid)
-	child, err := s.Create(ctx, CreateTaskInput{Priority: domain.PriorityMedium, Title: "c", ParentID: &pid, ChecklistInherit: false}, domain.ActorUser)
-	if err != nil {
-		t.Fatal(err)
-	}
-	inherit := true
-	if _, err := s.Update(ctx, child.ID, UpdateTaskInput{ChecklistInherit: &inherit}, domain.ActorUser); err != nil {
-		t.Fatal(err)
-	}
-	evs, err := s.ListTaskEvents(ctx, child.ID)
-	if err != nil {
-		t.Fatal(err)
-	}
-	var saw bool
-	for _, e := range evs {
-		if e.Type == domain.EventChecklistInheritChanged {
-			saw = true
-			break
+	t.Cleanup(func() {
+		if err := db.Callback().Query().Remove(cb); err != nil {
+			t.Logf("remove callback: %v", err)
 		}
-	}
-	if !saw {
-		t.Fatal("expected checklist_inherit_changed event")
+	})
+
+	s := NewStore(db)
+	_, err := s.Get(context.Background(), "00000000-0000-0000-0000-deadbeefdead")
+	if !errors.Is(err, domain.ErrNotFound) {
+		t.Fatalf("Get on wrapped ErrRecordNotFound: got err=%v, want errors.Is(domain.ErrNotFound)", err)
 	}
 }
 
-// --- List / Tree paths ---------------------------------------------------
+// --- Construction / migration --------------------------------------------
 
 func TestStore_List_pagination_and_limit_cap(t *testing.T) {
 	s := NewStore(tasktestdb.OpenSQLite(t))
@@ -669,235 +412,6 @@ func TestStore_List_empty_table(t *testing.T) {
 		t.Fatalf("len %d", len(got))
 	}
 }
-
-func TestStore_ListRootForest_empty_nonNilSlice(t *testing.T) {
-	db := tasktestdb.OpenSQLite(t)
-	s := NewStore(db)
-	got, hasMore, err := s.ListRootForest(context.Background(), 10, 0)
-	if err != nil {
-		t.Fatal(err)
-	}
-	if hasMore {
-		t.Fatal("unexpected hasMore")
-	}
-	if got == nil {
-		t.Fatal("want empty non-nil slice so JSON encodes as [] not null")
-	}
-	if len(got) != 0 {
-		t.Fatalf("len %d", len(got))
-	}
-}
-
-func TestStore_ListRootForest_nested(t *testing.T) {
-	db := tasktestdb.OpenSQLite(t)
-	s := NewStore(db)
-	ctx := context.Background()
-	p, err := s.Create(ctx, CreateTaskInput{Priority: domain.PriorityMedium, Title: "root"}, domain.ActorUser)
-	if err != nil {
-		t.Fatal(err)
-	}
-	pid := p.ID
-	ensureParentHasCriterion(t, ctx, s, pid)
-	_, err = s.Create(ctx, CreateTaskInput{Priority: domain.PriorityMedium, Title: "kid", ParentID: &pid}, domain.ActorUser)
-	if err != nil {
-		t.Fatal(err)
-	}
-	forest, hasMore, err := s.ListRootForest(ctx, 10, 0)
-	if err != nil {
-		t.Fatal(err)
-	}
-	if hasMore {
-		t.Fatal("unexpected hasMore")
-	}
-	if len(forest) != 1 {
-		t.Fatalf("roots %d", len(forest))
-	}
-	if len(forest[0].Children) != 1 {
-		t.Fatalf("children %d", len(forest[0].Children))
-	}
-	if forest[0].Children[0].Title != "kid" {
-		t.Fatalf("child title %q", forest[0].Children[0].Title)
-	}
-}
-
-func TestStore_ListRootForest_hasMore_and_keyset(t *testing.T) {
-	db := tasktestdb.OpenSQLite(t)
-	s := NewStore(db)
-	ctx := context.Background()
-	ids := []string{
-		"10000000-0000-4000-8000-000000000001",
-		"10000000-0000-4000-8000-000000000002",
-		"10000000-0000-4000-8000-000000000003",
-	}
-	for _, id := range ids {
-		if _, err := s.Create(ctx, CreateTaskInput{ID: id, Priority: domain.PriorityMedium, Title: "r"}, domain.ActorUser); err != nil {
-			t.Fatal(err)
-		}
-	}
-	got, hasMore, err := s.ListRootForest(ctx, 2, 0)
-	if err != nil {
-		t.Fatal(err)
-	}
-	if !hasMore || len(got) != 2 || got[0].ID != ids[0] || got[1].ID != ids[1] {
-		t.Fatalf("page1: len=%d hasMore=%v", len(got), hasMore)
-	}
-	got2, hasMore2, err := s.ListRootForestAfter(ctx, 2, ids[1])
-	if err != nil {
-		t.Fatal(err)
-	}
-	if hasMore2 || len(got2) != 1 || got2[0].ID != ids[2] {
-		t.Fatalf("page2: len=%d hasMore=%v", len(got2), hasMore2)
-	}
-}
-
-// TestStore_GetTaskTree_wrappedRecordNotFoundStillMapsToErrNotFound pins
-// the contract that GetTree's sentinel check uses errors.Is and not the
-// fragile `err == gorm.ErrRecordNotFound`. We register a Query "after"
-// callback that wraps any tasks-row miss with `fmt.Errorf("wrapped: %w",
-// tx.Error)`; with the historical `==` check the GetTaskTree call
-// produced a generic "get task: wrapped: ..." 500 instead of the
-// documented domain.ErrNotFound that the HTTP handler maps to 404.
-func TestStore_GetTaskTree_wrappedRecordNotFoundStillMapsToErrNotFound(t *testing.T) {
-	t.Parallel()
-	db := tasktestdb.OpenSQLite(t)
-	const cb = "test_wrap_tasks_record_not_found"
-	if err := db.Callback().Query().After("gorm:query").Register(cb, func(tx *gorm.DB) {
-		if tx.Statement != nil && tx.Statement.Table == "tasks" && errors.Is(tx.Error, gorm.ErrRecordNotFound) {
-			tx.Error = fmt.Errorf("wrapped: %w", tx.Error)
-		}
-	}); err != nil {
-		t.Fatalf("register callback: %v", err)
-	}
-	t.Cleanup(func() {
-		if err := db.Callback().Query().Remove(cb); err != nil {
-			t.Logf("remove callback: %v", err)
-		}
-	})
-
-	s := NewStore(db)
-	_, err := s.GetTaskTree(context.Background(), "00000000-0000-0000-0000-deadbeefdead")
-	if !errors.Is(err, domain.ErrNotFound) {
-		t.Fatalf("GetTaskTree on wrapped ErrRecordNotFound: got err=%v, want errors.Is(domain.ErrNotFound) — fragile `==` check would surface the wrap as a generic 500 instead of the documented 404", err)
-	}
-}
-
-// TestStore_Update_wrappedRecordNotFoundStillMapsToErrNotFound mirrors
-// the GetTaskTree sentinel-wrapping test above for the parent-cycle
-// guard in applyParentPatch / wouldCreateParentCycle. Same root cause:
-// the historical `err == gorm.ErrRecordNotFound` check broke as soon as
-// any upstream layer wrapped the sentinel via %w; switching to
-// errors.Is keeps the documented 404 wire shape intact.
-func TestStore_Update_wrappedRecordNotFoundStillMapsToErrNotFound(t *testing.T) {
-	t.Parallel()
-	db := tasktestdb.OpenSQLite(t)
-	s := NewStore(db)
-	ctx := context.Background()
-
-	parent, err := s.Create(ctx, CreateTaskInput{Title: "p", Priority: domain.PriorityMedium}, domain.ActorUser)
-	if err != nil {
-		t.Fatal(err)
-	}
-	ensureParentHasCriterion(t, ctx, s, parent.ID)
-	child, err := s.Create(ctx, CreateTaskInput{Title: "c", Priority: domain.PriorityMedium, ParentID: &parent.ID}, domain.ActorUser)
-	if err != nil {
-		t.Fatal(err)
-	}
-	// Manually corrupt the parent chain by deleting the parent row out
-	// from under the child *without* clearing the child's parent_id.
-	// The next PATCH that triggers wouldCreateParentCycle will load
-	// the dangling parent_id and hit the gorm.ErrRecordNotFound branch
-	// we are exercising here.
-	if err := db.Exec("DELETE FROM tasks WHERE id = ?", parent.ID).Error; err != nil {
-		t.Fatalf("seed: delete parent row: %v", err)
-	}
-
-	const cb = "test_wrap_tasks_record_not_found_update"
-	if err := db.Callback().Query().After("gorm:query").Register(cb, func(tx *gorm.DB) {
-		if tx.Statement != nil && tx.Statement.Table == "tasks" && errors.Is(tx.Error, gorm.ErrRecordNotFound) {
-			tx.Error = fmt.Errorf("wrapped: %w", tx.Error)
-		}
-	}); err != nil {
-		t.Fatalf("register callback: %v", err)
-	}
-	t.Cleanup(func() {
-		if err := db.Callback().Query().Remove(cb); err != nil {
-			t.Logf("remove callback: %v", err)
-		}
-	})
-
-	// Re-parent the orphaned child to itself's grandchild stand-in to
-	// trigger wouldCreateParentCycle, which walks up the (now
-	// corrupted) chain and hits the wrapped sentinel.
-	newParent, err := s.Create(ctx, CreateTaskInput{Title: "np", Priority: domain.PriorityMedium}, domain.ActorUser)
-	if err != nil {
-		t.Fatal(err)
-	}
-	// Make the new parent point to the deleted (dangling) id so the
-	// chain walk traverses through the wrapped not-found.
-	if err := db.Exec("UPDATE tasks SET parent_id = ? WHERE id = ?", parent.ID, newParent.ID).Error; err != nil {
-		t.Fatalf("seed: dangle new parent: %v", err)
-	}
-	_, err = s.Update(ctx, child.ID, UpdateTaskInput{Parent: &ParentFieldPatch{ID: newParent.ID}}, domain.ActorUser)
-	if err == nil {
-		t.Fatal("Update on dangling parent chain: want error, got nil")
-	}
-	if !errors.Is(err, domain.ErrNotFound) {
-		t.Fatalf("Update on wrapped ErrRecordNotFound in parent chain: got err=%v, want errors.Is(domain.ErrNotFound)", err)
-	}
-}
-
-func TestStore_GetTaskTree_rejects_chain_deeper_than_max(t *testing.T) {
-	db := tasktestdb.OpenSQLite(t)
-	s := NewStore(db)
-	ctx := context.Background()
-	root, err := s.Create(ctx, CreateTaskInput{Title: "root", Priority: domain.PriorityMedium}, domain.ActorUser)
-	if err != nil {
-		t.Fatal(err)
-	}
-	// Depth-1 create rejects grandchildren; seed a deep chain via direct insert to pin the read guard.
-	pid := root.ID
-	for i := 0; i < MaxTaskTreeDepth; i++ {
-		childID := fmt.Sprintf("deep-%d", i)
-		parent := pid
-		row := domain.Task{
-			ID:            childID,
-			Title:         childID,
-			InitialPrompt: childID,
-			Status:        domain.StatusBlocked,
-			Priority:      domain.PriorityMedium,
-			TaskType:      domain.TaskTypeGeneral,
-			ParentID:      &parent,
-			Runner:        "cursor",
-		}
-		if err := db.Create(&row).Error; err != nil {
-			t.Fatal(err)
-		}
-		pid = childID
-	}
-	if _, err := s.GetTaskTree(ctx, root.ID); err != nil {
-		t.Fatalf("tree at max depth should succeed: %v", err)
-	}
-	tooDeepParent := pid
-	tooDeep := domain.Task{
-		ID:            "too-deep",
-		Title:         "too-deep",
-		InitialPrompt: "too-deep",
-		Status:        domain.StatusBlocked,
-		Priority:      domain.PriorityMedium,
-		TaskType:      domain.TaskTypeGeneral,
-		ParentID:      &tooDeepParent,
-		Runner:        "cursor",
-	}
-	if err := db.Create(&tooDeep).Error; err != nil {
-		t.Fatal(err)
-	}
-	_, err = s.GetTaskTree(ctx, root.ID)
-	if !errors.Is(err, domain.ErrInvalidInput) {
-		t.Fatalf("got %v want ErrInvalidInput", err)
-	}
-}
-
-// --- Construction / migration --------------------------------------------
 
 func TestMigrate_second_call_succeeds(t *testing.T) {
 	db := tasktestdb.OpenSQLite(t)

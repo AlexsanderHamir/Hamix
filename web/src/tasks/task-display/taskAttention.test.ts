@@ -10,7 +10,6 @@ function minimalTask(status: Status): Task {
     initial_prompt: "",
     status,
     priority: "medium",
-    checklist_inherit: false,
     ...TASK_TEST_DEFAULTS,
   };
 }
@@ -41,15 +40,6 @@ describe("userAttention", () => {
     });
     expect(failed.show).toBe(true);
     expect(failed.headline).toContain("failed");
-  });
-
-  it("surfaces subtasks-in-progress copy for awaiting_subtasks", () => {
-    const out = userAttention(minimalTask("awaiting_subtasks"), {
-      approvalPending: false,
-    });
-    expect(out.show).toBe(true);
-    expect(out.headline).toBe("Subtasks in progress");
-    expect(out.body).toContain("subtasks");
   });
 
   it("hides attention for other statuses when not pending approval", () => {

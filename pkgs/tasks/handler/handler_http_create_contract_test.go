@@ -9,7 +9,6 @@ import (
 	"time"
 
 	"github.com/AlexsanderHamir/T2A/pkgs/tasks/domain"
-	"github.com/AlexsanderHamir/T2A/pkgs/tasks/store"
 )
 
 // postCreate centralizes the documented POST /tasks round-trip so the
@@ -48,9 +47,6 @@ func TestHTTP_createTask_400ErrorStrings(t *testing.T) {
 		{"priorityInvalid", `{"title":"ok","priority":"nope"}`, "priority"},
 		{"statusInvalid", `{"title":"ok","priority":"medium","status":"nope"}`, "status"},
 		{"taskTypeInvalid", `{"title":"ok","priority":"medium","task_type":"nope"}`, "task_type"},
-		{"checklistInheritWithoutParent", `{"title":"ok","priority":"medium","checklist_inherit":true}`, "checklist_inherit requires parent_id"},
-		{"checklistInheritWithEmptyParent", `{"title":"ok","priority":"medium","checklist_inherit":true,"parent_id":""}`, "checklist_inherit requires parent_id"},
-		{"parentNotFound", `{"title":"ok","priority":"medium","parent_id":"00000000-0000-0000-0000-000000000099"}`, "parent not found"},
 	}
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {
@@ -149,41 +145,6 @@ func TestHTTP_createTask_defaults(t *testing.T) {
 	})
 }
 
-// TestHTTP_createTask_emptyParentIDIsSilentlyOrphan pins the (asymmetric)
-// documented behavior that POST treats `"parent_id":""` (and whitespace) as
-// **no parent**, while PATCH rejects the same payload with `parent_id must not
-// be empty`. Catches a regression that would mistakenly add a "parent_id must
-// not be empty" check on the create path and break clients that re-use a
-// single payload shape across create/patch.
-func TestHTTP_createTask_emptyParentIDIsSilentlyOrphan(t *testing.T) {
-	srv := newTaskTestServer(t)
-	defer srv.Close()
-
-	cases := []struct {
-		name string
-		body string
-	}{
-		{"emptyString", `{"title":"orphan-empty","priority":"medium","parent_id":""}`},
-		{"whitespace", `{"title":"orphan-ws","priority":"medium","parent_id":"   "}`},
-		{"jsonNull", `{"title":"orphan-null","priority":"medium","parent_id":null}`},
-	}
-	for _, tc := range cases {
-		t.Run(tc.name, func(t *testing.T) {
-			res, raw := postCreate(t, srv.URL, tc.body)
-			if res.StatusCode != http.StatusCreated {
-				t.Fatalf("status %d (want 201) body=%s", res.StatusCode, raw)
-			}
-			var got domain.Task
-			if err := json.Unmarshal(raw, &got); err != nil {
-				t.Fatal(err)
-			}
-			if got.ParentID != nil && *got.ParentID != "" {
-				t.Fatalf("parent_id=%q want nil/empty (silently orphaned)", *got.ParentID)
-			}
-		})
-	}
-}
-
 // TestHTTP_createTask_doneStatusAllowedAtCreate pins the documented edge that
 // `status:"done"` IS allowed at create time because a brand-new row has no
 // descendants and no checklist items, so the precondition `validateCanMarkDone`
@@ -208,101 +169,27 @@ func TestHTTP_createTask_doneStatusAllowedAtCreate(t *testing.T) {
 	}
 }
 
-// TestHTTP_createTask_201ResponseShape pins the documented 201 envelope: the
-// response is a `store.TaskNode` JSON (domain.Task fields plus optional
-// `children` array). Per the doc table, `children` is **omitempty** — leaf
-// rows omit the key entirely (NOT `"children":[]`); it appears only when the
-// row has at least one descendant. This test will catch any future drift in
-// the omitempty tag (e.g. dropping it would break the documented "missing key
-// == empty subtree" contract that the web client relies on).
+// TestHTTP_createTask_201ResponseShape pins the flat domain.Task 201 envelope.
 func TestHTTP_createTask_201ResponseShape(t *testing.T) {
 	srv := newTaskTestServer(t)
 	defer srv.Close()
 
-	t.Run("leafOmitsChildrenKey", func(t *testing.T) {
-		res, raw := postCreate(t, srv.URL, `{"title":"leaf","priority":"medium"}`)
-		if res.StatusCode != http.StatusCreated {
-			t.Fatalf("status %d body=%s", res.StatusCode, raw)
+	res, raw := postCreate(t, srv.URL, `{"title":"leaf","priority":"medium"}`)
+	if res.StatusCode != http.StatusCreated {
+		t.Fatalf("status %d body=%s", res.StatusCode, raw)
+	}
+	var top map[string]json.RawMessage
+	if err := json.Unmarshal(raw, &top); err != nil {
+		t.Fatalf("decode top: %v body=%s", err, raw)
+	}
+	if _, ok := top["children"]; ok {
+		t.Fatalf("flat task row should not serialize \"children\": %s", raw)
+	}
+	for _, k := range []string{"id", "title", "status", "priority", "task_type"} {
+		if _, ok := top[k]; !ok {
+			t.Fatalf("missing top-level %q: %s", k, raw)
 		}
-		var top map[string]json.RawMessage
-		if err := json.Unmarshal(raw, &top); err != nil {
-			t.Fatalf("decode top: %v body=%s", err, raw)
-		}
-		if _, ok := top["children"]; ok {
-			t.Fatalf("leaf row should omit \"children\" key (omitempty); got %s", raw)
-		}
-		for _, k := range []string{"id", "title", "status", "priority", "task_type"} {
-			if _, ok := top[k]; !ok {
-				t.Fatalf("missing top-level %q (domain.Task field): %s", k, raw)
-			}
-		}
-	})
-
-	t.Run("parentSerializesChildren_grandchildOmitsKey", func(t *testing.T) {
-		parentRes, parentRaw := postCreate(t, srv.URL, `{"title":"parent","priority":"medium"}`)
-		if parentRes.StatusCode != http.StatusCreated {
-			t.Fatalf("parent create status %d body=%s", parentRes.StatusCode, parentRaw)
-		}
-		var parent domain.Task
-		if err := json.Unmarshal(parentRaw, &parent); err != nil {
-			t.Fatal(err)
-		}
-		ensureParentHasCriterionHTTP(t, srv.URL, parent.ID)
-		childRes, childRaw := postCreate(t, srv.URL,
-			`{"title":"child","priority":"medium","parent_id":"`+parent.ID+`"}`)
-		if childRes.StatusCode != http.StatusCreated {
-			t.Fatalf("child create status %d body=%s", childRes.StatusCode, childRaw)
-		}
-
-		getRes, err := http.Get(srv.URL + "/tasks/" + parent.ID)
-		if err != nil {
-			t.Fatal(err)
-		}
-		getRaw, _ := io.ReadAll(getRes.Body)
-		_ = getRes.Body.Close()
-		if getRes.StatusCode != http.StatusOK {
-			t.Fatalf("get parent status %d body=%s", getRes.StatusCode, getRaw)
-		}
-
-		// Parent JSON must carry "children" with one entry...
-		var parentTop map[string]json.RawMessage
-		if err := json.Unmarshal(getRaw, &parentTop); err != nil {
-			t.Fatal(err)
-		}
-		childrenRaw, ok := parentTop["children"]
-		if !ok {
-			t.Fatalf("parent (with one child) must serialize \"children\" key: %s", getRaw)
-		}
-		var children []json.RawMessage
-		if err := json.Unmarshal(childrenRaw, &children); err != nil {
-			t.Fatal(err)
-		}
-		if len(children) != 1 {
-			t.Fatalf("parent.children len=%d want 1", len(children))
-		}
-		// ...and the nested child (which is itself a leaf) must omit "children".
-		var childTop map[string]json.RawMessage
-		if err := json.Unmarshal(children[0], &childTop); err != nil {
-			t.Fatal(err)
-		}
-		if _, ok := childTop["children"]; ok {
-			t.Fatalf("nested leaf child should omit \"children\" key (omitempty); got %s", children[0])
-		}
-
-		// Defensive cross-check: store.TaskNode decode keeps the slice empty
-		// when the JSON omits the key (Go zero-value), which is the documented
-		// "missing key == empty subtree" contract for the web client.
-		var tree store.TaskNode
-		if err := json.Unmarshal(getRaw, &tree); err != nil {
-			t.Fatal(err)
-		}
-		if len(tree.Children) != 1 {
-			t.Fatalf("decoded parent.children len=%d want 1", len(tree.Children))
-		}
-		if tree.Children[0].Children != nil {
-			t.Fatalf("decoded nested child.children=%v want nil (key omitted in JSON)", tree.Children[0].Children)
-		}
-	})
+	}
 }
 
 // TestHTTP_createTask_acceptsPickupNotBefore_overrideGlobalDelay pins the
@@ -405,32 +292,22 @@ func TestHTTP_createTask_pickupNotBefore_pastIsAllowed(t *testing.T) {
 	}
 }
 
-// TestHTTP_createTask_publishesTaskCreatedAndParentTaskUpdated pins both
-// documented SSE side effects of a successful POST. Mirrors the existing
-// happy-path coverage in sse_trigger_surface_test.go but is colocated with the
-// create-contract suite so doc readers find it next to the 400/409 strings.
-func TestHTTP_createTask_publishesTaskCreatedAndParentTaskUpdated(t *testing.T) {
+// TestHTTP_createTask_publishesTaskCreated pins the documented SSE side effect.
+func TestHTTP_createTask_publishesTaskCreated(t *testing.T) {
 	srv, _, hub := newSSETriggerServer(t)
 	defer srv.Close()
-
-	parentID := mustCreateTask(t, srv.URL, `{"title":"parent","priority":"medium"}`)
-	ensureParentHasCriterionHTTP(t, srv.URL, parentID)
 
 	ch, unsub := hub.Subscribe()
 	defer unsub()
 
-	res, raw := postCreate(t, srv.URL,
-		`{"title":"child","priority":"medium","parent_id":"`+parentID+`"}`)
+	res, raw := postCreate(t, srv.URL, `{"title":"child","priority":"medium"}`)
 	if res.StatusCode != http.StatusCreated {
 		t.Fatalf("status %d body=%s", res.StatusCode, raw)
 	}
-	var child domain.Task
-	if err := json.Unmarshal(raw, &child); err != nil {
+	var task domain.Task
+	if err := json.Unmarshal(raw, &task); err != nil {
 		t.Fatal(err)
 	}
-	got := summarize(drainSSE(t, ch, 2, 2*time.Second))
-	mustEqualEvents(t, "POST /tasks (with parent)", got, []string{
-		"task_created:" + child.ID,
-		"task_updated:" + parentID,
-	})
+	got := summarize(drainSSE(t, ch, 1, 2*time.Second))
+	mustEqualEvents(t, "POST /tasks", got, []string{"task_created:" + task.ID})
 }

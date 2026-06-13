@@ -62,7 +62,6 @@ function makeRow(
     initial_prompt: "",
     status: extras.status ?? ("ready" as const),
     priority: extras.priority ?? ("medium" as const),
-    checklist_inherit: false as const,
     pickup_not_before: extras.pickup_not_before,
     project_id: extras.project_id,
     ...TASK_TEST_DEFAULTS,
@@ -174,7 +173,6 @@ describe("TaskListSection", () => {
       initial_prompt: "",
       status: "ready" as const,
       priority: "medium" as const,
-      checklist_inherit: false as const,
       ...TASK_TEST_DEFAULTS,
       depth: 0,
     };
@@ -199,7 +197,6 @@ describe("TaskListSection", () => {
     );
     expect(onRequestDelete).toHaveBeenCalledWith({
       ...task,
-      subtaskCount: 0,
     });
   });
 
@@ -212,7 +209,6 @@ describe("TaskListSection", () => {
         initial_prompt: "",
         status: "ready" as const,
         priority: "low" as const,
-        checklist_inherit: false as const,
         ...TASK_TEST_DEFAULTS,
         depth: 0,
       },
@@ -222,7 +218,6 @@ describe("TaskListSection", () => {
         initial_prompt: "",
         status: "done" as const,
         priority: "high" as const,
-        checklist_inherit: false as const,
         ...TASK_TEST_DEFAULTS,
         depth: 0,
       },
@@ -293,7 +288,6 @@ describe("TaskListSection", () => {
         initial_prompt: "",
         status: "ready" as const,
         priority: "medium" as const,
-        checklist_inherit: false as const,
         ...TASK_TEST_DEFAULTS,
         depth: 0,
       },
@@ -303,7 +297,6 @@ describe("TaskListSection", () => {
         initial_prompt: "",
         status: "ready" as const,
         priority: "medium" as const,
-        checklist_inherit: false as const,
         ...TASK_TEST_DEFAULTS,
         depth: 0,
       },
@@ -392,7 +385,6 @@ describe("TaskListSection", () => {
             initial_prompt: "",
             status: "ready" as const,
             priority: "medium" as const,
-            checklist_inherit: false as const,
             ...TASK_TEST_DEFAULTS,
             depth: 0,
           },
@@ -511,7 +503,6 @@ describe("TaskListSection", () => {
         initial_prompt: "",
         status: "ready",
         priority: "medium",
-        checklist_inherit: false,
         pickup_not_before: body.pickup_not_before ?? undefined,
         ...TASK_TEST_DEFAULTS,
       }));
@@ -571,7 +562,6 @@ describe("TaskListSection", () => {
         initial_prompt: "",
         status: "ready",
         priority: "medium",
-        checklist_inherit: false,
         ...TASK_TEST_DEFAULTS,
       });
       const futureIso = new Date(Date.now() + 60 * 60 * 1000).toISOString();
@@ -633,7 +623,6 @@ describe("TaskListSection", () => {
           initial_prompt: "",
           status: "ready",
           priority: "medium",
-          checklist_inherit: false,
           ...TASK_TEST_DEFAULTS,
         })
         .mockRejectedValueOnce(new Error("boom"))
@@ -643,7 +632,6 @@ describe("TaskListSection", () => {
           initial_prompt: "",
           status: "ready",
           priority: "medium",
-          checklist_inherit: false,
           ...TASK_TEST_DEFAULTS,
         });
       const tasks = [
@@ -818,7 +806,6 @@ describe("TaskListSection", () => {
       initial_prompt: "",
       status: "ready" as const,
       priority: "medium" as const,
-      checklist_inherit: false as const,
       ...TASK_TEST_DEFAULTS,
       depth: 0,
     };
@@ -828,7 +815,6 @@ describe("TaskListSection", () => {
       initial_prompt: "",
       status: "ready" as const,
       priority: "medium" as const,
-      checklist_inherit: false as const,
       ...TASK_TEST_DEFAULTS,
       depth: 0,
     }));

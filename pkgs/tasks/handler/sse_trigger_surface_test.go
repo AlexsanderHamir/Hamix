@@ -112,22 +112,6 @@ func TestHTTP_SSE_triggerSurface(t *testing.T) {
 		mustEqualEvents(t, "POST /tasks", got, []string{"task_created:" + created.ID})
 	})
 
-	t.Run("POST /tasks with parent emits task_created + parent task_updated", func(t *testing.T) {
-		srv, _, hub := newSSETriggerServer(t)
-		defer srv.Close()
-		parent := postTaskJSON(t, srv, `{"title":"parent","priority":"medium"}`, http.StatusCreated)
-		ensureParentHasCriterionHTTP(t, srv.URL, parent.ID)
-		ch, cancel := hub.Subscribe()
-		defer cancel()
-
-		child := postTaskJSON(t, srv, `{"title":"child","priority":"medium","parent_id":"`+parent.ID+`"}`, http.StatusCreated)
-		got := summarize(drainSSE(t, ch, 2, 2*time.Second))
-		mustEqualEvents(t, "POST /tasks (with parent)", got, []string{
-			"task_created:" + child.ID,
-			"task_updated:" + parent.ID,
-		})
-	})
-
 	t.Run("PATCH /tasks/{id} emits task_updated", func(t *testing.T) {
 		srv, _, hub := newSSETriggerServer(t)
 		defer srv.Close()
@@ -214,23 +198,6 @@ func TestHTTP_SSE_triggerSurface(t *testing.T) {
 		mustDoJSON(t, http.MethodDelete, srv.URL+"/tasks/"+task.ID, "", "", http.StatusNoContent)
 		got := summarize(drainSSE(t, ch, 1, 2*time.Second))
 		mustEqualEvents(t, "DELETE /tasks/{id}", got, []string{"task_deleted:" + task.ID})
-	})
-
-	t.Run("DELETE /tasks/{id} with parent emits task_deleted + parent task_updated", func(t *testing.T) {
-		srv, _, hub := newSSETriggerServer(t)
-		defer srv.Close()
-		parent := postTaskJSON(t, srv, `{"title":"parent","priority":"medium"}`, http.StatusCreated)
-		ensureParentHasCriterionHTTP(t, srv.URL, parent.ID)
-		child := postTaskJSON(t, srv, `{"title":"child","priority":"medium","parent_id":"`+parent.ID+`"}`, http.StatusCreated)
-		ch, cancel := hub.Subscribe()
-		defer cancel()
-
-		mustDoJSON(t, http.MethodDelete, srv.URL+"/tasks/"+child.ID, "", "", http.StatusNoContent)
-		got := summarize(drainSSE(t, ch, 2, 2*time.Second))
-		mustEqualEvents(t, "DELETE /tasks/{id} (with parent)", got, []string{
-			"task_deleted:" + child.ID,
-			"task_updated:" + parent.ID,
-		})
 	})
 
 	t.Run("POST /tasks/{id}/cycles emits task_cycle_changed", func(t *testing.T) {

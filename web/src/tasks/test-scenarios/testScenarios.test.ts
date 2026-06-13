@@ -66,30 +66,4 @@ describe("TEST_SCENARIOS catalog", () => {
     expect(totalGrouped).toBe(TEST_SCENARIOS.length);
   });
 
-  it("scheduling probe scenarios have valid sibling index references", () => {
-    for (const scenario of TEST_SCENARIOS) {
-      const pending = scenario.pendingSubtasks;
-      if (!pending) continue;
-      for (let i = 0; i < pending.length; i += 1) {
-        const st = pending[i]!;
-        for (const idx of st.dependsOnSiblingIndices ?? []) {
-          expect(idx).toBeGreaterThanOrEqual(0);
-          expect(idx).toBeLessThan(pending.length);
-          expect(idx).not.toBe(i);
-        }
-      }
-    }
-  });
-
-  it("includes subtask scheduling probe scenarios", () => {
-    const ids = [
-      "trivial.subtask-parent-gate",
-      "trivial.subtask-sibling-chain",
-      "trivial.subtask-parent-and-sibling",
-      "trivial.subtask-parallel-baseline",
-    ];
-    for (const id of ids) {
-      expect(findTestScenarioById(id)).toBeDefined();
-    }
-  });
 });

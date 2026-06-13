@@ -13,7 +13,6 @@ function makeStats(
     scheduled: 0,
     by_status: {},
     by_priority: {},
-    by_scope: { parent: 0, subtask: 0 },
     cycles: { by_status: {}, by_triggered_by: {} },
     phases: {
       by_phase_status: {

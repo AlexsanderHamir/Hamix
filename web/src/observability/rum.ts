@@ -35,8 +35,7 @@ export type RUMMutationKind =
   | "task_autonomy"
   | "checklist_add"
   | "checklist_edit"
-  | "checklist_delete"
-  | "subtask_create";
+  | "checklist_delete";
 
 type RUMEvent =
   | { type: "mutation_started"; mutation_kind: RUMMutationKind }

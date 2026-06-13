@@ -15,10 +15,10 @@ import (
 // taskQueryKeys.list directly from bootstrap without a follow-up
 // GET /tasks call. The wire shape is identical on purpose.
 type bootstrapTasksPayload struct {
-	Tasks   []store.TaskNode `json:"tasks"`
-	Limit   int              `json:"limit"`
-	Offset  int              `json:"offset"`
-	HasMore bool             `json:"has_more"`
+	Tasks   []domain.Task `json:"tasks"`
+	Limit   int           `json:"limit"`
+	Offset  int           `json:"offset"`
+	HasMore bool          `json:"has_more"`
 }
 
 // bootstrapDraftsPayload mirrors the GET /task-drafts envelope so the
@@ -75,7 +75,7 @@ func (h *Handler) bootstrap(w http.ResponseWriter, r *http.Request) {
 	ctx := r.Context()
 	var (
 		settings store.AppSettings
-		taskRows []store.TaskNode
+		taskRows []domain.Task
 		hasMore  bool
 		stats    store.TaskStats
 		projects []domain.Project
@@ -91,7 +91,7 @@ func (h *Handler) bootstrap(w http.ResponseWriter, r *http.Request) {
 		return err
 	})
 	g.Go(func() error {
-		rows, more, err := h.store.ListRootForest(gctx, bootstrapDefaultListLimit, 0)
+		rows, more, err := h.store.ListFlatPage(gctx, bootstrapDefaultListLimit, 0, nil)
 		if err == nil {
 			taskRows = rows
 			hasMore = more

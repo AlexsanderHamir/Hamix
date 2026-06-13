@@ -13,7 +13,6 @@ const TASK: Task = {
   initial_prompt: "",
   status: "failed",
   priority: "high",
-  checklist_inherit: false,
   ...TASK_TEST_DEFAULTS,
 };
 

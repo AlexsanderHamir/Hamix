@@ -5,8 +5,7 @@ export type Status =
   | "review"
   | "done"
   | "failed"
-  | "on_hold"
-  | "awaiting_subtasks";
+  | "on_hold";
 
 export type { GateCriterion, GateStatus, TaskGate } from "./gate";
 import type { TaskGate } from "./gate";
@@ -23,7 +22,7 @@ export type TaskType =
 /** Empty string means no selection yet (create / draft forms). */
 export type PriorityChoice = Priority | "";
 
-export type TaskDependencySatisfies = "done" | "criteria_complete";
+export type TaskDependencySatisfies = "done";
 
 export type TaskDependencyEdge = {
   task_id: string;
@@ -53,24 +52,18 @@ export type Task = {
   project_id?: string;
   /** User-selected project context items passed to agent runs for this task. */
   project_context_item_ids?: string[];
-  /** Present when this task is nested under another (GET /tasks tree). */
-  parent_id?: string;
-  /** When true, checklist definitions come from the nearest ancestor that does not inherit. */
-  checklist_inherit: boolean;
   tags?: string[];
   milestone?: string | null;
   depends_on?: TaskDependencyEdge[];
   criteria_satisfied_at?: string;
   gate?: TaskGate | null;
-  /** Nested subtasks from GET /tasks or GET /tasks/{id} (tree). */
-  children?: Task[];
 };
 
 export type TaskListResponse = {
   tasks: Task[];
   limit: number;
   offset: number;
-  /** True when the server may have more root tasks (see GET /tasks in docs/api.md). */
+  /** True when the server may have more tasks (see GET /tasks in docs/api.md). */
   has_more: boolean;
 };
 
@@ -191,10 +184,6 @@ export type TaskStatsResponse = {
   scheduled: number;
   by_status: Partial<Record<Status, number>>;
   by_priority: Partial<Record<Priority, number>>;
-  by_scope: {
-    parent: number;
-    subtask: number;
-  };
   cycles: TaskStatsCycles;
   phases: TaskStatsPhases;
   runner: TaskStatsRunner;
@@ -232,13 +221,10 @@ export const STATUSES: Status[] = [
   "done",
   "failed",
   "on_hold",
-  "awaiting_subtasks",
 ];
 
-/** Status values operators may set via create/PATCH; system-owned statuses excluded. */
-export const CLIENT_WRITABLE_STATUSES: Status[] = STATUSES.filter(
-  (s) => s !== "awaiting_subtasks",
-);
+/** Status values operators may set via create/PATCH. */
+export const CLIENT_WRITABLE_STATUSES: Status[] = [...STATUSES];
 
 export const PRIORITIES: Priority[] = [
   "low",
@@ -261,13 +247,10 @@ export const TASK_EVENT_TYPES = [
   "success_criterion_added",
   "non_goal_added",
   "plan_added",
-  "subtask_added",
-  "subtask_removed",
   "checklist_item_added",
   "checklist_item_toggled",
   "checklist_item_updated",
   "checklist_item_removed",
-  "checklist_inherit_changed",
   "message_added",
   "artifact_added",
   "approval_requested",
@@ -367,8 +350,6 @@ export type DraftTaskEvaluationInput = {
   status?: Status;
   priority?: Priority;
   task_type?: TaskType;
-  parent_id?: string;
-  checklist_inherit?: boolean;
   checklist_items?: Array<{ text: string }>;
 };
 
@@ -410,21 +391,7 @@ export type TaskDraftPayload = {
   /** Omitted in older drafts; defaults from app settings when missing. */
   runner?: string;
   cursor_model?: string;
-  parent_id: string;
-  checklist_inherit: boolean;
   checklist_items: string[];
-  pending_subtasks: Array<{
-    title: string;
-    initial_prompt: string;
-    priority: Priority;
-    task_type: TaskType;
-    checklist_items: string[];
-    checklist_inherit: boolean;
-    /** Draft-local indices of other pending subtasks (create flow). */
-    depends_on_sibling_indices?: number[];
-  }>;
-  /** When true, every pending subtask waits for the parent task to complete. */
-  subtasks_wait_for_parent?: boolean;
   /**
    * Optional in older drafts. When present, the draft restores the project
    * the operator was composing against on save. Empty string means "no

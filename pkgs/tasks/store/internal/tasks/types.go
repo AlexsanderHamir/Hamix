@@ -19,8 +19,6 @@ type CreateInput struct {
 	TaskType              domain.TaskType
 	ProjectID             *string
 	ProjectContextItemIDs []string
-	ParentID              *string
-	ChecklistInherit      bool
 	Runner                string
 	CursorModel           string
 	// PickupNotBefore is optional; when set, the agent queue excludes this task
@@ -32,18 +30,9 @@ type CreateInput struct {
 	DependsOn       []domain.DependencyEdge
 }
 
-// ParentFieldPatch updates parent_id when non-nil. Clear true means
-// set parent to null. Re-aliased by the public store facade as
-// store.ParentFieldPatch.
-type ParentFieldPatch struct {
-	Clear bool
-	ID    string
-}
-
-// PickupNotBeforePatch updates pickup_not_before when non-nil. Clear
-// true means set the column to NULL (the task is no longer
-// scheduled). Re-aliased by the public store facade as
-// store.PickupNotBeforePatch. See docs/data-model.md.
+// PickupNotBeforePatch updates pickup_not_before when non-nil. Clear true means
+// set the column to NULL (the task is no longer scheduled). Re-aliased by the
+// public store facade as store.PickupNotBeforePatch. See docs/data-model.md.
 type PickupNotBeforePatch struct {
 	Clear bool
 	At    time.Time
@@ -60,21 +49,12 @@ type UpdateInput struct {
 	TaskType              *domain.TaskType
 	Project               *ProjectFieldPatch
 	ProjectContextItemIDs *[]string
-	Parent                *ParentFieldPatch
-	ChecklistInherit      *bool
-	// PickupNotBefore mutates tasks.pickup_not_before when non-nil.
-	// Clear true sets the column to NULL (the task is no longer
-	// scheduled and will be picked up as soon as the global
-	// agent_pickup_delay_seconds elapses). When non-nil the value MUST
-	// be UTC; the handler enforces this on the wire.
-	PickupNotBefore *PickupNotBeforePatch
-	// CursorModel updates tasks.cursor_model when non-nil. Empty string
-	// after trim clears the column (runner uses app default / omits --model).
-	CursorModel *string
-	Tags        *[]string
-	Milestone   *string
-	Gate        **domain.TaskGate
-	DependsOn   *[]domain.DependencyEdge
+	PickupNotBefore       *PickupNotBeforePatch
+	CursorModel           *string
+	Tags                  *[]string
+	Milestone             *string
+	Gate                  **domain.TaskGate
+	DependsOn             *[]domain.DependencyEdge
 }
 
 // ListFilter optionally restricts flat task listing.
@@ -90,18 +70,5 @@ type ProjectFieldPatch struct {
 	Clear bool
 	ID    string
 }
-
-// Node is a task row plus nested children for API tree responses.
-// Re-aliased by the public store facade as store.TaskNode.
-type Node struct {
-	domain.Task
-	Children []Node `json:"children,omitempty" gorm:"-"`
-}
-
-// MaxTreeDepth bounds nesting depth for buildForest / GetTree
-// responses. It MUST stay aligned with the maxTaskParseDepth value in
-// web/src/api/parseTaskApi.ts; see internal/tasks/tree.go for the
-// guard that returns ErrInvalidInput when exceeded.
-const MaxTreeDepth = 64
 
 const logCmd = "taskapi"

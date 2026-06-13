@@ -18,8 +18,6 @@ import {
 } from "../hooks/optimisticVersion";
 import type { Task } from "@/types";
 import {
-  SubtaskCreateModal,
-  SubtaskTree,
   TaskCyclesPanel,
   TaskDetailAttentionBar,
   TaskDetailChecklistSection,
@@ -27,19 +25,17 @@ import {
   TaskDetailPromptSection,
   TaskDetailSchedule,
   TaskDependenciesPanel,
-  TaskDetailSubtasksHead,
   TaskGatePanel,
   TaskModelConfigModal,
 } from "../components/task-detail";
 import type { TaskDetailOkTone } from "../components/task-detail/layout/TaskDetailAttentionBar";
 import { AutonomyConfirmDialog } from "../components/dialogs";
 import { sanitizePromptHtml } from "../task-prompt";
-import { taskDescendantCount, userAttention } from "../task-display";
+import { userAttention } from "../task-display";
 import { TaskDetailPageSkeleton } from "../components/skeletons";
 import { useTaskDetailChecklist } from "../hooks/useTaskDetailChecklist";
 import { useTaskDetailDeleteNavigate } from "../hooks/useTaskDetailDeleteNavigate";
 import { useTaskDetailEvents } from "../hooks/useTaskDetailEvents";
-import { useTaskDetailSubtasks } from "../hooks/useTaskDetailSubtasks";
 import { resolveTaskDependencySummaries, taskQueryKeys } from "../task-query";
 import { useTasksApp } from "../hooks/useTasksApp";
 import { useTaskDetailScheduling } from "../hooks/useTaskDetailScheduling";
@@ -54,32 +50,6 @@ export function TaskDetailPage({ app }: Props) {
   const queryClient = useQueryClient();
   const [modelConfigOpen, setModelConfigOpen] = useState(false);
   const [autonomyConfirmOpen, setAutonomyConfirmOpen] = useState(false);
-  const {
-    subtaskModalOpen,
-    subtaskTitle,
-    setSubtaskTitle,
-    subtaskPrompt,
-    setSubtaskPrompt,
-    subtaskPriority,
-    setSubtaskPriority,
-    subtaskTaskType,
-    setSubtaskTaskType,
-    subtaskChecklistItems,
-    subtaskInherit,
-    setSubtaskInherit,
-    subtaskWaitForParent,
-    setSubtaskWaitForParent,
-    subtaskDependsOnSiblingIds,
-    setSubtaskDependsOnSiblingIds,
-    openSubtaskModal,
-    closeSubtaskModal,
-    appendSubtaskChecklistCriterion,
-    removeSubtaskChecklistRow,
-    updateSubtaskChecklistRow,
-    createSubtaskMutation,
-    submitNewSubtask,
-    subtaskFormError,
-  } = useTaskDetailSubtasks(taskId);
   const {
     checklistModalOpen,
     newChecklistText,
@@ -181,12 +151,6 @@ export function TaskDetailPage({ app }: Props) {
     },
   });
 
-  // Autonomy toggle: PATCH status between "ready" and "on_hold". Mirrors
-  // the requeue shape (optimistic on the detail row, server-truth
-  // invalidation for list/stats/tree caches) so the autonomy state
-  // updates feel as snappy as the existing requeue. The button label +
-  // dialog copy in TaskDetailAttentionBar / AutonomyConfirmDialog
-  // diverge between directions; the mutation itself is symmetric.
   const autonomyMutation = useMutation<
     unknown,
     unknown,
@@ -304,11 +268,6 @@ export function TaskDetailPage({ app }: Props) {
     approvalPending,
   });
   const sanitizedInitialPrompt = sanitizePromptHtml(task.initial_prompt);
-  // Autonomy is meaningful only for the two states the operator can
-  // freely move between without colliding with the agent — `ready`
-  // (eligible) and `on_hold` (parked). Running / blocked / review /
-  // done / failed are owned by the agent or by deeper state and
-  // hiding the toggle keeps the surface honest.
   const autonomyMode: "hidden" | "ready" | "on_hold" =
     task.status === "ready"
       ? "ready"
@@ -317,11 +276,6 @@ export function TaskDetailPage({ app }: Props) {
       : "hidden";
   const autonomyEnable = autonomyMode === "on_hold";
 
-  // The OK line ("No agent is waiting on you…") renders for every
-  // non-attention state, but those states mean different things —
-  // "done" is finished, "running" is in flight, "on_hold" is paused
-  // by the operator. Encode that distinction in the leading dot's
-  // colour so two OK-state tasks can still be told apart at a glance.
   const okTone: TaskDetailOkTone =
     task.status === "done"
       ? "success"
@@ -337,28 +291,13 @@ export function TaskDetailPage({ app }: Props) {
     <section className="panel task-detail-panel task-detail-content--enter">
       <TaskDetailHeader task={task} />
 
-      {/* Hero toolbar: groups the operator-facing state facts (attention /
-          "all clear" message + schedule) with the action cluster (edit,
-          delete, requeue, autonomy…) into a single rhythmic strip. The
-          previous layout stacked these as four orphan rows with competing
-          dots, which made the upper region feel ad-hoc — Edit and Delete
-          rendered LEFT-aligned BETWEEN the ok line and the schedule, so
-          metadata was visually cut in half by the action row. One grid
-          puts facts on the left and a right-anchored action cluster on
-          the right, with a single bottom hairline replacing the three
-          stray separators below. */}
       <div className="task-detail-toolbar">
         <TaskDetailAttentionBar
           attention={attention}
           saving={app.saving}
           okTone={okTone}
           onEdit={() => app.openEdit(task)}
-          onDelete={() =>
-            app.requestDelete({
-              ...task,
-              subtaskCount: taskDescendantCount(task),
-            })
-          }
+          onDelete={() => app.requestDelete(task)}
           onRequeue={
             task.status === "failed"
               ? () => {
@@ -424,10 +363,6 @@ export function TaskDetailPage({ app }: Props) {
         </p>
       ) : null}
 
-      {/* Dependencies are fixed at creation time: a task's upstream graph is
-          chosen in the create modal, not edited afterward. The detail page
-          surfaces the graph read-only — listing upstream tasks when they
-          exist, and stating plainly that there are none otherwise. */}
       <TaskDependenciesPanel dependencies={dependencySummaries} />
 
       <TaskGatePanel
@@ -438,49 +373,7 @@ export function TaskDetailPage({ app }: Props) {
         error={scheduling.gateMutation.error ? scheduling.schedulingError : null}
       />
 
-      <div className="task-detail-section" id="task-detail-subtasks">
-        <TaskDetailSubtasksHead
-          taskId={task.id}
-          saving={app.saving}
-          onAddSubtask={openSubtaskModal}
-        />
-        <SubtaskTree nodes={task.children ?? []} showNested={false} />
-        {subtaskModalOpen ? (
-          <SubtaskCreateModal
-            taskId={taskId}
-            pending={createSubtaskMutation.isPending}
-            saving={app.saving}
-            onClose={closeSubtaskModal}
-            title={subtaskTitle}
-            prompt={subtaskPrompt}
-            priority={subtaskPriority}
-            taskType={subtaskTaskType}
-            checklistItems={subtaskChecklistItems}
-            checklistInherit={subtaskInherit}
-            waitForParent={subtaskWaitForParent}
-            onWaitForParentChange={setSubtaskWaitForParent}
-            siblingOptions={(task.children ?? []).map((child) => ({
-              id: child.id,
-              label: child.title.trim() || "Untitled subtask",
-            }))}
-            dependsOnSiblingIds={subtaskDependsOnSiblingIds}
-            onDependsOnSiblingIdsChange={setSubtaskDependsOnSiblingIds}
-            onTitleChange={setSubtaskTitle}
-            onPromptChange={setSubtaskPrompt}
-            onPriorityChange={setSubtaskPriority}
-            onTaskTypeChange={setSubtaskTaskType}
-            onAppendChecklistCriterion={appendSubtaskChecklistCriterion}
-            onUpdateChecklistRow={updateSubtaskChecklistRow}
-            onRemoveChecklistRow={removeSubtaskChecklistRow}
-            onChecklistInheritChange={setSubtaskInherit}
-            onSubmit={submitNewSubtask}
-            error={subtaskFormError ?? createSubtaskMutation.error}
-          />
-        ) : null}
-      </div>
-
       <TaskDetailChecklistSection
-        checklistInherit={task.checklist_inherit}
         saving={app.saving}
         checklistQuery={checklistQuery}
         doneCount={checklistDoneCount}

@@ -2,7 +2,6 @@ package tasks
 
 import (
 	"context"
-	"errors"
 	"fmt"
 	"log/slog"
 	"strings"
@@ -193,21 +192,6 @@ func ensureTaskExists(tx *gorm.DB, id string) error {
 	}
 	if n == 0 {
 		return domain.ErrNotFound
-	}
-	return nil
-}
-
-// validateParentIsRootTask requires the parent to be a root task (no parent_id).
-func validateParentIsRootTask(tx *gorm.DB, parentID string) error {
-	var parent domain.Task
-	if err := tx.Where("id = ?", parentID).First(&parent).Error; err != nil {
-		if errors.Is(err, gorm.ErrRecordNotFound) {
-			return domain.ErrNotFound
-		}
-		return fmt.Errorf("parent lookup: %w", err)
-	}
-	if parent.ParentID != nil && strings.TrimSpace(*parent.ParentID) != "" {
-		return fmt.Errorf("%w: parent must be a root task (subtasks may only be one level deep)", domain.ErrInvalidInput)
 	}
 	return nil
 }

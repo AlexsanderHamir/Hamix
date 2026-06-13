@@ -11,7 +11,7 @@ import (
 func ValidStatus(s domain.Status) bool {
 	slog.Debug("trace", "cmd", LogCmd, "operation", "tasks.store.kernel.ValidStatus")
 	switch s {
-	case domain.StatusReady, domain.StatusRunning, domain.StatusBlocked, domain.StatusReview, domain.StatusDone, domain.StatusFailed, domain.StatusOnHold, domain.StatusAwaitingSubtasks:
+	case domain.StatusReady, domain.StatusRunning, domain.StatusBlocked, domain.StatusReview, domain.StatusDone, domain.StatusFailed, domain.StatusOnHold:
 		return true
 	default:
 		return false
@@ -21,9 +21,6 @@ func ValidStatus(s domain.Status) bool {
 // ValidClientWritableStatus reports whether a client may set s on create or PATCH.
 func ValidClientWritableStatus(s domain.Status) bool {
 	slog.Debug("trace", "cmd", LogCmd, "operation", "tasks.store.kernel.ValidClientWritableStatus")
-	if s == domain.StatusAwaitingSubtasks {
-		return false
-	}
 	return ValidStatus(s)
 }
 

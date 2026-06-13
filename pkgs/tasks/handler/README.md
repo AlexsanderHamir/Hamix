@@ -51,9 +51,9 @@ Implementations live in **[`pkgs/tasks/middleware`](../middleware/)** (no import
 | File | Role |
 |------|------|
 | `handler_http_json.go` | `decodeJSON`, `writeJSON` / `writeError`, `actorFromRequest`, store error → HTTP. |
-| `handler_task_json.go` | Request/response DTOs (`taskCreateJSON`, tree encoding, etc.). |
+| `handler_task_json.go` | Request/response DTOs (`taskCreateJSON`, flat task encoding, etc.). |
 | `handler_path_ids.go` | Path UUID / segment parsing and abuse-guard caps. |
-| `patch_fields.go` | `PATCH` helpers (e.g. nullable `parent_id`). |
+| `patch_fields.go` | `PATCH` helpers (e.g. nullable `project_id`, `gate`). |
 | `server_version.go` | Build/version string for health JSON. |
 
 ## Observability and debug logging

@@ -51,15 +51,9 @@ func scorePriority(p domain.Priority) int {
 	}
 }
 
-func scoreStructure(parentID *string, inherit *bool, checklist []ChecklistItemInput) int {
+func scoreStructure(checklist []ChecklistItemInput) int {
 	slog.Debug("trace", "cmd", logCmd, "operation", "tasks.store.eval.scoreStructure")
 	score := 72
-	if parentID != nil && strings.TrimSpace(*parentID) != "" {
-		score += 10
-	}
-	if inherit != nil && *inherit && (parentID == nil || strings.TrimSpace(*parentID) == "") {
-		score -= 25
-	}
 	nonEmptyChecklist := 0
 	for _, item := range checklist {
 		if strings.TrimSpace(item.Text) != "" {

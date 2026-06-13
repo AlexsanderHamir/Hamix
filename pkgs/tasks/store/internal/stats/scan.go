@@ -11,19 +11,9 @@ import (
 )
 
 type totalsRow struct {
-	Total        int64
-	Ready        int64
-	Critical     int64
-	ParentTotal  int64
-	SubtaskTotal int64
-	// Scheduled is the number of ready tasks deferred into the
-	// future via `pickup_not_before > now`. It is the SQL-side
-	// projection of the same predicate the agent's
-	// `ready.ListQueueCandidates` uses to *exclude* a row from the
-	// queue, surfaced as a stats counter so clients can answer
-	// "0 ready, 12 scheduled" (intentionally deferred)
-	// vs "0 ready, 0 scheduled" (truly idle). Driven by the
-	// existing index on `tasks.pickup_not_before` — no new schema.
+	Total     int64
+	Ready     int64
+	Critical  int64
 	Scheduled int64
 }
 
@@ -51,8 +41,6 @@ func scanTotals(ctx context.Context, db *gorm.DB, now time.Time) (totalsRow, err
 			"COUNT(*) AS total, "+
 				"SUM(CASE WHEN status = ? THEN 1 ELSE 0 END) AS ready, "+
 				"SUM(CASE WHEN priority = ? THEN 1 ELSE 0 END) AS critical, "+
-				"SUM(CASE WHEN parent_id IS NULL OR parent_id = '' THEN 1 ELSE 0 END) AS parent_total, "+
-				"SUM(CASE WHEN parent_id IS NOT NULL AND parent_id <> '' THEN 1 ELSE 0 END) AS subtask_total, "+
 				scheduledClause,
 			domain.StatusReady,
 			domain.PriorityCritical,

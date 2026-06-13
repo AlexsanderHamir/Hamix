@@ -25,7 +25,6 @@ func TestHTTP_evaluateDraft_envelopeShape(t *testing.T) {
 		"priority":"high",
 		"status":"ready",
 		"task_type":"feature",
-		"checklist_inherit":false,
 		"checklist_items":[{"text":"Add parser tests"},{"text":"Document edge cases"}]
 	}`
 	res, err := http.Post(srv.URL+"/tasks/evaluate", "application/json", strings.NewReader(body))

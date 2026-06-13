@@ -282,10 +282,7 @@ describe("useTasksApp saveDraftMutation race", () => {
         initial_prompt: "Draft B prompt",
         priority: "high",
         task_type: "general",
-        parent_id: "",
-        checklist_inherit: false,
         checklist_items: [],
-        pending_subtasks: [],
       },
     });
 
@@ -512,7 +509,6 @@ describe("useTasksApp createMutation race", () => {
         priority: input.priority,
         runner: input.runner ?? TASK_TEST_DEFAULTS.runner,
         cursor_model: input.cursor_model ?? TASK_TEST_DEFAULTS.cursor_model,
-        checklist_inherit: false,
       };
     });
 
@@ -526,10 +522,7 @@ describe("useTasksApp createMutation race", () => {
         initial_prompt: "Draft B prompt",
         priority: "high",
         task_type: "general",
-        parent_id: "",
-        checklist_inherit: false,
         checklist_items: [],
-        pending_subtasks: [],
       },
     });
 
@@ -592,7 +585,6 @@ describe("useTasksApp createMutation race", () => {
       priority: input.priority,
       runner: input.runner ?? TASK_TEST_DEFAULTS.runner,
       cursor_model: input.cursor_model ?? TASK_TEST_DEFAULTS.cursor_model,
-      checklist_inherit: false,
     }));
 
     const { Wrapper } = makeWrapper();
@@ -655,10 +647,7 @@ describe("useTasksApp resumeDraftMutation race", () => {
         initial_prompt: `${title} prompt`,
         priority: "medium",
         task_type: "general",
-        parent_id: "",
-        checklist_inherit: false,
         checklist_items: [],
-        pending_subtasks: [],
       },
     } as TaskDraftDetail;
   }

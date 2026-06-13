@@ -92,22 +92,9 @@ export function formatEventSummaryCompact(ev: TaskEvent): string | null {
     }
   }
 
-  if (ev.type === "checklist_inherit_changed") {
-    const from = ev.data.from;
-    const to = ev.data.to;
-    if (typeof from === "boolean" && typeof to === "boolean") {
-      return `${String(from)} → ${String(to)}`;
-    }
-  }
-
   if (ev.type === "checklist_item_removed") {
     const text = ev.data.text;
     if (typeof text === "string") return truncate(text, 140);
-  }
-
-  if (ev.type === "subtask_added" || ev.type === "subtask_removed") {
-    const title = ev.data.title;
-    if (typeof title === "string") return truncate(title, 140);
   }
 
   return null;
@@ -170,7 +157,6 @@ const CHECKLIST_SCOPE_TYPES = new Set<TaskEventType>([
   "checklist_item_toggled",
   "checklist_item_updated",
   "checklist_item_removed",
-  "checklist_inherit_changed",
 ]);
 
 const APPROVAL_SCOPE_TYPES = new Set<TaskEventType>([
@@ -188,8 +174,6 @@ const TASK_SCOPE_TYPES = new Set<TaskEventType>([
   "success_criterion_added",
   "non_goal_added",
   "plan_added",
-  "subtask_added",
-  "subtask_removed",
   "message_added",
   "artifact_added",
   "task_completed",

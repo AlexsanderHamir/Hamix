@@ -15,10 +15,6 @@ const (
 	// rows simply never become eligible. The user resumes the task by
 	// flipping it back to StatusReady from the detail page.
 	StatusOnHold Status = "on_hold"
-	// StatusAwaitingSubtasks is set by the agent harness (or checklist
-	// sync) when parent criteria are verified but descendant subtasks
-	// remain open. Not writable by operators on POST/PATCH.
-	StatusAwaitingSubtasks Status = "awaiting_subtasks"
 )
 
 type Priority string
@@ -82,28 +78,25 @@ const (
 type EventType string
 
 const (
-	EventTaskCreated             EventType = "task_created"
-	EventStatusChanged           EventType = "status_changed"
-	EventPriorityChanged         EventType = "priority_changed"
-	EventPromptAppended          EventType = "prompt_appended"
-	EventContextAdded            EventType = "context_added"
-	EventConstraintAdded         EventType = "constraint_added"
-	EventSuccessCriterionAdded   EventType = "success_criterion_added"
-	EventNonGoalAdded            EventType = "non_goal_added"
-	EventPlanAdded               EventType = "plan_added"
-	EventSubtaskAdded            EventType = "subtask_added"
-	EventSubtaskRemoved          EventType = "subtask_removed"
-	EventChecklistItemAdded      EventType = "checklist_item_added"
-	EventChecklistItemToggled    EventType = "checklist_item_toggled"
-	EventChecklistItemUpdated    EventType = "checklist_item_updated"
-	EventChecklistItemRemoved    EventType = "checklist_item_removed"
-	EventChecklistInheritChanged EventType = "checklist_inherit_changed"
-	EventMessageAdded            EventType = "message_added"
-	EventArtifactAdded           EventType = "artifact_added"
-	EventApprovalRequested       EventType = "approval_requested"
-	EventApprovalGranted         EventType = "approval_granted"
-	EventTaskCompleted           EventType = "task_completed"
-	EventTaskFailed              EventType = "task_failed"
+	EventTaskCreated           EventType = "task_created"
+	EventStatusChanged         EventType = "status_changed"
+	EventPriorityChanged       EventType = "priority_changed"
+	EventPromptAppended        EventType = "prompt_appended"
+	EventContextAdded          EventType = "context_added"
+	EventConstraintAdded       EventType = "constraint_added"
+	EventSuccessCriterionAdded EventType = "success_criterion_added"
+	EventNonGoalAdded          EventType = "non_goal_added"
+	EventPlanAdded             EventType = "plan_added"
+	EventChecklistItemAdded    EventType = "checklist_item_added"
+	EventChecklistItemToggled  EventType = "checklist_item_toggled"
+	EventChecklistItemUpdated  EventType = "checklist_item_updated"
+	EventChecklistItemRemoved  EventType = "checklist_item_removed"
+	EventMessageAdded          EventType = "message_added"
+	EventArtifactAdded         EventType = "artifact_added"
+	EventApprovalRequested     EventType = "approval_requested"
+	EventApprovalGranted       EventType = "approval_granted"
+	EventTaskCompleted         EventType = "task_completed"
+	EventTaskFailed            EventType = "task_failed"
 	// Execution-cycle audit mirrors. Emitted in the same SQL transaction as writes to
 	// task_cycles / task_cycle_phases so GET /tasks/{id}/events stays a complete witness
 	// of cycle activity. See docs/data-model.md.

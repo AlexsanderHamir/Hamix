@@ -69,12 +69,6 @@ export function TaskCreateModalsLayer({ app }: Props) {
           onAppendChecklistCriterion={app.appendNewChecklistCriterion}
           onUpdateChecklistRow={app.updateNewChecklistRow}
           onRemoveChecklistRow={app.removeNewChecklistRow}
-          pendingSubtasks={app.pendingSubtasks}
-          subtasksWaitForParent={app.subtasksWaitForParent}
-          onSubtasksWaitForParentChange={app.setSubtasksWaitForParent}
-          onAddPendingSubtask={app.addPendingSubtask}
-          onUpdatePendingSubtask={app.updatePendingSubtask}
-          onRemovePendingSubtask={app.removePendingSubtask}
           evaluatePending={app.evaluatePending}
           evaluation={app.latestDraftEvaluation}
           dmapCommitLimit={app.newDmapCommitLimit}

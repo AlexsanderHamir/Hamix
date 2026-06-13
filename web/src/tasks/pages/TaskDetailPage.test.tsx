@@ -31,7 +31,7 @@ function mockApp(): ReturnType<typeof useTasksApp> {
 }
 
 function appWithDeleteSuccess(
-  variables: { id: string; parent_id?: string },
+  variables: { id: string },
 ): ReturnType<typeof useTasksApp> {
   return {
     ...mockApp(),
@@ -82,8 +82,9 @@ type MockTaskDetailData = {
   initial_prompt: string;
   status: string;
   priority: string;
-  checklist_inherit: boolean;
-  parent_id?: string;
+  task_type?: string;
+  runner?: string;
+  cursor_model?: string;
 };
 
 function taskDetail(
@@ -97,7 +98,9 @@ function taskDetail(
     initial_prompt: "",
     status: "ready",
     priority: "medium",
-    checklist_inherit: false,
+    task_type: "general",
+    runner: "cursor",
+    cursor_model: "",
     ...overrides,
   };
 }
@@ -173,72 +176,6 @@ function mockTaskDetailFetchWithChecklistPatch(
   });
   return {
     getPatchBody: () => patchBody,
-  };
-}
-
-function mockTaskDetailFetchForSubtaskCreate(taskId: string) {
-  const checklistPosts: string[] = [];
-  let subtaskCreated = false;
-  vi.spyOn(globalThis, "fetch").mockImplementation(async (input, init) => {
-    const url = requestUrl(input);
-    const method = init?.method ?? "GET";
-    if (url === `/tasks/${taskId}` && method === "GET") {
-      return Response.json({
-        ...taskDetail(taskId, "Parent"),
-        children: subtaskCreated
-          ? [
-              {
-                ...taskDetail("child", "Child", {
-                  priority: "high",
-                  initial_prompt: "<p></p>",
-                }),
-              },
-            ]
-          : [],
-      });
-    }
-    if (url === `/tasks/${taskId}/checklist`) {
-      return Response.json({
-        items: [
-          {
-            id: "parent-criterion",
-            sort_order: 1,
-            text: "Parent deliverable",
-            done: false,
-          },
-        ],
-      });
-    }
-    if (url.startsWith(`/tasks/${taskId}/events`)) {
-      return Response.json(emptyEventsPayload(taskId));
-    }
-    if (url === "/tasks" && method === "POST") {
-      const body =
-        init?.body != null && typeof init.body === "string"
-          ? JSON.parse(init.body)
-          : {};
-      expect(body.parent_id).toBe(taskId);
-      expect(body.title).toBe("Child");
-      expect(body.priority).toBe("high");
-      subtaskCreated = true;
-      return new Response(
-        JSON.stringify(
-          taskDetail("child", "Child", {
-            priority: "high",
-            initial_prompt: "<p></p>",
-          }),
-        ),
-        { status: 201, headers: { "Content-Type": "application/json" } },
-      );
-    }
-    if (url === "/tasks/child/checklist/items" && method === "POST") {
-      checklistPosts.push(init?.body != null ? String(init.body) : "");
-      return new Response(null, { status: 204 });
-    }
-    return new Response("not found", { status: 404 });
-  });
-  return {
-    checklistPosts,
   };
 }
 
@@ -414,27 +351,6 @@ describe("TaskDetailPage", () => {
     }
   });
 
-  // The empty subtasks state is a quiet `task-detail-empty-hint`
-  // matching Dependencies / Release Gate, not a heavy `EmptyState`
-  // card. (2026-06-04 design alignment: no icon / no h2, one muted
-  // line — the empty subtasks slot should not be the loudest
-  // section on the page.)
-  it("renders the empty subtasks state as a quiet hint (no h2 / no icon)", async () => {
-    mockTaskDetailFetch(taskDetail("tsub", "Subtaskless task"));
-
-    renderDetail("/tasks/tsub", mockApp());
-
-    expect(
-      await screen.findByRole("heading", { name: /^subtaskless task$/i }),
-    ).toBeInTheDocument();
-    const hint = await screen.findByTestId("task-subtasks-empty");
-    expect(hint).toHaveTextContent(/no subtasks yet/i);
-    expect(hint.tagName).toBe("P");
-    expect(
-      screen.queryByRole("heading", { name: /no subtasks yet/i }),
-    ).not.toBeInTheDocument();
-  });
-
   // The Dependencies section is always present so the absence of upstream
   // tasks is stated explicitly rather than rendering nothing. (2026-06-04:
   // reverted an earlier "hide when empty" pass per product feedback.)
@@ -532,19 +448,7 @@ describe("TaskDetailPage", () => {
     ).toBeInTheDocument();
   });
 
-  it("navigates to parent task after successful delete when parent_id is set", () => {
-    mockTaskDetailFetch(taskDetail("sub1", "Sub", {
-      parent_id: "par1",
-    }));
-
-    const app = appWithDeleteSuccess({ id: "sub1", parent_id: "par1" });
-
-    renderDetail("/tasks/sub1", app);
-
-    expect(mockNavigate).toHaveBeenCalledWith("/tasks/par1", { replace: true });
-  });
-
-  it("navigates home after successful delete when task has no parent", () => {
+  it("navigates home after successful delete", () => {
     mockTaskDetailFetch(taskDetail("root1", "Root"));
 
     const app = appWithDeleteSuccess({ id: "root1" });
@@ -590,94 +494,5 @@ describe("TaskDetailPage", () => {
 
     expect(api.getPatchBody()).toBe(JSON.stringify({ text: "After" }));
     expect(await screen.findByText("After")).toBeInTheDocument();
-  });
-
-  it("creates a subtask with checklist items after POST /tasks", async () => {
-    const user = userEvent.setup();
-    const api = mockTaskDetailFetchForSubtaskCreate("parent");
-
-    renderDetail("/tasks/parent", mockApp());
-
-    expect(await screen.findByRole("heading", { name: /^parent$/i })).toBeInTheDocument();
-
-    await user.click(screen.getByRole("button", { name: /^add subtask$/i }));
-
-    const dialog = await screen.findByRole("dialog");
-    await user.type(within(dialog).getByLabelText(/^title$/i), "Child");
-    await user.click(
-      within(dialog).getByRole("combobox", { name: /^priority$/i }),
-    );
-    await user.click(screen.getByRole("option", { name: /^high$/i }));
-    await user.click(
-      within(dialog).getByRole("button", { name: /new criterion/i }),
-    );
-    const criterionDialog = await screen.findByRole("dialog", {
-      name: /new criterion/i,
-    });
-    await user.type(
-      within(criterionDialog).getByLabelText(/^criterion$/i),
-      "Criterion A",
-    );
-    await user.click(
-      within(criterionDialog).getByRole("button", { name: /^add criterion$/i }),
-    );
-
-    await user.click(
-      within(dialog).getByRole("button", { name: /^add subtask$/i }),
-    );
-
-    const childLinks = await screen.findAllByRole("link", { name: "Child" });
-    const childLink =
-      childLinks.find((link) =>
-        link.closest(".task-subtasks-item-row"),
-      ) ?? childLinks[0];
-    const subtaskRow = childLink.closest(
-      ".task-subtasks-item-row",
-    ) as HTMLElement | null;
-    expect(subtaskRow).not.toBeNull();
-    expect(within(subtaskRow!).getByText("high")).toBeInTheDocument();
-    expect(within(subtaskRow!).getByText("ready")).toBeInTheDocument();
-    expect(api.checklistPosts).toHaveLength(1);
-    expect(api.checklistPosts[0]).toContain("Criterion A");
-  });
-
-  it("links from task detail to the dedicated graph page", async () => {
-    vi.spyOn(globalThis, "fetch").mockImplementation(async (input) => {
-      const url = requestUrl(input);
-      if (url === "/tasks/parent-graph") {
-        return Response.json({
-          ...taskDetail("parent-graph", "Parent graph"),
-          children: [
-            {
-              ...taskDetail("child-a", "Child A"),
-              children: [
-                {
-                  ...taskDetail("grandchild-a1", "Grandchild A1"),
-                },
-              ],
-            },
-            {
-              ...taskDetail("child-b", "Child B"),
-            },
-          ],
-        });
-      }
-      if (url === "/tasks/parent-graph/checklist") {
-        return Response.json({ items: [] });
-      }
-      if (url.startsWith("/tasks/parent-graph/events")) {
-        return Response.json(emptyEventsPayload("parent-graph"));
-      }
-      return new Response("not found", { status: 404 });
-    });
-
-    renderDetail("/tasks/parent-graph", mockApp());
-
-    expect(
-      await screen.findByRole("heading", { name: /^parent graph$/i }),
-    ).toBeInTheDocument();
-    expect(
-      screen.getByRole("link", { name: /open graph view/i }),
-    ).toHaveAttribute("href", "/tasks/parent-graph/graph");
   });
 });

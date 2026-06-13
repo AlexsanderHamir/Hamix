@@ -35,9 +35,6 @@ func migrateDBAndRegisterMetrics(db *gorm.DB) error {
 	if err := store.BackfillCriteriaSatisfiedAt(migrateCtx, db); err != nil {
 		return fmt.Errorf("backfill criteria_satisfied_at: %w", err)
 	}
-	if err := store.BackfillAwaitingSubtasksStatus(migrateCtx, db); err != nil {
-		return fmt.Errorf("backfill awaiting_subtasks status: %w", err)
-	}
 	slog.Info("migrate ok", "cmd", cmdName, "operation", "taskapi.migrate",
 		"timeout_sec", int(postgres.DefaultMigrateTimeout/time.Second))
 	postgres.LogStartupDBConfig(slog.Default(), cmdName, db)

@@ -8,7 +8,7 @@ import { ToastProvider } from "@/shared/toast";
 import { __resetOptimisticVersionsForTests, shouldSuppressSSEFor } from "./optimisticVersion";
 import { settingsQueryKeys } from "../task-query";
 import type { AppSettings } from "@/api/settings";
-import type { Task, TaskListResponse } from "@/types";
+import type { Task } from "@/types";
 import { APP_SETTINGS_DEFAULTS } from "@/test/settingsDefaults";
 
 vi.mock("../../api", () => ({
@@ -59,7 +59,6 @@ function makeTask(overrides: Partial<Task> = {}): Task {
     task_type: "general",
     runner: "cursor",
     cursor_model: "",
-    checklist_inherit: false,
     ...overrides,
   };
 }
@@ -71,7 +70,6 @@ const baseInput: TaskPatchInput = {
   status: "ready",
   priority: "medium",
   task_type: "general",
-  checklist_inherit: false,
   cursor_model: "",
 };
 
@@ -112,7 +110,6 @@ describe("useTaskPatchFlow", () => {
       status: "ready",
       priority: "medium",
       task_type: "general",
-      checklist_inherit: false,
       cursor_model: "",
     });
   });
@@ -138,7 +135,6 @@ describe("useTaskPatchFlow", () => {
       status: "ready",
       priority: "medium",
       task_type: "general",
-      checklist_inherit: false,
       cursor_model: "",
       pickup_not_before: "2026-04-22T13:00:00.000Z",
     });
@@ -318,54 +314,6 @@ describe("useTaskPatchFlow", () => {
     const cached = queryClient.getQueryData<Task>(taskQueryKeys.detail("t1"));
     expect(cached?.title).toBe("New title");
     expect(cached?.priority).toBe("medium");
-    act(() => {
-      resolveFn?.();
-    });
-    await waitFor(() => {
-      expect(result.current.patchPending).toBe(false);
-    });
-  });
-
-  // Optimistic list write: list rows show the new values immediately.
-  // The walk must reach into nested children so a subtask edit
-  // updates the row inside its parent's children array; otherwise
-  // the optimistic effect is invisible on the home page tree view.
-  it("optimistically patches a nested subtask in cached list data", async () => {
-    let resolveFn: (() => void) | undefined;
-    mockedPatch.mockImplementationOnce(
-      () =>
-        new Promise<void>((resolve) => {
-          resolveFn = resolve;
-        }) as unknown as ReturnType<typeof patchTask>,
-    );
-    const { Wrapper, queryClient } = makeWrapper();
-    const parent = makeTask({ id: "parent" });
-    const child = makeTask({ id: "t1", parent_id: "parent", title: "old child" });
-    parent.children = [child];
-    const list: TaskListResponse = {
-      tasks: [parent],
-      limit: 50,
-      offset: 0,
-      has_more: false,
-    };
-    queryClient.setQueryData<TaskListResponse>(
-      taskQueryKeys.list({ limit: 20, offset: 0 }),
-      list,
-    );
-
-    const { result } = renderHook(() => useTaskPatchFlow(), {
-      wrapper: Wrapper,
-    });
-    act(() => {
-      result.current.patchTask(baseInput);
-    });
-    await waitFor(() => {
-      expect(result.current.patchPending).toBe(true);
-    });
-    const cached = queryClient.getQueryData<TaskListResponse>(
-      taskQueryKeys.list({ limit: 20, offset: 0 }),
-    );
-    expect(cached?.tasks[0]?.children?.[0]?.title).toBe("New title");
     act(() => {
       resolveFn?.();
     });

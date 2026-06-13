@@ -347,7 +347,7 @@ func TestStore_CycleStreamEventsCascadeWhenTaskDeleted(t *testing.T) {
 	}); err != nil {
 		t.Fatalf("append stream event: %v", err)
 	}
-	if _, _, err := s.Delete(ctx, tsk.ID, domain.ActorUser); err != nil {
+	if _, err := s.Delete(ctx, tsk.ID, domain.ActorUser); err != nil {
 		t.Fatalf("delete task: %v", err)
 	}
 	if _, err := s.ListCycleStreamEvents(ctx, cycle.ID, 0, 10); !errors.Is(err, domain.ErrNotFound) {
@@ -608,7 +608,7 @@ func TestStore_TaskDelete_cascades_to_cycles_and_phases(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	if _, _, err := s.Delete(ctx, tsk.ID, domain.ActorUser); err != nil {
+	if _, err := s.Delete(ctx, tsk.ID, domain.ActorUser); err != nil {
 		t.Fatalf("delete task: %v", err)
 	}
 

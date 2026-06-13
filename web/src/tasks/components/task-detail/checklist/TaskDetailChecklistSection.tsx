@@ -12,7 +12,6 @@ import { TaskDetailChecklistItemList } from "./TaskDetailChecklistItemList";
 import { TaskChecklistSkeleton } from "../../skeletons";
 
 export type TaskDetailChecklistSectionProps = {
-  checklistInherit: boolean;
   saving: boolean;
   checklistQuery: UseQueryResult<TaskChecklistResponse, Error>;
   doneCount: number;
@@ -46,7 +45,6 @@ export type TaskDetailChecklistSectionProps = {
 };
 
 export function TaskDetailChecklistSection({
-  checklistInherit,
   saving,
   checklistQuery,
   doneCount,
@@ -73,7 +71,6 @@ export function TaskDetailChecklistSection({
   removeItemError = null,
 }: TaskDetailChecklistSectionProps) {
   const showProgress =
-    !checklistInherit &&
     !checklistQuery.isPending &&
     !checklistQuery.isError &&
     totalCount > 0;
@@ -93,27 +90,17 @@ export function TaskDetailChecklistSection({
           >
             <span>Done criteria</span>
           </h3>
-          <FieldRequirementBadge
-            requirement={checklistInherit ? "none" : "optional"}
-          />
+          <FieldRequirementBadge requirement="optional" />
         </div>
-        {!checklistInherit ? (
-          <button
-            type="button"
-            className="task-detail-add-checklist-btn"
-            onClick={onOpenAddModal}
-            disabled={saving}
-          >
-            Add criterion
-          </button>
-        ) : null}
+        <button
+          type="button"
+          className="task-detail-add-checklist-btn"
+          onClick={onOpenAddModal}
+          disabled={saving}
+        >
+          Add criterion
+        </button>
       </div>
-      {checklistInherit ? (
-        <p className="task-checklist-intro-lead muted" role="status">
-          Inherited for <strong>this</strong> task; criteria are defined
-          upstream.
-        </p>
-      ) : null}
       {showProgress ? (
         <div
           className={
@@ -198,7 +185,6 @@ export function TaskDetailChecklistSection({
         ) : (
           <TaskDetailChecklistItemList
             items={checklistQuery.data?.items ?? []}
-            checklistInherit={checklistInherit}
             editCriterionPending={editCriterionPending}
             removeItemPending={removeItemPending}
             addCriterionPending={addCriterionPending}
@@ -207,7 +193,7 @@ export function TaskDetailChecklistSection({
           />
         )}
       </div>
-      {modalOpen && !checklistInherit ? (
+      {modalOpen ? (
         <ChecklistCriterionModal
           mode="add"
           pending={addCriterionPending}
@@ -230,7 +216,7 @@ export function TaskDetailChecklistSection({
           errorFallback="Could not add criterion."
         />
       ) : null}
-      {editModalOpen && !checklistInherit && editingItemId ? (
+      {editModalOpen && editingItemId ? (
         <ChecklistCriterionModal
           mode="edit"
           pending={editCriterionPending}

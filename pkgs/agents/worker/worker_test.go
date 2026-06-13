@@ -655,7 +655,7 @@ func TestWorker_TaskDeletedMidCycle_logsAndAcks(t *testing.T) {
 	br := newBlockingRunner()
 	br.onStart = func(req runner.Request) {
 		// Cascade-deletes the cycle + phase rows.
-		if _, _, err := h.store.Delete(context.Background(), tsk.ID, domain.ActorUser); err != nil {
+		if _, err := h.store.Delete(context.Background(), tsk.ID, domain.ActorUser); err != nil {
 			t.Logf("delete during run: %v", err)
 		}
 		close(br.release)

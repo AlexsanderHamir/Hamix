@@ -10,17 +10,15 @@ type Task struct {
 	ID            string   `json:"id" gorm:"primaryKey"`
 	Title         string   `json:"title" gorm:"not null"`
 	InitialPrompt string   `json:"initial_prompt" gorm:"type:text;not null"`
-	Status        Status   `json:"status" gorm:"not null;index;check:chk_tasks_status,status IN ('ready','running','blocked','review','done','failed','on_hold','awaiting_subtasks')"`
+	Status        Status   `json:"status" gorm:"not null;index;check:chk_tasks_status,status IN ('ready','running','blocked','review','done','failed','on_hold')"`
 	Priority      Priority `json:"priority" gorm:"not null;check:chk_tasks_priority,priority IN ('low','medium','high','critical')"`
 	TaskType      TaskType `json:"task_type" gorm:"not null;default:general;check:chk_tasks_task_type,task_type IN ('general','bug_fix','feature','refactor','docs')"`
 	ProjectID     *string  `json:"project_id,omitempty" gorm:"index"`
 	// ProjectContextItemIDs is the user-selected subset of project context to pass to agent runs.
 	ProjectContextItemIDs []string  `json:"project_context_item_ids,omitempty" gorm:"column:project_context_item_ids;serializer:json;type:jsonb;not null;default:'[]'"`
-	ParentID              *string   `json:"parent_id,omitempty" gorm:"index"`
 	Tags                  []string  `json:"tags,omitempty" gorm:"column:tags;serializer:json;type:jsonb;not null;default:'[]'"`
 	Milestone             *string   `json:"milestone,omitempty" gorm:"index"`
 	Gate                  *TaskGate `json:"gate,omitempty" gorm:"column:gate;serializer:json;type:jsonb"`
-	ChecklistInherit      bool      `json:"checklist_inherit" gorm:"not null;default:false"`
 	// DependsOn is hydrated from task_dependencies on read; not a GORM column.
 	DependsOn []DependencyEdge `json:"depends_on,omitempty" gorm:"-"`
 	// Runner is the agent runner id for this task (e.g. "cursor"). Set at
@@ -45,8 +43,7 @@ type Task struct {
 	Project *Project `json:"-" gorm:"foreignKey:ProjectID;references:ID;constraint:OnDelete:SET NULL"`
 }
 
-// Project is shared context memory for a long-running body of work. Tasks can
-// reference a project while still owning their own subtask tree via ParentID.
+// Project is shared context memory for a long-running body of work.
 type Project struct {
 	ID             string        `json:"id" gorm:"primaryKey"`
 	Name           string        `json:"name" gorm:"not null;index"`
@@ -124,7 +121,7 @@ func (TaskContextSnapshot) TableName() string { return "task_context_snapshots" 
 type TaskDependency struct {
 	TaskID          string              `json:"task_id" gorm:"primaryKey"`
 	DependsOnTaskID string              `json:"depends_on_task_id" gorm:"primaryKey;index"`
-	Satisfies       DependencySatisfies `json:"satisfies" gorm:"not null;default:done;check:chk_task_dependencies_satisfies,satisfies IN ('done','criteria_complete')"`
+	Satisfies       DependencySatisfies `json:"satisfies" gorm:"not null;default:done;check:chk_task_dependencies_satisfies,satisfies IN ('done')"`
 	CreatedAt       time.Time           `json:"created_at" gorm:"not null;index"`
 
 	Task          *Task `json:"-" gorm:"foreignKey:TaskID;references:ID;constraint:OnDelete:CASCADE"`
@@ -133,7 +130,7 @@ type TaskDependency struct {
 
 func (TaskDependency) TableName() string { return "task_dependencies" }
 
-// TaskChecklistItem is a definition row owned by a task that does not use checklist_inherit.
+// TaskChecklistItem is a definition row owned by a task.
 // Completion is recorded only by the agent worker after verify (verified_by=verify_agent)
 // or when execute did not claim done (verified_by=agent_self, failure-only).
 type TaskChecklistItem struct {

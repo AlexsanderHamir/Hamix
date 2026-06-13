@@ -14,9 +14,6 @@ function indexTask(task: Task, into: Map<string, TaskDependencySummary>): void {
     title: task.title,
     status: task.status,
   });
-  for (const child of task.children ?? []) {
-    indexTask(child, into);
-  }
 }
 
 function indexFromListResponse(data: TaskListResponse, into: Map<string, TaskDependencySummary>): void {

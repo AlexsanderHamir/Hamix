@@ -6,7 +6,14 @@ import (
 
 	"github.com/AlexsanderHamir/T2A/pkgs/tasks/domain"
 	"github.com/AlexsanderHamir/T2A/pkgs/tasks/store/internal/checklist"
+	"gorm.io/gorm"
 )
+
+// BackfillCriteriaSatisfiedAt sets criteria_satisfied_at for tasks whose
+// checklist is already complete. Idempotent migration helper.
+func BackfillCriteriaSatisfiedAt(ctx context.Context, db *gorm.DB) error {
+	return checklist.BackfillCriteriaSatisfiedAt(ctx, db)
+}
 
 // ChecklistItemView is the public re-export of the per-task checklist
 // row shape returned by ListChecklistForSubject. The alias keeps the

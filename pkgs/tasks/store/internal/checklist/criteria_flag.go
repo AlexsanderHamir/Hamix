@@ -7,7 +7,6 @@ import (
 	"time"
 
 	"github.com/AlexsanderHamir/T2A/pkgs/tasks/domain"
-	"github.com/AlexsanderHamir/T2A/pkgs/tasks/store/internal/kernel"
 	"gorm.io/gorm"
 )
 
@@ -18,8 +17,8 @@ type CriteriaFlagChange struct {
 	BecameIncomplete bool
 }
 
-// IsChecklistCompleteInTx reports whether every inherited checklist item
-// for subjectTaskID has a verified completion row.
+// IsChecklistCompleteInTx reports whether every checklist item for subjectTaskID
+// has a verified completion row.
 func IsChecklistCompleteInTx(tx *gorm.DB, subjectTaskID string) (bool, error) {
 	slog.Debug("trace", "cmd", logCmd, "operation", "tasks.store.checklist.IsChecklistCompleteInTx")
 	err := validateChecklistCompleteInTx(tx, subjectTaskID)
@@ -27,68 +26,6 @@ func IsChecklistCompleteInTx(tx *gorm.DB, subjectTaskID string) (bool, error) {
 		return true, nil
 	}
 	return false, nil
-}
-
-func hasIncompleteSubtasksInTx(tx *gorm.DB, taskID string) (bool, error) {
-	var n int64
-	err := tx.Model(&domain.Task{}).
-		Where("parent_id = ? AND status <> ?", taskID, domain.StatusDone).
-		Count(&n).Error
-	if err != nil {
-		return false, fmt.Errorf("count open subtasks: %w", err)
-	}
-	return n > 0, nil
-}
-
-func transitionStatusInTx(tx *gorm.DB, taskID string, from, to domain.Status, by domain.Actor) error {
-	b, err := kernel.EventPairJSON(string(from), string(to))
-	if err != nil {
-		return err
-	}
-	seq, err := kernel.NextEventSeq(tx, taskID)
-	if err != nil {
-		return err
-	}
-	if err := kernel.AppendEvent(tx, taskID, seq, domain.EventStatusChanged, by, b); err != nil {
-		return err
-	}
-	res := tx.Model(&domain.Task{}).Where("id = ? AND status = ?", taskID, from).Update("status", to)
-	if res.Error != nil {
-		return fmt.Errorf("update status: %w", res.Error)
-	}
-	if res.RowsAffected == 0 {
-		return fmt.Errorf("status transition %s -> %s did not apply", from, to)
-	}
-	return nil
-}
-
-func maybeTransitionAwaitingSubtasksInTx(tx *gorm.DB, taskID string, by domain.Actor) error {
-	var t domain.Task
-	if err := tx.Where("id = ?", taskID).First(&t).Error; err != nil {
-		return fmt.Errorf("load task for awaiting_subtasks transition: %w", err)
-	}
-	if t.Status != domain.StatusReady || t.CriteriaSatisfiedAt == nil {
-		return nil
-	}
-	incomplete, err := hasIncompleteSubtasksInTx(tx, taskID)
-	if err != nil {
-		return err
-	}
-	if !incomplete {
-		return nil
-	}
-	return transitionStatusInTx(tx, taskID, domain.StatusReady, domain.StatusAwaitingSubtasks, by)
-}
-
-func maybeRevertAwaitingSubtasksInTx(tx *gorm.DB, taskID string, by domain.Actor) error {
-	var t domain.Task
-	if err := tx.Where("id = ?", taskID).First(&t).Error; err != nil {
-		return fmt.Errorf("load task for awaiting_subtasks revert: %w", err)
-	}
-	if t.Status != domain.StatusAwaitingSubtasks {
-		return nil
-	}
-	return transitionStatusInTx(tx, taskID, domain.StatusAwaitingSubtasks, domain.StatusReady, by)
 }
 
 // syncCriteriaSatisfiedAtInTx updates tasks.criteria_satisfied_at when
@@ -120,33 +57,7 @@ func syncCriteriaSatisfiedAtInTx(tx *gorm.DB, subjectTaskID string, by domain.Ac
 		}
 		change.BecameIncomplete = true
 	}
-	if change.BecameComplete {
-		if err := maybeTransitionAwaitingSubtasksInTx(tx, subjectTaskID, by); err != nil {
-			return change, err
-		}
-	}
-	if change.BecameIncomplete {
-		if err := maybeRevertAwaitingSubtasksInTx(tx, subjectTaskID, by); err != nil {
-			return change, err
-		}
-	}
 	return change, nil
-}
-
-// validateDescendantsDoneInTx requires every direct child subtask to be done
-// before a parent may reach status=done.
-func validateDescendantsDoneInTx(tx *gorm.DB, taskID string) error {
-	slog.Debug("trace", "cmd", logCmd, "operation", "tasks.store.checklist.validateDescendantsDoneInTx")
-	var children []domain.Task
-	if err := tx.Where("parent_id = ?", taskID).Find(&children).Error; err != nil {
-		return fmt.Errorf("list subtasks: %w", err)
-	}
-	for _, ch := range children {
-		if ch.Status != domain.StatusDone {
-			return fmt.Errorf("%w: all subtasks must be done before marking this task done", domain.ErrInvalidInput)
-		}
-	}
-	return nil
 }
 
 // BackfillCriteriaSatisfiedAt sets criteria_satisfied_at for tasks whose

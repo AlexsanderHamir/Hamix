@@ -16,13 +16,9 @@ function baseInput(): DraftAutosaveSignatureInput {
     taskType: "general",
     runner: TASK_TEST_DEFAULTS.runner,
     cursorModel: TASK_TEST_DEFAULTS.cursor_model,
-    parentId: "",
     projectId: "",
     projectContextItemIds: [],
-    checklistInherit: false,
     checklistItems: [],
-    pendingSubtasks: [],
-    subtasksWaitForParent: false,
     latestEvaluation: null,
     dmapConfig: { commitLimit: "1", domain: "", description: "" },
   };
@@ -77,42 +73,10 @@ describe("draftAutosaveSignature", () => {
     expect(a).not.toBe(b);
   });
 
-  it("changes when pending subtasks change shape", () => {
-    const subtask = {
-      title: "child",
-      initial_prompt: "<p>do</p>",
-      priority: "medium" as const,
-      task_type: "general" as const,
-      checklistItems: ["a"],
-      checklist_inherit: false,
-      depends_on_sibling_indices: [] as number[],
-    };
-    const a = draftAutosaveSignature({
-      ...baseInput(),
-      pendingSubtasks: [subtask],
-    });
-    const b = draftAutosaveSignature({
-      ...baseInput(),
-      pendingSubtasks: [{ ...subtask, title: "renamed" }],
-    });
-    expect(a).not.toBe(b);
-  });
-
   it("matches the wire shape consumers persist via apiSaveDraft", () => {
     const sig = draftAutosaveSignature({
       ...baseInput(),
       prompt: "<p>Body</p>",
-      pendingSubtasks: [
-        {
-          title: "child",
-          initial_prompt: "<p>do</p>",
-          priority: "high",
-          task_type: "feature",
-          checklistItems: ["x", "y"],
-          checklist_inherit: true,
-          depends_on_sibling_indices: [],
-        },
-      ],
     });
     const parsed = JSON.parse(sig);
     expect(parsed).toEqual({
@@ -123,24 +87,11 @@ describe("draftAutosaveSignature", () => {
         initial_prompt: "<p>Body</p>",
         priority: "medium",
         task_type: "general",
-        ...TASK_TEST_DEFAULTS,
-        parent_id: "",
+        runner: TASK_TEST_DEFAULTS.runner,
+        cursor_model: TASK_TEST_DEFAULTS.cursor_model,
         project_id: "",
         project_context_item_ids: [],
-        checklist_inherit: false,
         checklist_items: [],
-        pending_subtasks: [
-          {
-            title: "child",
-            initial_prompt: "<p>do</p>",
-            priority: "high",
-            task_type: "feature",
-            checklist_items: ["x", "y"],
-          checklist_inherit: true,
-          depends_on_sibling_indices: [],
-        },
-      ],
-      subtasks_wait_for_parent: false,
         latest_evaluation: null,
         dmap_config: { commitLimit: "1", domain: "", description: "" },
       },

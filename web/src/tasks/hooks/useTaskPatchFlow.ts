@@ -24,7 +24,6 @@ export type TaskPatchInput = {
   status: Status;
   priority: Priority;
   task_type: TaskType;
-  checklist_inherit: boolean;
   project_id?: string | null;
   project_context_item_ids?: string[];
   tags?: string[];
@@ -63,10 +62,9 @@ interface PatchSnapshot {
 }
 
 /**
- * Patch a task in the cached list tree, returning a new TaskListResponse
- * if a matching task was found anywhere in the (possibly nested)
- * children. Returns null when the task wasn't found so callers can
- * skip writing back.
+ * Patch a task in the cached list, returning a new TaskListResponse
+ * if a matching task was found. Returns null when the task wasn't
+ * found so callers can skip writing back.
  */
 function patchTaskInList(
   list: TaskListResponse,
@@ -84,7 +82,6 @@ function patchTaskInList(
           status: patch.status,
           priority: patch.priority,
           task_type: patch.task_type,
-          checklist_inherit: patch.checklist_inherit,
           project_id:
             patch.project_id === undefined
               ? t.project_id
@@ -102,12 +99,6 @@ function patchTaskInList(
               ? t.pickup_not_before
               : patch.pickup_not_before ?? undefined,
         };
-      }
-      if (t.children?.length) {
-        const next = visit(t.children);
-        if (next !== t.children) {
-          return { ...t, children: next };
-        }
       }
       return t;
     });
@@ -146,7 +137,6 @@ export function useTaskPatchFlow(opts: {
         status: input.status,
         priority: input.priority,
         task_type: input.task_type,
-        checklist_inherit: input.checklist_inherit,
         project_id: input.project_id,
         project_context_item_ids: input.project_context_item_ids,
         tags: input.tags,
@@ -184,7 +174,6 @@ export function useTaskPatchFlow(opts: {
           status: input.status,
           priority: input.priority,
           task_type: input.task_type,
-          checklist_inherit: input.checklist_inherit,
           project_id:
             input.project_id === undefined
               ? detailPrev.project_id

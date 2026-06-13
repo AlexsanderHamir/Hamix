@@ -1,6 +1,6 @@
 import type { FormEvent, ReactNode } from "react";
 import { CLIENT_WRITABLE_STATUSES, type Priority, type Status, type TaskType } from "@/types";
-import { FieldLabel, FieldRequirementBadge } from "@/shared/FieldLabel";
+import { FieldLabel } from "@/shared/FieldLabel";
 import { Modal } from "../../../../shared/Modal";
 import { MutationErrorBanner } from "../../../../shared/MutationErrorBanner";
 import { PrioritySelect, TaskTypeSelect } from "../../task-compose";
@@ -30,7 +30,6 @@ type Props = {
   priority: Priority;
   taskType: TaskType;
   status: Status;
-  checklistInherit: boolean;
   /** Runner id stored on the task (model list is loaded for this runner). */
   taskRunner: string;
   cursorModel: string;
@@ -41,8 +40,6 @@ type Props = {
    * reference project context nodes for the active project.
    */
   promptProjectContext?: RichPromptEditorProjectContextProps;
-  /** When false, the inherit checkbox is disabled (task has no parent). */
-  canInheritChecklist: boolean;
   tagsCsv: string;
   milestone: string;
   pickupSchedule: string | null;
@@ -69,7 +66,6 @@ type Props = {
   onPriorityChange: (p: Priority) => void;
   onTaskTypeChange: (t: TaskType) => void;
   onStatusChange: (s: Status) => void;
-  onChecklistInheritChange: (v: boolean) => void;
   onSubmit: (e: FormEvent) => void;
   onCancel: () => void;
 };
@@ -81,13 +77,11 @@ export function TaskEditForm({
   priority,
   taskType,
   status,
-  checklistInherit,
   taskRunner,
   cursorModel,
   onCursorModelChange,
   projectAssignment,
   promptProjectContext,
-  canInheritChecklist,
   tagsCsv,
   milestone,
   pickupSchedule,
@@ -102,7 +96,6 @@ export function TaskEditForm({
   onPriorityChange,
   onTaskTypeChange,
   onStatusChange,
-  onChecklistInheritChange,
   onSubmit,
   onCancel,
 }: Props) {
@@ -180,30 +173,11 @@ export function TaskEditForm({
                 ? CLIENT_WRITABLE_STATUSES
                 : [...CLIENT_WRITABLE_STATUSES, status]
               ).map((s) => (
-                <option key={s} value={s} disabled={s === "awaiting_subtasks"}>
+                <option key={s} value={s}>
                   {s}
                 </option>
               ))}
             </select>
-          </div>
-          <div className="field grow stack-tight checkbox-field">
-            <label className="checkbox-label">
-              <input
-                type="checkbox"
-                checked={checklistInherit}
-                disabled={!canInheritChecklist || saving}
-                onChange={(ev) => onChecklistInheritChange(ev.target.checked)}
-              />
-              <span className="checkbox-label-body">
-                <span>Use parent&apos;s checklist (inherit completion criteria)</span>
-                <FieldRequirementBadge requirement="optional" />
-              </span>
-            </label>
-            {!canInheritChecklist ? (
-              <p className="muted stack-tight-zero">
-                Only tasks with a parent can inherit its checklist.
-              </p>
-            ) : null}
           </div>
           <TaskCreateModalAgentSection
             disabled={saving}

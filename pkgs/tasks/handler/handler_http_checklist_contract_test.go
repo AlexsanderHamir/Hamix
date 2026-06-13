@@ -115,35 +115,6 @@ func TestHTTP_postChecklistItem_textRequired(t *testing.T) {
 	}
 }
 
-// TestHTTP_postChecklistItem_rejectsInheritedChild pins the documented 400 when
-// posting against a task whose checklist_inherit is true. The store wording flows
-// through invalidInputDetail so the client receives the bare phrase.
-func TestHTTP_postChecklistItem_rejectsInheritedChild(t *testing.T) {
-	srv := newTaskTestServer(t)
-	defer srv.Close()
-	parentID := mustCreateChecklistTask(t, srv, "chk-parent")
-	childID := mustCreateChildInheriting(t, srv, parentID, "chk-child")
-
-	res, err := http.Post(srv.URL+"/tasks/"+childID+"/checklist/items", "application/json",
-		strings.NewReader(`{"text":"on inheriting child"}`))
-	if err != nil {
-		t.Fatal(err)
-	}
-	defer res.Body.Close()
-	raw, _ := io.ReadAll(res.Body)
-	if res.StatusCode != http.StatusBadRequest {
-		t.Fatalf("status %d (want 400) body=%s", res.StatusCode, raw)
-	}
-	var errBody jsonErrorBody
-	if err := json.Unmarshal(raw, &errBody); err != nil {
-		t.Fatalf("decode: %v body=%s", err, raw)
-	}
-	if errBody.Error != "cannot add checklist items while checklist_inherit is true" {
-		t.Fatalf("error=%q want %q (docs/api.md)", errBody.Error,
-			"cannot add checklist items while checklist_inherit is true")
-	}
-}
-
 // TestHTTP_patchChecklistItem_doneAgentReturnsItemsView pins the documented PATCH
 // happy path for `done`: 200 + full `{ "items": [...] }` with `done:true` on the
 // targeted item. This complements the existing 400 coverage in
@@ -256,42 +227,6 @@ func TestHTTP_deleteChecklistItem_204ThenGone(t *testing.T) {
 	}
 }
 
-// TestHTTP_deleteChecklistItem_rejectsInheritedChild pins the previously
-// undocumented DELETE 400 string for inheriting children.
-func TestHTTP_deleteChecklistItem_rejectsInheritedChild(t *testing.T) {
-	srv, st := newTaskTestServerWithStore(t)
-	defer srv.Close()
-	parentID := mustCreateChecklistTask(t, srv, "chk-par")
-	it, err := st.AddChecklistItem(context.Background(), parentID, "owned by parent", domain.ActorUser)
-	if err != nil {
-		t.Fatal(err)
-	}
-	childID := mustCreateChildInheriting(t, srv, parentID, "chk-child")
-
-	req, err := http.NewRequest(http.MethodDelete,
-		srv.URL+"/tasks/"+childID+"/checklist/items/"+it.ID, nil)
-	if err != nil {
-		t.Fatal(err)
-	}
-	res, err := http.DefaultClient.Do(req)
-	if err != nil {
-		t.Fatal(err)
-	}
-	defer res.Body.Close()
-	raw, _ := io.ReadAll(res.Body)
-	if res.StatusCode != http.StatusBadRequest {
-		t.Fatalf("status %d (want 400) body=%s", res.StatusCode, raw)
-	}
-	var errBody jsonErrorBody
-	if err := json.Unmarshal(raw, &errBody); err != nil {
-		t.Fatal(err)
-	}
-	if errBody.Error != "cannot delete inherited checklist definitions from this task" {
-		t.Fatalf("error=%q want %q (docs/api.md)", errBody.Error,
-			"cannot delete inherited checklist definitions from this task")
-	}
-}
-
 // TestHTTP_checklist_404OnUnknownTask pins the documented 404 mapping across
 // the three checklist write routes when the task id does not exist.
 func TestHTTP_checklist_404OnUnknownTask(t *testing.T) {
@@ -374,7 +309,6 @@ func TestHTTP_postChecklistItem_errorPathsNeverPublish(t *testing.T) {
 	srv, _, hub := newSSETriggerServer(t)
 	defer srv.Close()
 	parentID := mustCreateChecklistTask(t, srv, "chk-sse-neg-parent")
-	childID := mustCreateChildInheriting(t, srv, parentID, "chk-sse-neg-child")
 
 	ch, unsub := hub.Subscribe()
 	defer unsub()
@@ -387,7 +321,6 @@ func TestHTTP_postChecklistItem_errorPathsNeverPublish(t *testing.T) {
 	}{
 		{"emptyText", parentID, `{"text":""}`, http.StatusBadRequest},
 		{"whitespaceText", parentID, `{"text":"   "}`, http.StatusBadRequest},
-		{"inheritingChild", childID, `{"text":"on inheriting child"}`, http.StatusBadRequest},
 		{"unknownTask", "11111111-1111-4111-8111-111111111111", `{"text":"x"}`, http.StatusNotFound},
 	}
 	for _, tc := range cases {
@@ -445,7 +378,6 @@ func TestHTTP_patchChecklistItem_textBranch400Strings(t *testing.T) {
 	if err := json.Unmarshal(defBody, &def); err != nil {
 		t.Fatal(err)
 	}
-	childID := mustCreateChildInheriting(t, srv, parentID, "chk-text-400-child")
 
 	patch := func(taskID, itemID, body string) (int, string) {
 		t.Helper()
@@ -495,12 +427,6 @@ func TestHTTP_patchChecklistItem_textBranch400Strings(t *testing.T) {
 			body:             `{"text":"x","done":true}`,
 			want:             "send exactly one of text or done",
 			commentaryReason: "same one-of phrase from the opposite direction (sending both fields); proves the textSet == doneSet branch covers the symmetric case the doc bullet `or neither field was provided for the one-of choice` only covers the empty side of",
-		},
-		{
-			name: "inheritingChild", taskID: childID, itemID: def.ID,
-			body:             `{"text":"updated"}`,
-			want:             "cannot update inherited checklist definitions from this task",
-			commentaryReason: "store-generated phrase from pkgs/tasks/store/internal/checklist/checklist.go:256; the child task inherits via checklist_inherit=true so the definition lives on parent and cannot be edited through the child handle",
 		},
 	}
 
@@ -652,7 +578,6 @@ func TestHTTP_deleteChecklistItem_errorPathsNeverPublish(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	childID := mustCreateChildInheriting(t, srv, parentID, "chk-sse-del-child")
 
 	ch, unsub := hub.Subscribe()
 	defer unsub()
@@ -675,7 +600,6 @@ func TestHTTP_deleteChecklistItem_errorPathsNeverPublish(t *testing.T) {
 		}
 	}
 
-	doDelete("inheritingChild", childID, it.ID, http.StatusBadRequest)
 	doDelete("unknownTask", "11111111-1111-4111-8111-111111111111", it.ID, http.StatusNotFound)
 	doDelete("unknownItem", parentID, "22222222-2222-4222-8222-222222222222", http.StatusNotFound)
 
@@ -702,26 +626,6 @@ func mustCreateChecklistTask(t *testing.T, srv *httptest.Server, title string) s
 		t.Fatal(err)
 	}
 	return task.ID
-}
-
-func mustCreateChildInheriting(t *testing.T, srv *httptest.Server, parentID, title string) string {
-	t.Helper()
-	ensureParentHasCriterionHTTP(t, srv.URL, parentID)
-	body := `{"title":"` + title + `","priority":"medium","parent_id":"` + parentID + `","checklist_inherit":true}`
-	res, err := http.Post(srv.URL+"/tasks", "application/json", strings.NewReader(body))
-	if err != nil {
-		t.Fatal(err)
-	}
-	defer res.Body.Close()
-	raw, _ := io.ReadAll(res.Body)
-	if res.StatusCode != http.StatusCreated {
-		t.Fatalf("create child status %d body=%s", res.StatusCode, raw)
-	}
-	var child domain.Task
-	if err := json.Unmarshal(raw, &child); err != nil {
-		t.Fatal(err)
-	}
-	return child.ID
 }
 
 func keysOf(m map[string]json.RawMessage) []string {

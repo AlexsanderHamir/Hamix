@@ -69,6 +69,11 @@ func (h *Handler) create(w http.ResponseWriter, r *http.Request) {
 		writeStoreError(w, r, op, err)
 		return
 	}
+	automationSelections, err := parseAutomationSelectionsWire(body.AutomationSelections)
+	if err != nil {
+		writeStoreError(w, r, op, err)
+		return
+	}
 	t, err := h.store.Create(r.Context(), store.CreateTaskInput{
 		ID:                    body.ID,
 		DraftID:               body.DraftID,
@@ -86,6 +91,7 @@ func (h *Handler) create(w http.ResponseWriter, r *http.Request) {
 		Gate:                  body.Gate,
 		DependsOn:             dependsOn,
 		ChecklistItems:        checklistItems,
+		AutomationSelections:  automationSelections,
 	}, by)
 	if err != nil {
 		writeStoreError(w, r, op, err)
@@ -211,6 +217,15 @@ func (h *Handler) patch(w http.ResponseWriter, r *http.Request) {
 	if body.DependsOn != nil && body.DependsOn.set {
 		dependsOnPatch = &body.DependsOn.value
 	}
+	var automationSelectionsPatch *[]domain.AutomationSelection
+	if body.AutomationSelections != nil {
+		parsed, err := parseAutomationSelectionsWire(*body.AutomationSelections)
+		if err != nil {
+			writeStoreError(w, r, op, err)
+			return
+		}
+		automationSelectionsPatch = &parsed
+	}
 	in := store.UpdateTaskInput{
 		Title:                 body.Title,
 		InitialPrompt:         body.InitialPrompt,
@@ -224,6 +239,7 @@ func (h *Handler) patch(w http.ResponseWriter, r *http.Request) {
 		Milestone:             body.Milestone,
 		Gate:                  gateFieldPatchToStore(body.Gate),
 		DependsOn:             dependsOnPatch,
+		AutomationSelections:  automationSelectionsPatch,
 	}
 	if body.InitialPrompt != nil {
 		if err := h.validatePromptMentionsIfRepo(r, *body.InitialPrompt); err != nil {

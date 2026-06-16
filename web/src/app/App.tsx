@@ -58,6 +58,11 @@ const ProjectContextPage = lazy(() =>
     default: m.ProjectContextPage,
   })),
 );
+const AutomationsPage = lazy(() =>
+  import("@/automations/AutomationsPage").then((m) => ({
+    default: m.AutomationsPage,
+  })),
+);
 import { UiTestModeBanner } from "@/dev/UiTestModeBanner";
 import { ErrorBanner } from "../shared/ErrorBanner";
 import { ModalStackProvider } from "../shared/ModalStackContext";
@@ -89,6 +94,7 @@ function AppShell({ app }: { app: ReturnType<typeof useTasksApp> }) {
   const homeIsCurrent = location.pathname === "/";
   const draftsIsCurrent = location.pathname.startsWith("/drafts");
   const projectsIsCurrent = location.pathname.startsWith("/projects");
+  const automationsIsCurrent = location.pathname.startsWith("/automations");
   const headerElevated = useStickyShellElevation();
   // Settings chunk is small but the icon is the most prominent
   // header affordance; prefetching on hover is a free win.
@@ -145,6 +151,15 @@ function AppShell({ app }: { app: ReturnType<typeof useTasksApp> }) {
                   : {})}
               >
                 Projects
+              </Link>
+              <Link
+                to="/automations"
+                className="app-nav__link"
+                {...(automationsIsCurrent
+                  ? { "aria-current": "page" as const }
+                  : {})}
+              >
+                Automations
               </Link>
             </nav>
             <div className="app-header-actions">
@@ -317,6 +332,7 @@ export default function App() {
           <Route path="projects" element={<ProjectListPage />} />
           <Route path="projects/:projectId/context" element={<ProjectContextPage />} />
           <Route path="projects/:projectId" element={<ProjectDetailPage />} />
+          <Route path="automations" element={<AutomationsPage />} />
           <Route path="settings" element={<SettingsPage />} />
           <Route
             path="tasks/:taskId/events/:eventSeq"

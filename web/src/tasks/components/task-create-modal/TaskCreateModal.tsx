@@ -44,6 +44,7 @@ type Props = {
   onTaskRunnerChange: (runner: string) => void;
   onTaskCursorModelChange: (v: string) => void;
   projectAssignment?: ReactNode;
+  automationAssignment?: ReactNode;
   promptProjectContext?: RichPromptEditorProjectContextProps;
   schedule: string | null;
   onScheduleChange: (next: string | null) => void;
@@ -90,6 +91,7 @@ export function TaskCreateModal({
   onTaskRunnerChange,
   onTaskCursorModelChange,
   projectAssignment,
+  automationAssignment,
   promptProjectContext,
   schedule,
   onScheduleChange,
@@ -202,6 +204,16 @@ export function TaskCreateModal({
                   lede="Scope this task to a project and attach context the agent can reference."
                 >
                   {projectAssignment}
+                </TaskCreateModalSection>
+              ) : null}
+
+              {automationAssignment ? (
+                <TaskCreateModalSection
+                  variant="context"
+                  title="Behaviors"
+                  lede="Reusable yes/no instructions injected into the agent prompt at run time."
+                >
+                  {automationAssignment}
                 </TaskCreateModalSection>
               ) : null}
 

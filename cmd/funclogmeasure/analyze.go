@@ -514,6 +514,23 @@ var skipSlogRequirement = map[string]struct{}{
 	"github.com/AlexsanderHamir/T2A/pkgs/tasks/handler\tparseCreateChecklistItems":            {},
 	"github.com/AlexsanderHamir/T2A/pkgs/tasks/handler\t*dependsOnWire.UnmarshalJSON":         {},
 	"github.com/AlexsanderHamir/T2A/pkgs/tasks/handler\t*dependsOnPatchWire.UnmarshalJSON":    {},
+
+	// Prompt automations (ADR-0013): GORM TableName, pure domain validation,
+	// store validators/resolvers, and handler wire parsers — same categories as
+	// project-context and dependency slices; CRUD handlers trace first.
+	"github.com/AlexsanderHamir/T2A/pkgs/tasks/domain\tAutomation.TableName":                            {},
+	"github.com/AlexsanderHamir/T2A/pkgs/tasks/domain\tValidateAutomationFields":                        {},
+	"github.com/AlexsanderHamir/T2A/pkgs/tasks/domain\tNormalizeAutomationState":                        {},
+	"github.com/AlexsanderHamir/T2A/pkgs/tasks/domain\tValidateAutomationSelections":                    {},
+	"github.com/AlexsanderHamir/T2A/pkgs/tasks/store/internal/automations\tValidateSelectionIDs":        {},
+	"github.com/AlexsanderHamir/T2A/pkgs/tasks/store/internal/automations\tResolveForTask":              {},
+	"github.com/AlexsanderHamir/T2A/pkgs/tasks/store/internal/automations\tassertTitleAvailable":        {},
+	"github.com/AlexsanderHamir/T2A/pkgs/tasks/store/internal/automations\tmapNotFound":                 {},
+	"github.com/AlexsanderHamir/T2A/pkgs/tasks/store/internal/automations\tmapWriteError":               {},
+	"github.com/AlexsanderHamir/T2A/pkgs/tasks/store/internal/tasks\tapplyAutomationSelectionsOnCreate": {},
+	"github.com/AlexsanderHamir/T2A/pkgs/tasks/handler\tparseAutomationListParams":                      {},
+	"github.com/AlexsanderHamir/T2A/pkgs/tasks/handler\tautomationPatchJSON.isEmpty":                    {},
+	"github.com/AlexsanderHamir/T2A/pkgs/tasks/handler\tparseAutomationSelectionsWire":                  {},
 }
 
 func shouldSkipSlogRequirement(pkgPath, funcName string) bool {

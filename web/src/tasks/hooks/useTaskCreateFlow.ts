@@ -22,6 +22,7 @@ import {
   type PriorityChoice,
   type Status,
   type TaskDependencyEdge,
+  type AutomationSelection,
 } from "@/types";
 import { TASK_DRAFTS, TASK_TIMINGS } from "@/constants/tasks";
 import {
@@ -45,6 +46,7 @@ type CreateTaskMutationInput = {
   pickup_not_before: string | null;
   project_id: string;
   project_context_item_ids: string[];
+  automation_selections: AutomationSelection[];
   tags: string[];
   milestone?: string;
   depends_on: TaskDependencyEdge[];
@@ -64,6 +66,9 @@ export function useTaskCreateFlow() {
   const [newTaskCursorModel, setNewTaskCursorModel] = useState("");
   const [newProjectID, setNewProjectID] = useState(DEFAULT_PROJECT_ID);
   const [newProjectContextItemIDs, setNewProjectContextItemIDs] = useState<string[]>([]);
+  const [newAutomationSelections, setNewAutomationSelections] = useState<
+    AutomationSelection[]
+  >([]);
   /**
    * Future pickup time for the new task as an RFC3339 UTC ISO
    * string, or `null` to mean "no schedule — pick up immediately
@@ -210,6 +215,7 @@ export function useTaskCreateFlow() {
     setNewTaskCursorModel(s?.cursor_model ?? "");
     setNewProjectID(DEFAULT_PROJECT_ID);
     setNewProjectContextItemIDs([]);
+    setNewAutomationSelections([]);
     setNewSchedule(null);
     setNewAutonomyEnabled(true);
     setNewTagsCsv("");
@@ -231,6 +237,7 @@ export function useTaskCreateFlow() {
         cursorModel: s?.cursor_model ?? "",
         projectId: DEFAULT_PROJECT_ID,
         projectContextItemIds: [],
+        automationSelections: [],
         checklistItems: [],
         latestEvaluation: null,
       }),
@@ -311,6 +318,9 @@ export function useTaskCreateFlow() {
         ...(input.project_id ? { project_id: input.project_id } : {}),
         ...(input.project_context_item_ids.length > 0
           ? { project_context_item_ids: input.project_context_item_ids }
+          : {}),
+        ...(input.automation_selections.length > 0
+          ? { automation_selections: input.automation_selections }
           : {}),
         ...(input.pickup_not_before !== null
           ? { pickup_not_before: input.pickup_not_before }
@@ -505,6 +515,7 @@ export function useTaskCreateFlow() {
         priority: newPriority,
         projectId: newProjectID,
         projectContextItemIds: newProjectContextItemIDs,
+        automationSelections: newAutomationSelections,
         checklistItems: newChecklistItems.map((item) => item.text),
         latestEvaluation: latestDraftEvaluation,
         runner: newTaskRunner,
@@ -521,6 +532,7 @@ export function useTaskCreateFlow() {
       newTaskCursorModel,
       newProjectID,
       newProjectContextItemIDs,
+      newAutomationSelections,
     ],
   );
 
@@ -539,6 +551,7 @@ export function useTaskCreateFlow() {
         // prompt editor (and the same `project_context_item_ids` on submit).
         project_id: newProjectID,
         project_context_item_ids: newProjectContextItemIDs,
+        automation_selections: newAutomationSelections,
         checklist_items: newChecklistItems.map((item) => item.text),
         ...(latestDraftEvaluation
           ? {
@@ -562,6 +575,7 @@ export function useTaskCreateFlow() {
     newTaskCursorModel,
     newProjectID,
     newProjectContextItemIDs,
+    newAutomationSelections,
   ]);
 
   const saveDraftNow = useCallback(() => {
@@ -673,6 +687,7 @@ export function useTaskCreateFlow() {
       cursor_model: newTaskCursorModel.trim(),
       project_id: newProjectID.trim(),
       project_context_item_ids: newProjectContextItemIDs,
+      automation_selections: newAutomationSelections,
       pickup_not_before: newSchedule,
       tags: newTagsCsv
         .split(/[,;\n]+/)
@@ -754,8 +769,14 @@ export function useTaskCreateFlow() {
     )
       ? draft.payload.project_context_item_ids
       : [];
+    const resumedAutomationSelections = Array.isArray(
+      draft.payload.automation_selections,
+    )
+      ? draft.payload.automation_selections
+      : [];
     setNewProjectID(resumedProjectID);
     setNewProjectContextItemIDs(resumedProjectContextIds);
+    setNewAutomationSelections(resumedAutomationSelections);
     const resumedTitle = draft.payload.title ?? "";
     setDraftAutosaveBaseline(
       draftAutosaveSignature({
@@ -776,6 +797,7 @@ export function useTaskCreateFlow() {
         cursorModel: resumedModel,
         projectId: resumedProjectID,
         projectContextItemIds: resumedProjectContextIds,
+        automationSelections: resumedAutomationSelections,
         checklistItems: draft.payload.checklist_items ?? [],
         latestEvaluation,
       }),
@@ -922,6 +944,8 @@ export function useTaskCreateFlow() {
     setNewProjectID,
     newProjectContextItemIDs,
     setNewProjectContextItemIDs,
+    newAutomationSelections,
+    setNewAutomationSelections,
     newSchedule,
     setNewSchedule,
     newAutonomyEnabled,

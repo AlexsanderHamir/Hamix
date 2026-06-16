@@ -2,4 +2,5 @@ export * from "./task";
 export * from "./gate";
 export * from "./cycle";
 export * from "./project";
+export * from "./automation";
 export * from "./system";

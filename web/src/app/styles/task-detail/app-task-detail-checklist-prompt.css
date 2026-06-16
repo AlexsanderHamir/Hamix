@@ -143,14 +143,18 @@
 
 .task-checklist-list--grouped .task-checklist-row {
   display: flex;
-  align-items: flex-start;
-  justify-content: space-between;
-  gap: var(--space-3);
+  flex-direction: column;
+  align-items: stretch;
+  gap: var(--space-2);
   padding: 0.7rem var(--space-4);
   margin: 0;
   border-top: 1px solid var(--border-hairline);
   background: transparent;
   transition: background-color var(--duration-fast) var(--ease-out);
+}
+
+.task-checklist-row--interactive {
+  cursor: pointer;
 }
 
 .task-checklist-list--grouped .task-checklist-row:first-child {
@@ -163,6 +167,26 @@
   }
 }
 
+/* Primary line: status icon, criterion title, verify badge, and row
+   actions share one horizontal band. Verification detail sits on a
+   second line below the title so trailing controls stay aligned. */
+.task-checklist-row-primary {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-3);
+  min-width: 0;
+}
+
+.task-checklist-row-primary .task-checklist-status {
+  margin-top: 0;
+}
+
+.task-checklist-row-primary .task-checklist-text {
+  flex: 1 1 auto;
+  min-width: 0;
+}
+
 .task-checklist-row-main {
   display: flex;
   align-items: flex-start;
@@ -173,29 +197,20 @@
   min-width: 0;
 }
 
+/* Trailing column: verify badge and row actions share the right edge. */
+.task-checklist-row-trailing {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  flex-shrink: 0;
+}
+
 .task-checklist-row-actions {
   display: flex;
   flex-wrap: nowrap;
   align-items: center;
   gap: 0.1rem;
   flex-shrink: 0;
-  margin-top: 0.05rem;
-  opacity: 0;
-  transition: opacity var(--duration-fast) var(--ease-out);
-}
-
-/* Reveal on row hover and whenever an action inside is focused —
-   keyboard users always see the affordance, mouse users get a calm
-   resting state. */
-.task-checklist-row:hover .task-checklist-row-actions,
-.task-checklist-row:focus-within .task-checklist-row-actions {
-  opacity: 1;
-}
-
-@media (hover: none) {
-  .task-checklist-row-actions {
-    opacity: 1;
-  }
 }
 
 button.task-detail-checklist-edit {
@@ -233,7 +248,7 @@ button.task-detail-checklist-edit:focus-visible {
 }
 
 button.task-detail-checklist-edit:disabled {
-  opacity: 0.42;
+  color: var(--text-tertiary);
   cursor: not-allowed;
 }
 
@@ -272,7 +287,7 @@ button.task-detail-checklist-remove:focus-visible {
 }
 
 button.task-detail-checklist-remove:disabled {
-  opacity: 0.42;
+  color: var(--text-tertiary);
   cursor: not-allowed;
 }
 
@@ -322,25 +337,27 @@ button.task-detail-checklist-remove:disabled {
 
 .task-checklist-text {
   display: block;
+  width: 100%;
+  max-width: 100%;
   color: var(--text-primary);
   font-size: var(--text-base);
   line-height: 1.45;
   letter-spacing: -0.01em;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
-/* Trailing meta row under a checklist criterion. Holds the "Verified
-   (verify_agent)" badge and the "View verification" popup trigger.
-   Both items used to live as either bare text or inline <details>
-   disclosures stacked vertically — the row got visually heavy and
-   pushed the checklist past single-glance comprehension. Grouping
-   them into a single subtle row keeps the criterion the dominant
-   read while the audit detail stays one click away. */
+/* Trailing meta row under a checklist criterion. Holds the "View
+   verification" popup trigger for satisfied rows. Indented to align
+   with the criterion title beside the leading status icon. */
 .task-checklist-row-meta {
   display: flex;
   flex-wrap: wrap;
   align-items: center;
   gap: var(--space-2) var(--space-3);
-  margin-top: var(--space-2);
+  margin-top: 0;
+  padding-left: calc(1rem + 0.65rem);
 }
 
 .task-checklist-row-meta:empty {

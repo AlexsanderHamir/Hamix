@@ -1,4 +1,5 @@
 import { render, screen } from "@testing-library/react";
+import userEvent from "@testing-library/user-event";
 import { describe, expect, it, vi } from "vitest";
 import { TaskComposeChecklistFields } from "./TaskComposeChecklistFields";
 
@@ -24,5 +25,30 @@ describe("TaskComposeChecklistFields", () => {
     expect(screen.getByLabelText(/1 automated verify command/i)).toHaveTextContent(
       "1 command",
     );
+  });
+
+  it("opens edit when anywhere on the criterion row is clicked", async () => {
+    const user = userEvent.setup();
+    const onOpenEditCriterion = vi.fn();
+    const item = {
+      text: "The chosen entry point is named with a justification for why it was picked.",
+      verify_commands: [{ command: "go test ./...", expected_outcome: "pass" }],
+    };
+
+    render(
+      <TaskComposeChecklistFields
+        checklistHeadingId="checklist-heading"
+        checklistItems={[item]}
+        disabled={false}
+        onOpenNewCriterion={vi.fn()}
+        onOpenEditCriterion={onOpenEditCriterion}
+        onRemoveRow={vi.fn()}
+      />,
+    );
+
+    await user.click(
+      screen.getByText(/The chosen entry point is named with a justification/i),
+    );
+    expect(onOpenEditCriterion).toHaveBeenCalledWith(0, item);
   });
 });

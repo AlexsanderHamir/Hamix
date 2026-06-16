@@ -63,19 +63,29 @@ export function TaskComposeChecklistFields({
           >
             {checklistItems.map((item, index) => {
               const commandCount = item.verify_commands?.length ?? 0;
+              const canEditRow = !disabled;
               return (
-                <li key={`${index}-${item.text}`} className="task-checklist-row">
-                  <div className="task-checklist-row-main">
-                    <div className="task-checklist-text-block">
-                      <span className="task-checklist-text">{item.text}</span>
-                      {commandCount > 0 ? (
-                        <div className="task-checklist-row-meta">
-                          <ChecklistVerifyBadge count={commandCount} />
-                        </div>
-                      ) : null}
-                    </div>
-                  </div>
-                  <div className="task-checklist-row-actions">
+                <li
+                  key={`${index}-${item.text}`}
+                  className={
+                    canEditRow
+                      ? "task-checklist-row task-checklist-row--interactive"
+                      : "task-checklist-row"
+                  }
+                  title={canEditRow ? item.text : undefined}
+                  onClick={(event) => {
+                    if (!canEditRow) return;
+                    if ((event.target as HTMLElement).closest("button")) return;
+                    onOpenEditCriterion(index, item);
+                  }}
+                >
+                  <div className="task-checklist-row-primary">
+                    <span className="task-checklist-text">{item.text}</span>
+                    <div className="task-checklist-row-trailing">
+                    {commandCount > 0 ? (
+                      <ChecklistVerifyBadge count={commandCount} />
+                    ) : null}
+                    <div className="task-checklist-row-actions">
                     <button
                       type="button"
                       className="task-detail-checklist-edit"
@@ -92,7 +102,9 @@ export function TaskComposeChecklistFields({
                     >
                       Remove
                     </button>
+                    </div>
                   </div>
+                </div>
                 </li>
               );
             })}

@@ -59,18 +59,10 @@ describe("TaskDetailChecklistItemList", () => {
   it("locks the Edit button on done criteria and explains why", () => {
     renderList([PENDING, DONE]);
 
-    const editButtons = screen.getAllByRole("button", { name: /^edit/i });
-    expect(editButtons).toHaveLength(2);
+    const editButtons = screen.getAllByRole("button", { name: /^edit$/i });
+    expect(editButtons).toHaveLength(1);
 
-    // Pending row: editable.
-    const editPending = editButtons.find((b) => !b.hasAttribute("disabled"));
-    expect(editPending).toBeDefined();
-    expect(editPending).not.toBeDisabled();
-
-    // Done row: disabled with a clear explanatory tooltip.
-    const editDone = editButtons.find((b) =>
-      b.getAttribute("aria-label")?.includes("locked"),
-    );
+    const editDone = screen.getByRole("button", { name: /edit \(locked/i });
     expect(editDone).toBeDefined();
     expect(editDone).toBeDisabled();
     expect(editDone).toHaveAttribute(
@@ -83,7 +75,7 @@ describe("TaskDetailChecklistItemList", () => {
     const user = userEvent.setup();
     const { onOpenEditCriterionModal } = renderList([DONE]);
 
-    const editDone = screen.getByRole("button", { name: /edit.*locked/i });
+    const editDone = screen.getByRole("button", { name: /edit \(locked/i });
     // userEvent honors `disabled` and skips the click; we still
     // explicitly assert no handler invocation, since that is the
     // contract this test pins.
@@ -200,7 +192,30 @@ describe("TaskDetailChecklistItemList", () => {
     ).not.toBeInTheDocument();
   });
 
-  it("shows verify command badge in the meta row with accessible label", () => {
+  it("opens edit when anywhere on a pending criterion row is clicked", async () => {
+    const user = userEvent.setup();
+    const { onOpenEditCriterionModal } = renderList([PENDING]);
+
+    await user.click(
+      screen.getByText("Hello World is written inside the 123.md file"),
+    );
+
+    expect(onOpenEditCriterionModal).toHaveBeenCalledWith(
+      PENDING.id,
+      PENDING.text,
+      undefined,
+    );
+  });
+
+  it("does not call onOpenEditCriterionModal when a done criterion row is clicked", async () => {
+    const user = userEvent.setup();
+    const { onOpenEditCriterionModal } = renderList([DONE]);
+
+    await user.click(screen.getByText("123.md file created"));
+    expect(onOpenEditCriterionModal).not.toHaveBeenCalled();
+  });
+
+  it("shows verify command badge beside row actions with accessible label", () => {
     renderList([
       {
         ...PENDING,

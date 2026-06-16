@@ -47,109 +47,132 @@ export function TaskDetailChecklistItemList({
             ((typeof item.evidence === "string" && item.evidence.length > 0) ||
               (typeof item.verifier_reasoning === "string" &&
                 item.verifier_reasoning.length > 0));
-          const showRowMeta = verifyCommandCount > 0 || hasVerificationDetail;
+          const showRowMeta = hasVerificationDetail;
+          const canEditRow =
+            !item.done &&
+            !editCriterionPending &&
+            !removeItemPending &&
+            !addCriterionPending;
           return (
             <li
               key={item.id}
               className={
                 item.done
                   ? "task-checklist-row task-checklist-row--done"
-                  : "task-checklist-row task-checklist-row--pending"
+                  : canEditRow
+                    ? "task-checklist-row task-checklist-row--pending task-checklist-row--interactive"
+                    : "task-checklist-row task-checklist-row--pending"
               }
+              title={
+                item.done
+                  ? "Already marked done — cannot edit a satisfied criterion."
+                  : canEditRow
+                    ? item.text
+                    : undefined
+              }
+              onClick={(event) => {
+                if (!canEditRow) return;
+                if ((event.target as HTMLElement).closest("button")) return;
+                onOpenEditCriterionModal(
+                  item.id,
+                  item.text,
+                  item.verify_commands,
+                );
+              }}
             >
-            <div className="task-checklist-row-main">
+            <div className="task-checklist-row-primary">
               <ChecklistStatusIcon done={item.done} />
-              <div className="task-checklist-text-block">
-                <span className="task-checklist-text">{item.text}</span>
-                {showRowMeta ? (
-                  <div className="task-checklist-row-meta">
-                    {hasVerificationDetail ? (
-                      <button
-                        type="button"
-                        className="task-checklist-verification-trigger"
-                        onClick={() => setOpenVerificationId(item.id)}
-                        aria-label={`View verification details for: ${item.text}`}
-                      >
-                        <span className="task-checklist-verification-trigger-label">
-                          View verification
-                        </span>
-                        <span
-                          className="task-checklist-verification-trigger-arrow"
-                          aria-hidden="true"
-                        >
-                          &rarr;
-                        </span>
-                      </button>
-                    ) : null}
-                    <ChecklistVerifyBadge count={verifyCommandCount} />
-                  </div>
+              <span className="task-checklist-text">{item.text}</span>
+              <div className="task-checklist-row-trailing">
+                {verifyCommandCount > 0 ? (
+                  <ChecklistVerifyBadge count={verifyCommandCount} />
                 ) : null}
+                <div className="task-checklist-row-actions">
+                <button
+                    type="button"
+                    className="task-detail-checklist-edit"
+                    // Done criteria are locked: editing the text after the
+                    // agent has accepted the criterion as satisfied would
+                    // silently rewrite history (the
+                    // checklist_item_toggled audit row would now point at
+                    // text that didn't exist at completion time). The
+                    // backend rejects this with ErrInvalidInput as well —
+                    // disabling here just keeps the affordance honest.
+                    disabled={
+                      item.done ||
+                      editCriterionPending ||
+                      removeItemPending ||
+                      addCriterionPending
+                    }
+                    title={
+                      item.done
+                        ? "Already marked done — cannot edit a satisfied criterion."
+                        : undefined
+                    }
+                    aria-label={
+                      item.done
+                        ? "Edit (locked: already marked done)"
+                        : undefined
+                    }
+                    onClick={() =>
+                      onOpenEditCriterionModal(
+                        item.id,
+                        item.text,
+                        item.verify_commands,
+                      )
+                    }
+                  >
+                    Edit
+                  </button>
+                  <button
+                    type="button"
+                    className="task-detail-checklist-remove"
+                    // Symmetric with the Edit lock above: removing a done
+                    // criterion would orphan the persisted
+                    // checklist_item_toggled (done=true) audit row and
+                    // erase the historical fact that the task ever
+                    // satisfied this requirement. The backend rejects
+                    // this with ErrInvalidInput; disabling here keeps the
+                    // affordance honest so users don't trigger a bogus
+                    // 400 round-trip.
+                    disabled={item.done || removeItemPending}
+                    title={
+                      item.done
+                        ? "Already marked done — cannot remove a satisfied criterion."
+                        : undefined
+                    }
+                    aria-label={
+                      item.done
+                        ? `Remove criterion (locked: already marked done): ${item.text}`
+                        : undefined
+                    }
+                    onClick={() => onRemoveChecklistItem(item.id)}
+                  >
+                    Remove
+                  </button>
+                </div>
               </div>
             </div>
-            <div className="task-checklist-row-actions">
-              <button
-                  type="button"
-                  className="task-detail-checklist-edit"
-                  // Done criteria are locked: editing the text after the
-                  // agent has accepted the criterion as satisfied would
-                  // silently rewrite history (the
-                  // checklist_item_toggled audit row would now point at
-                  // text that didn't exist at completion time). The
-                  // backend rejects this with ErrInvalidInput as well —
-                  // disabling here just keeps the affordance honest.
-                  disabled={
-                    item.done ||
-                    editCriterionPending ||
-                    removeItemPending ||
-                    addCriterionPending
-                  }
-                  title={
-                    item.done
-                      ? "Already marked done — cannot edit a satisfied criterion."
-                      : undefined
-                  }
-                  aria-label={
-                    item.done
-                      ? `Edit criterion (locked: already marked done): ${item.text}`
-                      : undefined
-                  }
-                  onClick={() =>
-                    onOpenEditCriterionModal(
-                      item.id,
-                      item.text,
-                      item.verify_commands,
-                    )
-                  }
-                >
-                  Edit
-                </button>
+            {showRowMeta ? (
+              <div className="task-checklist-row-meta">
                 <button
                   type="button"
-                  className="task-detail-checklist-remove"
-                  // Symmetric with the Edit lock above: removing a done
-                  // criterion would orphan the persisted
-                  // checklist_item_toggled (done=true) audit row and
-                  // erase the historical fact that the task ever
-                  // satisfied this requirement. The backend rejects
-                  // this with ErrInvalidInput; disabling here keeps the
-                  // affordance honest so users don't trigger a bogus
-                  // 400 round-trip.
-                  disabled={item.done || removeItemPending}
-                  title={
-                    item.done
-                      ? "Already marked done — cannot remove a satisfied criterion."
-                      : undefined
-                  }
-                  aria-label={
-                    item.done
-                      ? `Remove criterion (locked: already marked done): ${item.text}`
-                      : undefined
-                  }
-                  onClick={() => onRemoveChecklistItem(item.id)}
+                  className="task-checklist-verification-trigger"
+                  onClick={() => setOpenVerificationId(item.id)}
+                  aria-label={`View verification details for: ${item.text}`}
                 >
-                  Remove
+                  <span className="task-checklist-verification-trigger-label">
+                    View verification
+                  </span>
+                  <span
+                    className="task-checklist-verification-trigger-arrow"
+                    aria-hidden="true"
+                  >
+                    &rarr;
+                  </span>
                 </button>
               </div>
+            ) : null}
           </li>
           );
         })}

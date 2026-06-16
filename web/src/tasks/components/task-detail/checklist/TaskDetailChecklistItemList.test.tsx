@@ -199,4 +199,18 @@ describe("TaskDetailChecklistItemList", () => {
       screen.queryByRole("button", { name: /view verification/i }),
     ).not.toBeInTheDocument();
   });
+
+  it("shows verify command badge in the meta row with accessible label", () => {
+    renderList([
+      {
+        ...PENDING,
+        verify_commands: [{ command: "go test ./...", expected_outcome: "pass" }],
+      },
+    ]);
+
+    expect(screen.getByLabelText(/1 automated verify command/i)).toHaveTextContent(
+      "1 command",
+    );
+    expect(screen.getByText("Hello World is written inside the 123.md file")).toBeInTheDocument();
+  });
 });

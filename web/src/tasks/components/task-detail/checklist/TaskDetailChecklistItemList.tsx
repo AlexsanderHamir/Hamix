@@ -1,6 +1,7 @@
 import { useState } from "react";
 import type { TaskChecklistItemView } from "@/types";
 import { ChecklistStatusIcon } from "./ChecklistStatusIcon";
+import { ChecklistVerifyBadge } from "./ChecklistVerifyBadge";
 import { ChecklistVerificationModal } from "./ChecklistVerificationModal";
 
 type Props = {
@@ -40,11 +41,13 @@ export function TaskDetailChecklistItemList({
     <div className="task-checklist-surface">
       <ul className="task-checklist-list task-checklist-list--grouped">
         {items.map((item) => {
+          const verifyCommandCount = item.verify_commands?.length ?? 0;
           const hasVerificationDetail =
             item.done &&
             ((typeof item.evidence === "string" && item.evidence.length > 0) ||
               (typeof item.verifier_reasoning === "string" &&
                 item.verifier_reasoning.length > 0));
+          const showRowMeta = verifyCommandCount > 0 || hasVerificationDetail;
           return (
             <li
               key={item.id}
@@ -58,32 +61,29 @@ export function TaskDetailChecklistItemList({
               <ChecklistStatusIcon done={item.done} />
               <div className="task-checklist-text-block">
                 <span className="task-checklist-text">{item.text}</span>
-                {(item.verify_commands?.length ?? 0) > 0 ? (
-                  <span className="task-checklist-verify-badge">
-                    {item.verify_commands!.length} verify
-                    {item.verify_commands!.length === 1 ? "" : " cmds"}
-                  </span>
-                ) : null}
-                <div className="task-checklist-row-meta">
-                  {hasVerificationDetail ? (
-                    <button
-                      type="button"
-                      className="task-checklist-verification-trigger"
-                      onClick={() => setOpenVerificationId(item.id)}
-                      aria-label={`View verification details for: ${item.text}`}
-                    >
-                      <span className="task-checklist-verification-trigger-label">
-                        View verification
-                      </span>
-                      <span
-                        className="task-checklist-verification-trigger-arrow"
-                        aria-hidden="true"
+                {showRowMeta ? (
+                  <div className="task-checklist-row-meta">
+                    {hasVerificationDetail ? (
+                      <button
+                        type="button"
+                        className="task-checklist-verification-trigger"
+                        onClick={() => setOpenVerificationId(item.id)}
+                        aria-label={`View verification details for: ${item.text}`}
                       >
-                        &rarr;
-                      </span>
-                    </button>
-                  ) : null}
-                </div>
+                        <span className="task-checklist-verification-trigger-label">
+                          View verification
+                        </span>
+                        <span
+                          className="task-checklist-verification-trigger-arrow"
+                          aria-hidden="true"
+                        >
+                          &rarr;
+                        </span>
+                      </button>
+                    ) : null}
+                    <ChecklistVerifyBadge count={verifyCommandCount} />
+                  </div>
+                ) : null}
               </div>
             </div>
             <div className="task-checklist-row-actions">

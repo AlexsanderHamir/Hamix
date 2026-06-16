@@ -1,5 +1,6 @@
 import { FieldRequirementBadge } from "@/shared/FieldLabel";
 import type { ChecklistItemDraft } from "@/types";
+import { ChecklistVerifyBadge } from "@/tasks/components/task-detail/checklist/ChecklistVerifyBadge";
 import { CREATE_CHECKLIST_REQUIRED_MSG } from "@/tasks/task-compose/checklistRequirement";
 
 type Props = {
@@ -65,13 +66,14 @@ export function TaskComposeChecklistFields({
               return (
                 <li key={`${index}-${item.text}`} className="task-checklist-row">
                   <div className="task-checklist-row-main">
-                    <span className="task-checklist-text">{item.text}</span>
-                    {commandCount > 0 ? (
-                      <span className="task-checklist-verify-badge">
-                        {commandCount} verify
-                        {commandCount === 1 ? "" : " cmds"}
-                      </span>
-                    ) : null}
+                    <div className="task-checklist-text-block">
+                      <span className="task-checklist-text">{item.text}</span>
+                      {commandCount > 0 ? (
+                        <div className="task-checklist-row-meta">
+                          <ChecklistVerifyBadge count={commandCount} />
+                        </div>
+                      ) : null}
+                    </div>
                   </div>
                   <div className="task-checklist-row-actions">
                     <button

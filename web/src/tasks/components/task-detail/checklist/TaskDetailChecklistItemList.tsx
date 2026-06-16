@@ -63,13 +63,6 @@ export function TaskDetailChecklistItemList({
                     ? "task-checklist-row task-checklist-row--pending task-checklist-row--interactive"
                     : "task-checklist-row task-checklist-row--pending"
               }
-              title={
-                item.done
-                  ? "Already marked done — cannot edit a satisfied criterion."
-                  : canEditRow
-                    ? item.text
-                    : undefined
-              }
               onClick={(event) => {
                 if (!canEditRow) return;
                 if ((event.target as HTMLElement).closest("button")) return;
@@ -82,7 +75,9 @@ export function TaskDetailChecklistItemList({
             >
             <div className="task-checklist-row-primary">
               <ChecklistStatusIcon done={item.done} />
-              <span className="task-checklist-text">{item.text}</span>
+              <span className="task-checklist-text" title={item.text}>
+                {item.text}
+              </span>
               <div className="task-checklist-row-trailing">
                 {verifyCommandCount > 0 ? (
                   <ChecklistVerifyBadge count={verifyCommandCount} />

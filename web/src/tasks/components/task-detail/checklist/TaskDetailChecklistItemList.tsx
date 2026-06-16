@@ -59,9 +59,9 @@ export function TaskDetailChecklistItemList({
               <div className="task-checklist-text-block">
                 <span className="task-checklist-text">{item.text}</span>
                 {(item.verify_commands?.length ?? 0) > 0 ? (
-                  <span className="cell-pill task-checklist-verify-badge">
-                    {item.verify_commands!.length} verify cmd
-                    {item.verify_commands!.length === 1 ? "" : "s"}
+                  <span className="task-checklist-verify-badge">
+                    {item.verify_commands!.length} verify
+                    {item.verify_commands!.length === 1 ? "" : " cmds"}
                   </span>
                 ) : null}
                 <div className="task-checklist-row-meta">

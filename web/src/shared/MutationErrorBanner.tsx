@@ -64,7 +64,7 @@ type Props = {
  * Why a single component instead of leaving the `<div className="err"
  * role="alert">` JSX inline at every call site:
  *   - Six call sites (ChecklistCriterionModal, SubtaskCreateModal,
- *     TaskCreateModal x2, DeleteConfirmDialog, TaskEditForm) had drifted
+ *     TaskCreateModal create + edit, DeleteConfirmDialog) had drifted
  *     into two different inner-shape patterns (`<p>{message}</p>` vs.
  *     bare text) — unifying here gives every alert the same DOM shape
  *     and lets the canonical `.err > p { margin: 0 }` rule own the

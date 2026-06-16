@@ -9,7 +9,7 @@ const TERMINAL_STATUSES: ReadonlySet<Status> = new Set(["done", "failed"]);
 
 /**
  * Read-only pickup schedule line on the task detail toolbar. Mutations
- * live in the edit-task form (`TaskEditForm` + `SchedulePicker`).
+ * live in the edit-task modal (`TaskCreateModal` edit mode + `SchedulePicker`).
  */
 export function TaskDetailSchedule({ task }: Props) {
   const tz = useAppTimezone();

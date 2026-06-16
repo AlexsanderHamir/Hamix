@@ -336,6 +336,7 @@ export function useTasksApp({ sseLive, dataEnabled = true }: UseTasksAppOptions)
     openEdit,
     closeEdit,
     submitEdit,
+    editFormError: editTitleRequiredError,
     deleteTarget,
     requestDelete,
     cancelDelete,

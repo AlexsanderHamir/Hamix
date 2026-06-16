@@ -3,7 +3,6 @@ import { Link, Route, Routes, useLocation } from "react-router-dom";
 import {
   DeleteConfirmDialog,
   TaskChangeModelModal,
-  TaskEditForm,
   TaskDraftsPage,
   TaskCreateModalsLayer,
   TaskHome,
@@ -11,12 +10,6 @@ import {
 } from "@/tasks";
 import { useTaskEventStream } from "@/tasks/hooks/useTaskEventStream";
 import { useStickyShellElevation } from "@/lib/useStickyShellElevation";
-import {
-  ProjectContextPicker,
-  ProjectSelect,
-  useProjectContextPromptBinding,
-  useProjects,
-} from "@/projects";
 
 // Route-level code splitting. Each lazy() call becomes its own chunk
 // so the initial bundle covers only the home/drafts paths a freshly
@@ -75,22 +68,6 @@ import "./App.css";
 
 function AppShell({ app }: { app: ReturnType<typeof useTasksApp> }) {
   const location = useLocation();
-  // The shell-level project list is consumed only by the edit modal's
-  // ProjectSelect. Until the user opens that modal there is no need to
-  // hit the network here — TaskHome and the project pages own their
-  // own copies for their own surfaces. The bootstrap aggregate seeds
-  // this cache key on cold start, so when the edit modal opens the
-  // first render hits warm data even before the lazy fetch returns.
-  const projects = useProjects({
-    includeArchived: false,
-    limit: 100,
-    enabled: app.editing !== null,
-  });
-  const editPromptProjectContext = useProjectContextPromptBinding({
-    projectId: app.editing ? app.editProjectID : "",
-    selectedIds: app.editProjectContextItemIDs,
-    onSelectedIdsChange: app.setEditProjectContextItemIDs,
-  });
   const homeIsCurrent = location.pathname === "/";
   const draftsIsCurrent = location.pathname.startsWith("/drafts");
   const projectsIsCurrent = location.pathname.startsWith("/projects");
@@ -211,59 +188,6 @@ function AppShell({ app }: { app: ReturnType<typeof useTasksApp> }) {
               error={app.deleteError}
               onCancel={app.cancelDelete}
               onConfirm={() => void app.confirmDelete()}
-            />
-          ) : null}
-
-          {app.editing ? (
-            <TaskEditForm
-              taskId={app.editing.id}
-              title={app.editTitle}
-              prompt={app.editPrompt}
-              priority={app.editPriority}
-              status={app.editStatus}
-              taskRunner={app.editing.runner}
-              cursorModel={app.editCursorModel}
-              onCursorModelChange={app.setEditCursorModel}
-              projectAssignment={
-                <section
-                  className="task-create-project"
-                  aria-label="Project assignment"
-                >
-                  <ProjectSelect
-                    id="task-edit-project"
-                    value={app.editProjectID}
-                    projects={projects.data?.projects ?? []}
-                    loading={projects.isLoading}
-                    disabled={app.saving}
-                    onChange={(projectId) => {
-                      app.setEditProjectID(projectId);
-                      app.setEditProjectContextItemIDs([]);
-                    }}
-                  />
-                  <ProjectContextPicker
-                    projectId={app.editProjectID}
-                    selectedIds={app.editProjectContextItemIDs}
-                    disabled={app.saving}
-                    onChange={app.setEditProjectContextItemIDs}
-                  />
-                </section>
-              }
-              promptProjectContext={editPromptProjectContext ?? undefined}
-              tagsCsv={app.editTagsCsv}
-              milestone={app.editMilestone}
-              pickupSchedule={app.editPickupSchedule}
-              onPickupScheduleChange={app.setEditPickupSchedule}
-              onTagsCsvChange={app.setEditTagsCsv}
-              onMilestoneChange={app.setEditMilestone}
-              saving={app.saving}
-              patchPending={app.patchPending}
-              error={app.patchError}
-              onTitleChange={app.setEditTitle}
-              onPromptChange={app.setEditPrompt}
-              onPriorityChange={app.setEditPriority}
-              onStatusChange={app.setEditStatus}
-              onSubmit={(e) => void app.submitEdit(e)}
-              onCancel={app.closeEdit}
             />
           ) : null}
 

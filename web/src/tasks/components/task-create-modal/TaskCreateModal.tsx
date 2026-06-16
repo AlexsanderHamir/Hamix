@@ -1,5 +1,5 @@
 import { useRef, useState, type FormEvent, type ReactNode } from "react";
-import type { ChecklistItemDraft, PriorityChoice } from "@/types";
+import type { ChecklistItemDraft, PriorityChoice, Status } from "@/types";
 import type { RichPromptEditorProjectContextProps } from "../rich-prompt";
 import type { TestScenario } from "@/tasks/test-scenarios";
 import { Modal } from "../../../shared/Modal";
@@ -7,10 +7,13 @@ import { MutationErrorBanner } from "../../../shared/MutationErrorBanner";
 import { TaskCreateModalPrimaryFields } from "./fields/TaskCreateModalPrimaryFields";
 import { taskCreateModalBusyLabel } from "./taskCreateModalBusyLabel";
 import { TaskCreateModalFooterActions } from "./fields/TaskCreateModalFooterActions";
+import { TaskCreateModalEditFooterActions } from "./fields/TaskCreateModalEditFooterActions";
 import { TaskCreateModalAgentSection } from "./fields/TaskCreateModalAgentSection";
 import { TaskCreateModalAutonomyToggle } from "./fields/TaskCreateModalAutonomyToggle";
 import { TaskCreateModalSchedulingFields } from "./fields/TaskCreateModalSchedulingFields";
 import { TaskCreateModalSection } from "./fields/TaskCreateModalSection";
+import { TaskCreateModalStatusField } from "./fields/TaskCreateModalStatusField";
+import { TaskCreateModalPickupScheduleField } from "./fields/TaskCreateModalPickupScheduleField";
 import { SchedulePicker } from "@/shared/time/SchedulePicker";
 import {
   TaskCreateModalEvaluationSummary,
@@ -20,7 +23,23 @@ import { TestScenariosTrigger } from "./TestScenariosTrigger";
 import { TestScenariosPopover } from "./TestScenariosPopover";
 import { advancedSummaryLine } from "./advancedSummaryLine";
 
+// Stable no-op props for edit mode where depends-on is not surfaced.
+const EMPTY_DEPENDS_ON: string[] = [];
+const noopOnDependsOnChange = (): void => {};
+
 type Props = {
+  /** When `"edit"`, renders the same sheet as create with task-loaded data. */
+  mode?: "create" | "edit";
+  /** Required in edit mode — shown under the dialog title. */
+  taskId?: string;
+  /** Required in edit mode. */
+  status?: Status;
+  onStatusChange?: (status: Status) => void;
+  /** Edit-mode PATCH in flight (maps to modal `busy`). */
+  patchPending?: boolean;
+  patchError?: string | null;
+  /** Client-side validation (e.g. missing title) in edit mode. */
+  formError?: string | null;
   pending: boolean;
   saving: boolean;
   draftSaving: boolean;
@@ -68,6 +87,13 @@ type Props = {
 };
 
 export function TaskCreateModal({
+  mode = "create",
+  taskId,
+  status,
+  onStatusChange,
+  patchPending = false,
+  patchError = null,
+  formError = null,
   pending,
   saving,
   draftSaving,
@@ -113,7 +139,12 @@ export function TaskCreateModal({
   evaluateError = null,
   onApplyTestScenario,
 }: Props) {
+  const isEdit = mode === "edit";
   const disabled = pending || saving;
+  const modalBusy = isEdit ? patchPending : pending;
+  const modalTitle = isEdit ? "Edit task" : "New task";
+  const modalTitleId = isEdit ? "task-edit-modal-title" : "task-create-modal-title";
+  const modalDescribedBy = isEdit ? "task-edit-modal-description" : undefined;
 
   const [scenariosOpen, setScenariosOpen] = useState(false);
   const scenariosTriggerRef = useRef<HTMLButtonElement>(null);
@@ -126,26 +157,28 @@ export function TaskCreateModal({
 
   const busyLabel = taskCreateModalBusyLabel();
 
+  const essentialsLede = isEdit
+    ? "Title, urgency, and the initial prompt the agent receives."
+    : "What to do, how urgent it is, and how success is judged.";
+
   return (
     <>
       <Modal
         onClose={onClose}
-        labelledBy="task-create-modal-title"
+        labelledBy={modalTitleId}
+        describedBy={modalDescribedBy}
         size="wide"
-        busy={pending}
-        busyLabel={busyLabel}
+        busy={modalBusy}
+        busyLabel={isEdit ? undefined : busyLabel}
         dismissibleWhileBusy
       >
         <section className="panel modal-sheet modal-sheet--edit task-create-modal-sheet task-create">
           <header className="task-create-modal-header">
             <div className="task-create-modal-header__top">
-              <h2
-                id="task-create-modal-title"
-                className="task-create-modal-title"
-              >
-                New task
+              <h2 id={modalTitleId} className="task-create-modal-title">
+                {modalTitle}
               </h2>
-              {onApplyTestScenario ? (
+              {!isEdit && onApplyTestScenario ? (
                 <TestScenariosTrigger
                   ref={scenariosTriggerRef}
                   open={scenariosOpen}
@@ -154,7 +187,15 @@ export function TaskCreateModal({
                 />
               ) : null}
             </div>
-            {draftSaveLabel ? (
+            {isEdit && taskId ? (
+              <p
+                className="muted stack-tight-zero task-create-modal-task-id"
+                id="task-edit-modal-description"
+              >
+                <code>{taskId}</code>
+              </p>
+            ) : null}
+            {!isEdit && draftSaveLabel ? (
               <p
                 className={[
                   "task-create-draft-status",
@@ -177,9 +218,11 @@ export function TaskCreateModal({
               <TaskCreateModalSection
                 variant="essentials"
                 title="Essentials"
-                lede="What to do, how urgent it is, and how success is judged."
+                lede={essentialsLede}
               >
                 <TaskCreateModalPrimaryFields
+                  idsPrefix={isEdit ? "task-edit" : "task-new"}
+                  editorKey={isEdit ? taskId ?? "edit-prompt-modal" : "create-prompt-modal"}
                   disabled={disabled}
                   title={title}
                   onTitleChange={onTitleChange}
@@ -187,8 +230,8 @@ export function TaskCreateModal({
                   onPriorityChange={onPriorityChange}
                   prompt={prompt}
                   checklistItems={checklistItems}
-                  hideComposeChecklist={false}
-                  checklistRequirement="required"
+                  hideComposeChecklist={isEdit}
+                  checklistRequirement={isEdit ? "optional" : "required"}
                   onPromptChange={onPromptChange}
                   onAppendChecklistCriterion={onAppendChecklistCriterion}
                   onUpdateChecklistRow={onUpdateChecklistRow}
@@ -207,7 +250,7 @@ export function TaskCreateModal({
                 </TaskCreateModalSection>
               ) : null}
 
-              {automationAssignment ? (
+              {automationAssignment && !isEdit ? (
                 <TaskCreateModalSection
                   variant="context"
                   title="Behaviors"
@@ -220,13 +263,27 @@ export function TaskCreateModal({
               <TaskCreateModalSection
                 variant="execution"
                 title="Execution"
-                lede="Whether the agent may pick this up and how it runs."
+                lede={
+                  isEdit
+                    ? "Task status, agent runtime, and pickup scheduling."
+                    : "Whether the agent may pick this up and how it runs."
+                }
               >
-                <TaskCreateModalAutonomyToggle
-                  enabled={autonomyEnabled}
-                  disabled={disabled}
-                  onChange={onAutonomyChange}
-                />
+                {isEdit && status != null && onStatusChange ? (
+                  <TaskCreateModalStatusField
+                    status={status}
+                    disabled={disabled}
+                    onChange={onStatusChange}
+                  />
+                ) : null}
+
+                {!isEdit ? (
+                  <TaskCreateModalAutonomyToggle
+                    enabled={autonomyEnabled}
+                    disabled={disabled}
+                    onChange={onAutonomyChange}
+                  />
+                ) : null}
 
                 <details className="task-create-advanced">
                   <summary
@@ -247,78 +304,120 @@ export function TaskCreateModal({
                         schedule,
                         tagsCsv,
                         milestone,
-                        dependsOn,
+                        dependsOn: isEdit ? EMPTY_DEPENDS_ON : dependsOn,
                       })}
                     </span>
                   </summary>
                   <div className="task-create-advanced__body">
                     <TaskCreateModalAgentSection
                       disabled={disabled}
-                      variant="createModal"
+                      variant={isEdit ? "default" : "createModal"}
+                      lockRunner={isEdit}
                       runner={taskRunner}
                       cursorModel={taskCursorModel}
-                      onRunnerChange={onTaskRunnerChange}
+                      onRunnerChange={isEdit ? () => {} : onTaskRunnerChange}
                       onCursorModelChange={onTaskCursorModelChange}
                     />
 
-                    <SchedulePicker
-                      value={schedule}
-                      onChange={onScheduleChange}
-                      appTimezone={appTimezone}
-                      disabled={disabled}
-                      idPrefix="task-create-modal"
-                    />
+                    {isEdit ? (
+                      <TaskCreateModalPickupScheduleField
+                        status={status ?? "ready"}
+                        value={schedule}
+                        onChange={onScheduleChange}
+                        appTimezone={appTimezone}
+                        disabled={disabled}
+                        idPrefix="task-edit-modal"
+                      />
+                    ) : (
+                      <SchedulePicker
+                        value={schedule}
+                        onChange={onScheduleChange}
+                        appTimezone={appTimezone}
+                        disabled={disabled}
+                        idPrefix="task-create-modal"
+                      />
+                    )}
 
                     <TaskCreateModalSchedulingFields
                       disabled={disabled}
                       tagsCsv={tagsCsv}
                       milestone={milestone}
                       projectId={projectId}
-                      dependsOn={dependsOn}
+                      dependsOn={isEdit ? EMPTY_DEPENDS_ON : dependsOn}
+                      showDependsOn={!isEdit}
                       onTagsCsvChange={onTagsCsvChange}
                       onMilestoneChange={onMilestoneChange}
-                      onDependsOnChange={onDependsOnChange}
+                      onDependsOnChange={
+                        isEdit ? noopOnDependsOnChange : onDependsOnChange
+                      }
                     />
                   </div>
                 </details>
               </TaskCreateModalSection>
             </div>
 
-            <TaskCreateModalEvaluationSummary evaluation={evaluation} />
+            {!isEdit ? (
+              <TaskCreateModalEvaluationSummary evaluation={evaluation} />
+            ) : null}
 
-            <MutationErrorBanner
-              error={evaluateError}
-              fallback="Could not evaluate draft."
-              className="task-create-modal-err task-create-modal-err--evaluate"
-            />
+            {!isEdit ? (
+              <MutationErrorBanner
+                error={evaluateError}
+                fallback="Could not evaluate draft."
+                className="task-create-modal-err task-create-modal-err--evaluate"
+              />
+            ) : null}
 
-            <MutationErrorBanner
-              error={createFormError}
-              className="task-create-modal-err task-create-modal-err--create"
-            />
+            {!isEdit ? (
+              <>
+                <MutationErrorBanner
+                  error={createFormError}
+                  className="task-create-modal-err task-create-modal-err--create"
+                />
 
-            <MutationErrorBanner
-              error={createError}
-              fallback="Could not create task."
-              className="task-create-modal-err task-create-modal-err--create"
-            />
+                <MutationErrorBanner
+                  error={createError}
+                  fallback="Could not create task."
+                  className="task-create-modal-err task-create-modal-err--create"
+                />
+              </>
+            ) : (
+              <>
+                <MutationErrorBanner
+                  error={formError}
+                  className="task-create-modal-err task-create-modal-err--edit"
+                />
+                <MutationErrorBanner
+                  error={patchError}
+                  className="task-edit-form-err task-create-modal-err task-create-modal-err--edit"
+                />
+              </>
+            )}
 
-            <TaskCreateModalFooterActions
-              disabled={disabled}
-              draftSaving={draftSaving}
-              title={title}
-              priority={priority}
-              checklistItems={checklistItems}
-              evaluatePending={evaluatePending}
-              onClose={onClose}
-              onSaveDraft={onSaveDraft}
-              onEvaluate={onEvaluate}
-            />
+            {isEdit ? (
+              <TaskCreateModalEditFooterActions
+                disabled={disabled}
+                saveDisabled={!title.trim()}
+                onClose={onClose}
+              />
+            ) : (
+              <TaskCreateModalFooterActions
+                disabled={disabled}
+                draftSaving={draftSaving}
+                title={title}
+                priority={priority}
+                checklistItems={checklistItems}
+                evaluatePending={evaluatePending}
+                onClose={onClose}
+                onSaveDraft={onSaveDraft}
+                onEvaluate={onEvaluate}
+              />
+            )}
           </form>
         </section>
       </Modal>
 
-      {scenariosOpen && onApplyTestScenario ? (
+      {scenariosOpen && onApplyTestScenario && !isEdit ? (
         <TestScenariosPopover
           anchor={scenariosTriggerRef.current}
           onPick={handleScenarioPicked}

@@ -4,7 +4,6 @@ export * from "./checklist/TaskDetailChecklistItemList";
 export * from "./checklist/TaskDetailChecklistSection";
 export * from "./layout/TaskDetailHeader";
 export * from "./prompt/TaskDetailPromptSection";
-export * from "./edit/TaskEditForm";
 export * from "./edit/TaskChangeModelModal";
 export * from "./edit/TaskModelConfigModal";
 export * from "./schedule/TaskDetailSchedule";

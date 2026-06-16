@@ -396,4 +396,93 @@ describe("TaskCreateModal", () => {
       screen.queryByTestId("test-scenarios-popover"),
     ).not.toBeInTheDocument();
   });
+
+  describe("edit mode", () => {
+    function renderEditModal(
+      props?: Partial<ComponentProps<typeof TaskCreateModal>>,
+    ) {
+      return renderModal({
+        mode: "edit",
+        taskId: "task-123",
+        status: "ready",
+        onStatusChange: vi.fn(),
+        patchPending: false,
+        patchError: null,
+        formError: null,
+        title: "Existing title",
+        prompt: "Existing prompt",
+        priority: "medium",
+        checklistItems: [],
+        onSubmit: vi.fn(),
+        ...props,
+      });
+    }
+
+    it("renders the edit dialog with the task id and current title", () => {
+      renderEditModal();
+      expect(
+        screen.getByRole("dialog", { name: /edit task/i }),
+      ).toBeInTheDocument();
+      expect(screen.getByText("task-123")).toBeInTheDocument();
+      expect(screen.getByDisplayValue(/existing title/i)).toBeInTheDocument();
+    });
+
+    it("calls onClose on Escape while the patch is pending (dismissibleWhileBusy)", async () => {
+      const user = userEvent.setup();
+      const onClose = vi.fn();
+      renderEditModal({ patchPending: true, saving: true, onClose });
+      await user.keyboard("{Escape}");
+      expect(onClose).toHaveBeenCalledTimes(1);
+    });
+
+    it("still renders the busy spinner overlay while pending", () => {
+      renderEditModal({ patchPending: true, saving: true });
+      expect(screen.getByRole("status")).toBeInTheDocument();
+    });
+
+    it("does not render an alert region when patchError and formError are null", () => {
+      renderEditModal();
+      expect(screen.queryByRole("alert")).not.toBeInTheDocument();
+    });
+
+    it("renders the underlying patch error message when patchError is set", () => {
+      renderEditModal({ patchError: "title cannot be empty" });
+      const alert = screen.getByRole("alert");
+      expect(alert).toHaveTextContent(/title cannot be empty/i);
+    });
+
+    it("keeps action buttons enabled when an error is showing so the user can retry", () => {
+      renderEditModal({ patchError: "boom" });
+      expect(
+        screen.getByRole("button", { name: /^save$/i }),
+      ).not.toBeDisabled();
+      expect(
+        screen.getByRole("button", { name: /^cancel$/i }),
+      ).not.toBeDisabled();
+    });
+
+    it("shows SchedulePicker for ready tasks inside More options", async () => {
+      const user = userEvent.setup();
+      renderEditModal({ status: "ready", schedule: null });
+      await expandMoreOptions(user);
+      expect(screen.getByTestId("schedule-picker-input")).toBeInTheDocument();
+    });
+
+    it("shows read-only pickup copy for running tasks inside More options", async () => {
+      const user = userEvent.setup();
+      renderEditModal({
+        status: "running",
+        schedule: "2026-04-22T13:00:00Z",
+      });
+      await expandMoreOptions(user);
+      expect(
+        screen.queryByTestId("schedule-picker-input"),
+      ).not.toBeInTheDocument();
+      expect(
+        screen.getByText(
+          /pickup time cannot be changed while the task is running/i,
+        ),
+      ).toBeInTheDocument();
+    });
+  });
 });

@@ -3,6 +3,8 @@ import type { RichPromptEditorProjectContextProps } from "../../rich-prompt";
 import { TaskComposeFields } from "../../task-compose";
 
 type Props = {
+  idsPrefix?: string;
+  editorKey?: string;
   disabled: boolean;
   title: string;
   onTitleChange: (value: string) => void;
@@ -21,6 +23,8 @@ type Props = {
 };
 
 export function TaskCreateModalPrimaryFields({
+  idsPrefix = "task-new",
+  editorKey = "create-prompt-modal",
   disabled,
   title,
   onTitleChange,
@@ -38,8 +42,8 @@ export function TaskCreateModalPrimaryFields({
 }: Props) {
   return (
     <TaskComposeFields
-      idsPrefix="task-new"
-      editorKey="create-prompt-modal"
+      idsPrefix={idsPrefix}
+      editorKey={editorKey}
       title={title}
       prompt={prompt}
       priority={priority}

@@ -1142,4 +1142,40 @@ describe("parseTaskDraftDetail (payload.priority validation)", () => {
       }),
     ).toThrow(/known task priority/);
   });
+
+  it("parses checklist_items objects with verify_commands", () => {
+    const out = parseTaskDraftDetail({
+      ...baseDraft,
+      payload: {
+        ...baseDraft.payload,
+        checklist_items: [
+          {
+            text: "Ship with tests",
+            verify_commands: [
+              { command: "go test ./...", expected_outcome: "exit 0" },
+            ],
+          },
+        ],
+      },
+    });
+    expect(out.payload.checklist_items).toEqual([
+      {
+        text: "Ship with tests",
+        verify_commands: [
+          { command: "go test ./...", expected_outcome: "exit 0" },
+        ],
+      },
+    ]);
+  });
+
+  it("accepts legacy string checklist_items entries", () => {
+    const out = parseTaskDraftDetail({
+      ...baseDraft,
+      payload: {
+        ...baseDraft.payload,
+        checklist_items: ["Legacy criterion"],
+      },
+    });
+    expect(out.payload.checklist_items).toEqual([{ text: "Legacy criterion" }]);
+  });
 });

@@ -1,9 +1,11 @@
 import {
   type DraftTaskEvaluation,
+  type TaskDraftChecklistItem,
   type TaskDraftDetail,
   type TaskDraftPayload,
   type TaskDraftSummary,
 } from "@/types";
+import { parseChecklistVerifyCommand } from "./parseTaskApiTasks";
 import {
   isRecord,
   parseFiniteNumber,
@@ -65,6 +67,33 @@ export function parseDraftTaskEvaluation(value: unknown): DraftTaskEvaluation {
   };
 }
 
+function parseDraftChecklistItem(
+  value: unknown,
+  path: string,
+): TaskDraftChecklistItem {
+  if (typeof value === "string") {
+    return { text: parseString(value, path) };
+  }
+  if (!isRecord(value)) {
+    throw new Error(`Invalid API response: ${path} must be string or object`);
+  }
+  let verify_commands: TaskDraftChecklistItem["verify_commands"];
+  if (value.verify_commands !== undefined && value.verify_commands !== null) {
+    if (!Array.isArray(value.verify_commands)) {
+      throw new Error(`Invalid API response: ${path}.verify_commands must be an array`);
+    }
+    verify_commands = value.verify_commands.map((cmd, j) =>
+      parseChecklistVerifyCommand(cmd, `${path}.verify_commands[${j}]`),
+    );
+  }
+  return {
+    text: parseString(value.text, `${path}.text`),
+    ...(verify_commands !== undefined && verify_commands.length > 0
+      ? { verify_commands }
+      : {}),
+  };
+}
+
 function parseDraftPayload(value: unknown): TaskDraftPayload {
   if (!isRecord(value)) throw new Error("Invalid API response: payload must be object");
   const checklistRaw = value.checklist_items;
@@ -75,7 +104,9 @@ function parseDraftPayload(value: unknown): TaskDraftPayload {
     title: parseString(value.title, "payload.title"),
     initial_prompt: parseString(value.initial_prompt, "payload.initial_prompt"),
     priority: parsePriorityChoice(value.priority),
-    checklist_items: checklistRaw.map((s, i) => parseString(s, `payload.checklist_items[${i}]`)),
+    checklist_items: checklistRaw.map((row, i) =>
+      parseDraftChecklistItem(row, `payload.checklist_items[${i}]`),
+    ),
     ...(isRecord(value.latest_evaluation)
       ? {
           latest_evaluation: {

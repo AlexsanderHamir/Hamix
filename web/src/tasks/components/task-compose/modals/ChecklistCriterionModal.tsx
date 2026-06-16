@@ -73,6 +73,13 @@ export function ChecklistCriterionModal({
     onVerifyCommandsChange([...verifyCommands, emptyVerifyCommandRow()]);
   };
 
+  const ensureVerifySectionReady = (open: boolean) => {
+    setVerifySectionOpen(open);
+    if (open && verifyCommands.length === 0) {
+      onVerifyCommandsChange([emptyVerifyCommandRow()]);
+    }
+  };
+
   const removeCommandRow = (index: number) => {
     onVerifyCommandsChange(verifyCommands.filter((_, i) => i !== index));
   };
@@ -129,7 +136,9 @@ export function ChecklistCriterionModal({
             className="task-create-advanced task-checklist-verify-commands"
             open={verifySectionOpen}
             onToggle={(e) =>
-              setVerifySectionOpen((e.currentTarget as HTMLDetailsElement).open)
+              ensureVerifySectionReady(
+                (e.currentTarget as HTMLDetailsElement).open,
+              )
             }
           >
             <summary
@@ -149,69 +158,106 @@ export function ChecklistCriterionModal({
             </summary>
             <div className="task-checklist-verify-commands__body">
               <p className="task-checklist-verify-commands__note">
-                Shell checks run in the repo during verify. Output is saved for
-                the verifier — exit code alone does not pass the criterion.
+                Shell commands run in the repo during the verify phase. The
+                verify agent interprets stdout/stderr against each expected
+                outcome — exit code alone does not pass the criterion.
               </p>
               {verifyCommands.length > 0 ? (
                 <div
-                  className="task-checklist-verify-commands__list"
-                  role="list"
+                  className="task-checklist-verify-commands__table"
+                  role="table"
+                  aria-label="Verify commands"
                 >
+                  <div
+                    className="task-checklist-verify-commands__row task-checklist-verify-commands__row--head"
+                    role="row"
+                  >
+                    <span
+                      className="task-checklist-verify-commands__cell task-checklist-verify-commands__cell--command"
+                      role="columnheader"
+                    >
+                      Shell command
+                    </span>
+                    <span
+                      className="task-checklist-verify-commands__cell task-checklist-verify-commands__cell--outcome"
+                      role="columnheader"
+                    >
+                      Expected outcome
+                    </span>
+                    <span
+                      className="task-checklist-verify-commands__cell task-checklist-verify-commands__cell--action visually-hidden"
+                      role="columnheader"
+                    >
+                      Remove
+                    </span>
+                  </div>
                   {verifyCommands.map((row, index) => (
                     <div
                       key={index}
-                      className="task-checklist-verify-command-card"
-                      role="listitem"
+                      className="task-checklist-verify-commands__row"
+                      role="row"
                     >
-                      <div className="task-checklist-verify-command-card__head">
-                        <span className="task-checklist-verify-command-card__index">
-                          Command {index + 1}
-                        </span>
+                      <div
+                        className="task-checklist-verify-commands__cell task-checklist-verify-commands__cell--command"
+                        role="cell"
+                      >
+                        <label
+                          htmlFor={`checklist-verify-cmd-${index}`}
+                          className="visually-hidden"
+                        >
+                          Shell command {index + 1}
+                        </label>
+                        <input
+                          id={`checklist-verify-cmd-${index}`}
+                          className="task-checklist-verify-command-input"
+                          value={row.command}
+                          onChange={(ev) =>
+                            updateCommand(index, {
+                              command: ev.target.value,
+                            })
+                          }
+                          placeholder="go test ./pkgs/foo/..."
+                          disabled={disabled}
+                          spellCheck={false}
+                          autoComplete="off"
+                        />
+                      </div>
+                      <div
+                        className="task-checklist-verify-commands__cell task-checklist-verify-commands__cell--outcome"
+                        role="cell"
+                      >
+                        <label
+                          htmlFor={`checklist-verify-outcome-${index}`}
+                          className="visually-hidden"
+                        >
+                          Expected outcome for command {index + 1}
+                        </label>
+                        <input
+                          id={`checklist-verify-outcome-${index}`}
+                          className="task-checklist-verify-command-outcome-input"
+                          value={row.expected_outcome ?? ""}
+                          onChange={(ev) =>
+                            updateCommand(index, {
+                              expected_outcome: ev.target.value,
+                            })
+                          }
+                          placeholder="All tests pass"
+                          disabled={disabled}
+                        />
+                      </div>
+                      <div
+                        className="task-checklist-verify-commands__cell task-checklist-verify-commands__cell--action"
+                        role="cell"
+                      >
                         <button
                           type="button"
                           className="task-checklist-verify-command-card__remove"
                           disabled={disabled}
+                          aria-label={`Remove command ${index + 1}`}
                           onClick={() => removeCommandRow(index)}
                         >
                           Remove
                         </button>
-                      </div>
-                      <div className="task-checklist-verify-command-card__fields">
-                        <div className="field">
-                          <FieldLabel htmlFor={`checklist-verify-cmd-${index}`}>
-                            Shell command
-                          </FieldLabel>
-                          <input
-                            id={`checklist-verify-cmd-${index}`}
-                            className="task-checklist-verify-command-input"
-                            value={row.command}
-                            onChange={(ev) =>
-                              updateCommand(index, { command: ev.target.value })
-                            }
-                            placeholder="go test ./pkgs/foo/..."
-                            disabled={disabled}
-                            spellCheck={false}
-                            autoComplete="off"
-                          />
-                        </div>
-                        <div className="field">
-                          <FieldLabel
-                            htmlFor={`checklist-verify-outcome-${index}`}
-                          >
-                            Expected outcome
-                          </FieldLabel>
-                          <input
-                            id={`checklist-verify-outcome-${index}`}
-                            value={row.expected_outcome ?? ""}
-                            onChange={(ev) =>
-                              updateCommand(index, {
-                                expected_outcome: ev.target.value,
-                              })
-                            }
-                            placeholder="All tests pass"
-                            disabled={disabled}
-                          />
-                        </div>
                       </div>
                     </div>
                   ))}

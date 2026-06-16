@@ -254,7 +254,7 @@ describe("useTaskCreateFlow", () => {
     );
   });
 
-  it("applyTestScenario fills title / prompt / priority / task type / checklist with zero typing", async () => {
+  it("applyTestScenario fills title / prompt / priority / criteria with zero typing", async () => {
     const { Wrapper } = makeWrapper();
     const { result } = renderHook(() => useTaskCreateFlow(), {
       wrapper: Wrapper,
@@ -270,7 +270,7 @@ describe("useTaskCreateFlow", () => {
 
     const scenarios = await import("../test-scenarios");
     const scenario = scenarios.TEST_SCENARIOS.find(
-      (s) => s.checklist.length > 0,
+      (s) => s.criteria.length > 0,
     );
     expect(scenario).toBeDefined();
     if (!scenario) throw new Error("expected at least one scenario");
@@ -282,7 +282,12 @@ describe("useTaskCreateFlow", () => {
     expect(result.current.newTitle).toBe(scenario.title);
     expect(result.current.newPriority).toBe(scenario.priority);
     expect(result.current.newChecklistItems).toEqual(
-      scenario.checklist.map((text) => ({ text })),
+      scenario.criteria.map((item) => ({
+        text: item.text,
+        ...(item.verify_commands?.length
+          ? { verify_commands: item.verify_commands }
+          : {}),
+      })),
     );
     // Prompt is wrapped in <p> blocks by plainTextToInitialHtml; assert the
     // first paragraph contains the scenario's first line so we know the
@@ -327,6 +332,53 @@ describe("useTaskCreateFlow", () => {
     expect(result.current.newProjectContextItemIDs).toEqual([
       "ctx-r1",
       "ctx-r2",
+    ]);
+  });
+
+  it("restores verify commands when resuming a draft", async () => {
+    const draft: TaskDraftDetail = {
+      id: "draft-verify-cmds",
+      name: "Untitled",
+      created_at: "2026-04-29T00:00:00Z",
+      updated_at: "2026-04-29T00:00:00Z",
+      payload: {
+        title: "Resumed",
+        initial_prompt: "<p>Body</p>",
+        priority: "high",
+        runner: "cursor",
+        cursor_model: "",
+        checklist_items: [
+          {
+            text: "Ship with tests",
+            verify_commands: [
+              { command: "go test ./...", expected_outcome: "exit 0" },
+            ],
+          },
+        ],
+      },
+    };
+    mockedGetDraft.mockResolvedValue(draft);
+
+    const { Wrapper } = makeWrapper();
+    const { result } = renderHook(() => useTaskCreateFlow(), {
+      wrapper: Wrapper,
+    });
+
+    await waitFor(() => {
+      expect(result.current.draftListLoading).toBe(false);
+    });
+
+    await act(async () => {
+      await result.current.resumeDraftByID("draft-verify-cmds");
+    });
+
+    expect(result.current.newChecklistItems).toEqual([
+      {
+        text: "Ship with tests",
+        verify_commands: [
+          { command: "go test ./...", expected_outcome: "exit 0" },
+        ],
+      },
     ]);
   });
 

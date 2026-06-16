@@ -29,8 +29,9 @@ import {
   CREATE_CHECKLIST_REQUIRED_MSG,
   nonEmptyChecklistCount,
   normalizeChecklistItems,
+  normalizeVerifyCommands,
 } from "../task-compose/checklistRequirement";
-import type { ChecklistItemDraft } from "@/types";
+import type { ChecklistItemDraft, TaskDraftChecklistItem } from "@/types";
 
 const DRAFT_AUTOSAVE_DEBOUNCE_MS = TASK_TIMINGS.draftAutosaveDebounceMs;
 
@@ -358,10 +359,7 @@ export function useTaskCreateFlow() {
         initial_prompt: input.initial_prompt,
         status: input.status,
         priority: input.priority,
-        checklist_items: input.checklistItems
-          .map((item) => item.text.trim())
-          .filter(Boolean)
-          .map((text) => ({ text })),
+        checklist_items: normalizeChecklistItems(input.checklistItems),
       });
     },
     onSuccess: (evaluation, variables) => {
@@ -400,7 +398,7 @@ export function useTaskCreateFlow() {
         cursor_model: string;
         project_id: string;
         project_context_item_ids: string[];
-        checklist_items: string[];
+        checklist_items: TaskDraftChecklistItem[];
         latest_evaluation?: {
           overall_score: number;
           overall_summary: string;
@@ -516,7 +514,7 @@ export function useTaskCreateFlow() {
         projectId: newProjectID,
         projectContextItemIds: newProjectContextItemIDs,
         automationSelections: newAutomationSelections,
-        checklistItems: newChecklistItems.map((item) => item.text),
+        checklistItems: normalizeChecklistItems(newChecklistItems),
         latestEvaluation: latestDraftEvaluation,
         runner: newTaskRunner,
         cursorModel: newTaskCursorModel,
@@ -552,7 +550,7 @@ export function useTaskCreateFlow() {
         project_id: newProjectID,
         project_context_item_ids: newProjectContextItemIDs,
         automation_selections: newAutomationSelections,
-        checklist_items: newChecklistItems.map((item) => item.text),
+        checklist_items: normalizeChecklistItems(newChecklistItems),
         ...(latestDraftEvaluation
           ? {
               latest_evaluation: {
@@ -754,7 +752,12 @@ export function useTaskCreateFlow() {
     setNewPrompt(draft.payload.initial_prompt ?? "");
     setNewPriority(draft.payload.priority ?? "");
     setNewChecklistItems(
-      (draft.payload.checklist_items ?? []).map((text) => ({ text })),
+      (draft.payload.checklist_items ?? []).map((item) => ({
+        text: item.text,
+        ...(item.verify_commands?.length
+          ? { verify_commands: item.verify_commands }
+          : {}),
+      })),
     );
     setLatestDraftEvaluation(latestEvaluation);
     // Project + selected context items are optional on legacy drafts; fall
@@ -814,7 +817,7 @@ export function useTaskCreateFlow() {
   /**
    * Apply a `TestScenario` from `web/src/tasks/test-scenarios` to the open
    * create-modal form. Overwrites title / prompt / priority /
-   * checklist with the scenario's pre-canned content so the operator can
+   * done criteria with the scenario's pre-canned content so the operator can
    * dispatch a real agent run with zero typing — the whole point of the
    * test-scenarios affordance.
    *
@@ -830,10 +833,19 @@ export function useTaskCreateFlow() {
       setNewPrompt(plainTextToInitialHtml(scenario.prompt));
       setNewPriority(scenario.priority);
       setNewChecklistItems(
-        scenario.checklist
-          .map((item) => item.trim())
-          .filter((item) => item.length > 0)
-          .map((text) => ({ text })),
+        scenario.criteria
+          .map((item) => {
+            const text = item.text.trim();
+            if (!text) return null;
+            const verify_commands = normalizeVerifyCommands(
+              item.verify_commands ?? [],
+            );
+            return {
+              text,
+              ...(verify_commands.length > 0 ? { verify_commands } : {}),
+            };
+          })
+          .filter((item): item is ChecklistItemDraft => item !== null),
       );
     },
     [],

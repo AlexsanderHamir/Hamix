@@ -27,14 +27,17 @@ describe("TEST_SCENARIOS catalog", () => {
     }
   });
 
-  it("every scenario has non-empty title, description, prompt, and at least one checklist item", () => {
+  it("every scenario has non-empty title, description, prompt, and at least one criterion", () => {
     for (const scenario of TEST_SCENARIOS) {
       expect(scenario.title.trim()).not.toBe("");
       expect(scenario.description.trim()).not.toBe("");
       expect(scenario.prompt.trim()).not.toBe("");
-      expect(scenario.checklist.length).toBeGreaterThan(0);
-      for (const item of scenario.checklist) {
-        expect(item.trim()).not.toBe("");
+      expect(scenario.criteria.length).toBeGreaterThan(0);
+      for (const item of scenario.criteria) {
+        expect(item.text.trim()).not.toBe("");
+        for (const cmd of item.verify_commands ?? []) {
+          expect(cmd.command.trim()).not.toBe("");
+        }
       }
     }
   });

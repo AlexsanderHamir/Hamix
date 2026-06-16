@@ -1,4 +1,5 @@
 import { render, screen } from "@testing-library/react";
+import userEvent from "@testing-library/user-event";
 import { describe, expect, it, vi } from "vitest";
 import { ModalStackProvider } from "@/shared/ModalStackContext";
 import { ChecklistCriterionModal } from "./ChecklistCriterionModal";
@@ -75,5 +76,21 @@ describe("ChecklistCriterionModal error display", () => {
       screen.getByRole("button", { name: /add criterion/i }),
     ).not.toBeDisabled();
     expect(screen.getByRole("button", { name: /cancel/i })).not.toBeDisabled();
+  });
+});
+
+describe("ChecklistCriterionModal verify commands", () => {
+  it("does not add a row when focus moves from command to outcome in the same row", async () => {
+    const user = userEvent.setup();
+    const onVerifyCommandsChange = vi.fn();
+    renderModal({
+      verifyCommands: [{ command: "go test ./...", expected_outcome: "" }],
+      onVerifyCommandsChange,
+    });
+
+    await user.click(screen.getByLabelText(/shell command 1/i));
+    await user.click(screen.getByLabelText(/expected outcome for command 1/i));
+
+    expect(onVerifyCommandsChange).not.toHaveBeenCalled();
   });
 });

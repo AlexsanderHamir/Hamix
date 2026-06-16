@@ -1,4 +1,4 @@
-import type { Priority } from "@/types";
+import type { ChecklistVerifyCommandInput, Priority } from "@/types";
 
 /**
  * Difficulty buckets ordered by expected agent effort. Used to group
@@ -48,6 +48,33 @@ export const TEST_SCENARIO_DIFFICULTY_HINT: Record<
   expert: "≈ 2+ hours — architecture-shifting refactor or new instrumentation.",
 };
 
+/** One done criterion pre-filled when a scenario is applied to the create form. */
+export type TestScenarioCriterion = {
+  text: string;
+  verify_commands?: ChecklistVerifyCommandInput[];
+};
+
+/** Shell check that a path exists relative to the repository root. */
+function fileExistsCmd(
+  path: string,
+  expectedOutcome: string,
+): ChecklistVerifyCommandInput {
+  return {
+    command: `test -f ${JSON.stringify(path)}`,
+    expected_outcome: expectedOutcome,
+  };
+}
+
+/**
+ * Runs the dominant test entrypoint for the detected stack. Intentionally
+ * agnostic so the same scenario works across Go, Node, Rust, and Python repos.
+ */
+const RUN_PROJECT_TESTS: ChecklistVerifyCommandInput = {
+  command:
+    "sh -c 'if [ -f go.mod ]; then go test ./... -count=1; elif [ -f package.json ]; then npm test -- --run; elif [ -f Cargo.toml ]; then cargo test; elif [ -f pyproject.toml ]; then python -m pytest -q; else exit 1; fi'",
+  expected_outcome: "Exit code 0.",
+};
+
 /**
  * One ready-to-run test scenario. Picking it auto-fills every form field in
  * the create-task modal so the operator can dispatch a real agent run with
@@ -74,8 +101,8 @@ export type TestScenario = {
   prompt: string;
   /** Default priority for the auto-fill — almost always "medium". */
   priority: Priority;
-  /** Done criteria written into the form's checklist on apply. */
-  checklist: string[];
+  /** Done criteria written into the form on apply (text + optional verify commands). */
+  criteria: TestScenarioCriterion[];
 };
 
 /**
@@ -103,10 +130,20 @@ export const TEST_SCENARIOS: TestScenario[] = [
       "Save the summary as a markdown file at the repository root named CODEBASE_TOUR.md. Do not modify any other files.",
     ].join("\n\n"),
     priority: "medium",
-    checklist: [
-      "CODEBASE_TOUR.md exists at the repository root with the summary.",
-      "No other files were modified.",
-      "The summary names the primary language, runtime, and main entry point.",
+    criteria: [
+      {
+        text: "CODEBASE_TOUR.md exists at the repository root with the summary.",
+        verify_commands: [
+          fileExistsCmd(
+            "CODEBASE_TOUR.md",
+            "CODEBASE_TOUR.md exists at the repository root.",
+          ),
+        ],
+      },
+      { text: "No other files were modified." },
+      {
+        text: "The summary names the primary language, runtime, and main entry point.",
+      },
     ],
   },
   {
@@ -121,10 +158,18 @@ export const TEST_SCENARIOS: TestScenario[] = [
       "Save the report at the repository root as TODO_REPORT.md. Do not modify any source files.",
     ].join("\n\n"),
     priority: "low",
-    checklist: [
-      "TODO_REPORT.md exists at the repository root.",
-      "Vendored / generated code is excluded.",
-      "Each entry has a file path, a line number, and a summary.",
+    criteria: [
+      {
+        text: "TODO_REPORT.md exists at the repository root.",
+        verify_commands: [
+          fileExistsCmd(
+            "TODO_REPORT.md",
+            "TODO_REPORT.md exists at the repository root.",
+          ),
+        ],
+      },
+      { text: "Vendored / generated code is excluded." },
+      { text: "Each entry has a file path, a line number, and a summary." },
     ],
   },
 
@@ -141,11 +186,14 @@ export const TEST_SCENARIOS: TestScenario[] = [
       "Do not change any function bodies or signatures. Match the docstring/comment style already used elsewhere in the codebase. If the language has no convention, use the most idiomatic form (e.g. JSDoc for TypeScript, godoc comments for Go, docstrings for Python).",
     ].join("\n\n"),
     priority: "medium",
-    checklist: [
-      "The chosen file is named in the task report.",
-      "Every previously undocumented public symbol now has a doc comment.",
-      "No function body or signature was modified.",
-      "Existing tests still pass.",
+    criteria: [
+      { text: "The chosen file is named in the task report." },
+      { text: "Every previously undocumented public symbol now has a doc comment." },
+      { text: "No function body or signature was modified." },
+      {
+        text: "Existing tests still pass.",
+        verify_commands: [RUN_PROJECT_TESTS],
+      },
     ],
   },
   {
@@ -161,10 +209,14 @@ export const TEST_SCENARIOS: TestScenario[] = [
       "Do not duplicate sections that already exist; merge intelligently if a similar section is already present.",
     ].join("\n\n"),
     priority: "medium",
-    checklist: [
-      "README has a `Repository tour` section listing real top-level directories.",
-      "README has a `Quick start` section with verified install + run commands.",
-      "No pre-existing README content was deleted or contradicted.",
+    criteria: [
+      {
+        text: "README has a `Repository tour` section listing real top-level directories.",
+      },
+      {
+        text: "README has a `Quick start` section with verified install + run commands.",
+      },
+      { text: "No pre-existing README content was deleted or contradicted." },
     ],
   },
 
@@ -182,11 +234,18 @@ export const TEST_SCENARIOS: TestScenario[] = [
       "If the original function is covered by tests, run them and confirm they still pass. If not, add at least one test that exercises the happy path of the refactored function.",
     ].join("\n\n"),
     priority: "medium",
-    checklist: [
-      "The chosen function is named in the task report along with its original line count.",
-      "Helper functions are named descriptively and live in the same file.",
-      "The original function's signature and behavior are unchanged.",
-      "Pre-existing tests pass; if none existed, at least one new happy-path test was added.",
+    criteria: [
+      {
+        text: "The chosen function is named in the task report along with its original line count.",
+      },
+      {
+        text: "Helper functions are named descriptively and live in the same file.",
+      },
+      { text: "The original function's signature and behavior are unchanged." },
+      {
+        text: "Pre-existing tests pass; if none existed, at least one new happy-path test was added.",
+        verify_commands: [RUN_PROJECT_TESTS],
+      },
     ],
   },
   {
@@ -202,11 +261,16 @@ export const TEST_SCENARIOS: TestScenario[] = [
       "Document the new validation rules in the function's doc comment.",
     ].join("\n\n"),
     priority: "medium",
-    checklist: [
-      "The chosen entry point is named with a justification for why it was picked.",
-      "Each new validation branch has at least one test.",
-      "The function's doc comment lists the new validation rules.",
-      "The full test suite still passes.",
+    criteria: [
+      {
+        text: "The chosen entry point is named with a justification for why it was picked.",
+      },
+      { text: "Each new validation branch has at least one test." },
+      { text: "The function's doc comment lists the new validation rules." },
+      {
+        text: "The full test suite still passes.",
+        verify_commands: [RUN_PROJECT_TESTS],
+      },
     ],
   },
 
@@ -225,11 +289,11 @@ export const TEST_SCENARIOS: TestScenario[] = [
       "Document the new failure-handling contract in the function's doc comment or in the relevant operator-facing doc.",
     ].join("\n\n"),
     priority: "high",
-    checklist: [
-      "The chosen path is named with a one-paragraph justification.",
-      "Every newly handled failure branch has logging and a test.",
-      "No new silent error swallowing was introduced.",
-      "The doc comment / operator doc was updated to reflect the new contract.",
+    criteria: [
+      { text: "The chosen path is named with a one-paragraph justification." },
+      { text: "Every newly handled failure branch has logging and a test." },
+      { text: "No new silent error swallowing was introduced." },
+      { text: "The doc comment / operator doc was updated to reflect the new contract." },
     ],
   },
   {
@@ -246,11 +310,21 @@ export const TEST_SCENARIOS: TestScenario[] = [
       "Document the new instrumentation in the project's observability doc (or create OBSERVABILITY.md if none exists).",
     ].join("\n\n"),
     priority: "high",
-    checklist: [
-      "The chosen flow is named with a one-line justification.",
-      "Every meaningful state transition logs structured fields including the correlation ID.",
-      "A success / failure counter (or equivalent) exists and is documented.",
-      "Operator-facing observability documentation was updated or created.",
+    criteria: [
+      { text: "The chosen flow is named with a one-line justification." },
+      {
+        text: "Every meaningful state transition logs structured fields including the correlation ID.",
+      },
+      { text: "A success / failure counter (or equivalent) exists and is documented." },
+      {
+        text: "Operator-facing observability documentation was updated or created.",
+        verify_commands: [
+          fileExistsCmd(
+            "OBSERVABILITY.md",
+            "OBSERVABILITY.md exists or an existing observability doc was updated.",
+          ),
+        ],
+      },
     ],
   },
 
@@ -268,11 +342,18 @@ export const TEST_SCENARIOS: TestScenario[] = [
       "Document the new seam in the module's doc comment, including a one-line note on how to inject a fake in tests.",
     ].join("\n\n"),
     priority: "high",
-    checklist: [
-      "The chosen module is named with a one-paragraph justification of the coupling.",
-      "Production behavior is unchanged (no public signatures broken).",
-      "At least one happy-path and one error-path test exercise the new seam.",
-      "The module's doc comment describes how to inject a fake in tests.",
+    criteria: [
+      {
+        text: "The chosen module is named with a one-paragraph justification of the coupling.",
+      },
+      { text: "Production behavior is unchanged (no public signatures broken)." },
+      {
+        text: "At least one happy-path and one error-path test exercise the new seam.",
+        verify_commands: [RUN_PROJECT_TESTS],
+      },
+      {
+        text: "The module's doc comment describes how to inject a fake in tests.",
+      },
     ],
   },
   {
@@ -288,11 +369,18 @@ export const TEST_SCENARIOS: TestScenario[] = [
       "Update the API docs / endpoint documentation describing the new parameter or field, including the default value and a usage example.",
     ].join("\n\n"),
     priority: "high",
-    checklist: [
-      "The chosen API is named with a justification for the enhancement.",
-      "Existing callers' behavior is verified unchanged via a regression test.",
-      "The new feature has a happy-path test and at least one edge-case test.",
-      "API documentation lists the new parameter / field with a usage example.",
+    criteria: [
+      { text: "The chosen API is named with a justification for the enhancement." },
+      {
+        text: "Existing callers' behavior is verified unchanged via a regression test.",
+        verify_commands: [RUN_PROJECT_TESTS],
+      },
+      {
+        text: "The new feature has a happy-path test and at least one edge-case test.",
+      },
+      {
+        text: "API documentation lists the new parameter / field with a usage example.",
+      },
     ],
   },
 ];

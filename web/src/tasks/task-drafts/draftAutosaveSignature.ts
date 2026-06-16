@@ -1,4 +1,4 @@
-import type { PriorityChoice } from "@/types";
+import type { PriorityChoice, ChecklistVerifyCommandInput } from "@/types";
 import type { AutomationSelection } from "@/types";
 
 /**
@@ -40,7 +40,10 @@ export type DraftAutosaveSignatureInput = {
   projectContextItemIds: string[];
   /** Per-task automation yes/no selections. Omit rows are not stored. */
   automationSelections: AutomationSelection[];
-  checklistItems: string[];
+  checklistItems: Array<{
+    text: string;
+    verify_commands?: ChecklistVerifyCommandInput[];
+  }>;
   latestEvaluation: {
     overallScore: number;
     overallSummary: string;

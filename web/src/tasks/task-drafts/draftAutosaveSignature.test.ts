@@ -63,11 +63,28 @@ describe("draftAutosaveSignature", () => {
   it("changes when checklist items reorder", () => {
     const a = draftAutosaveSignature({
       ...baseInput(),
-      checklistItems: ["one", "two"],
+      checklistItems: [{ text: "one" }, { text: "two" }],
     });
     const b = draftAutosaveSignature({
       ...baseInput(),
-      checklistItems: ["two", "one"],
+      checklistItems: [{ text: "two" }, { text: "one" }],
+    });
+    expect(a).not.toBe(b);
+  });
+
+  it("changes when verify commands are added to a criterion", () => {
+    const a = draftAutosaveSignature({
+      ...baseInput(),
+      checklistItems: [{ text: "Ship with tests" }],
+    });
+    const b = draftAutosaveSignature({
+      ...baseInput(),
+      checklistItems: [
+        {
+          text: "Ship with tests",
+          verify_commands: [{ command: "go test ./...", expected_outcome: "pass" }],
+        },
+      ],
     });
     expect(a).not.toBe(b);
   });

@@ -357,7 +357,10 @@ export type DraftTaskEvaluationInput = {
   initial_prompt?: string;
   status?: Status;
   priority?: Priority;
-  checklist_items?: Array<{ text: string }>;
+  checklist_items?: Array<{
+    text: string;
+    verify_commands?: ChecklistVerifyCommandInput[];
+  }>;
 };
 
 export type DraftTaskEvaluationSection = {
@@ -379,6 +382,11 @@ export type DraftTaskEvaluation = {
   cohesion_suggestions: string[];
 };
 
+export type TaskDraftChecklistItem = {
+  text: string;
+  verify_commands?: ChecklistVerifyCommandInput[];
+};
+
 export type TaskDraftPayload = {
   title: string;
   initial_prompt: string;
@@ -386,7 +394,11 @@ export type TaskDraftPayload = {
   /** Omitted in older drafts; defaults from app settings when missing. */
   runner?: string;
   cursor_model?: string;
-  checklist_items: string[];
+  /**
+   * Legacy drafts store plain strings; newer drafts store objects with
+   * optional `verify_commands`. The parser normalizes both to objects.
+   */
+  checklist_items: TaskDraftChecklistItem[];
   /**
    * Optional in older drafts. When present, the draft restores the project
    * the operator was composing against on save. Empty string means "no

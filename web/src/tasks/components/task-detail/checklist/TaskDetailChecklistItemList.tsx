@@ -8,7 +8,11 @@ type Props = {
   editCriterionPending: boolean;
   removeItemPending: boolean;
   addCriterionPending: boolean;
-  onOpenEditCriterionModal: (itemId: string, text: string) => void;
+  onOpenEditCriterionModal: (
+    itemId: string,
+    text: string,
+    verifyCommands?: import("@/types").ChecklistVerifyCommandInput[],
+  ) => void;
   onRemoveChecklistItem: (itemId: string) => void;
 };
 
@@ -54,6 +58,12 @@ export function TaskDetailChecklistItemList({
               <ChecklistStatusIcon done={item.done} />
               <div className="task-checklist-text-block">
                 <span className="task-checklist-text">{item.text}</span>
+                {(item.verify_commands?.length ?? 0) > 0 ? (
+                  <span className="cell-pill task-checklist-verify-badge">
+                    {item.verify_commands!.length} verify cmd
+                    {item.verify_commands!.length === 1 ? "" : "s"}
+                  </span>
+                ) : null}
                 <div className="task-checklist-row-meta">
                   {hasVerificationDetail ? (
                     <button
@@ -104,7 +114,11 @@ export function TaskDetailChecklistItemList({
                       : undefined
                   }
                   onClick={() =>
-                    onOpenEditCriterionModal(item.id, item.text)
+                    onOpenEditCriterionModal(
+                      item.id,
+                      item.text,
+                      item.verify_commands,
+                    )
                   }
                 >
                   Edit

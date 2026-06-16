@@ -22,21 +22,22 @@ import (
 // ago" without a parser; nil-safe because the row always exists once
 // GET seeds defaults on first boot.
 type settingsResponse struct {
-	AgentPaused                bool   `json:"agent_paused"`
-	Runner                     string `json:"runner"`
-	RepoRoot                   string `json:"repo_root"`
-	CursorBin                  string `json:"cursor_bin"`
-	CursorModel                string `json:"cursor_model"`
-	MaxRunDurationSeconds      int    `json:"max_run_duration_seconds"`
-	AgentPickupDelaySeconds    int    `json:"agent_pickup_delay_seconds"`
-	DisplayTimezone            string `json:"display_timezone"`
-	OptimisticMutationsEnabled bool   `json:"optimistic_mutations_enabled"`
-	SSEReplayEnabled           bool   `json:"sse_replay_enabled"`
-	VerifyMaxRetries           int    `json:"verify_max_retries"`
-	VerifyRunnerName           string `json:"verify_runner_name"`
-	VerifyRunnerModel          string `json:"verify_runner_model"`
-	AgentCommitExecuteWork     bool   `json:"agent_commit_execute_work"`
-	UpdatedAt                  string `json:"updated_at,omitempty"`
+	AgentPaused                 bool   `json:"agent_paused"`
+	Runner                      string `json:"runner"`
+	RepoRoot                    string `json:"repo_root"`
+	CursorBin                   string `json:"cursor_bin"`
+	CursorModel                 string `json:"cursor_model"`
+	MaxRunDurationSeconds       int    `json:"max_run_duration_seconds"`
+	AgentPickupDelaySeconds     int    `json:"agent_pickup_delay_seconds"`
+	DisplayTimezone             string `json:"display_timezone"`
+	OptimisticMutationsEnabled  bool   `json:"optimistic_mutations_enabled"`
+	SSEReplayEnabled            bool   `json:"sse_replay_enabled"`
+	VerifyMaxRetries            int    `json:"verify_max_retries"`
+	VerifyRunnerName            string `json:"verify_runner_name"`
+	VerifyRunnerModel           string `json:"verify_runner_model"`
+	AgentCommitExecuteWork      bool   `json:"agent_commit_execute_work"`
+	VerifyCommandTimeoutSeconds int    `json:"verify_command_timeout_seconds"`
+	UpdatedAt                   string `json:"updated_at,omitempty"`
 }
 
 // settingsPatchBody is the JSON body accepted by PATCH /settings.
@@ -46,20 +47,21 @@ type settingsResponse struct {
 // store.SettingsPatch one-for-one so the handler can map fields
 // directly without any field-by-field adapter logic.
 type settingsPatchBody struct {
-	AgentPaused                *bool   `json:"agent_paused,omitempty"`
-	Runner                     *string `json:"runner,omitempty"`
-	RepoRoot                   *string `json:"repo_root,omitempty"`
-	CursorBin                  *string `json:"cursor_bin,omitempty"`
-	CursorModel                *string `json:"cursor_model,omitempty"`
-	MaxRunDurationSeconds      *int    `json:"max_run_duration_seconds,omitempty"`
-	AgentPickupDelaySeconds    *int    `json:"agent_pickup_delay_seconds,omitempty"`
-	DisplayTimezone            *string `json:"display_timezone,omitempty"`
-	OptimisticMutationsEnabled *bool   `json:"optimistic_mutations_enabled,omitempty"`
-	SSEReplayEnabled           *bool   `json:"sse_replay_enabled,omitempty"`
-	VerifyMaxRetries           *int    `json:"verify_max_retries,omitempty"`
-	VerifyRunnerName           *string `json:"verify_runner_name,omitempty"`
-	VerifyRunnerModel          *string `json:"verify_runner_model,omitempty"`
-	AgentCommitExecuteWork     *bool   `json:"agent_commit_execute_work,omitempty"`
+	AgentPaused                 *bool   `json:"agent_paused,omitempty"`
+	Runner                      *string `json:"runner,omitempty"`
+	RepoRoot                    *string `json:"repo_root,omitempty"`
+	CursorBin                   *string `json:"cursor_bin,omitempty"`
+	CursorModel                 *string `json:"cursor_model,omitempty"`
+	MaxRunDurationSeconds       *int    `json:"max_run_duration_seconds,omitempty"`
+	AgentPickupDelaySeconds     *int    `json:"agent_pickup_delay_seconds,omitempty"`
+	DisplayTimezone             *string `json:"display_timezone,omitempty"`
+	OptimisticMutationsEnabled  *bool   `json:"optimistic_mutations_enabled,omitempty"`
+	SSEReplayEnabled            *bool   `json:"sse_replay_enabled,omitempty"`
+	VerifyMaxRetries            *int    `json:"verify_max_retries,omitempty"`
+	VerifyRunnerName            *string `json:"verify_runner_name,omitempty"`
+	VerifyRunnerModel           *string `json:"verify_runner_model,omitempty"`
+	AgentCommitExecuteWork      *bool   `json:"agent_commit_execute_work,omitempty"`
+	VerifyCommandTimeoutSeconds *int    `json:"verify_command_timeout_seconds,omitempty"`
 }
 
 // probeRequest is the JSON body for POST /settings/probe-cursor. Both
@@ -147,18 +149,19 @@ func (h *Handler) patchSettings(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	patch := store.SettingsPatch{
-		AgentPaused:             body.AgentPaused,
-		Runner:                  body.Runner,
-		RepoRoot:                body.RepoRoot,
-		CursorBin:               body.CursorBin,
-		CursorModel:             body.CursorModel,
-		MaxRunDurationSeconds:   body.MaxRunDurationSeconds,
-		AgentPickupDelaySeconds: body.AgentPickupDelaySeconds,
-		DisplayTimezone:         body.DisplayTimezone,
-		VerifyMaxRetries:        body.VerifyMaxRetries,
-		VerifyRunnerName:        body.VerifyRunnerName,
-		VerifyRunnerModel:       body.VerifyRunnerModel,
-		AgentCommitExecuteWork:  body.AgentCommitExecuteWork,
+		AgentPaused:                 body.AgentPaused,
+		Runner:                      body.Runner,
+		RepoRoot:                    body.RepoRoot,
+		CursorBin:                   body.CursorBin,
+		CursorModel:                 body.CursorModel,
+		MaxRunDurationSeconds:       body.MaxRunDurationSeconds,
+		AgentPickupDelaySeconds:     body.AgentPickupDelaySeconds,
+		DisplayTimezone:             body.DisplayTimezone,
+		VerifyMaxRetries:            body.VerifyMaxRetries,
+		VerifyRunnerName:            body.VerifyRunnerName,
+		VerifyRunnerModel:           body.VerifyRunnerModel,
+		AgentCommitExecuteWork:      body.AgentCommitExecuteWork,
+		VerifyCommandTimeoutSeconds: body.VerifyCommandTimeoutSeconds,
 		// optimistic_mutations_enabled / sse_replay_enabled are not
 		// user-configurable; ignore if present in the JSON body.
 	}
@@ -316,20 +319,21 @@ func (h *Handler) cancelCurrentRun(w http.ResponseWriter, r *http.Request) {
 func settingsResponseFrom(cfg store.AppSettings) settingsResponse {
 	slog.Debug("trace", "cmd", calltrace.LogCmd, "operation", "handler.settingsResponseFrom")
 	resp := settingsResponse{
-		AgentPaused:                cfg.AgentPaused,
-		Runner:                     cfg.Runner,
-		RepoRoot:                   cfg.RepoRoot,
-		CursorBin:                  cfg.CursorBin,
-		CursorModel:                cfg.CursorModel,
-		MaxRunDurationSeconds:      cfg.MaxRunDurationSeconds,
-		AgentPickupDelaySeconds:    cfg.AgentPickupDelaySeconds,
-		DisplayTimezone:            cfg.DisplayTimezone,
-		OptimisticMutationsEnabled: cfg.OptimisticMutationsEnabled,
-		SSEReplayEnabled:           cfg.SSEReplayEnabled,
-		VerifyMaxRetries:           cfg.VerifyMaxRetries,
-		VerifyRunnerName:           cfg.VerifyRunnerName,
-		VerifyRunnerModel:          cfg.VerifyRunnerModel,
-		AgentCommitExecuteWork:     cfg.AgentCommitExecuteWork,
+		AgentPaused:                 cfg.AgentPaused,
+		Runner:                      cfg.Runner,
+		RepoRoot:                    cfg.RepoRoot,
+		CursorBin:                   cfg.CursorBin,
+		CursorModel:                 cfg.CursorModel,
+		MaxRunDurationSeconds:       cfg.MaxRunDurationSeconds,
+		AgentPickupDelaySeconds:     cfg.AgentPickupDelaySeconds,
+		DisplayTimezone:             cfg.DisplayTimezone,
+		OptimisticMutationsEnabled:  cfg.OptimisticMutationsEnabled,
+		SSEReplayEnabled:            cfg.SSEReplayEnabled,
+		VerifyMaxRetries:            cfg.VerifyMaxRetries,
+		VerifyRunnerName:            cfg.VerifyRunnerName,
+		VerifyRunnerModel:           cfg.VerifyRunnerModel,
+		AgentCommitExecuteWork:      cfg.AgentCommitExecuteWork,
+		VerifyCommandTimeoutSeconds: cfg.VerifyCommandTimeoutSeconds,
 	}
 	if !cfg.UpdatedAt.IsZero() {
 		resp.UpdatedAt = cfg.UpdatedAt.UTC().Format(time.RFC3339)

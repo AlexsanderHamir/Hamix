@@ -6,11 +6,18 @@ import (
 	"github.com/AlexsanderHamir/T2A/pkgs/tasks/domain"
 )
 
+// VerifyCommandInput is one optional shell check on a draft checklist line.
+type VerifyCommandInput struct {
+	Command         string `json:"command"`
+	ExpectedOutcome string `json:"expected_outcome,omitempty"`
+}
+
 // ChecklistItemInput is one acceptance-criteria line in the draft
 // snapshot fed to the rubric. Re-aliased by the public store facade
 // as store.EvaluateDraftChecklistItemInput.
 type ChecklistItemInput struct {
-	Text string `json:"text"`
+	Text           string               `json:"text"`
+	VerifyCommands []VerifyCommandInput `json:"verify_commands,omitempty"`
 }
 
 // DraftTaskInput is the read-only draft snapshot fed to the rubric.

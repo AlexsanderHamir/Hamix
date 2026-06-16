@@ -79,8 +79,10 @@ type AppSettings struct {
 	VerifyRunnerModel string `gorm:"not null;default:''"`
 	// AgentCommitExecuteWork instructs the execute agent to commit work
 	// with a cycle marker before finishing the phase (resume enabler).
-	AgentCommitExecuteWork bool      `gorm:"not null;default:true"`
-	UpdatedAt              time.Time `gorm:"not null"`
+	AgentCommitExecuteWork bool `gorm:"not null;default:true"`
+	// VerifyCommandTimeoutSeconds caps each optional criterion shell check during verify.
+	VerifyCommandTimeoutSeconds int       `gorm:"not null;default:120;check:chk_app_settings_verify_command_timeout_seconds,verify_command_timeout_seconds > 0"`
+	UpdatedAt                   time.Time `gorm:"not null"`
 }
 
 // AppSettingsRowID is the singleton primary key. Every read/write of
@@ -98,6 +100,9 @@ const DefaultAgentPickupDelaySeconds = 5
 
 // DefaultVerifyMaxRetries is the seed value for VerifyMaxRetries on first boot.
 const DefaultVerifyMaxRetries = 2
+
+// DefaultVerifyCommandTimeoutSeconds is the per-command wall-clock cap during verify.
+const DefaultVerifyCommandTimeoutSeconds = 120
 
 // DefaultDisplayTimezone is the seed value for DisplayTimezone on first
 // boot. Empty string is the "auto-detect" sentinel: the SPA reads it as
@@ -117,20 +122,21 @@ const DefaultDisplayTimezone = ""
 // store.GetAppSettings already logs the seed-on-first-read decision.
 func DefaultAppSettings() AppSettings {
 	return AppSettings{
-		ID:                         AppSettingsRowID,
-		AgentPaused:                false,
-		Runner:                     DefaultRunner,
-		RepoRoot:                   "",
-		CursorBin:                  "",
-		MaxRunDurationSeconds:      0,
-		AgentPickupDelaySeconds:    DefaultAgentPickupDelaySeconds,
-		DisplayTimezone:            DefaultDisplayTimezone,
-		OptimisticMutationsEnabled: true,
-		SSEReplayEnabled:           true,
-		VerifyMaxRetries:           DefaultVerifyMaxRetries,
-		VerifyRunnerName:           "",
-		VerifyRunnerModel:          "",
-		AgentCommitExecuteWork:     true,
+		ID:                          AppSettingsRowID,
+		AgentPaused:                 false,
+		Runner:                      DefaultRunner,
+		RepoRoot:                    "",
+		CursorBin:                   "",
+		MaxRunDurationSeconds:       0,
+		AgentPickupDelaySeconds:     DefaultAgentPickupDelaySeconds,
+		DisplayTimezone:             DefaultDisplayTimezone,
+		OptimisticMutationsEnabled:  true,
+		SSEReplayEnabled:            true,
+		VerifyMaxRetries:            DefaultVerifyMaxRetries,
+		VerifyRunnerName:            "",
+		VerifyRunnerModel:           "",
+		AgentCommitExecuteWork:      true,
+		VerifyCommandTimeoutSeconds: DefaultVerifyCommandTimeoutSeconds,
 	}
 }
 

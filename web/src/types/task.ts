@@ -313,6 +313,18 @@ export type TaskEventDetail = TaskEvent & {
   task_id: string;
 };
 
+/** Optional shell check attached to a done criterion. */
+export type ChecklistVerifyCommandInput = {
+  command: string;
+  expected_outcome?: string;
+};
+
+/** Draft criterion row in create/edit modals before persistence. */
+export type ChecklistItemDraft = {
+  text: string;
+  verify_commands?: ChecklistVerifyCommandInput[];
+};
+
 /** One checklist row from GET /tasks/{id}/checklist. */
 export type TaskChecklistItemView = {
   id: string;
@@ -323,6 +335,7 @@ export type TaskChecklistItemView = {
   verified_by?: string;
   verifier_reasoning?: string;
   cycle_id?: string;
+  verify_commands?: ChecklistVerifyCommandInput[];
 };
 
 export type TaskChecklistResponse = {

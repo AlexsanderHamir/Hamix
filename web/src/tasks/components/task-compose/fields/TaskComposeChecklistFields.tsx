@@ -1,14 +1,15 @@
 import { FieldRequirementBadge } from "@/shared/FieldLabel";
+import type { ChecklistItemDraft } from "@/types";
 import { CREATE_CHECKLIST_REQUIRED_MSG } from "@/tasks/task-compose/checklistRequirement";
 
 type Props = {
   checklistHeadingId: string;
-  checklistItems: string[];
+  checklistItems: ChecklistItemDraft[];
   /** When `required`, shows the required badge and create-time helper copy. */
   checklistRequirement?: "optional" | "required";
   disabled: boolean;
   onOpenNewCriterion: () => void;
-  onOpenEditCriterion: (index: number, text: string) => void;
+  onOpenEditCriterion: (index: number, item: ChecklistItemDraft) => void;
   onRemoveRow: (index: number) => void;
 };
 
@@ -48,17 +49,23 @@ export function TaskComposeChecklistFields({
             className="task-checklist-list task-checklist-list--grouped"
             aria-labelledby={checklistHeadingId}
           >
-            {checklistItems.map((text, index) => (
-              <li key={`${index}-${text}`} className="task-checklist-row">
+            {checklistItems.map((item, index) => (
+              <li key={`${index}-${item.text}`} className="task-checklist-row">
                 <div className="task-checklist-row-main">
-                  <span className="task-checklist-text">{text}</span>
+                  <span className="task-checklist-text">{item.text}</span>
+                  {(item.verify_commands?.length ?? 0) > 0 ? (
+                    <span className="cell-pill task-checklist-verify-badge">
+                      {item.verify_commands!.length} verify cmd
+                      {item.verify_commands!.length === 1 ? "" : "s"}
+                    </span>
+                  ) : null}
                 </div>
                 <div className="task-checklist-row-actions">
                   <button
                     type="button"
                     className="task-detail-checklist-edit"
                     disabled={disabled}
-                    onClick={() => onOpenEditCriterion(index, text)}
+                    onClick={() => onOpenEditCriterion(index, item)}
                   >
                     Edit
                   </button>

@@ -15,7 +15,7 @@ import (
 func seedCycleWithCriterion(t *testing.T, s *Store, ctx context.Context) (cycleID, criterionID string) {
 	t.Helper()
 	tsk := mustCreateTask(t, s, ctx)
-	it, err := s.AddChecklistItem(ctx, tsk.ID, "criterion", domain.ActorUser)
+	it, err := s.AddChecklistItem(ctx, tsk.ID, "criterion", nil, domain.ActorUser)
 	if err != nil {
 		t.Fatalf("add checklist item: %v", err)
 	}

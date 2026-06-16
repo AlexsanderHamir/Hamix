@@ -1,7 +1,12 @@
 import type { FormEvent } from "react";
+import type { ChecklistVerifyCommandInput } from "@/types";
 import { FieldLabel } from "@/shared/FieldLabel";
 import { Modal } from "../../../../shared/Modal";
 import { MutationErrorBanner } from "../../../../shared/MutationErrorBanner";
+import {
+  emptyVerifyCommandRow,
+  MAX_VERIFY_COMMANDS_PER_ITEM,
+} from "@/tasks/task-compose/checklistRequirement";
 
 type Props = {
   mode: "add" | "edit";
@@ -10,33 +15,12 @@ type Props = {
   onClose: () => void;
   text: string;
   onTextChange: (v: string) => void;
+  verifyCommands: ChecklistVerifyCommandInput[];
+  onVerifyCommandsChange: (cmds: ChecklistVerifyCommandInput[]) => void;
   onSubmit: (e: FormEvent) => void;
-  /** When opened above another dialog (e.g. new-task modal). */
   modalStack?: "default" | "nested";
   lockBodyScroll?: boolean;
-  /**
-   * Allow Escape / backdrop click to dismiss the modal even while the
-   * underlying mutation is `pending`. Caller is responsible for
-   * ensuring the mutation's settle handler is race-hardened against a
-   * stale resolution after dismiss (see
-   * `.agent/frontend-improvement-agent.log` Session 30 for the
-   * `useTaskDetailChecklist` add/edit flows). Default `false`
-   * preserves the legacy "busy locks close" contract for the
-   * `TaskComposeFields` caller, where the modal manages local state
-   * only and `pending` is permanently false anyway.
-   */
   dismissibleWhileBusy?: boolean;
-  /**
-   * Surfaces the underlying mutation's error inside the modal as a
-   * `.err role="alert"` callout above the action buttons. Pass
-   * `mutation.error` directly (typed as `Error | null` by react-query
-   * v5). When `null` (the happy / idle / pending path), no callout is
-   * rendered. The callout uses `errorMessage(error, fallback)` so the
-   * caller controls the fallback phrase per mode (e.g. "Could not add
-   * criterion." vs "Could not save changes."). Defaults to no
-   * callout for the `TaskComposeFields` caller, where the local-state
-   * editor has no async error path to surface.
-   */
   error?: unknown;
   errorFallback?: string;
 };
@@ -48,6 +32,8 @@ export function ChecklistCriterionModal({
   onClose,
   text,
   onTextChange,
+  verifyCommands,
+  onVerifyCommandsChange,
   onSubmit,
   modalStack = "default",
   lockBodyScroll = true,
@@ -62,6 +48,25 @@ export function ChecklistCriterionModal({
       : "checklist-criterion-edit-modal-title";
   const busyLabel =
     mode === "add" ? "Adding criterion…" : "Saving changes…";
+  const commandsOpen = verifyCommands.length > 0;
+
+  const updateCommand = (
+    index: number,
+    patch: Partial<ChecklistVerifyCommandInput>,
+  ) => {
+    onVerifyCommandsChange(
+      verifyCommands.map((row, i) => (i === index ? { ...row, ...patch } : row)),
+    );
+  };
+
+  const addCommandRow = () => {
+    if (verifyCommands.length >= MAX_VERIFY_COMMANDS_PER_ITEM) return;
+    onVerifyCommandsChange([...verifyCommands, emptyVerifyCommandRow()]);
+  };
+
+  const removeCommandRow = (index: number) => {
+    onVerifyCommandsChange(verifyCommands.filter((_, i) => i !== index));
+  };
 
   return (
     <Modal
@@ -84,11 +89,11 @@ export function ChecklistCriterionModal({
         >
           {mode === "add" ? (
             <>
-              Add one clear, testable requirement. You can open this again to
-              add more.
+              Add one clear, testable requirement. Optional shell checks run
+              during verify and feed the verifier as evidence.
             </>
           ) : (
-            <>Update the wording for this requirement.</>
+            <>Update the wording or verification commands for this requirement.</>
           )}
         </p>
         <form
@@ -113,6 +118,76 @@ export function ChecklistCriterionModal({
               aria-required="true"
             />
           </div>
+
+          <details
+            className="task-checklist-verify-commands"
+            open={commandsOpen}
+          >
+            <summary className="task-checklist-verify-commands-summary">
+              Verification commands (optional)
+            </summary>
+            <p className="muted task-checklist-verify-commands-lead">
+              The worker runs these in the repo during verify. Output is saved
+              to temp files for the verifier — exit code alone does not auto-pass.
+            </p>
+            {verifyCommands.length > 0 ? (
+              <ul className="task-checklist-verify-commands-list">
+                {verifyCommands.map((row, index) => (
+                  <li key={index} className="task-checklist-verify-command-row">
+                    <div className="field">
+                      <FieldLabel htmlFor={`checklist-verify-cmd-${index}`}>
+                        Command
+                      </FieldLabel>
+                      <input
+                        id={`checklist-verify-cmd-${index}`}
+                        value={row.command}
+                        onChange={(ev) =>
+                          updateCommand(index, { command: ev.target.value })
+                        }
+                        placeholder="e.g. go test ./..."
+                        disabled={disabled}
+                      />
+                    </div>
+                    <div className="field">
+                      <FieldLabel htmlFor={`checklist-verify-outcome-${index}`}>
+                        Expected outcome
+                      </FieldLabel>
+                      <input
+                        id={`checklist-verify-outcome-${index}`}
+                        value={row.expected_outcome ?? ""}
+                        onChange={(ev) =>
+                          updateCommand(index, {
+                            expected_outcome: ev.target.value,
+                          })
+                        }
+                        placeholder="e.g. all tests pass"
+                        disabled={disabled}
+                      />
+                    </div>
+                    <button
+                      type="button"
+                      className="secondary task-checklist-verify-command-remove"
+                      disabled={disabled}
+                      onClick={() => removeCommandRow(index)}
+                    >
+                      Remove command
+                    </button>
+                  </li>
+                ))}
+              </ul>
+            ) : null}
+            <button
+              type="button"
+              className="secondary task-checklist-verify-command-add"
+              disabled={
+                disabled || verifyCommands.length >= MAX_VERIFY_COMMANDS_PER_ITEM
+              }
+              onClick={addCommandRow}
+            >
+              Add command
+            </button>
+          </details>
+
           <MutationErrorBanner
             error={error}
             fallback={

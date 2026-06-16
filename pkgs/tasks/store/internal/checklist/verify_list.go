@@ -17,6 +17,7 @@ type VerifyItem struct {
 	Text           string
 	SourceTaskID   string
 	DefinitionTask string
+	VerifyCommands []VerifyCommandView
 }
 
 // ListForVerify returns all definition items for the subject task's
@@ -41,6 +42,14 @@ func ListForVerify(ctx context.Context, db *gorm.DB, taskID string) ([]VerifyIte
 		if err != nil {
 			return err
 		}
+		ids := make([]string, len(items))
+		for i := range items {
+			ids[i] = items[i].ID
+		}
+		cmdsByItem, err := commandsForItemsInTx(tx, ids)
+		if err != nil {
+			return err
+		}
 		out = make([]VerifyItem, 0, len(items))
 		for _, it := range items {
 			out = append(out, VerifyItem{
@@ -48,6 +57,7 @@ func ListForVerify(ctx context.Context, db *gorm.DB, taskID string) ([]VerifyIte
 				Text:           it.Text,
 				SourceTaskID:   taskID,
 				DefinitionTask: defID,
+				VerifyCommands: cmdsByItem[it.ID],
 			})
 		}
 		return nil

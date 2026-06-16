@@ -36,11 +36,12 @@ func (e *verifyTamperedError) Error() string {
 }
 
 type verificationSnapshot struct {
-	enabled      bool
-	maxRetries   int
-	criteria     []store.ChecklistVerifyItem
-	verifyRunner runner.Runner
-	verifyModel  string
+	enabled                     bool
+	maxRetries                  int
+	verifyCommandTimeoutSeconds int
+	criteria                    []store.ChecklistVerifyItem
+	verifyRunner                runner.Runner
+	verifyModel                 string
 }
 
 type criterionVerdict struct {
@@ -75,14 +76,19 @@ func (h *Harness) loadVerificationSnapshot(ctx context.Context, taskID string) (
 	if h.opts.VerifyRunner != nil {
 		verifyRunner = h.opts.VerifyRunner
 	}
+	timeoutSec := settings.VerifyCommandTimeoutSeconds
+	if timeoutSec <= 0 {
+		timeoutSec = domain.DefaultVerifyCommandTimeoutSeconds
+	}
 	snap := verificationSnapshot{
 		// Verify runs only when the task has at least one criterion.
 		// Zero criteria: skip verify; execute success alone completes the task.
-		enabled:      len(items) > 0,
-		maxRetries:   maxRetries,
-		criteria:     items,
-		verifyRunner: verifyRunner,
-		verifyModel:  strings.TrimSpace(settings.VerifyRunnerModel),
+		enabled:                     len(items) > 0,
+		maxRetries:                  maxRetries,
+		verifyCommandTimeoutSeconds: timeoutSec,
+		criteria:                    items,
+		verifyRunner:                verifyRunner,
+		verifyModel:                 strings.TrimSpace(settings.VerifyRunnerModel),
 	}
 	return snap, nil
 }
@@ -333,7 +339,11 @@ func (h *Harness) runVerifyChecks(
 	}
 
 	if needLLMVerify {
-		if err := h.runLLMVerifyAgent(parentCtx, task, cycle, phaseSeq, snap, previouslyPassed, selfReport, feedback); err != nil {
+		cmdEvidence, cmdErr := h.runCriterionCommands(parentCtx, cycle.ID, attemptSeq, snap, selfReport, nil)
+		if cmdErr != nil {
+			return nil, "", cmdErr
+		}
+		if err := h.runLLMVerifyAgent(parentCtx, task, cycle, phaseSeq, snap, previouslyPassed, selfReport, feedback, cmdEvidence); err != nil {
 			return nil, "", err
 		}
 		vrep, err := parseVerifyReport(h.opts.ReportDir, cycle.ID, expected)
@@ -413,6 +423,7 @@ func (h *Harness) runLLMVerifyAgent(
 	previouslyPassed map[string]criterionVerdict,
 	selfReport map[string]criteriaReportEntry,
 	feedback string,
+	cmdEvidence []commandEvidence,
 ) error {
 	slog.Debug("trace", "cmd", harnessLogCmd, "operation", "agent.harness.Harness.runLLMVerifyAgent",
 		"task_id", task.ID, "cycle_id", cycle.ID, "locked_passes", len(previouslyPassed))
@@ -444,6 +455,7 @@ func (h *Harness) runLLMVerifyAgent(
 		}
 		b.WriteString(fmt.Sprintf("- [%s] %s\n  execute claimed_done: true (assertion only)\n  execute evidence: %s\n", it.ID, it.Text, e.Evidence))
 	}
+	b.WriteString(formatCommandEvidenceSection(cmdEvidence))
 	b.WriteString("\nDiff:\n")
 	b.WriteString(diff)
 	prompt := b.String()

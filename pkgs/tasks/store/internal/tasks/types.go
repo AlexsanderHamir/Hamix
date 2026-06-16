@@ -4,6 +4,7 @@ import (
 	"time"
 
 	"github.com/AlexsanderHamir/T2A/pkgs/tasks/domain"
+	"github.com/AlexsanderHamir/T2A/pkgs/tasks/store/internal/checklist"
 )
 
 // CreateInput is the task creation payload. Re-aliased by the public
@@ -27,7 +28,7 @@ type CreateInput struct {
 	Milestone       *string
 	Gate            *domain.TaskGate
 	DependsOn       []domain.DependencyEdge
-	ChecklistItems  []string
+	ChecklistItems  []checklist.CreateChecklistItemInput
 }
 
 // PickupNotBeforePatch updates pickup_not_before when non-nil. Clear true means

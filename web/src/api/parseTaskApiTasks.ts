@@ -1,3 +1,4 @@
+import type { ChecklistVerifyCommandInput } from "@/types";
 import { errorMessage } from "@/lib/errorMessage";
 import {
   CYCLE_STATUSES,
@@ -413,6 +414,23 @@ export function parseTask(value: unknown): Task {
   return base;
 }
 
+/** Validates one verify_commands row on checklist API responses. */
+export function parseChecklistVerifyCommand(
+  value: unknown,
+  path: string,
+): ChecklistVerifyCommandInput {
+  if (!isRecord(value)) {
+    throw new Error(`Invalid API response: ${path} must be an object`);
+  }
+  return {
+    command: parseString(value.command, `${path}.command`),
+    expected_outcome:
+      typeof value.expected_outcome === "string"
+        ? value.expected_outcome
+        : undefined,
+  };
+}
+
 /** Validates GET /tasks/{id}/checklist JSON. */
 export function parseTaskChecklistResponse(value: unknown): TaskChecklistResponse {
   if (!isRecord(value)) {
@@ -425,6 +443,15 @@ export function parseTaskChecklistResponse(value: unknown): TaskChecklistRespons
   const items: TaskChecklistItemView[] = raw.map((row, i) => {
     if (!isRecord(row)) {
       throw new Error(`Invalid API response: items[${i}] must be an object`);
+    }
+    let verify_commands: TaskChecklistItemView["verify_commands"];
+    if (row.verify_commands !== undefined && row.verify_commands !== null) {
+      if (!Array.isArray(row.verify_commands)) {
+        throw new Error(`Invalid API response: items[${i}].verify_commands must be an array`);
+      }
+      verify_commands = row.verify_commands.map((cmd, j) =>
+        parseChecklistVerifyCommand(cmd, `items[${i}].verify_commands[${j}]`),
+      );
     }
     return {
       id: parseNonEmptyString(row.id, "id"),
@@ -439,6 +466,7 @@ export function parseTaskChecklistResponse(value: unknown): TaskChecklistRespons
           ? row.verifier_reasoning
           : undefined,
       cycle_id: typeof row.cycle_id === "string" ? row.cycle_id : undefined,
+      ...(verify_commands !== undefined ? { verify_commands } : {}),
     };
   });
   return { items };

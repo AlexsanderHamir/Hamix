@@ -55,6 +55,8 @@ const (
 	OpListCycleStreamEvents       = "list_cycle_stream_events"
 	OpUpsertCriteriaReports       = "upsert_criteria_reports"
 	OpUpsertVerifyReports         = "upsert_verify_reports"
+	OpUpsertCommandRuns           = "upsert_command_runs"
+	OpListCommandRunsForCycle     = "list_command_runs_for_cycle"
 	OpListCriteriaReportsForCycle = "list_criteria_reports_for_cycle"
 	OpListVerifyReportsForCycle   = "list_verify_reports_for_cycle"
 	OpGetAppSettings              = "get_app_settings"

@@ -265,17 +265,26 @@ func (h *Handler) getTaskCycleVerdicts(w http.ResponseWriter, r *http.Request) {
 		writeStoreError(w, r, op, err)
 		return
 	}
+	commandRows, err := h.store.ListCommandRunsForCycle(r.Context(), cycleID)
+	if err != nil {
+		writeStoreError(w, r, op, err)
+		return
+	}
 	resp := cycleVerdictsResponse{
 		TaskID:          taskID,
 		CycleID:         cycleID,
 		CriteriaReports: make([]cycleCriteriaReportEntry, 0, len(criteriaRows)),
 		VerifyReports:   make([]cycleVerifyReportEntry, 0, len(verifyRows)),
+		CommandRuns:     make([]cycleCommandRunEntry, 0, len(commandRows)),
 	}
 	for i := range criteriaRows {
 		resp.CriteriaReports = append(resp.CriteriaReports, cycleCriteriaReportFromDomain(&criteriaRows[i]))
 	}
 	for i := range verifyRows {
 		resp.VerifyReports = append(resp.VerifyReports, cycleVerifyReportFromDomain(&verifyRows[i]))
+	}
+	for i := range commandRows {
+		resp.CommandRuns = append(resp.CommandRuns, cycleCommandRunFromDomain(&commandRows[i]))
 	}
 	writeJSON(w, r, op, http.StatusOK, resp)
 }
@@ -639,6 +648,20 @@ func cycleVerifyReportFromDomain(r *domain.TaskCycleVerifyReport) cycleVerifyRep
 		VerifierKind: r.VerifierKind,
 		Reasoning:    r.Reasoning,
 		WrittenAt:    r.WrittenAt,
+	}
+}
+
+func cycleCommandRunFromDomain(r *domain.TaskCycleCommandRun) cycleCommandRunEntry {
+	slog.Debug("trace", "cmd", calltrace.LogCmd, "operation", "handler.cycleCommandRunFromDomain")
+	return cycleCommandRunEntry{
+		ID:          r.ID,
+		CycleID:     r.CycleID,
+		AttemptSeq:  r.AttemptSeq,
+		CriterionID: r.CriterionID,
+		CommandSeq:  r.CommandSeq,
+		ExitCode:    r.ExitCode,
+		MetaPath:    r.MetaPath,
+		WrittenAt:   r.WrittenAt,
 	}
 }
 

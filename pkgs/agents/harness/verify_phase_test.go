@@ -135,7 +135,7 @@ func TestWorker_VerifyPhase_opensWhileExecuteIsTerminal(t *testing.T) {
 		t.Fatalf("set verify max retries: %v", err)
 	}
 
-	if _, err := h.store.AddChecklistItem(ctx, tsk.ID, "criterion one", domain.ActorUser); err != nil {
+	if _, err := h.store.AddChecklistItem(ctx, tsk.ID, "criterion one", nil, domain.ActorUser); err != nil {
 		t.Fatalf("add checklist item: %v", err)
 	}
 
@@ -238,7 +238,7 @@ func TestWorker_VerifyPhase_usesSeparateRunnerWhenConfigured(t *testing.T) {
 	defer cancel()
 
 	tsk := h.createReadyTask(ctx, "verify-multi-runner")
-	item, err := h.store.AddChecklistItem(ctx, tsk.ID, "criterion one", domain.ActorUser)
+	item, err := h.store.AddChecklistItem(ctx, tsk.ID, "criterion one", nil, domain.ActorUser)
 	if err != nil {
 		t.Fatalf("add checklist item: %v", err)
 	}
@@ -307,7 +307,7 @@ func TestWorker_VerifyPhase_failsCycleWhenVerifyTampers(t *testing.T) {
 	defer cancel()
 
 	tsk := h.createReadyTask(ctx, "verify-tampers")
-	item, err := h.store.AddChecklistItem(ctx, tsk.ID, "criterion one", domain.ActorUser)
+	item, err := h.store.AddChecklistItem(ctx, tsk.ID, "criterion one", nil, domain.ActorUser)
 	if err != nil {
 		t.Fatalf("add checklist item: %v", err)
 	}
@@ -417,7 +417,7 @@ func TestWorker_VerifyPhase_persistsAndPublishesProgressEventsUnderVerifyPhaseSe
 	defer cancel()
 
 	tsk := h.createReadyTask(ctx, "verify-progress")
-	item, err := h.store.AddChecklistItem(ctx, tsk.ID, "criterion one", domain.ActorUser)
+	item, err := h.store.AddChecklistItem(ctx, tsk.ID, "criterion one", nil, domain.ActorUser)
 	if err != nil {
 		t.Fatalf("add checklist item: %v", err)
 	}
@@ -559,11 +559,11 @@ func TestWorker_VerifyPhase_carriesPassesAcrossRetries(t *testing.T) {
 	defer cancel()
 
 	tsk := h.createReadyTask(ctx, "verify-carry")
-	c1, err := h.store.AddChecklistItem(ctx, tsk.ID, "criterion one", domain.ActorUser)
+	c1, err := h.store.AddChecklistItem(ctx, tsk.ID, "criterion one", nil, domain.ActorUser)
 	if err != nil {
 		t.Fatalf("add c1: %v", err)
 	}
-	c2, err := h.store.AddChecklistItem(ctx, tsk.ID, "criterion two", domain.ActorUser)
+	c2, err := h.store.AddChecklistItem(ctx, tsk.ID, "criterion two", nil, domain.ActorUser)
 	if err != nil {
 		t.Fatalf("add c2: %v", err)
 	}
@@ -693,11 +693,11 @@ func TestWorker_VerifyPhase_finalFailureWritesNoCompletions(t *testing.T) {
 	defer cancel()
 
 	tsk := h.createReadyTask(ctx, "verify-no-completion")
-	c1, err := h.store.AddChecklistItem(ctx, tsk.ID, "criterion one", domain.ActorUser)
+	c1, err := h.store.AddChecklistItem(ctx, tsk.ID, "criterion one", nil, domain.ActorUser)
 	if err != nil {
 		t.Fatalf("add c1: %v", err)
 	}
-	c2, err := h.store.AddChecklistItem(ctx, tsk.ID, "criterion two", domain.ActorUser)
+	c2, err := h.store.AddChecklistItem(ctx, tsk.ID, "criterion two", nil, domain.ActorUser)
 	if err != nil {
 		t.Fatalf("add c2: %v", err)
 	}
@@ -781,7 +781,7 @@ func TestWorker_VerifyPhase_recordsDisagreementAsAgentSelfFailed(t *testing.T) {
 	defer cancel()
 
 	tsk := h.createReadyTask(ctx, "verify-disagreement")
-	c1, err := h.store.AddChecklistItem(ctx, tsk.ID, "criterion one", domain.ActorUser)
+	c1, err := h.store.AddChecklistItem(ctx, tsk.ID, "criterion one", nil, domain.ActorUser)
 	if err != nil {
 		t.Fatalf("add c1: %v", err)
 	}
@@ -859,11 +859,11 @@ func TestWorker_VerifyPhase_terminateReasonIncludesFailingIDs(t *testing.T) {
 	defer cancel()
 
 	tsk := h.createReadyTask(ctx, "verify-reason-ids")
-	c1, err := h.store.AddChecklistItem(ctx, tsk.ID, "criterion one", domain.ActorUser)
+	c1, err := h.store.AddChecklistItem(ctx, tsk.ID, "criterion one", nil, domain.ActorUser)
 	if err != nil {
 		t.Fatalf("add c1: %v", err)
 	}
-	c2, err := h.store.AddChecklistItem(ctx, tsk.ID, "criterion two", domain.ActorUser)
+	c2, err := h.store.AddChecklistItem(ctx, tsk.ID, "criterion two", nil, domain.ActorUser)
 	if err != nil {
 		t.Fatalf("add c2: %v", err)
 	}
@@ -961,7 +961,7 @@ func TestWorker_VerifyPhase_repoRootStaysCleanThroughoutCycle(t *testing.T) {
 	defer cancel()
 
 	tsk := h.createReadyTask(ctx, "verify-clean-repo")
-	item, err := h.store.AddChecklistItem(ctx, tsk.ID, "criterion one", domain.ActorUser)
+	item, err := h.store.AddChecklistItem(ctx, tsk.ID, "criterion one", nil, domain.ActorUser)
 	if err != nil {
 		t.Fatalf("add checklist item: %v", err)
 	}
@@ -1043,7 +1043,7 @@ func TestWorker_terminateCycle_cleansReportDir(t *testing.T) {
 	defer cancel()
 
 	tsk := h.createReadyTask(ctx, "verify-cleanup")
-	item, err := h.store.AddChecklistItem(ctx, tsk.ID, "criterion one", domain.ActorUser)
+	item, err := h.store.AddChecklistItem(ctx, tsk.ID, "criterion one", nil, domain.ActorUser)
 	if err != nil {
 		t.Fatalf("add checklist item: %v", err)
 	}
@@ -1111,7 +1111,7 @@ func TestWorker_VerifyPhase_repoRootMutationStillTampered(t *testing.T) {
 	defer cancel()
 
 	tsk := h.createReadyTask(ctx, "verify-no-allowlist")
-	item, err := h.store.AddChecklistItem(ctx, tsk.ID, "criterion one", domain.ActorUser)
+	item, err := h.store.AddChecklistItem(ctx, tsk.ID, "criterion one", nil, domain.ActorUser)
 	if err != nil {
 		t.Fatalf("add checklist item: %v", err)
 	}

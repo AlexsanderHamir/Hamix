@@ -144,6 +144,23 @@ type TaskChecklistItem struct {
 // reflection time, no decision logic to trace.
 func (TaskChecklistItem) TableName() string { return "task_checklist_items" }
 
+// TaskChecklistItemCommand is an optional shell check attached to a
+// checklist definition. The worker runs these during verify and writes
+// stdout/stderr to temp files under the cycle report dir; the LLM
+// verifier interprets the artifacts against ExpectedOutcome.
+type TaskChecklistItemCommand struct {
+	ID              string `json:"id" gorm:"primaryKey"`
+	ItemID          string `json:"item_id" gorm:"not null;index"`
+	SortOrder       int    `json:"sort_order" gorm:"not null"`
+	Command         string `json:"command" gorm:"not null;type:text"`
+	ExpectedOutcome string `json:"expected_outcome" gorm:"not null;default:'';type:text"`
+
+	Item *TaskChecklistItem `json:"-" gorm:"foreignKey:ItemID;references:ID;constraint:OnDelete:CASCADE"`
+}
+
+// TableName: see TaskChecklistItem.TableName for skip-list rationale.
+func (TaskChecklistItemCommand) TableName() string { return "task_checklist_item_commands" }
+
 // TaskChecklistCompletion records that subject TaskID satisfied checklist item ItemID.
 type TaskChecklistCompletion struct {
 	TaskID            string       `json:"task_id" gorm:"primaryKey"`
@@ -332,3 +349,23 @@ type TaskCycleVerifyReport struct {
 
 // TableName: see TaskChecklistItem.TableName for skip-list rationale.
 func (TaskCycleVerifyReport) TableName() string { return "task_cycle_verify_reports" }
+
+// TaskCycleCommandRun mirrors one verify-phase command execution for a
+// criterion attempt. Output bytes live in temp files referenced by
+// MetaPath; this row is the durable audit trail for the SPA timeline.
+type TaskCycleCommandRun struct {
+	ID          string    `gorm:"primaryKey"`
+	CycleID     string    `gorm:"not null;index;uniqueIndex:idx_cycle_command_run_unique,priority:1"`
+	AttemptSeq  int64     `gorm:"not null;check:chk_task_cycle_command_runs_attempt_seq,attempt_seq > 0;uniqueIndex:idx_cycle_command_run_unique,priority:2"`
+	CriterionID string    `gorm:"not null;index;uniqueIndex:idx_cycle_command_run_unique,priority:3"`
+	CommandSeq  int64     `gorm:"not null;check:chk_task_cycle_command_runs_command_seq,command_seq >= 0;uniqueIndex:idx_cycle_command_run_unique,priority:4"`
+	ExitCode    int       `gorm:"not null;default:-1"`
+	MetaPath    string    `gorm:"not null;default:'';type:text"`
+	WrittenAt   time.Time `gorm:"not null;index"`
+
+	Cycle     *TaskCycle         `gorm:"foreignKey:CycleID;references:ID;constraint:OnDelete:CASCADE"`
+	Criterion *TaskChecklistItem `gorm:"foreignKey:CriterionID;references:ID;constraint:OnDelete:NO ACTION"`
+}
+
+// TableName: see TaskChecklistItem.TableName for skip-list rationale.
+func (TaskCycleCommandRun) TableName() string { return "task_cycle_command_runs" }

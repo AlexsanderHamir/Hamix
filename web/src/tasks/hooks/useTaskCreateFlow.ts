@@ -29,6 +29,7 @@ import {
   nonEmptyChecklistCount,
   normalizeChecklistItems,
 } from "../task-compose/checklistRequirement";
+import type { ChecklistItemDraft } from "@/types";
 
 const DRAFT_AUTOSAVE_DEBOUNCE_MS = TASK_TIMINGS.draftAutosaveDebounceMs;
 
@@ -37,7 +38,7 @@ type CreateTaskMutationInput = {
   initial_prompt: string;
   status: Status;
   priority: Priority;
-  checklistItems: string[];
+  checklistItems: ChecklistItemDraft[];
   draft_id: string;
   runner: string;
   cursor_model: string;
@@ -101,7 +102,7 @@ export function useTaskCreateFlow() {
   const [newTagsCsv, setNewTagsCsv] = useState("");
   const [newMilestone, setNewMilestone] = useState("");
   const [newDependsOn, setNewDependsOn] = useState<string[]>([]);
-  const [newChecklistItems, setNewChecklistItems] = useState<string[]>([]);
+  const [newChecklistItems, setNewChecklistItems] = useState<ChecklistItemDraft[]>([]);
   const [createFormError, setCreateFormError] = useState<string | null>(null);
   // Drop the staged dependency picks whenever the operator switches the
   // task's project. The picker scopes its lookup to a single project, so
@@ -339,7 +340,7 @@ export function useTaskCreateFlow() {
       initial_prompt: string;
       status: Status;
       priority: Priority;
-      checklistItems: string[];
+      checklistItems: ChecklistItemDraft[];
     }) => {
       return apiEvaluateDraft({
         id: input.id,
@@ -348,7 +349,7 @@ export function useTaskCreateFlow() {
         status: input.status,
         priority: input.priority,
         checklist_items: input.checklistItems
-          .map((text) => text.trim())
+          .map((item) => item.text.trim())
           .filter(Boolean)
           .map((text) => ({ text })),
       });
@@ -504,7 +505,7 @@ export function useTaskCreateFlow() {
         priority: newPriority,
         projectId: newProjectID,
         projectContextItemIds: newProjectContextItemIDs,
-        checklistItems: newChecklistItems,
+        checklistItems: newChecklistItems.map((item) => item.text),
         latestEvaluation: latestDraftEvaluation,
         runner: newTaskRunner,
         cursorModel: newTaskCursorModel,
@@ -538,7 +539,7 @@ export function useTaskCreateFlow() {
         // prompt editor (and the same `project_context_item_ids` on submit).
         project_id: newProjectID,
         project_context_item_ids: newProjectContextItemIDs,
-        checklist_items: newChecklistItems,
+        checklist_items: newChecklistItems.map((item) => item.text),
         ...(latestDraftEvaluation
           ? {
               latest_evaluation: {
@@ -737,7 +738,9 @@ export function useTaskCreateFlow() {
     setNewTitle(draft.payload.title ?? "");
     setNewPrompt(draft.payload.initial_prompt ?? "");
     setNewPriority(draft.payload.priority ?? "");
-    setNewChecklistItems(draft.payload.checklist_items ?? []);
+    setNewChecklistItems(
+      (draft.payload.checklist_items ?? []).map((text) => ({ text })),
+    );
     setLatestDraftEvaluation(latestEvaluation);
     // Project + selected context items are optional on legacy drafts; fall
     // back to the default project / empty selection so the REFERENCES block
@@ -807,17 +810,19 @@ export function useTaskCreateFlow() {
       setNewChecklistItems(
         scenario.checklist
           .map((item) => item.trim())
-          .filter((item) => item.length > 0),
+          .filter((item) => item.length > 0)
+          .map((text) => ({ text })),
       );
     },
     [],
   );
 
-  const appendNewChecklistCriterion = useCallback((raw: string) => {
-    const t = raw.trim();
+  const appendNewChecklistCriterion = useCallback((raw: ChecklistItemDraft | string) => {
+    const item = typeof raw === "string" ? { text: raw } : raw;
+    const t = item.text.trim();
     if (!t) return;
     setNewChecklistItems((prev) => {
-      const next = [...prev, t];
+      const next = [...prev, { text: t, verify_commands: item.verify_commands }];
       if (nonEmptyChecklistCount(next) >= 1) {
         setCreateFormError(null);
       }
@@ -829,10 +834,14 @@ export function useTaskCreateFlow() {
     setNewChecklistItems((prev) => prev.filter((_, i) => i !== index));
   }, []);
 
-  const updateNewChecklistRow = useCallback((index: number, raw: string) => {
-    const t = raw.trim();
+  const updateNewChecklistRow = useCallback((index: number, item: ChecklistItemDraft) => {
+    const t = item.text.trim();
     if (!t) return;
-    setNewChecklistItems((prev) => prev.map((x, i) => (i === index ? t : x)));
+    setNewChecklistItems((prev) =>
+      prev.map((x, i) =>
+        i === index ? { text: t, verify_commands: item.verify_commands } : x,
+      ),
+    );
   }, []);
 
   const createPending = createMutation.isPending;

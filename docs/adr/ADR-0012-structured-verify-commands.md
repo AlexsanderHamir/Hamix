@@ -1,0 +1,48 @@
+# ADR-0012: Structured Verify Commands for Done Criteria
+
+**Date:** 2026-06-15  
+**Status:** Accepted  
+**Deciders:** T2A maintainers
+
+## Context
+
+Early T2A stored a `check` column on checklist items for shell verification. That column was merged into free-form `text` and dropped ([migrateChecklistCheckToText](pkgs/tasks/postgres/postgres.go)). ADR-0003 moved verification to an adversarial LLM pass with no deterministic auto-pass.
+
+Operators still need repeatable, machine-checkable evidence (test output, lint results) without relying on the execute agent to run commands honestly. The verify agent can interpret structured output, but the worker must produce a stable evidence bundle first.
+
+## Decision
+
+1. **Child table `task_checklist_item_commands`** — optional ordered shell checks per criterion (`command`, `expected_outcome`), capped at five per item. Criterion `text` remains required.
+
+2. **Verify phase execution** — after the execute agent claims `claimed_done: true` and before `runLLMVerifyAgent`, the worker runs attached commands sequentially in `app_settings.repo_root` using `adapterkit.DefaultExec` (not the LLM runner). Only criteria with commands are executed.
+
+3. **Temp-file evidence contract** — under `<ReportDir>/<cycleId>/checks/<criterionId>/<seq>.{stdout,stderr,meta.json}`. Streams truncate at 256 KiB; meta records exit code, duration, truncation, and errors. Failures do not skip the LLM verify pass.
+
+4. **LLM remains verdict authority** — success still requires `verified_by=verify_agent`. Exit code 0 does not auto-pass (`deterministic_check` stays legacy-only).
+
+5. **Audit mirror `task_cycle_command_runs`** — exposed on `GET .../verdicts` as `command_runs[]` for the SPA timeline.
+
+6. **Timeout** — `app_settings.verify_command_timeout_seconds` (default 120s) caps each command.
+
+## Consequences
+
+### Positive
+
+- Deterministic evidence the verify agent can cite without trusting execute self-report alone.
+- Clear separation: commands produce artifacts; LLM judges against text + `expected_outcome`.
+- Child-table design allows a future global command template library (copy-on-insert) without schema churn.
+
+### Negative / Trade-offs
+
+- Verify commands that mutate the repo may trigger `verify_tampered` on post-snapshot integrity checks — operators must use read-only checks.
+- Trusted-operator surface: commands are not agent-authored, but shell injection risk remains; bounded by timeout and output caps.
+- Extra verify latency when many commands are attached.
+
+## Alternatives Considered
+
+| Alternative | Reason Rejected |
+|-------------|-----------------|
+| JSON blob on `task_checklist_items` | Poor ordering/CRUD; blocks template library V2 |
+| Re-enable auto-pass on exit 0 | Conflicts with ADR-0003 adversarial verify model |
+| Run commands in execute phase | Execute agent could interfere; verify needs post-execute snapshot |
+| Inline megabyte payloads in API | Temp files + meta paths keep HTTP and DB bounded |

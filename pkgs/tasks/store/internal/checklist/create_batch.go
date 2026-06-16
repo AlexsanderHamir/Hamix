@@ -15,8 +15,8 @@ import (
 // SeedDefinitionItemsAtCreateInTx inserts definition rows during POST /tasks
 // inside the create transaction. Unlike Add, it does not re-check
 // ValidateCanAddCriterionInTx because the row was just inserted.
-func SeedDefinitionItemsAtCreateInTx(tx *gorm.DB, taskID string, texts []string, by domain.Actor) error {
-	slog.Debug("trace", "cmd", logCmd, "operation", "tasks.store.checklist.AddDefinitionItemsInTx")
+func SeedDefinitionItemsAtCreateInTx(tx *gorm.DB, taskID string, items []CreateChecklistItemInput, by domain.Actor) error {
+	slog.Debug("trace", "cmd", logCmd, "operation", "tasks.store.checklist.SeedDefinitionItemsAtCreateInTx")
 	if err := kernel.ValidateActor(by); err != nil {
 		return err
 	}
@@ -24,7 +24,7 @@ func SeedDefinitionItemsAtCreateInTx(tx *gorm.DB, taskID string, texts []string,
 	if taskID == "" {
 		return fmt.Errorf("%w: id", domain.ErrInvalidInput)
 	}
-	if len(texts) == 0 {
+	if len(items) == 0 {
 		return nil
 	}
 	t, err := kernel.LoadTask(tx, taskID)
@@ -37,10 +37,14 @@ func SeedDefinitionItemsAtCreateInTx(tx *gorm.DB, taskID string, texts []string,
 	if err := row.Scan(&maxOrder).Error; err != nil {
 		return fmt.Errorf("checklist order: %w", err)
 	}
-	for _, raw := range texts {
-		text := strings.TrimSpace(raw)
+	for _, raw := range items {
+		text := strings.TrimSpace(raw.Text)
 		if text == "" {
 			continue
+		}
+		cmds, err := NormalizeVerifyCommandInputs(raw.VerifyCommands)
+		if err != nil {
+			return err
 		}
 		maxOrder++
 		it := &domain.TaskChecklistItem{
@@ -51,6 +55,9 @@ func SeedDefinitionItemsAtCreateInTx(tx *gorm.DB, taskID string, texts []string,
 		}
 		if err := tx.Create(it).Error; err != nil {
 			return fmt.Errorf("insert checklist item: %w", err)
+		}
+		if err := replaceCommandsInTx(tx, it.ID, cmds); err != nil {
+			return err
 		}
 		seq, err := kernel.NextEventSeq(tx, taskID)
 		if err != nil {

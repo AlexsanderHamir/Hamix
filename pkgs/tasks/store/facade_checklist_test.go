@@ -20,7 +20,7 @@ func TestStore_AddChecklistItem_rejects_running_and_done(t *testing.T) {
 			if err != nil {
 				t.Fatal(err)
 			}
-			_, err = s.AddChecklistItem(ctx, tsk.ID, "criterion", domain.ActorUser)
+			_, err = s.AddChecklistItem(ctx, tsk.ID, "criterion", nil, domain.ActorUser)
 			if !errors.Is(err, domain.ErrConflict) {
 				t.Fatalf("status=%s got %v want ErrConflict", status, err)
 			}
@@ -35,7 +35,7 @@ func TestStore_SetChecklistItemDone_rejects_user_actor(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	it, err := s.AddChecklistItem(ctx, tsk.ID, "criterion", domain.ActorUser)
+	it, err := s.AddChecklistItem(ctx, tsk.ID, "criterion", nil, domain.ActorUser)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -52,7 +52,7 @@ func TestStore_SetChecklistItemDone_allows_agent(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	it, err := s.AddChecklistItem(ctx, tsk.ID, "criterion", domain.ActorUser)
+	it, err := s.AddChecklistItem(ctx, tsk.ID, "criterion", nil, domain.ActorUser)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -87,7 +87,7 @@ func TestStore_SetChecklistItemDone_idempotent_skips_event(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	it, err := s.AddChecklistItem(ctx, tsk.ID, "criterion", domain.ActorUser)
+	it, err := s.AddChecklistItem(ctx, tsk.ID, "criterion", nil, domain.ActorUser)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -171,7 +171,7 @@ func TestStore_UpdateChecklistItemText_updates_row(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	it, err := s.AddChecklistItem(ctx, tsk.ID, "before", domain.ActorUser)
+	it, err := s.AddChecklistItem(ctx, tsk.ID, "before", nil, domain.ActorUser)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -216,7 +216,7 @@ func TestStore_UpdateChecklistItemText_rejects_done_item(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	it, err := s.AddChecklistItem(ctx, tsk.ID, "before", domain.ActorUser)
+	it, err := s.AddChecklistItem(ctx, tsk.ID, "before", nil, domain.ActorUser)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -266,7 +266,7 @@ func TestStore_DeleteChecklistItem_rejects_done_item(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	it, err := s.AddChecklistItem(ctx, tsk.ID, "keep", domain.ActorUser)
+	it, err := s.AddChecklistItem(ctx, tsk.ID, "keep", nil, domain.ActorUser)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -307,7 +307,7 @@ func TestStore_DeleteChecklistItem_appends_removed_event(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	it, err := s.AddChecklistItem(ctx, tsk.ID, "gone", domain.ActorUser)
+	it, err := s.AddChecklistItem(ctx, tsk.ID, "gone", nil, domain.ActorUser)
 	if err != nil {
 		t.Fatal(err)
 	}

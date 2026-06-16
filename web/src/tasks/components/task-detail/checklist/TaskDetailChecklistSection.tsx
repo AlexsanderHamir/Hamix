@@ -1,6 +1,6 @@
 import type { UseQueryResult } from "@tanstack/react-query";
 import type { FormEvent } from "react";
-import type { TaskChecklistResponse } from "@/types";
+import type { ChecklistVerifyCommandInput, TaskChecklistResponse } from "@/types";
 import { errorMessage } from "@/lib/errorMessage";
 import { FieldRequirementBadge } from "@/shared/FieldLabel";
 import {
@@ -19,6 +19,8 @@ export type TaskDetailChecklistSectionProps = {
   modalOpen: boolean;
   newCriterionText: string;
   onNewCriterionTextChange: (v: string) => void;
+  newCriterionVerifyCommands: ChecklistVerifyCommandInput[];
+  onNewCriterionVerifyCommandsChange: (cmds: ChecklistVerifyCommandInput[]) => void;
   onOpenAddModal: () => void;
   onCloseAddModal: () => void;
   onSubmitNewCriterion: (e: FormEvent) => void;
@@ -27,7 +29,13 @@ export type TaskDetailChecklistSectionProps = {
   editingItemId: string | null;
   editCriterionText: string;
   onEditCriterionTextChange: (v: string) => void;
-  onOpenEditCriterionModal: (itemId: string, text: string) => void;
+  editCriterionVerifyCommands: ChecklistVerifyCommandInput[];
+  onEditCriterionVerifyCommandsChange: (cmds: ChecklistVerifyCommandInput[]) => void;
+  onOpenEditCriterionModal: (
+    itemId: string,
+    text: string,
+    verifyCommands?: ChecklistVerifyCommandInput[],
+  ) => void;
   onCloseEditCriterionModal: () => void;
   onSubmitEditCriterion: (e: FormEvent) => void;
   editCriterionPending: boolean;
@@ -54,6 +62,8 @@ export function TaskDetailChecklistSection({
   modalOpen,
   newCriterionText,
   onNewCriterionTextChange,
+  newCriterionVerifyCommands,
+  onNewCriterionVerifyCommandsChange,
   onOpenAddModal,
   onCloseAddModal,
   onSubmitNewCriterion,
@@ -62,6 +72,8 @@ export function TaskDetailChecklistSection({
   editingItemId,
   editCriterionText,
   onEditCriterionTextChange,
+  editCriterionVerifyCommands,
+  onEditCriterionVerifyCommandsChange,
   onOpenEditCriterionModal,
   onCloseEditCriterionModal,
   onSubmitEditCriterion,
@@ -209,6 +221,8 @@ export function TaskDetailChecklistSection({
           onClose={onCloseAddModal}
           text={newCriterionText}
           onTextChange={onNewCriterionTextChange}
+          verifyCommands={newCriterionVerifyCommands}
+          onVerifyCommandsChange={onNewCriterionVerifyCommandsChange}
           onSubmit={onSubmitNewCriterion}
           // Safe because `useTaskDetailChecklist.addChecklistMutation`
           // is race-hardened: `onSuccess` only fires the form-clear +
@@ -232,6 +246,8 @@ export function TaskDetailChecklistSection({
           onClose={onCloseEditCriterionModal}
           text={editCriterionText}
           onTextChange={onEditCriterionTextChange}
+          verifyCommands={editCriterionVerifyCommands}
+          onVerifyCommandsChange={onEditCriterionVerifyCommandsChange}
           onSubmit={onSubmitEditCriterion}
           // Safe because `useTaskDetailChecklist.updateChecklistTextMutation`
           // is race-hardened: `onSuccess` only fires

@@ -16,6 +16,7 @@ import {
   phaseStatusLabel,
 } from "@/observability";
 import type {
+  CycleCommandRun,
   CycleCriteriaReport,
   CycleVerifyReport,
   Phase,
@@ -496,7 +497,8 @@ function CycleRowVerdicts({
   const data = verdictsQuery.data;
   if (
     data.criteria_reports.length === 0 &&
-    data.verify_reports.length === 0
+    data.verify_reports.length === 0 &&
+    data.command_runs.length === 0
   ) {
     return (
       <p
@@ -560,9 +562,67 @@ function CycleRowVerdicts({
               </li>
             ))}
           </ul>
+          <CycleCommandRunsSummary
+            runs={commandRunsForAttempt(data.command_runs, group.attemptSeq)}
+          />
         </section>
       ))}
+      {groups.length === 0 && data.command_runs.length > 0
+        ? commandRunAttemptSeqs(data.command_runs).map((attemptSeq) => (
+            <section
+              key={attemptSeq}
+              className="task-cycle-verdicts-attempt"
+              aria-label={`Attempt ${attemptSeq}`}
+            >
+              <p className="task-cycle-verdicts-attempt-eyebrow muted">
+                Attempt #{attemptSeq}
+              </p>
+              <CycleCommandRunsSummary
+                runs={commandRunsForAttempt(data.command_runs, attemptSeq)}
+              />
+            </section>
+          ))
+        : null}
     </div>
+  );
+}
+
+function commandRunsForAttempt(
+  runs: ReadonlyArray<CycleCommandRun>,
+  attemptSeq: number,
+): CycleCommandRun[] {
+  return runs.filter((r) => r.attempt_seq === attemptSeq);
+}
+
+function commandRunAttemptSeqs(runs: ReadonlyArray<CycleCommandRun>): number[] {
+  const seen = new Set<number>();
+  for (const r of runs) {
+    seen.add(r.attempt_seq);
+  }
+  return Array.from(seen).sort((a, b) => a - b);
+}
+
+function CycleCommandRunsSummary({
+  runs,
+}: {
+  runs: ReadonlyArray<CycleCommandRun>;
+}) {
+  if (runs.length === 0) {
+    return null;
+  }
+  return (
+    <ul className="task-cycle-command-runs-list">
+      {runs.map((run) => (
+        <li key={run.id} className="task-cycle-command-run muted">
+          <span className="task-cycle-command-run-label">
+            [{run.criterion_id}] command {run.command_seq}
+          </span>
+          <span className="task-cycle-command-run-meta">
+            exit {run.exit_code}
+          </span>
+        </li>
+      ))}
+    </ul>
   );
 }
 

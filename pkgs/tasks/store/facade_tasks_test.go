@@ -29,7 +29,7 @@ func ensureParentHasCriterion(t *testing.T, ctx context.Context, s *Store, paren
 	if len(items) > 0 {
 		return
 	}
-	if _, err := s.AddChecklistItem(ctx, parentID, "test criterion", domain.ActorUser); err != nil {
+	if _, err := s.AddChecklistItem(ctx, parentID, "test criterion", nil, domain.ActorUser); err != nil {
 		t.Fatal(err)
 	}
 }

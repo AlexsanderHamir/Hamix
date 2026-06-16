@@ -194,7 +194,7 @@ Keys are additive only; consumers must ignore unknown keys. Values are always st
 
 ## Checklist (done criteria)
 
-Per-task acceptance requirements. Stored in `task_checklist_items` (definitions: `id`, `task_id`, `sort_order`, `text`) and `task_checklist_completions` (per-subject ledger: `task_id`, `item_id`, `at`, `done_by`, `evidence`, `verified_by`, `verifier_reasoning`, `cycle_id`). Operators may describe verification commands in criterion text; the worker does not execute them.
+Per-task acceptance requirements. Stored in `task_checklist_items` (definitions: `id`, `task_id`, `sort_order`, `text`) and optional `task_checklist_item_commands` (per-criterion shell checks: `item_id`, `sort_order`, `command`, `expected_outcome`, `ON DELETE CASCADE`) and `task_checklist_completions` (per-subject ledger: `task_id`, `item_id`, `at`, `done_by`, `evidence`, `verified_by`, `verifier_reasoning`, `cycle_id`). Operators attach zero or more verification commands per criterion; during verify the worker runs them in `app_settings.repo_root`, writes stdout/stderr/meta under the worker-managed report dir, and feeds those artifacts to the verify agent. The LLM remains the sole authority for marking criteria done — exit code 0 does not auto-pass.
 
 **Create:** `POST /tasks` requires at least one non-empty done criterion in `checklist_items`; definition rows are inserted in the same transaction as the task row.
 
@@ -272,7 +272,22 @@ The two report files above are the agent ↔ worker wire format. They are GC'd a
 | `reasoning` | text (≤ 16 KB) | verifier rationale. |
 | `written_at` | timestamptz | indexed. |
 
-Both tables enforce a composite unique index on `(cycle_id, attempt_seq, criterion_id)`. The worker's bulk insert is `ON CONFLICT … DO UPDATE`, so a transient store error during upsert is safe to retry (the same row is rewritten). One row per criterion per attempt is intentional: the `previouslyPassed` retry-efficiency lock is in-memory only, but the durable table preserves *all* attempts so the SPA's per-attempt timeline can be rendered without losing the rejected attempt that triggered the retry.
+`task_cycle_command_runs`
+
+| Column | Type | Notes |
+|---|---|---|
+| `id` | uuid pk | server-assigned. |
+| `cycle_id` | string fk → `task_cycles.id` (`ON DELETE CASCADE`) | indexed. |
+| `attempt_seq` | int (>0) | verify attempt that ran the command. |
+| `criterion_id` | string fk → `task_checklist_items.id` (`ON DELETE NO ACTION`) | which criterion owned the command. |
+| `command_seq` | int (≥0) | `sort_order` from `task_checklist_item_commands`. |
+| `exit_code` | int | process exit code (`-1` when start/wait failed). |
+| `meta_path` | text | absolute path to `<report_dir>/<cycle_id>/checks/<criterion_id>/<seq>.meta.json`. |
+| `written_at` | timestamptz | indexed. |
+
+Stdout/stderr bytes live only in temp files under the worker report dir (see `<worker-managed dir>/<cycle_id>/checks/...`); this table is the durable audit index for the SPA timeline.
+
+Both verdict tables enforce a composite unique index on `(cycle_id, attempt_seq, criterion_id)`. Command runs enforce `(cycle_id, attempt_seq, criterion_id, command_seq)`.
 
 Pre-PR2 cycles return zero rows from these tables; the handler returns empty arrays, never 404. Cleanup is FK-driven: deleting a cycle (which itself cascades from task deletion) cascades to the verdict rows; `criterion_id` is intentionally `NO ACTION` so that historical cycles remain readable after a checklist edit.
 

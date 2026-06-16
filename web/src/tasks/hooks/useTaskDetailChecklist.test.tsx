@@ -170,7 +170,7 @@ describe("useTaskDetailChecklist", () => {
     });
 
     await waitFor(() => {
-      expect(mockAdd).toHaveBeenCalledWith(TASK_A, "New");
+      expect(mockAdd).toHaveBeenCalledWith(TASK_A, "New", { verify_commands: [] });
     });
     expect(inv).toHaveBeenCalled();
     await waitFor(() => {

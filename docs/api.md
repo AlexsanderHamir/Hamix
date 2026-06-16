@@ -50,7 +50,7 @@ Model semantics (tags, milestone, `depends_on`, gate, worker readiness): [data-m
 
 | Method | Path | Notes |
 |---|---|---|
-| POST | `/tasks` | Create. Title required; `priority` required; `checklist_items` required — `[{ "text": "..." }]`, at least one non-empty `text` (persisted atomically with the task row). `400` `at least one done criterion required` when missing, empty, or all-blank. Optional `id`, `draft_id`, `project_id`, `pickup_not_before`, `cursor_model`, `tags`, `milestone`, `depends_on` (string[] legacy or `{ task_id, satisfies }[]` with `satisfies: done`). Returns flat `domain.Task`. `409` on duplicate `id`. Publishes `task_created`. |
+| POST | `/tasks` | Create. Title required; `priority` required; `checklist_items` required — `[{ "text": "..." , "verify_commands"?: [{ "command": "...", "expected_outcome"?: "..." }] }]`, at least one non-empty `text` (persisted atomically with the task row). `400` `at least one done criterion required` when missing, empty, or all-blank. Optional `id`, `draft_id`, `project_id`, `pickup_not_before`, `cursor_model`, `tags`, `milestone`, `depends_on` (string[] legacy or `{ task_id, satisfies }[]` with `satisfies: done`). Returns flat `domain.Task`. `409` on duplicate `id`. Publishes `task_created`. |
 | POST | `/tasks/evaluate` | Score a draft payload; persist snapshot. Never publishes on SSE. |
 | GET | `/tasks` | List all tasks (flat). Pagination: `?limit` (0–200, default 50) + `?offset` (≥ 0) **or** `?after_id` (keyset, mutually exclusive with offset). Envelope `{ tasks, limit, offset, has_more }`. Each element is a flat `domain.Task` (no nested `children`). |
 | GET | `/tasks/stats` | Counters: `total`, `ready`, `critical`, `scheduled`, `by_status`, `by_priority`, `cycles`, `phases`, `runner`, `recent_failures`. |
@@ -70,9 +70,9 @@ Model semantics (tags, milestone, `depends_on`, gate, worker readiness): [data-m
 
 | Method | Path | Notes |
 |---|---|---|
-| GET | `/tasks/{id}/checklist` | `{ items: [...] }` ordered by `sort_order`. |
-| POST | `/tasks/{id}/checklist/items` | Body `{ text }`. Rejected `409` when the task is `running` or `done`, or when a cycle is running. Publishes `task_updated`. |
-| PATCH | `/tasks/{id}/checklist/items/{itemId}` | Body: exactly one of `{ text }` or `{ done: true|false }`. `done:true` requires `X-Actor: agent` plus `evidence` + optional `verified_by`. Publishes `task_updated`. |
+| GET | `/tasks/{id}/checklist` | `{ items: [...] }` ordered by `sort_order`. Each item includes optional `verify_commands: [{ sort_order, command, expected_outcome }]`. |
+| POST | `/tasks/{id}/checklist/items` | Body `{ text, verify_commands? }`. Rejected `409` when the task is `running` or `done`, or when a cycle is running. Publishes `task_updated`. |
+| PATCH | `/tasks/{id}/checklist/items/{itemId}` | Body: exactly one of `{ text }`, `{ verify_commands }`, or `{ done: true|false }`. `done:true` requires `X-Actor: agent` plus `evidence` + optional `verified_by`. Publishes `task_updated`. |
 | DELETE | `/tasks/{id}/checklist/items/{itemId}` | `204`. Publishes `task_updated`. |
 
 ### Task drafts
@@ -95,7 +95,7 @@ See [data-model.md](./data-model.md) for state machine and substrate semantics.
 | GET | `/tasks/{id}/cycles/{cycleId}` | One cycle with `phases[]` ordered ascending. |
 | PATCH | `/tasks/{id}/cycles/{cycleId}` | Terminate. Body `{ status: succeeded|failed|aborted, reason? }`. Publishes `task_cycle_changed`. The agent worker emits `verification_failed:<id>,<id>,…` on terminal verify failure (sorted, deduped failing criterion IDs); the `verification_failed` prefix is contract-stable — clients MUST use prefix matching. Bare `verification_failed` (older cycles) remains a valid value. The reason column is 256 chars; long lists are truncated with `…` while the prefix stays intact. |
 | GET | `/tasks/{id}/cycles/{cycleId}/stream` | Normalized Cursor live-run history. `?limit` (1–500), `?after_seq` keyset. |
-| GET | `/tasks/{id}/cycles/{cycleId}/verdicts` | Per-criterion verdict evidence for one cycle. Returns `{ task_id, cycle_id, criteria_reports: [...], verify_reports: [...] }`. Both arrays are non-null (empty when no verdicts have been mirrored — pre-PR2 cycles, or cycles whose verify phase hasn't run yet); rows are ordered `(attempt_seq ASC, criterion_id ASC)`. Each criteria row carries `claimed_done` + `evidence` from the execute agent's self-report; each verify row carries `verified` + `verifier_kind` + `reasoning`. `verifier_kind` is the same enum as `task_checklist_completions.verified_by`. |
+| GET | `/tasks/{id}/cycles/{cycleId}/verdicts` | Per-criterion verdict evidence for one cycle. Returns `{ task_id, cycle_id, criteria_reports: [...], verify_reports: [...], command_runs: [...] }`. All three arrays are non-null (empty when no rows mirrored); rows are ordered `(attempt_seq ASC, criterion_id ASC)` (command runs also by `command_seq ASC`). Each criteria row carries `claimed_done` + `evidence` from the execute agent's self-report; each verify row carries `verified` + `verifier_kind` + `reasoning`; each command run carries `exit_code` + `meta_path` for worker-executed verify shell checks. `verifier_kind` is the same enum as `task_checklist_completions.verified_by`. |
 | POST | `/tasks/{id}/cycles/{cycleId}/phases` | Start a phase. Body `{ phase: execute|verify }`. Transitions follow `domain.ValidPhaseTransition`. Publishes `task_cycle_changed`. |
 | PATCH | `/tasks/{id}/cycles/{cycleId}/phases/{phaseSeq}` | Terminate a phase. Body `{ status: succeeded|failed|skipped, summary?, details? }`. Publishes `task_cycle_changed`. |
 

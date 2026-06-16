@@ -13,6 +13,7 @@ import {
   type TaskEventsResponse,
   type TaskListResponse,
   type TaskStatsResponse,
+  type ChecklistVerifyCommandInput,
   type CycleFailuresListResponse,
   type TaskDependencyEdge,
   type TaskGate,
@@ -247,7 +248,7 @@ export async function createTask(input: {
   milestone?: string;
   gate?: TaskGate;
   depends_on?: TaskDependencyEdge[];
-  checklist_items: Array<{ text: string }>;
+  checklist_items: Array<{ text: string; verify_commands?: ChecklistVerifyCommandInput[] }>;
 }): Promise<Task> {
   const body: Record<string, unknown> = {
     title: input.title,
@@ -569,21 +570,53 @@ export async function listChecklist(
 export async function addChecklistItem(
   taskId: string,
   text: string,
-  options?: { actor?: "user" | "agent" },
+  options?: {
+    actor?: "user" | "agent";
+    verify_commands?: ChecklistVerifyCommandInput[];
+  },
 ): Promise<void> {
   const headers: Record<string, string> = { ...jsonHeaders };
   if (options?.actor === "agent") {
     headers["X-Actor"] = "agent";
+  }
+  const body: Record<string, unknown> = { text };
+  if (options?.verify_commands && options.verify_commands.length > 0) {
+    body.verify_commands = options.verify_commands;
   }
   const res = await fetchWithTimeout(
     `/tasks/${encodeURIComponent(taskId)}/checklist/items`,
     {
       method: "POST",
       headers,
-      body: JSON.stringify({ text }),
+      body: JSON.stringify(body),
     },
   );
   if (!res.ok) throw await apiErrorFromResponse(res);
+}
+
+export async function patchChecklistItemVerifyCommands(
+  taskId: string,
+  itemId: string,
+  verify_commands: ChecklistVerifyCommandInput[],
+  options?: { actor?: "user" | "agent" },
+): Promise<TaskChecklistResponse> {
+  const tid = assertTaskPathId(taskId, "task id");
+  const iid = assertTaskPathId(itemId, "item id");
+  const headers: Record<string, string> = { ...jsonHeaders };
+  if (options?.actor === "agent") {
+    headers["X-Actor"] = "agent";
+  }
+  const res = await fetchWithTimeout(
+    `/tasks/${encodeURIComponent(tid)}/checklist/items/${encodeURIComponent(iid)}`,
+    {
+      method: "PATCH",
+      headers,
+      body: JSON.stringify({ verify_commands }),
+    },
+  );
+  if (!res.ok) throw await apiErrorFromResponse(res);
+  const raw: unknown = await res.json();
+  return parseTaskChecklistResponse(raw);
 }
 
 export async function patchChecklistItemText(

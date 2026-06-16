@@ -1,5 +1,6 @@
 import { useState, type FormEvent } from "react";
-import type { PriorityChoice } from "@/types";
+import type { PriorityChoice, ChecklistItemDraft } from "@/types";
+import { normalizeVerifyCommands } from "@/tasks/task-compose/checklistRequirement";
 import { FieldLabel } from "@/shared/FieldLabel";
 import { PrioritySelect } from "./PrioritySelect";
 import {
@@ -15,7 +16,7 @@ export type TaskComposeFieldsProps = {
   title: string;
   prompt: string;
   priority: PriorityChoice;
-  checklistItems: string[];
+  checklistItems: ChecklistItemDraft[];
   /** When true, the done-criteria block is omitted (e.g. subtask inherits a parent checklist). */
   hideChecklist?: boolean;
   /** When `required`, at least one done criterion is required on create. */
@@ -24,8 +25,8 @@ export type TaskComposeFieldsProps = {
   onTitleChange: (v: string) => void;
   onPromptChange: (v: string) => void;
   onPriorityChange: (p: PriorityChoice) => void;
-  onAppendChecklistCriterion: (text: string) => void;
-  onUpdateChecklistRow: (index: number, text: string) => void;
+  onAppendChecklistCriterion: (item: ChecklistItemDraft) => void;
+  onUpdateChecklistRow: (index: number, item: ChecklistItemDraft) => void;
   onRemoveChecklistRow: (index: number) => void;
   /** Passed to `RichPromptEditor` as `key` so the editor resets when needed. */
   editorKey: string;
@@ -63,17 +64,22 @@ export function TaskComposeFields({
 
   const [criterionModalOpen, setCriterionModalOpen] = useState(false);
   const [criterionModalText, setCriterionModalText] = useState("");
+  const [criterionModalCommands, setCriterionModalCommands] = useState<
+    ChecklistItemDraft["verify_commands"]
+  >([]);
   const [criterionEditIndex, setCriterionEditIndex] = useState<number | null>(null);
 
   const openCriterionModal = () => {
     setCriterionEditIndex(null);
     setCriterionModalText("");
+    setCriterionModalCommands([]);
     setCriterionModalOpen(true);
   };
 
-  const openEditCriterionModal = (index: number, text: string) => {
+  const openEditCriterionModal = (index: number, item: ChecklistItemDraft) => {
     setCriterionEditIndex(index);
-    setCriterionModalText(text);
+    setCriterionModalText(item.text);
+    setCriterionModalCommands(item.verify_commands ?? []);
     setCriterionModalOpen(true);
   };
 
@@ -81,6 +87,7 @@ export function TaskComposeFields({
     setCriterionModalOpen(false);
     setCriterionEditIndex(null);
     setCriterionModalText("");
+    setCriterionModalCommands([]);
   };
 
   const submitCriterionModal = (e: FormEvent) => {
@@ -88,10 +95,14 @@ export function TaskComposeFields({
     e.stopPropagation();
     const t = criterionModalText.trim();
     if (!t) return;
+    const item: ChecklistItemDraft = {
+      text: t,
+      verify_commands: normalizeVerifyCommands(criterionModalCommands ?? []),
+    };
     if (criterionEditIndex === null) {
-      onAppendChecklistCriterion(t);
+      onAppendChecklistCriterion(item);
     } else {
-      onUpdateChecklistRow(criterionEditIndex, t);
+      onUpdateChecklistRow(criterionEditIndex, item);
     }
     closeCriterionModal();
   };
@@ -167,6 +178,8 @@ export function TaskComposeFields({
           onClose={closeCriterionModal}
           text={criterionModalText}
           onTextChange={setCriterionModalText}
+          verifyCommands={criterionModalCommands ?? []}
+          onVerifyCommandsChange={setCriterionModalCommands}
           onSubmit={submitCriterionModal}
           modalStack="nested"
           lockBodyScroll={false}

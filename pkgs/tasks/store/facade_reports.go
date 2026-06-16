@@ -17,6 +17,9 @@ type CriteriaReportEntry = reports.CriteriaEntry
 // CriteriaReportEntry.
 type VerifyReportEntry = reports.VerifyEntry
 
+// CommandRunEntry is one verify-phase shell command execution row.
+type CommandRunEntry = reports.CommandRunEntry
+
 // UpsertCriteriaReports persists one batch of per-criterion
 // criteria-report rows for (cycleID, attemptSeq). See
 // reports.UpsertCriteriaReports for the idempotency contract.
@@ -54,4 +57,16 @@ func (s *Store) ListVerifyReportsForCycle(ctx context.Context, cycleID string) (
 func (s *Store) GetCriteriaReport(ctx context.Context, cycleID string, attemptSeq int64, criterionID string) (*domain.TaskCycleCriteriaReport, error) {
 	slog.Debug("trace", "cmd", storeLogCmd, "operation", "tasks.store.GetCriteriaReport")
 	return reports.GetCriteriaReport(ctx, s.db, cycleID, attemptSeq, criterionID)
+}
+
+// UpsertCommandRuns persists command run metadata for one verify attempt.
+func (s *Store) UpsertCommandRuns(ctx context.Context, cycleID string, attemptSeq int64, entries []CommandRunEntry) error {
+	slog.Debug("trace", "cmd", storeLogCmd, "operation", "tasks.store.UpsertCommandRuns")
+	return reports.UpsertCommandRuns(ctx, s.db, cycleID, attemptSeq, entries)
+}
+
+// ListCommandRunsForCycle returns command run rows for cycleID.
+func (s *Store) ListCommandRunsForCycle(ctx context.Context, cycleID string) ([]domain.TaskCycleCommandRun, error) {
+	slog.Debug("trace", "cmd", storeLogCmd, "operation", "tasks.store.ListCommandRunsForCycle")
+	return reports.ListCommandRunsForCycle(ctx, s.db, cycleID)
 }

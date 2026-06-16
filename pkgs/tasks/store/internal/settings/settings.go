@@ -44,11 +44,12 @@ type Patch struct {
 	// config map. When non-nil, it replaces the entire runner_configs
 	// column. The handler is responsible for merging deltas before
 	// passing the blob here.
-	RunnerConfigs          *json.RawMessage
-	VerifyMaxRetries       *int
-	VerifyRunnerName       *string
-	VerifyRunnerModel      *string
-	AgentCommitExecuteWork *bool
+	RunnerConfigs               *json.RawMessage
+	VerifyMaxRetries            *int
+	VerifyRunnerName            *string
+	VerifyRunnerModel           *string
+	AgentCommitExecuteWork      *bool
+	VerifyCommandTimeoutSeconds *int
 }
 
 // IsEmpty reports whether the patch has nothing to apply. Used by the
@@ -71,7 +72,8 @@ func (p Patch) IsEmpty() bool {
 		p.VerifyMaxRetries == nil &&
 		p.VerifyRunnerName == nil &&
 		p.VerifyRunnerModel == nil &&
-		p.AgentCommitExecuteWork == nil
+		p.AgentCommitExecuteWork == nil &&
+		p.VerifyCommandTimeoutSeconds == nil
 }
 
 // Get returns the singleton app_settings row, creating it with
@@ -215,6 +217,9 @@ func validatePatch(patch Patch) error {
 	if patch.VerifyRunnerModel != nil && len(strings.TrimSpace(*patch.VerifyRunnerModel)) > 256 {
 		return fmt.Errorf("%w: verify_runner_model too long (max 256)", domain.ErrInvalidInput)
 	}
+	if patch.VerifyCommandTimeoutSeconds != nil && *patch.VerifyCommandTimeoutSeconds <= 0 {
+		return fmt.Errorf("%w: verify_command_timeout_seconds must be > 0", domain.ErrInvalidInput)
+	}
 	return nil
 }
 
@@ -268,6 +273,9 @@ func applyPatch(row *domain.AppSettings, patch Patch) {
 	}
 	if patch.AgentCommitExecuteWork != nil {
 		row.AgentCommitExecuteWork = *patch.AgentCommitExecuteWork
+	}
+	if patch.VerifyCommandTimeoutSeconds != nil {
+		row.VerifyCommandTimeoutSeconds = *patch.VerifyCommandTimeoutSeconds
 	}
 
 	dualWriteCursorToRunnerConfigs(row)

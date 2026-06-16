@@ -13,6 +13,8 @@ function renderModal(overrides: Partial<
     onClose: vi.fn(),
     text: "",
     onTextChange: vi.fn(),
+    verifyCommands: [],
+    onVerifyCommandsChange: vi.fn(),
     onSubmit: vi.fn(),
     ...overrides,
   };

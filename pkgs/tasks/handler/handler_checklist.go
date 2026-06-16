@@ -12,14 +12,16 @@ import (
 )
 
 type checklistItemCreateJSON struct {
-	Text string `json:"text"`
+	Text           string                     `json:"text"`
+	VerifyCommands []store.VerifyCommandInput `json:"verify_commands,omitempty"`
 }
 
 type patchChecklistItemBody struct {
-	Text       *string `json:"text,omitempty"`
-	Done       *bool   `json:"done,omitempty"`
-	Evidence   *string `json:"evidence,omitempty"`
-	VerifiedBy *string `json:"verified_by,omitempty"`
+	Text           *string                     `json:"text,omitempty"`
+	VerifyCommands *[]store.VerifyCommandInput `json:"verify_commands,omitempty"`
+	Done           *bool                       `json:"done,omitempty"`
+	Evidence       *string                     `json:"evidence,omitempty"`
+	VerifiedBy     *string                     `json:"verified_by,omitempty"`
 }
 
 type checklistListResponse struct {
@@ -69,7 +71,7 @@ func (h *Handler) postChecklistItem(w http.ResponseWriter, r *http.Request) {
 		writeStoreError(w, r, op, fmt.Errorf("%w: cycle running; cannot add criteria", domain.ErrConflict))
 		return
 	}
-	it, err := h.store.AddChecklistItem(r.Context(), id, body.Text, by)
+	it, err := h.store.AddChecklistItem(r.Context(), id, body.Text, body.VerifyCommands, by)
 	if err != nil {
 		writeStoreError(w, r, op, err)
 		return
@@ -102,15 +104,38 @@ func (h *Handler) patchChecklistItem(w http.ResponseWriter, r *http.Request) {
 	if body.Text != nil {
 		setCount++
 	}
+	if body.VerifyCommands != nil {
+		setCount++
+	}
 	if body.Done != nil {
 		setCount++
 	}
 	if setCount != 1 {
-		writeStoreError(w, r, op, fmt.Errorf("%w: send exactly one of text or done", domain.ErrInvalidInput))
+		writeStoreError(w, r, op, fmt.Errorf("%w: send exactly one of text, verify_commands, or done", domain.ErrInvalidInput))
 		return
 	}
 	by := actorFromRequest(r)
 	if body.Text != nil {
+		if running, err := h.store.IsTaskCycleRunning(r.Context(), taskID); err != nil {
+			writeStoreError(w, r, op, err)
+			return
+		} else if running {
+			writeStoreError(w, r, op, fmt.Errorf("%w: cycle running; cannot edit criteria", domain.ErrConflict))
+			return
+		}
+		items, err := h.store.ListChecklistForSubject(r.Context(), taskID)
+		if err != nil {
+			writeStoreError(w, r, op, err)
+			return
+		}
+		for _, it := range items {
+			if it.ID == itemID && it.Done {
+				writeStoreError(w, r, op, fmt.Errorf("%w: criterion verified; cannot edit", domain.ErrConflict))
+				return
+			}
+		}
+	}
+	if body.VerifyCommands != nil {
 		if running, err := h.store.IsTaskCycleRunning(r.Context(), taskID); err != nil {
 			writeStoreError(w, r, op, err)
 			return
@@ -138,6 +163,11 @@ func (h *Handler) patchChecklistItem(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 		if err := h.store.UpdateChecklistItemText(r.Context(), taskID, itemID, t, by); err != nil {
+			writeStoreError(w, r, op, err)
+			return
+		}
+	} else if body.VerifyCommands != nil {
+		if err := h.store.ReplaceChecklistVerifyCommands(r.Context(), taskID, itemID, *body.VerifyCommands, by); err != nil {
 			writeStoreError(w, r, op, err)
 			return
 		}

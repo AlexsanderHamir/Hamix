@@ -1,4 +1,4 @@
-import type { PriorityChoice } from "@/types";
+import type { ChecklistItemDraft, PriorityChoice } from "@/types";
 import { nonEmptyChecklistCount } from "@/tasks/task-compose/checklistRequirement";
 
 type Props = {
@@ -6,7 +6,7 @@ type Props = {
   draftSaving: boolean;
   title: string;
   priority: PriorityChoice;
-  checklistItems: string[];
+  checklistItems: ChecklistItemDraft[];
   evaluatePending: boolean;
   onClose: () => void;
   onSaveDraft: () => void;

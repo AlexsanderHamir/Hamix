@@ -166,7 +166,7 @@ func TestHTTP_patchTask_doneBlockedByIncompleteChecklist(t *testing.T) {
 	defer srv.Close()
 
 	id := mustCreateTask(t, srv.URL, `{"title":"t","priority":"medium"}`)
-	if _, err := st.AddChecklistItem(context.Background(), id, "not done yet", domain.ActorUser); err != nil {
+	if _, err := st.AddChecklistItem(context.Background(), id, "not done yet", nil, domain.ActorUser); err != nil {
 		t.Fatal(err)
 	}
 

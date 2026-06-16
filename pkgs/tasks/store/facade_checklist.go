@@ -39,10 +39,27 @@ func (s *Store) ListChecklistForSubject(ctx context.Context, taskID string) ([]C
 }
 
 // AddChecklistItem appends a definition row when the task is not running or done.
-func (s *Store) AddChecklistItem(ctx context.Context, taskID, text string, by domain.Actor) (*domain.TaskChecklistItem, error) {
+func (s *Store) AddChecklistItem(ctx context.Context, taskID, text string, verifyCommands []checklist.VerifyCommandInput, by domain.Actor) (*domain.TaskChecklistItem, error) {
 	slog.Debug("trace", "cmd", storeLogCmd, "operation", "tasks.store.AddChecklistItem")
-	return checklist.Add(ctx, s.db, taskID, text, by)
+	return checklist.Add(ctx, s.db, taskID, text, verifyCommands, by)
 }
+
+// ReplaceChecklistVerifyCommands replaces optional verify commands on a criterion.
+func (s *Store) ReplaceChecklistVerifyCommands(ctx context.Context, taskID, itemID string, cmds []checklist.VerifyCommandInput, by domain.Actor) error {
+	slog.Debug("trace", "cmd", storeLogCmd, "operation", "tasks.store.ReplaceChecklistVerifyCommands")
+	return checklist.ReplaceVerifyCommands(ctx, s.db, taskID, itemID, cmds, by)
+}
+
+// NormalizeVerifyCommands validates optional verify command inputs.
+func NormalizeVerifyCommands(in []VerifyCommandInput) ([]VerifyCommandInput, error) {
+	return checklist.NormalizeVerifyCommandInputs(in)
+}
+
+// CreateChecklistItemInput is the public re-export for task-create checklist rows.
+type CreateChecklistItemInput = checklist.CreateChecklistItemInput
+
+// VerifyCommandInput is the public re-export for checklist verify command wire shape.
+type VerifyCommandInput = checklist.VerifyCommandInput
 
 // ListChecklistForVerify returns criteria rows for worker verification.
 func (s *Store) ListChecklistForVerify(ctx context.Context, taskID string) ([]ChecklistVerifyItem, error) {

@@ -182,7 +182,7 @@ type cycleVerifyReportEntry struct {
 }
 
 // cycleVerdictsResponse is the JSON envelope for
-// GET /tasks/{id}/cycles/{cycleId}/verdicts. Both arrays are always
+// GET /tasks/{id}/cycles/{cycleId}/verdicts. All arrays are always
 // non-null (defaulted to []) so the SPA can iterate without a
 // presence check; pre-PR2 cycles return empty arrays.
 type cycleVerdictsResponse struct {
@@ -190,6 +190,20 @@ type cycleVerdictsResponse struct {
 	CycleID         string                     `json:"cycle_id"`
 	CriteriaReports []cycleCriteriaReportEntry `json:"criteria_reports"`
 	VerifyReports   []cycleVerifyReportEntry   `json:"verify_reports"`
+	CommandRuns     []cycleCommandRunEntry     `json:"command_runs"`
+}
+
+// cycleCommandRunEntry is one verify-phase shell command execution
+// mirrored from task_cycle_command_runs.
+type cycleCommandRunEntry struct {
+	ID          string    `json:"id"`
+	CycleID     string    `json:"cycle_id"`
+	AttemptSeq  int64     `json:"attempt_seq"`
+	CriterionID string    `json:"criterion_id"`
+	CommandSeq  int64     `json:"command_seq"`
+	ExitCode    int       `json:"exit_code"`
+	MetaPath    string    `json:"meta_path"`
+	WrittenAt   time.Time `json:"written_at"`
 }
 
 // taskCycleStreamListResponse is the JSON envelope for

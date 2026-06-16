@@ -1,3 +1,4 @@
+import type { ChecklistItemDraft } from "@/types";
 import type { RichPromptEditorProjectContextProps } from "../../rich-prompt";
 import { TaskComposeFields } from "../../task-compose";
 
@@ -8,12 +9,12 @@ type Props = {
   priority: import("@/types").PriorityChoice;
   onPriorityChange: (value: import("@/types").PriorityChoice) => void;
   prompt: string;
-  checklistItems: string[];
+  checklistItems: ChecklistItemDraft[];
   hideComposeChecklist: boolean;
   checklistRequirement?: "optional" | "required";
   onPromptChange: (value: string) => void;
-  onAppendChecklistCriterion: (text: string) => void;
-  onUpdateChecklistRow: (index: number, text: string) => void;
+  onAppendChecklistCriterion: (item: ChecklistItemDraft | string) => void;
+  onUpdateChecklistRow: (index: number, item: ChecklistItemDraft) => void;
   onRemoveChecklistRow: (index: number) => void;
   /** Forwarded to the rich prompt editor for `#` mentions and the REFERENCES block. */
   projectContext?: RichPromptEditorProjectContextProps;

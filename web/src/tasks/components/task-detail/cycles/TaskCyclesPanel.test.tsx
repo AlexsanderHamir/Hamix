@@ -170,6 +170,7 @@ describe("TaskCyclesPanel", () => {
           cycle_id: m?.[1] ?? "",
           criteria_reports: [],
           verify_reports: [],
+          command_runs: [],
         });
       }
       if (url.startsWith("/tasks/task-1/cycles/")) {
@@ -605,6 +606,7 @@ describe("TaskCyclesPanel", () => {
               written_at: "2026-04-18T10:00:58.000Z",
             },
           ],
+          command_runs: [],
         });
       }
       return new Response("not found", { status: 404 });
@@ -665,6 +667,7 @@ describe("TaskCyclesPanel", () => {
           cycle_id: "cyc-empty",
           criteria_reports: [],
           verify_reports: [],
+          command_runs: [],
         });
       }
       return new Response("not found", { status: 404 });

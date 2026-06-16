@@ -1,5 +1,6 @@
 import { errorMessage } from "@/lib/errorMessage";
 import {
+  type CycleCommandRun,
   type CycleCriteriaReport,
   type CycleMeta,
   type CycleVerdictsResponse,
@@ -219,8 +220,24 @@ export function parseCycleVerifyReport(value: unknown): CycleVerifyReport {
   };
 }
 
+export function parseCycleCommandRun(value: unknown): CycleCommandRun {
+  if (!isRecord(value)) {
+    throw new Error("Invalid API response: command run must be an object");
+  }
+  return {
+    id: parseNonEmptyString(value.id, "id"),
+    cycle_id: parseNonEmptyString(value.cycle_id, "cycle_id"),
+    attempt_seq: parseFiniteNumber(value.attempt_seq, "attempt_seq"),
+    criterion_id: parseNonEmptyString(value.criterion_id, "criterion_id"),
+    command_seq: parseFiniteNumber(value.command_seq, "command_seq"),
+    exit_code: parseFiniteNumber(value.exit_code, "exit_code"),
+    meta_path: typeof value.meta_path === "string" ? value.meta_path : "",
+    written_at: parseISO8601Required(value.written_at, "written_at"),
+  };
+}
+
 /**
- * Validates `GET /tasks/{id}/cycles/{cycleId}/verdicts`. Both arrays
+ * Validates `GET /tasks/{id}/cycles/{cycleId}/verdicts`. All arrays
  * are mandatory but may be empty (pre-PR2 cycles produce no rows).
  */
 export function parseCycleVerdictsResponse(
@@ -237,6 +254,10 @@ export function parseCycleVerdictsResponse(
   if (!Array.isArray(rawVerify)) {
     throw new Error("Invalid API response: verify_reports must be an array");
   }
+  const rawCommands = value.command_runs;
+  if (!Array.isArray(rawCommands)) {
+    throw new Error("Invalid API response: command_runs must be an array");
+  }
   const criteriaReports = rawCriteria.map((item, i) => {
     try {
       return parseCycleCriteriaReport(item);
@@ -251,11 +272,19 @@ export function parseCycleVerdictsResponse(
       throw new Error(`Invalid API response: verify_reports[${i}]: ${errorMessage(e)}`);
     }
   });
+  const commandRuns = rawCommands.map((item, i) => {
+    try {
+      return parseCycleCommandRun(item);
+    } catch (e) {
+      throw new Error(`Invalid API response: command_runs[${i}]: ${errorMessage(e)}`);
+    }
+  });
   return {
     task_id: parseNonEmptyString(value.task_id, "task_id"),
     cycle_id: parseNonEmptyString(value.cycle_id, "cycle_id"),
     criteria_reports: criteriaReports,
     verify_reports: verifyReports,
+    command_runs: commandRuns,
   };
 }
 

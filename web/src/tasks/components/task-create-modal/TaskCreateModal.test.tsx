@@ -89,7 +89,7 @@ describe("TaskCreateModal", () => {
   it("shows Evaluate action and calls onEvaluate", async () => {
     const user = userEvent.setup();
     const onEvaluate = vi.fn();
-    renderModal({ onEvaluate, checklistItems: ["Ship it"] });
+    renderModal({ onEvaluate, checklistItems: [{ text: "Ship it" }] });
     await user.click(screen.getByRole("button", { name: /^evaluate$/i }));
     expect(onEvaluate).toHaveBeenCalledTimes(1);
   });
@@ -259,7 +259,7 @@ describe("TaskCreateModal", () => {
   it("keeps Create / Evaluate buttons reachable while an error is showing", () => {
     renderModal({
       title: "Reproduce me",
-      checklistItems: ["Ship it"],
+      checklistItems: [{ text: "Ship it" }],
       createError: new Error("boom"),
     });
     expect(screen.getByRole("button", { name: /^evaluate$/i })).not.toBeDisabled();

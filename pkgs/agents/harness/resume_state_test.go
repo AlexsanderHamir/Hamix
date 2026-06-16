@@ -22,7 +22,7 @@ func TestReconstructCheckpoint_lockedCriteriaAndVerifyAttempt(t *testing.T) {
 	if err != nil {
 		t.Fatalf("create: %v", err)
 	}
-	item, err := st.AddChecklistItem(ctx, tsk.ID, "criterion one", domain.ActorUser)
+	item, err := st.AddChecklistItem(ctx, tsk.ID, "criterion one", nil, domain.ActorUser)
 	if err != nil {
 		t.Fatalf("add checklist: %v", err)
 	}

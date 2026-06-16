@@ -19,7 +19,7 @@ func TestHTTP_getChecklist_envelopeShape(t *testing.T) {
 	srv, st := newTaskTestServerWithStore(t)
 	defer srv.Close()
 	taskID := mustCreateChecklistTask(t, srv, "chk-get-shape")
-	if _, err := st.AddChecklistItem(context.Background(), taskID, "alpha", domain.ActorUser); err != nil {
+	if _, err := st.AddChecklistItem(context.Background(), taskID, "alpha", nil, domain.ActorUser); err != nil {
 		t.Fatal(err)
 	}
 
@@ -144,7 +144,7 @@ func TestHTTP_getChecklist_orderIsSortOrderAscThenIDAsc(t *testing.T) {
 	wantTexts := []string{"first", "second", "third"}
 	wantIDs := make([]string, 0, len(wantTexts))
 	for _, txt := range wantTexts {
-		it, err := st.AddChecklistItem(ctx, taskID, txt, domain.ActorUser)
+		it, err := st.AddChecklistItem(ctx, taskID, txt, nil, domain.ActorUser)
 		if err != nil {
 			t.Fatal(err)
 		}

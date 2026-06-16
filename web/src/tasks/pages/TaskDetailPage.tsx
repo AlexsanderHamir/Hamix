@@ -54,10 +54,14 @@ export function TaskDetailPage({ app }: Props) {
     checklistModalOpen,
     newChecklistText,
     setNewChecklistText,
+    newChecklistVerifyCommands,
+    setNewChecklistVerifyCommands,
     editCriterionModalOpen,
     editingChecklistItemId,
     editChecklistText,
     setEditChecklistText,
+    editChecklistVerifyCommands,
+    setEditChecklistVerifyCommands,
     closeChecklistModal,
     closeEditCriterionModal,
     openChecklistModal,
@@ -384,6 +388,8 @@ export function TaskDetailPage({ app }: Props) {
         modalOpen={checklistModalOpen}
         newCriterionText={newChecklistText}
         onNewCriterionTextChange={setNewChecklistText}
+        newCriterionVerifyCommands={newChecklistVerifyCommands}
+        onNewCriterionVerifyCommandsChange={setNewChecklistVerifyCommands}
         onOpenAddModal={openChecklistModal}
         onCloseAddModal={closeChecklistModal}
         onSubmitNewCriterion={submitNewChecklistCriterion}
@@ -392,6 +398,8 @@ export function TaskDetailPage({ app }: Props) {
         editingItemId={editingChecklistItemId}
         editCriterionText={editChecklistText}
         onEditCriterionTextChange={setEditChecklistText}
+        editCriterionVerifyCommands={editChecklistVerifyCommands}
+        onEditCriterionVerifyCommandsChange={setEditChecklistVerifyCommands}
         onOpenEditCriterionModal={openEditCriterionModal}
         onCloseEditCriterionModal={closeEditCriterionModal}
         onSubmitEditCriterion={submitEditChecklistCriterion}

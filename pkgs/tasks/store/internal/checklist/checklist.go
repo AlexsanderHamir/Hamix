@@ -22,14 +22,15 @@ const logCmd = "taskapi"
 // Re-aliased by the store facade as store.ChecklistItemView so the
 // JSON field tags stay stable on the wire.
 type ItemView struct {
-	ID                string `json:"id"`
-	SortOrder         int    `json:"sort_order"`
-	Text              string `json:"text"`
-	Done              bool   `json:"done"`
-	Evidence          string `json:"evidence,omitempty"`
-	VerifiedBy        string `json:"verified_by,omitempty"`
-	VerifierReasoning string `json:"verifier_reasoning,omitempty"`
-	CycleID           string `json:"cycle_id,omitempty"`
+	ID                string              `json:"id"`
+	SortOrder         int                 `json:"sort_order"`
+	Text              string              `json:"text"`
+	VerifyCommands    []VerifyCommandView `json:"verify_commands,omitempty"`
+	Done              bool                `json:"done"`
+	Evidence          string              `json:"evidence,omitempty"`
+	VerifiedBy        string              `json:"verified_by,omitempty"`
+	VerifierReasoning string              `json:"verifier_reasoning,omitempty"`
+	CycleID           string              `json:"cycle_id,omitempty"`
 }
 
 // DefinitionSourceTaskID returns the task id that owns checklist item
@@ -102,11 +103,16 @@ func List(ctx context.Context, db *gorm.DB, taskID string) ([]ItemView, error) {
 			doneByItem[d.ItemID] = d
 		}
 		out = make([]ItemView, 0, len(items))
+		cmdsByItem, err := commandsForItemsInTx(tx, ids)
+		if err != nil {
+			return err
+		}
 		for _, it := range items {
 			v := ItemView{
-				ID:        it.ID,
-				SortOrder: it.SortOrder,
-				Text:      it.Text,
+				ID:             it.ID,
+				SortOrder:      it.SortOrder,
+				Text:           it.Text,
+				VerifyCommands: cmdsByItem[it.ID],
 			}
 			if d, ok := doneByItem[it.ID]; ok {
 				v.Done = true
@@ -127,7 +133,7 @@ func List(ctx context.Context, db *gorm.DB, taskID string) ([]ItemView, error) {
 
 // Add appends a definition row; the task must exist and not be running
 // or done. Appends EventChecklistItemAdded in the same TX.
-func Add(ctx context.Context, db *gorm.DB, taskID, text string, by domain.Actor) (*domain.TaskChecklistItem, error) {
+func Add(ctx context.Context, db *gorm.DB, taskID, text string, verifyCommands []VerifyCommandInput, by domain.Actor) (*domain.TaskChecklistItem, error) {
 	defer kernel.DeferLatency(kernel.OpAddChecklistItem)()
 	slog.Debug("trace", "cmd", logCmd, "operation", "tasks.store.checklist.Add")
 	if err := kernel.ValidateActor(by); err != nil {
@@ -137,12 +143,16 @@ func Add(ctx context.Context, db *gorm.DB, taskID, text string, by domain.Actor)
 	if text == "" {
 		return nil, fmt.Errorf("%w: checklist text required", domain.ErrInvalidInput)
 	}
+	cmds, err := NormalizeVerifyCommandInputs(verifyCommands)
+	if err != nil {
+		return nil, err
+	}
 	taskID = strings.TrimSpace(taskID)
 	if taskID == "" {
 		return nil, fmt.Errorf("%w: id", domain.ErrInvalidInput)
 	}
 	var created *domain.TaskChecklistItem
-	err := db.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
+	err = db.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
 		t, err := kernel.LoadTask(tx, taskID)
 		if err != nil {
 			return err
@@ -163,6 +173,9 @@ func Add(ctx context.Context, db *gorm.DB, taskID, text string, by domain.Actor)
 		}
 		if err := tx.Create(it).Error; err != nil {
 			return fmt.Errorf("insert checklist item: %w", err)
+		}
+		if err := replaceCommandsInTx(tx, it.ID, cmds); err != nil {
+			return err
 		}
 		seq, err := kernel.NextEventSeq(tx, taskID)
 		if err != nil {

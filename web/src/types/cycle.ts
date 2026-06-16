@@ -210,16 +210,28 @@ export type CycleVerifyReport = {
   written_at: string;
 };
 
+export type CycleCommandRun = {
+  id: string;
+  cycle_id: string;
+  attempt_seq: number;
+  criterion_id: string;
+  command_seq: number;
+  exit_code: number;
+  meta_path: string;
+  /** ISO 8601 from API. */
+  written_at: string;
+};
+
 /**
- * Envelope for `GET /tasks/{id}/cycles/{cycleId}/verdicts`. Both
- * arrays are always present (`[]` when no rows mirrored, never
- * null) so the SPA can iterate without a presence check.
+ * Envelope for `GET /tasks/{id}/cycles/{cycleId}/verdicts`. All arrays
+ * are always present (`[]` when no rows mirrored, never null).
  */
 export type CycleVerdictsResponse = {
   task_id: string;
   cycle_id: string;
   criteria_reports: CycleCriteriaReport[];
   verify_reports: CycleVerifyReport[];
+  command_runs: CycleCommandRun[];
 };
 
 /** Body for `POST /tasks/{id}/cycles`. Both fields are optional. */

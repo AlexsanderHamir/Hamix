@@ -4,7 +4,12 @@ import {
   addChecklistItem,
   deleteChecklistItem,
   patchChecklistItemText,
+  patchChecklistItemVerifyCommands,
 } from "@/api";
+import {
+  normalizeVerifyCommands,
+} from "@/tasks/task-compose/checklistRequirement";
+import type { ChecklistVerifyCommandInput } from "@/types";
 import {
   rumMutationOptimisticApplied,
   rumMutationRolledBack,
@@ -65,17 +70,25 @@ export function useTaskDetailChecklist(taskId: string) {
   const { optimisticMutationsEnabled } = useRolloutFlags();
   const [checklistModalOpen, setChecklistModalOpen] = useState(false);
   const [newChecklistText, setNewChecklistText] = useState("");
+  const [newChecklistVerifyCommands, setNewChecklistVerifyCommands] = useState<
+    ChecklistVerifyCommandInput[]
+  >([]);
   const [editCriterionModalOpen, setEditCriterionModalOpen] = useState(false);
   const [editingChecklistItemId, setEditingChecklistItemId] = useState<
     string | null
   >(null);
   const [editChecklistText, setEditChecklistText] = useState("");
+  const [editChecklistVerifyCommands, setEditChecklistVerifyCommands] = useState<
+    ChecklistVerifyCommandInput[]
+  >([]);
   /**
    * Stored at edit-open time so `submitEditChecklistCriterion` can skip
    * a no-op PATCH when the user saved without changing the text.
    */
   const [editChecklistOriginalText, setEditChecklistOriginalText] =
     useState("");
+  const [editChecklistOriginalVerifyCommands, setEditChecklistOriginalVerifyCommands] =
+    useState<ChecklistVerifyCommandInput[]>([]);
 
   /**
    * Per-submission token for `addChecklistMutation`. The new criterion
@@ -108,10 +121,13 @@ export function useTaskDetailChecklist(taskId: string) {
   useEffect(() => {
     setChecklistModalOpen(false);
     setNewChecklistText("");
+    setNewChecklistVerifyCommands([]);
     setEditCriterionModalOpen(false);
     setEditingChecklistItemId(null);
     setEditChecklistText("");
     setEditChecklistOriginalText("");
+    setEditChecklistVerifyCommands([]);
+    setEditChecklistOriginalVerifyCommands([]);
     addSubmissionTokenRef.current += 1;
   }, [taskId]);
 
@@ -119,6 +135,7 @@ export function useTaskDetailChecklist(taskId: string) {
     addSubmissionTokenRef.current += 1;
     setChecklistModalOpen(false);
     setNewChecklistText("");
+    setNewChecklistVerifyCommands([]);
   }, []);
 
   const closeEditCriterionModal = useCallback(() => {
@@ -126,35 +143,50 @@ export function useTaskDetailChecklist(taskId: string) {
     setEditingChecklistItemId(null);
     setEditChecklistText("");
     setEditChecklistOriginalText("");
+    setEditChecklistVerifyCommands([]);
+    setEditChecklistOriginalVerifyCommands([]);
   }, []);
 
   const openChecklistModal = useCallback(() => {
     addSubmissionTokenRef.current += 1;
     setNewChecklistText("");
+    setNewChecklistVerifyCommands([]);
     setChecklistModalOpen(true);
     setEditCriterionModalOpen(false);
     setEditingChecklistItemId(null);
     setEditChecklistText("");
     setEditChecklistOriginalText("");
+    setEditChecklistVerifyCommands([]);
+    setEditChecklistOriginalVerifyCommands([]);
   }, []);
 
-  const openEditCriterionModal = useCallback((itemId: string, text: string) => {
-    addSubmissionTokenRef.current += 1;
-    setEditingChecklistItemId(itemId);
-    setEditChecklistText(text);
-    setEditChecklistOriginalText(text);
-    setEditCriterionModalOpen(true);
-    setChecklistModalOpen(false);
-    setNewChecklistText("");
-  }, []);
+  const openEditCriterionModal = useCallback(
+    (itemId: string, text: string, verifyCommands: ChecklistVerifyCommandInput[] = []) => {
+      addSubmissionTokenRef.current += 1;
+      setEditingChecklistItemId(itemId);
+      setEditChecklistText(text);
+      setEditChecklistOriginalText(text);
+      const cmds = verifyCommands ?? [];
+      setEditChecklistVerifyCommands(cmds);
+      setEditChecklistOriginalVerifyCommands(cmds);
+      setEditCriterionModalOpen(true);
+      setChecklistModalOpen(false);
+      setNewChecklistText("");
+      setNewChecklistVerifyCommands([]);
+    },
+    [],
+  );
 
   const addChecklistMutation = useMutation<
     void,
     unknown,
-    { text: string; submissionToken: number },
+    { text: string; verify_commands: ChecklistVerifyCommandInput[]; submissionToken: number },
     ChecklistOptimisticContext
   >({
-    mutationFn: (input) => addChecklistItem(taskId, input.text),
+    mutationFn: (input) =>
+      addChecklistItem(taskId, input.text, {
+        verify_commands: input.verify_commands,
+      }),
     onMutate: async (input) => {
       const startedAtMs = performance.now();
       rumMutationStarted("checklist_add");
@@ -228,6 +260,7 @@ export function useTaskDetailChecklist(taskId: string) {
         return;
       }
       setNewChecklistText("");
+      setNewChecklistVerifyCommands([]);
       setChecklistModalOpen(false);
       if (context) {
         rumMutationSettled(
@@ -245,9 +278,10 @@ export function useTaskDetailChecklist(taskId: string) {
       const t = newChecklistText.trim();
       if (!t || addChecklistMutation.isPending) return;
       const submissionToken = ++addSubmissionTokenRef.current;
-      addChecklistMutation.mutate({ text: t, submissionToken });
+      const verify_commands = normalizeVerifyCommands(newChecklistVerifyCommands);
+      addChecklistMutation.mutate({ text: t, verify_commands, submissionToken });
     },
-    [newChecklistText, addChecklistMutation],
+    [newChecklistText, newChecklistVerifyCommands, addChecklistMutation],
   );
 
   const updateChecklistTextMutation = useMutation<
@@ -321,15 +355,28 @@ export function useTaskDetailChecklist(taskId: string) {
       const newText = editChecklistText.trim();
       if (!newText) return;
       if (updateChecklistTextMutation.isPending) return;
-      if (newText === editChecklistOriginalText) {
+      const newCommands = normalizeVerifyCommands(editChecklistVerifyCommands);
+      const textChanged = newText !== editChecklistOriginalText;
+      const commandsChanged =
+        JSON.stringify(newCommands) !==
+        JSON.stringify(normalizeVerifyCommands(editChecklistOriginalVerifyCommands));
+      if (!textChanged && !commandsChanged) {
         closeEditCriterionModal();
         return;
       }
       try {
-        await updateChecklistTextMutation.mutateAsync({
-          itemId: id,
-          text: newText,
-        });
+        if (textChanged) {
+          await updateChecklistTextMutation.mutateAsync({
+            itemId: id,
+            text: newText,
+          });
+        }
+        if (commandsChanged) {
+          await patchChecklistItemVerifyCommands(taskId, id, newCommands);
+          await queryClient.invalidateQueries({
+            queryKey: taskQueryKeys.checklist(taskId),
+          });
+        }
         if (editingChecklistItemIdRef.current === id) {
           closeEditCriterionModal();
         }
@@ -343,8 +390,12 @@ export function useTaskDetailChecklist(taskId: string) {
       editingChecklistItemId,
       editChecklistText,
       editChecklistOriginalText,
+      editChecklistVerifyCommands,
+      editChecklistOriginalVerifyCommands,
       updateChecklistTextMutation,
       closeEditCriterionModal,
+      queryClient,
+      taskId,
     ],
   );
 
@@ -416,10 +467,14 @@ export function useTaskDetailChecklist(taskId: string) {
     checklistModalOpen,
     newChecklistText,
     setNewChecklistText,
+    newChecklistVerifyCommands,
+    setNewChecklistVerifyCommands,
     editCriterionModalOpen,
     editingChecklistItemId,
     editChecklistText,
     setEditChecklistText,
+    editChecklistVerifyCommands,
+    setEditChecklistVerifyCommands,
     closeChecklistModal,
     closeEditCriterionModal,
     openChecklistModal,

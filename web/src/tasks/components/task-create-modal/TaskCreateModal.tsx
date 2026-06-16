@@ -1,5 +1,5 @@
 import { useRef, useState, type FormEvent, type ReactNode } from "react";
-import type { PriorityChoice } from "@/types";
+import type { ChecklistItemDraft, PriorityChoice } from "@/types";
 import type { RichPromptEditorProjectContextProps } from "../rich-prompt";
 import type { TestScenario } from "@/tasks/test-scenarios";
 import { Modal } from "../../../shared/Modal";
@@ -30,12 +30,12 @@ type Props = {
   title: string;
   prompt: string;
   priority: PriorityChoice;
-  checklistItems: string[];
+  checklistItems: ChecklistItemDraft[];
   onTitleChange: (v: string) => void;
   onPromptChange: (v: string) => void;
   onPriorityChange: (p: PriorityChoice) => void;
-  onAppendChecklistCriterion: (text: string) => void;
-  onUpdateChecklistRow: (index: number, text: string) => void;
+  onAppendChecklistCriterion: (item: ChecklistItemDraft | string) => void;
+  onUpdateChecklistRow: (index: number, item: ChecklistItemDraft) => void;
   onRemoveChecklistRow: (index: number) => void;
   evaluatePending: boolean;
   evaluation: TaskCreateModalEvaluation | null;

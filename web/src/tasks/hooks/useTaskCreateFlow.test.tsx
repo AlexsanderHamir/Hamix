@@ -230,7 +230,9 @@ describe("useTaskCreateFlow", () => {
 
     expect(result.current.newTitle).toBe(scenario.title);
     expect(result.current.newPriority).toBe(scenario.priority);
-    expect(result.current.newChecklistItems).toEqual(scenario.checklist);
+    expect(result.current.newChecklistItems).toEqual(
+      scenario.checklist.map((text) => ({ text })),
+    );
     // Prompt is wrapped in <p> blocks by plainTextToInitialHtml; assert the
     // first paragraph contains the scenario's first line so we know the
     // body actually made it into the editor.

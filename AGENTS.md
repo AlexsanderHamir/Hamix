@@ -10,6 +10,7 @@ Use this file as the first pass before editing code. Contributor reference lives
 | 2 | [CONTRIBUTING.md](CONTRIBUTING.md) | PR checklist, `.env.example`, API/doc sync pointers. |
 | 3 | [docs/architecture.md](docs/architecture.md) | System overview, store, agent worker, SSE hub, limitations. |
 | 4 | [docs/data-model.md](docs/data-model.md) | Tasks, projects, execution cycles/phases, checklist, dependencies, gates. |
+| 4b | [docs/domain/](docs/domain/) | Behavioral deep-dives (verify agent, …). Schema stays in data-model. |
 | 5 | [docs/api.md](docs/api.md) | REST + SSE endpoint list. Handler code is authoritative for status codes and error strings. |
 | 6 | [docs/configuration.md](docs/configuration.md) | Env vars + `app_settings` row. |
 | 7 | [docs/web.md](docs/web.md) | `web/src` layout, React Query + SSE, `parseTaskApi`, Vitest. |

@@ -279,6 +279,8 @@ Default CI does not require a running agent binary.
 
 | Doc | Content |
 | --- | --- |
+| [task-scheduling.md](./task-scheduling.md) | Four readiness predicates, enqueue vs admission |
+| [agent-supervisor.md](./agent-supervisor.md) | Worker boot/reload, reconcile tick wiring |
 | [sse-hub.md](./sse-hub.md) | Browser realtime path (parallel to queue) |
 | [harness.md](./harness.md) | Cycle body after admission |
 | [runner-adapters.md](./runner-adapters.md) | Worker supervisor and runner build |

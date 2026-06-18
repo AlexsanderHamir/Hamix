@@ -75,7 +75,7 @@ If a task is dequeued but fails (3) or (4) on reload, the worker sets `pickup_no
 
 - Wire format: RFC3339 UTC string. JSON `null` on `PATCH` clears the field. Empty string is rejected on `POST` (`400`).
 - Default deferral on create: `app_settings.agent_pickup_delay_seconds` applies when creating `status=ready` and the client omits `pickup_not_before`.
-- Eligibility predicate: `status='ready' AND (pickup_not_before IS NULL OR pickup_not_before <= now())` — see `pkgs/tasks/store/internal/ready/ready.go` (`ListQueueCandidates`). Deep dive: [domain/agent-queue.md](domain/agent-queue.md).
+- Eligibility predicate: `status='ready' AND (pickup_not_before IS NULL OR pickup_not_before <= now())` — see `pkgs/tasks/store/internal/ready/ready.go` (`ListQueueCandidates`). Deep dives: [domain/task-scheduling.md](domain/task-scheduling.md) (four readiness predicates), [domain/agent-queue.md](domain/agent-queue.md) (in-memory queue).
 - Three paths to the worker: immediate notify on commit, `PickupWakeScheduler` for future times, reconcile (2m tick) as backstop. **Invariant:** the in-memory queue never contains a task the SQL predicate would reject.
 - Single-process: `MemoryQueue` and `PickupWakeScheduler` are not shared across replicas. Keep NTP aligned on app hosts and Postgres so process and DB clocks agree.
 
@@ -195,7 +195,7 @@ Keys are additive only; consumers must ignore unknown keys. Values are always st
 
 ## Checklist (done criteria)
 
-Behavioral deep-dives: [domain/harness.md](./domain/harness.md) (orchestration), [domain/done-criteria.md](./domain/done-criteria.md) (full lifecycle), [domain/execute-agent.md](./domain/execute-agent.md) (execute phase), [domain/verify-agent.md](./domain/verify-agent.md) (verify phase).
+Behavioral deep-dives: [domain/harness.md](./domain/harness.md) (orchestration), [domain/done-criteria.md](./domain/done-criteria.md) (full lifecycle), [domain/execute-agent.md](./domain/execute-agent.md) (execute phase), [domain/verify-agent.md](./domain/verify-agent.md) (verify phase), [domain/project-context.md](./domain/project-context.md) (context snapshots), [domain/persistence.md](./domain/persistence.md) (dual-write), [domain/task-events.md](./domain/task-events.md) (audit log).
 
 Per-task acceptance requirements. Stored in `task_checklist_items` (definitions: `id`, `task_id`, `sort_order`, `text`) and optional `task_checklist_item_commands` (per-criterion shell checks: `item_id`, `sort_order`, `command`, `expected_outcome`, `ON DELETE CASCADE`) and `task_checklist_completions` (per-subject ledger: `task_id`, `item_id`, `at`, `done_by`, `evidence`, `verified_by`, `verifier_reasoning`, `cycle_id`). Operators attach zero or more verification commands per criterion; during verify the worker runs them in `app_settings.repo_root`, writes stdout/stderr/meta under the worker-managed report dir, and feeds those artifacts to the verify agent. The LLM remains the sole authority for marking criteria done — exit code 0 does not auto-pass.
 

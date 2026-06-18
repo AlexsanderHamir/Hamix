@@ -422,6 +422,7 @@ Supervisor reload triggers on successful `PATCH /settings`; changing runner-rela
 
 | Doc | Content |
 | --- | --- |
+| [agent-supervisor.md](./agent-supervisor.md) | Supervisor build/probe/reload wiring |
 | [agent-queue.md](./agent-queue.md) | Worker queue delivery path |
 | [sse-hub.md](./sse-hub.md) | SSE fanout (not worker queue) |
 | [harness.md](./harness.md) | Cycle loop, error classification, meta recording |

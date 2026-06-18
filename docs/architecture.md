@@ -48,7 +48,7 @@ flowchart LR
   W --> S
 ```
 
-Successful writes call `notifyChange`, which publishes through `SSEHub`. The store maps DB errors to `domain.ErrNotFound` and `domain.ErrInvalidInput`, and appends `task_events` on every meaningful mutation. The SSE hub is in-memory only — not durable, not shared across processes. `GET /repo/*` and `@`-mention validation use `pkgs/repo` only when `app_settings.repo_root` is configured.
+Successful writes call `notifyChange`, which publishes through `SSEHub`. The store maps DB errors to `domain.ErrNotFound` and `domain.ErrInvalidInput`, and appends `task_events` on every meaningful mutation. The SSE hub is in-memory only — not durable, not shared across processes. `GET /repo/*` and `@`-mention validation use `pkgs/repo` only when `app_settings.repo_root` is configured. Deep dive: [domain/workspace-repo.md](domain/workspace-repo.md).
 
 ## Go packages
 
@@ -122,12 +122,12 @@ SSE is a hint. The follow-up GET returns the authoritative body.
 
 ## Persistence
 
-GORM + Postgres. Schema migration is `AutoMigrate` only — no versioned migration files. The same migration runs against SQLite in tests via `tasktestdb.OpenSQLite`.
+GORM + Postgres. Schema migration is `AutoMigrate` only — no versioned migration files. The same migration runs against SQLite in tests via `tasktestdb.OpenSQLite`. Deep dive: [domain/persistence.md](domain/persistence.md) (facade, dual-write, verdict vs report files).
 
 | Table | Purpose |
 |---|---|
 | `tasks` | Tasks (optional `project_id`, flat tags + milestone, gate JSON, `depends_on` via `task_dependencies`). |
-| `task_events` | Append-only audit log. Every cycle/phase mutation appends a mirror row in the same SQL transaction. |
+| `task_events` | Append-only audit log. Every cycle/phase mutation appends a mirror row in the same SQL transaction. Deep dive: [domain/task-events.md](domain/task-events.md). |
 | `task_cycles` / `task_cycle_phases` | Typed execution-cycle substrate (see [data-model.md](./data-model.md)). |
 | `task_cycle_stream_events` | Durable normalized Cursor `stream-json` progress for one attempt. |
 | `task_checklist_items` / `task_checklist_completions` | Per-task done criteria. See [domain/done-criteria.md](./domain/done-criteria.md). |
@@ -151,7 +151,7 @@ In-memory ring buffer keyed by monotonic event id. Deep dive: [domain/sse-hub.md
 
 ## Ready-task queue and reconcile
 
-Bounded in-memory FIFO for the agent worker. Deep dive: [domain/agent-queue.md](domain/agent-queue.md).
+Bounded in-memory FIFO for the agent worker. Deep dives: [domain/agent-queue.md](domain/agent-queue.md) (queue mechanics), [domain/task-scheduling.md](domain/task-scheduling.md) (readiness predicates, enqueue vs admission).
 
 `pkgs/agents` ships `domain.Task` snapshots into a bounded in-memory FIFO (`MemoryQueue`, default depth **256**, configurable via `T2A_USER_TASK_AGENT_QUEUE_CAP`).
 
@@ -167,7 +167,7 @@ The queue is single-process: multiple `taskapi` replicas with the worker enabled
 
 ## Agent worker and harness
 
-`pkgs/agents/worker` is the single in-process consumer of `pkgs/agents.MemoryQueue`. It handles queue admission (reload, readiness, ready→running, ack ordering) and delegates cycle choreography to `pkgs/agents/harness`. The worker is enabled by default whenever `app_settings.repo_root` is set; toggle from the SPA Settings page. Disabled by default if no workspace is configured.
+`pkgs/agents/worker` is the single in-process consumer of `pkgs/agents.MemoryQueue`. It handles queue admission (reload, readiness, ready→running, ack ordering) and delegates cycle choreography to `pkgs/agents/harness`. Supervisor boot/reload/hot-swap: [domain/agent-supervisor.md](domain/agent-supervisor.md). The worker is enabled by default whenever `app_settings.repo_root` is set; toggle from the SPA Settings page. Disabled by default if no workspace is configured.
 
 The **harness** (`pkgs/agents/harness`) is everything wrapped around `runner.Run`: execute/verify phase loop, criteria injection, report-file contracts, adversarial verification, git integrity checks, and crash/shutdown recovery of in-flight cycle state. See [domain/harness.md](./domain/harness.md) (orchestration deep-dive), [ADR-0005](./adr/ADR-0005-extract-agent-harness.md), [domain/done-criteria.md](./domain/done-criteria.md), [domain/execute-agent.md](./domain/execute-agent.md), and [domain/verify-agent.md](./domain/verify-agent.md).
 

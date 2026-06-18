@@ -72,7 +72,7 @@ Model semantics (tags, milestone, `depends_on`, gate, worker readiness): [data-m
 | GET | `/tasks/{id}` | Single flat `domain.Task`. |
 | PATCH | `/tasks/{id}` | At least one of: `title`, `initial_prompt`, `status`, `priority`, `project_id`, `project_context_item_ids`, `automation_selections`, `pickup_not_before`, `cursor_model`, `tags`, `milestone`, `gate`, `depends_on`. Publishes `task_updated` (+ `task_gate_changed` / `task_dependency_changed` when those fields change). Writable `status` values for `X-Actor: user`: `ready`, `running`, `blocked`, `review`, `done`, `failed`, `on_hold`. See [data-model.md](./data-model.md). |
 | DELETE | `/tasks/{id}` | `204` empty body. Publishes `task_deleted`. |
-| GET | `/tasks/{id}/events` | Audit log. Default: ascending all rows. With `limit` / `before_seq` / `after_seq`: keyset-paged newest-first slice with `range_*`, `has_more_*`, `approval_pending`. |
+| GET | `/tasks/{id}/events` | Audit log. Default: ascending all rows. With `limit` / `before_seq` / `after_seq`: keyset-paged newest-first slice with `range_*`, `has_more_*`, `approval_pending`. Deep dive: [domain/task-events.md](./domain/task-events.md). |
 | GET | `/tasks/{id}/events/{seq}` | Single event row. |
 | PATCH | `/tasks/{id}/events/{seq}` | Append a user-response message (max 10 000 bytes after trim, thread cap 200). Only for `approval_requested` and `task_failed`. Publishes `task_updated`. |
 | GET | `/tasks/{id}/dependencies` | `{ depends_on: [{ task_id, satisfies }] }`. |
@@ -141,7 +141,7 @@ Singleton row (`id=1`) seeded on first read with `domain.DefaultAppSettings`. Fu
 
 ## Workspace repo
 
-Wired only when `app_settings.repo_root` is set. When unset, every `/repo/*` route returns `409 { error: "repo root is not configured", reason: "repo_root_not_configured" }`. When `OpenRoot` rejects the path (missing, not a directory, symlink loop), routes return `500 { reason: "repo_root_open_failed", error }`.
+Deep dive: [domain/workspace-repo.md](./domain/workspace-repo.md). Wired only when `app_settings.repo_root` is set. When unset, every `/repo/*` route returns `409 { error: "repo root is not configured", reason: "repo_root_not_configured" }`. When `OpenRoot` rejects the path (missing, not a directory, symlink loop), routes return `500 { reason: "repo_root_open_failed", error }`.
 
 | Method | Path | Notes |
 |---|---|---|

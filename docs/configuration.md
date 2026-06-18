@@ -40,7 +40,7 @@ Reconcile tick interval is fixed in code (`pkgs/agents.ReconcileTickInterval`, 2
 3. `postgres.Open` — GORM connection. Configures `database/sql` pool (max open/idle, lifetime). No startup `Ping`.
 4. `postgres.Migrate` — `AutoMigrate` for every domain model under `postgres.DefaultMigrateTimeout` (120s).
 5. `store.NewStore`, `(*store.Store).SetReadyTaskNotifier` (in-process queue), `(*store.Store).SetPickupWake` (deferred ready), `handler.NewSSEHub`.
-6. Agent worker supervisor (`cmd/taskapi/run_agentworker.go`) reads `app_settings`, builds the runner via `pkgs/agents/runner/registry`, probes the binary, and starts the worker when conditions are met.
+6. Agent worker supervisor (`cmd/taskapi/run_agentworker.go`) reads `app_settings`, builds the runner via `pkgs/agents/runner/registry`, probes the binary, and starts the worker when conditions are met. Deep dive: [domain/agent-supervisor.md](domain/agent-supervisor.md).
 7. `internal/taskapi.NewHTTPHandler` wires store + hub + repo into `handler.NewHandler`, then applies `pkgs/tasks/middleware.Stack` (recovery, metrics, access logging, rate limit, optional auth, timeouts, body cap, idempotency).
 8. `http.Server` on `-port` (default 8080). `ReadHeaderTimeout` / `ReadTimeout` / `IdleTimeout` / `MaxHeaderBytes` are set; `WriteTimeout` is intentionally **not** set so SSE streams are not cut off.
 
@@ -68,7 +68,7 @@ Singleton row in Postgres (CHECK enforces `id=1`). AutoMigrate creates the table
 |---|---|---|---|
 | `agent_paused` | bool | `false` | Operator-facing soft pause exposed as a one-click toggle in the SPA header chip. The agent worker always starts at boot; pause is the only "stop dequeuing" knob. Idle reason: `paused_by_operator`. Surfaces in `GET /system/health`. |
 | `runner` | string | `"cursor"` | Identifier from `pkgs/agents/runner/registry`. Production: `cursor`. Scaffold: `claude-code` (registered but not production-ready). See [domain/runner-adapters.md](domain/runner-adapters.md). |
-| `repo_root` | string | `""` | Absolute path to the workspace the worker and `/repo/*` operate against. **Empty = not configured**: supervisor stays idle, repo routes respond `409 repo_root_not_configured`, `@`-mention validation is skipped. |
+| `repo_root` | string | `""` | Absolute path to the workspace the worker and `/repo/*` operate against. **Empty = not configured**: supervisor stays idle, repo routes respond `409 repo_root_not_configured`, `@`-mention validation is skipped. See [domain/workspace-repo.md](domain/workspace-repo.md). |
 | `cursor_bin` | string | `""` | Cursor CLI binary path. Empty = `PATH` lookup of `cursor`. Absolute paths pin a build. |
 | `cursor_model` | string | `""` | Optional Cursor model forwarded to the runner. Empty = omit the model flag (Cursor uses account default). |
 | `max_run_duration_seconds` | int (≥0) | `0` | Per-run wall-clock cap on `runner.Request.Timeout`. `0` = no limit. |
@@ -95,6 +95,8 @@ Singleton row in Postgres (CHECK enforces `id=1`). AutoMigrate creates the table
 `repo_root` is **not** validated for "directory exists" on `PATCH` — the supervisor reports `repo_root_open_failed` on the next reload, surfaced via `/health/ready` (`workspace_repo: fail`).
 
 ### Lifecycle on `PATCH /settings`
+
+Supervisor reload semantics (idle reasons, hot-swap, cancel): [domain/agent-supervisor.md](domain/agent-supervisor.md).
 
 ```mermaid
 sequenceDiagram

@@ -64,9 +64,15 @@ Use Microsoft-style callouts where they add clarity:
 
 | Article | Description |
 | --- | --- |
-| [sse-hub.md](./sse-hub.md) | SSE hub: fanout, reconnect replay, resync, SPA invalidation |
+| [task-scheduling.md](./task-scheduling.md) | Worker readiness: dependencies, gate, pickup deferral, enqueue vs admission |
 | [agent-queue.md](./agent-queue.md) | Agent ready-task queue: notify, pickup wake, reconcile, ack semantics |
-| [runner-adapters.md](./runner-adapters.md) | Runner plug-in model: registry, capabilities, supervisor wiring, adding CLI adapters |
+| [agent-supervisor.md](./agent-supervisor.md) | Worker supervisor: boot/reload, idle reasons, hot-swap, cancel, SSE wiring |
+| [sse-hub.md](./sse-hub.md) | SSE hub: fanout, reconnect replay, resync, SPA invalidation |
+| [workspace-repo.md](./workspace-repo.md) | Workspace repo: `repo_root` gate, `/repo/*`, `@`-mention validation |
+| [persistence.md](./persistence.md) | Store facade, dual-write, verdict tables vs report files |
+| [task-events.md](./task-events.md) | Audit log: `task_events`, paging, response threads, cycle mirrors |
+| [runner-adapters.md](./runner-adapters.md) | Runner plug-in model: registry, capabilities, adding CLI adapters |
+| [project-context.md](./project-context.md) | Project context: snapshots, harness injection, resume reuse |
 | [harness.md](./harness.md) | Agent harness: cycle loop, worker boundary, resume, recovery, observability |
 | [done-criteria.md](./done-criteria.md) | Done criteria lifecycle: definition, execute/verify loop, completion ledger |
 | [execute-agent.md](./execute-agent.md) | Execute phase: prompt composition, runner invocation, criteria self-report, resume |

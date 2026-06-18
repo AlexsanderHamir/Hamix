@@ -352,6 +352,9 @@ Task-level fields consumed in the loop: `cursor_model`, `automation_selections`,
 
 | Doc | Content |
 | --- | --- |
+| [persistence.md](./persistence.md) | Store writes, dual-write mirrors, verdict tables |
+| [project-context.md](./project-context.md) | Context snapshots injected before execute |
+| [agent-supervisor.md](./agent-supervisor.md) | Worker supervisor boundary before admission |
 | [sse-hub.md](./sse-hub.md) | SSE fanout, cycle/progress publish, resync |
 | [agent-queue.md](./agent-queue.md) | Worker queue admission and ack ordering |
 | [runner-adapters.md](./runner-adapters.md) | Runner registry, capabilities, adding CLI adapters |

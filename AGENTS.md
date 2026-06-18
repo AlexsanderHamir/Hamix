@@ -10,7 +10,7 @@ Use this file as the first pass before editing code. Contributor reference lives
 | 2 | [CONTRIBUTING.md](CONTRIBUTING.md) | PR checklist, `.env.example`, API/doc sync pointers. |
 | 3 | [docs/architecture.md](docs/architecture.md) | System overview, store, agent worker, SSE hub, limitations. |
 | 4 | [docs/data-model.md](docs/data-model.md) | Tasks, projects, execution cycles/phases, checklist, dependencies, gates. |
-| 4b | [docs/domain/](docs/domain/) | Behavioral deep-dives (harness orchestration, done criteria, execute/verify agents, …). Start with [harness.md](docs/domain/harness.md) for cycle loop context. Schema stays in data-model. |
+| 4b | [docs/domain/](docs/domain/) | Behavioral deep-dives (SSE, agent queue, harness, runners, execute/verify agents, …). Start with [harness.md](docs/domain/harness.md) for cycle loop context. Schema stays in data-model. |
 | 5 | [docs/api.md](docs/api.md) | REST + SSE endpoint list. Handler code is authoritative for status codes and error strings. |
 | 6 | [docs/configuration.md](docs/configuration.md) | Env vars + `app_settings` row. |
 | 7 | [docs/web.md](docs/web.md) | `web/src` layout, React Query + SSE, `parseTaskApi`, Vitest. |
@@ -23,7 +23,7 @@ Cursor rules are grouped by purpose under `.cursor/rules/`: shared structure and
 
 | Area | Path | Notes |
 |------|------|--------|
-| HTTP API + SSE | `pkgs/tasks/handler/` | REST `/tasks`, `GET /events`, `/repo/*` when `app_settings.repo_root` is set; `/health*`, `/settings*`, `/metrics`. File map: `pkgs/tasks/handler/README.md`. Split conventions: [docs/contributing.md](docs/contributing.md). |
+| HTTP API + SSE | `pkgs/tasks/handler/` | REST `/tasks`, `GET /events`, `/repo/*` when `app_settings.repo_root` is set; `/health*`, `/settings*`, `/metrics`. SSE deep dive: [docs/domain/sse-hub.md](docs/domain/sse-hub.md). File map: `pkgs/tasks/handler/README.md`. Split conventions: [docs/contributing.md](docs/contributing.md). |
 | Request call stack / helper.io | `pkgs/tasks/calltrace/` | `Push`, `Path`, `WithRequestRoot`, `RunObserved` for `call_path` in logs. README: `pkgs/tasks/calltrace/README.md`. |
 | Request log correlation | `pkgs/tasks/logctx/` | `request_id` on context, per-request `log_seq`, `slog.Handler` wrappers; stdlib-only, no cycle with `handler`. |
 | JSON API response helpers | `pkgs/tasks/apijson/` | Shared security headers + `WriteJSONError`; depends on `logctx` only. |
@@ -31,7 +31,7 @@ Cursor rules are grouped by purpose under `.cursor/rules/`: shared structure and
 | Domain types | `pkgs/tasks/domain/` | Status, priority, task model, audit events; `TaskCycle` / `TaskCyclePhase` + `Phase` / `CycleStatus` / `PhaseStatus` enums + `ValidPhaseTransition`. |
 | Execution cycles HTTP | `pkgs/tasks/handler/handler_cycles.go` (+ `handler_cycles_json.go`) | `POST/GET /tasks/{id}/cycles`, `GET/PATCH /tasks/{id}/cycles/{cycleId}`, `POST /tasks/{id}/cycles/{cycleId}/phases`, `PATCH /tasks/{id}/cycles/{cycleId}/phases/{phaseSeq}`. Publishes `task_cycle_changed`; contract in [docs/api.md](docs/api.md) and [docs/data-model.md](docs/data-model.md). |
 | Workspace search | `pkgs/repo/` | Optional; used for `@file` mentions when `app_settings.repo_root` is set. |
-| Agent hooks | `pkgs/agents/` | In-process ready-task queue (`store.SetReadyTaskNotifier`); default **256** cap (`T2A_USER_TASK_AGENT_QUEUE_CAP`); fixed **2m** reconcile tick (`ReconcileTickInterval`, not env). See [docs/architecture.md](docs/architecture.md). |
+| Agent hooks | `pkgs/agents/` | In-process ready-task queue (`store.SetReadyTaskNotifier`); default **256** cap (`T2A_USER_TASK_AGENT_QUEUE_CAP`); fixed **2m** reconcile tick (`ReconcileTickInterval`, not env). Deep dive: [docs/domain/agent-queue.md](docs/domain/agent-queue.md). |
 | Agent runner abstraction | `pkgs/agents/runner/` | `Runner` interface + typed sentinel errors (`ErrTimeout`, `ErrNonZeroExit`, `ErrInvalidOutput`); pin point for additional CLI adapters (Claude Code, Codex). |
 | Runner adapter kit | `pkgs/agents/runner/adapterkit/` | Shared CLI adapter mechanics: exec/stream execution, env policy, redaction, diagnostics, probes. |
 | Cursor CLI runner adapter | `pkgs/agents/runner/cursor/` | V1 `runner.Runner` implementation: `cursor --print --output-format stream-json`, env allowlist, secret redaction, live progress normalization, `Probe(cursor --version)`. |
@@ -39,7 +39,7 @@ Cursor rules are grouped by purpose under `.cursor/rules/`: shared structure and
 | Agent harness | `pkgs/agents/harness/` | Cycle choreography around `runner.Run`: execute/verify phase loop, criteria injection, verification pipeline, git integrity, crash/shutdown recovery. Called by the worker after admission. See [docs/domain/harness.md](docs/domain/harness.md) and [ADR-0005](docs/adr/ADR-0005-extract-agent-harness.md). |
 | Agent worker (V1) | `pkgs/agents/worker/` | Single-goroutine consumer of `MemoryQueue` (admission + ack ordering); delegates cycle body to `harness`; `SweepOrphanRunningCycles` runs once at startup. Configured live from the SPA Settings page — see [docs/configuration.md](docs/configuration.md). |
 | Agent worker supervisor | `cmd/taskapi/run_agentworker.go` | Reads `app_settings`, builds the runner via `pkgs/agents/runner/registry`, probes the binary, starts/stops `worker.Worker`, hot-reloads on `PATCH /settings`. |
-| Runner registry | `pkgs/agents/runner/registry/` | Pluggable runner registration + lookup + probe; `cursor` is the only registered runner today. |
+| Runner registry | `pkgs/agents/runner/registry/` | Pluggable runner registration + lookup + probe; production `cursor`, scaffold `claude-code`. See [docs/domain/runner-adapters.md](docs/domain/runner-adapters.md). |
 | App settings store | `pkgs/tasks/store/internal/settings/` | Singleton `app_settings` row (id=1) seeded with `domain.DefaultAppSettings`; `GetSettings` / `UpdateSettings` via the store facade. |
 | Agent reconcile tests | `pkgs/tasks/agentreconcile/` | Integration tests (SQLite store + agents); not imported by production code. |
 | Env loading | `internal/envload/` | Resolves `.env` from repo root. |

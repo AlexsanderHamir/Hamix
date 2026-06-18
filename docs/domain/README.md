@@ -64,6 +64,9 @@ Use Microsoft-style callouts where they add clarity:
 
 | Article | Description |
 | --- | --- |
+| [sse-hub.md](./sse-hub.md) | SSE hub: fanout, reconnect replay, resync, SPA invalidation |
+| [agent-queue.md](./agent-queue.md) | Agent ready-task queue: notify, pickup wake, reconcile, ack semantics |
+| [runner-adapters.md](./runner-adapters.md) | Runner plug-in model: registry, capabilities, supervisor wiring, adding CLI adapters |
 | [harness.md](./harness.md) | Agent harness: cycle loop, worker boundary, resume, recovery, observability |
 | [done-criteria.md](./done-criteria.md) | Done criteria lifecycle: definition, execute/verify loop, completion ledger |
 | [execute-agent.md](./execute-agent.md) | Execute phase: prompt composition, runner invocation, criteria self-report, resume |

@@ -26,7 +26,7 @@ The two surfaces do not overlap. Anything in `app_settings` is **not** driven by
 | `T2A_IDEMPOTENCY_MAX_ENTRIES` | No | `2048` | Max idempotency cache entries. `0` disables entry-count bounding. |
 | `T2A_IDEMPOTENCY_MAX_BYTES` | No | `8388608` (8 MiB) | Max idempotency cache memory. `0` disables byte bounding. |
 | `T2A_MAX_REQUEST_BODY_BYTES` | No | `1048576` (1 MiB) | Reject larger bodies with `413 request body too large`. `0` disables. |
-| `T2A_USER_TASK_AGENT_QUEUE_CAP` | No | `256` | Bounded depth of `pkgs/agents.MemoryQueue`. Not durable, not shared. |
+| `T2A_USER_TASK_AGENT_QUEUE_CAP` | No | `256` | Bounded depth of `pkgs/agents.MemoryQueue`. Not durable, not shared. See [domain/agent-queue.md](domain/agent-queue.md). |
 | `T2A_WORKER_REPORT_DIR` | No | `<os.TempDir()>/t2a-worker` | Worker-managed scratch root for the agent ↔ worker side-channel report files (`criteria-report.json`, `verify-report.json`). Lives outside `app_settings.repo_root` so customer working trees stay clean. The supervisor probes writability at startup; failure logs a `report_dir_not_writable` warn and the worker still starts (verify will fail loudly on the first run instead of silently). The per-cycle `<dir>/<cycle_id>/` subdirectory is GC'd at cycle terminate so disk use stays bounded. |
 | `T2A_SSE_TEST` | No | — | Dev: enable synthetic SSE ticker. See [api.md](./api.md). |
 | `T2A_SSE_TEST_*` | No | — | Dev tuning (interval, events per tick, lifecycle simulation). See [api.md](./api.md) and `.env.example`. |
@@ -67,7 +67,7 @@ Singleton row in Postgres (CHECK enforces `id=1`). AutoMigrate creates the table
 | Field | Type | Default | Effect |
 |---|---|---|---|
 | `agent_paused` | bool | `false` | Operator-facing soft pause exposed as a one-click toggle in the SPA header chip. The agent worker always starts at boot; pause is the only "stop dequeuing" knob. Idle reason: `paused_by_operator`. Surfaces in `GET /system/health`. |
-| `runner` | string | `"cursor"` | Identifier from `pkgs/agents/runner/registry`. Only `cursor` is registered today. |
+| `runner` | string | `"cursor"` | Identifier from `pkgs/agents/runner/registry`. Production: `cursor`. Scaffold: `claude-code` (registered but not production-ready). See [domain/runner-adapters.md](domain/runner-adapters.md). |
 | `repo_root` | string | `""` | Absolute path to the workspace the worker and `/repo/*` operate against. **Empty = not configured**: supervisor stays idle, repo routes respond `409 repo_root_not_configured`, `@`-mention validation is skipped. |
 | `cursor_bin` | string | `""` | Cursor CLI binary path. Empty = `PATH` lookup of `cursor`. Absolute paths pin a build. |
 | `cursor_model` | string | `""` | Optional Cursor model forwarded to the runner. Empty = omit the model flag (Cursor uses account default). |

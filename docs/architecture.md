@@ -142,11 +142,28 @@ Concurrency: `Update` runs in a transaction with `SELECT … FOR UPDATE`; concur
 
 ## SSE hub
 
-In-memory ring buffer keyed by monotonic event id. Each `Publish` allocates a new id, marshals the frame, and stores it (default 1024 entries). On reconnect, `EventSource` sends `Last-Event-ID`; the handler replays every retained frame newer than that value, then enters the live loop. If the requested id is older than the oldest retained entry, the handler emits one `resync` directive and the client drops caches.
+In-memory ring buffer keyed by monotonic event id. Deep dive: [domain/sse-hub.md](domain/sse-hub.md).
 
-- Subscriber buffer: 32 entries. Slow consumers are evicted with a `resync` frame.
-- Heartbeat: a `: heartbeat` comment line every 15s so proxies do not idle-kill the connection.
-- Coalescing: identical `{type,id}` frames inside a 50ms window are dropped. `task_cycle_changed` and `agent_run_progress` are intentionally never coalesced.
+- Each `Publish` allocates a new id, marshals the frame, and stores it (default **1024** entries). On reconnect, `EventSource` sends `Last-Event-ID`; the handler replays every retained frame newer than that value, then enters the live loop. If the requested id is older than the oldest retained entry, the handler emits one `resync` directive and the client drops caches.
+- Subscriber buffer: **256** entries. Slow consumers are evicted with a `resync` frame.
+- Heartbeat: a `: heartbeat` comment line every **15s** so proxies do not idle-kill the connection.
+- Coalescing: identical `{type,id}` hint-only frames inside a **50ms** window are dropped. `task_cycle_changed` and `agent_run_progress` are intentionally never coalesced.
+
+## Ready-task queue and reconcile
+
+Bounded in-memory FIFO for the agent worker. Deep dive: [domain/agent-queue.md](domain/agent-queue.md).
+
+`pkgs/agents` ships `domain.Task` snapshots into a bounded in-memory FIFO (`MemoryQueue`, default depth **256**, configurable via `T2A_USER_TASK_AGENT_QUEUE_CAP`).
+
+- After a successful commit that leaves a task `ready`, `Store.notifyReadyTask` enqueues a snapshot. If the queue is full, the mutation still succeeds (the notify failure is `Warn`-logged).
+- `PickupWakeScheduler` defers enqueue when `pickup_not_before` is in the future. Startup `Hydrate` reloads deferred rows.
+- `agents.RunReconcileLoop` runs `ReconcileReadyTasksNotQueued` and `ReconcileRunningTasksNotQueued` once at startup and every 2 minutes (fixed in code, `ReconcileTickInterval`). Ready reconcile pages `store.ListReadyTaskQueueCandidates` in oldest-first order so backlog is not starved. Running reconcile pages open cycles and enqueues tasks still `status='running'` when not already pending.
+
+**Invariant (ready queue):** the queue never contains a task the SQL filter `status='ready' AND (pickup_not_before IS NULL OR pickup_not_before <= now())` would reject.
+
+**Invariant (running resume):** the queue may contain `status='running'` tasks with an open cycle after process restart — admission calls `Harness.Resume` instead of starting a new cycle.
+
+The queue is single-process: multiple `taskapi` replicas with the worker enabled are **not supported** (startup finalization and in-memory queue would race in-flight cycles).
 
 ## Agent worker and harness
 
@@ -180,7 +197,7 @@ sequenceDiagram
   W->>Q: AckAfterRecv (LIFO last)
 ```
 
-- `AckAfterRecv` runs last. Until terminate succeeds, the task id stays in the queue's pending set so a notify+reconcile race cannot start a second cycle.
+- `Receive` clears `pending` on dequeue; worker still defers `AckAfterRecv` (idempotent). While a cycle runs, duplicate ready pickup is prevented by `status=running`, not by the pending set after dequeue.
 - Panic recovery runs before ack on a fresh 5s background context: best-effort `CompletePhase(failed, "panic")` + `TerminateCycle(failed, "panic")` + `Update(task, failed)`.
 - Shutdown branch after `runner.Run` returns: same shape with reason `"shutdown"` and cycle status `aborted`.
 
@@ -191,6 +208,7 @@ type Runner interface {
     Run(ctx context.Context, req Request) (Result, error)
     Name() string
     Version() string
+    EffectiveModel(req Request) string
 }
 
 type Request struct {
@@ -206,9 +224,9 @@ type Request struct {
 
 Errors must wrap one of `runner.ErrTimeout`, `runner.ErrNonZeroExit`, `runner.ErrInvalidOutput`, or be a generic adapter failure. The harness's `classifyRunOutcome` maps each to a `cycle_failed` mirror with a fixed `reason` string (`runner_timeout`, `runner_non_zero_exit`, `runner_invalid_output`, `runner_error`).
 
-`Name()` and `Version()` go into `task_cycles.meta_json` once per cycle. `prompt_hash` is `sha256(initial_prompt)` — never the body.
+`Name()`, `Version()`, and `EffectiveModel()` feed cycle metadata once per cycle. `prompt_hash` is `sha256(initial_prompt)` — never the body.
 
-V1 ships exactly one adapter (`pkgs/agents/runner/cursor`). Adding Claude Code / Codex lands as one new file in `pkgs/agents/runner/` plus a registry entry in `pkgs/agents/runner/registry`.
+**Production adapter:** `cursor` (`pkgs/agents/runner/cursor`). **Scaffold:** `claude-code` is registered but not production-ready. Adding a new CLI adapter: implement `runner.Runner`, register via `init()` in `register.go`, blank-import in `pkgs/agents/runner/registry/all/all.go`. Full contributor checklist: [domain/runner-adapters.md](domain/runner-adapters.md).
 
 ### Cursor adapter
 
@@ -230,20 +248,6 @@ After finalization, `agents.ReconcileRunningTasksNotQueued` (startup + every rec
 Resume reconstructs a logical checkpoint from the phase ledger, verify/criteria report tables, context snapshots, and git state (see [ADR-0006](adr/ADR-0006-phase-boundary-resume.md)). The checkpoint is encoded in composed `runner.Request.Prompt`, not new runner fields.
 
 Idempotent: no-op on a clean DB. Skipped when the worker is disabled.
-
-## Ready-task queue and reconcile
-
-`pkgs/agents` ships `domain.Task` snapshots into a bounded in-memory FIFO (`MemoryQueue`, default depth `256`, configurable via `T2A_USER_TASK_AGENT_QUEUE_CAP`).
-
-- After a successful commit that leaves a task `ready`, `Store.notifyReadyTask` enqueues a snapshot. If the queue is full, the mutation still succeeds (the notify failure is `Warn`-logged).
-- `PickupWakeScheduler` defers enqueue when `pickup_not_before` is in the future. Startup `Hydrate` reloads deferred rows.
-- `agents.RunReconcileLoop` runs `ReconcileReadyTasksNotQueued` and `ReconcileRunningTasksNotQueued` once at startup and every 2 minutes (fixed in code, `ReconcileTickInterval`). Ready reconcile pages `store.ListReadyTaskQueueCandidates` in oldest-first order so backlog is not starved. Running reconcile pages open cycles and enqueues tasks still `status='running'` when not already pending.
-
-**Invariant (ready queue):** the queue never contains a task the SQL filter `status='ready' AND (pickup_not_before IS NULL OR pickup_not_before <= now())` would reject.
-
-**Invariant (running resume):** the queue may contain `status='running'` tasks with an open cycle after process restart — admission calls `Harness.Resume` instead of starting a new cycle.
-
-The queue is single-process: multiple `taskapi` replicas with the worker enabled are **not supported** (startup finalization and in-memory queue would race in-flight cycles).
 
 ## Limitations
 

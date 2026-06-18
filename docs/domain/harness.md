@@ -43,7 +43,7 @@ Package comment: [`doc.go`](../../pkgs/agents/harness/doc.go). Extraction ration
 ### Out of scope
 
 - Queue admission, ack ordering, reconcile tick — [`pkgs/agents/worker/admission.go`](../../pkgs/agents/worker/admission.go)
-- Runner adapter internals (Cursor CLI, env allowlist) — [architecture.md](../architecture.md)
+- Runner adapter internals (Cursor CLI, env allowlist, registry) — [runner-adapters.md](./runner-adapters.md)
 - Execute/verify prompt engineering — [execute-agent.md](./execute-agent.md), [verify-agent.md](./verify-agent.md)
 - Operator checklist CRUD and completion ledger semantics — [done-criteria.md](./done-criteria.md)
 
@@ -110,11 +110,13 @@ Domain article stack:
 ```mermaid
 flowchart TB
   arch[architecture.md]
+  runnersDoc[runner-adapters.md]
   harnessDoc[harness.md]
   done[done-criteria.md]
   exec[execute-agent.md]
   verify[verify-agent.md]
-  arch --> harnessDoc
+  arch --> runnersDoc
+  runnersDoc --> harnessDoc
   harnessDoc --> done
   harnessDoc --> exec
   harnessDoc --> verify
@@ -350,6 +352,9 @@ Task-level fields consumed in the loop: `cursor_model`, `automation_selections`,
 
 | Doc | Content |
 | --- | --- |
+| [sse-hub.md](./sse-hub.md) | SSE fanout, cycle/progress publish, resync |
+| [agent-queue.md](./agent-queue.md) | Worker queue admission and ack ordering |
+| [runner-adapters.md](./runner-adapters.md) | Runner registry, capabilities, adding CLI adapters |
 | [execute-agent.md](./execute-agent.md) | Execute phase prompt and self-report |
 | [verify-agent.md](./verify-agent.md) | Verify phase LLM, commands, integrity |
 | [done-criteria.md](./done-criteria.md) | Criteria lifecycle and completion ledger |

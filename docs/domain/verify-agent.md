@@ -276,6 +276,7 @@ Full reference: [configuration.md](../configuration.md).
 
 | Doc | Content |
 | --- | --- |
+| [runner-adapters.md](./runner-adapters.md) | Verify runner selection, probe demotion, registry |
 | [harness.md](./harness.md) | Cycle loop, resume, recovery (orchestration) |
 | [execute-agent.md](./execute-agent.md) | Execute pass deep-dive (companion article) |
 | [done-criteria.md](./done-criteria.md) | Full criteria lifecycle (companion article) |

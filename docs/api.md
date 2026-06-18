@@ -113,6 +113,20 @@ See [data-model.md](./data-model.md) for state machine and substrate semantics.
 | POST | `/tasks/{id}/cycles/{cycleId}/phases` | Start a phase. Body `{ phase: execute|verify }`. Transitions follow `domain.ValidPhaseTransition`. Publishes `task_cycle_changed`. |
 | PATCH | `/tasks/{id}/cycles/{cycleId}/phases/{phaseSeq}` | Terminate a phase. Body `{ status: succeeded|failed|skipped, summary?, details? }`. Publishes `task_cycle_changed`. |
 
+## Runners
+
+Runner adapters register at compile time via `pkgs/agents/runner/registry`. The SPA Settings page discovers available runners through these routes. Full plug-in model: [domain/runner-adapters.md](./domain/runner-adapters.md).
+
+| Method | Path | Notes |
+|---|---|---|
+| GET | `/runners` | Array of `{ id, label, default_binary_hint, config_schema? }`. `config_schema` present when the adapter implements `ConfigSchemaProvider`. |
+| GET | `/runners/{id}/config-schema` | Returns the adapter config schema. **404** unknown runner. **501** runner does not expose a schema. |
+| POST | `/runners/{id}/validate-config` | Body: opaque JSON config blob. **200** `{ valid: true }` or **422** `{ valid: false, error }`. **404** unknown runner. **501** no validator. |
+| POST | `/runners/{id}/probe` | Body `{ binary_path? }`. When `binary_path` is omitted, falls back to `app_settings.cursor_bin` for `cursor` only. Probe/CLI failures return **200** `{ ok: false, error, runner, binary_path? }` so the SPA renders inline. **404** unknown runner. **501** adapter does not implement `Prober`. Success: **200** `{ ok: true, version, binary_path, runner }`. |
+| POST | `/runners/{id}/list-models` | Same body and soft-failure semantics as probe. Success: **200** `{ ok: true, models: [{ id, label }], binary_path, runner }`. **501** when `ModelLister` is not implemented. Timeout: 30s. |
+
+Legacy cursor-named routes under `/settings` (`probe-cursor`, `list-cursor-models`) remain; prefer `/runners/*` for new UI work.
+
 ## App settings
 
 Singleton row (`id=1`) seeded on first read with `domain.DefaultAppSettings`. Full field reference: [configuration.md](./configuration.md).
@@ -139,7 +153,7 @@ Wired only when `app_settings.repo_root` is set. When unset, every `/repo/*` rou
 
 ## SSE — `GET /events`
 
-`text/event-stream`. First frame: `retry: 3000`. Frames are id + JSON:
+Deep dive: [domain/sse-hub.md](./domain/sse-hub.md). `text/event-stream`. First frame: `retry: 3000`. Frames are id + JSON:
 
 ```text
 id: 42

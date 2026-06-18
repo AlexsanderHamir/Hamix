@@ -39,7 +39,7 @@ The **execute agent** is the LLM pass during `PhaseExecute`. The harness invokes
 
 - Verify phase (LLM judge, shell checks, git tamper detection) — see [verify-agent.md](./verify-agent.md)
 - Queue admission and ack ordering — `pkgs/agents/worker`
-- Runner adapter internals (Cursor CLI, env allowlist, redaction) — [architecture.md](../architecture.md)
+- Runner adapter internals (Cursor CLI, env allowlist, registry) — [runner-adapters.md](./runner-adapters.md)
 - Gate criteria on `task.gate.criteria[]` — [data-model.md](../data-model.md) (Gate)
 - Draft-task eval rubric (advisory scoring at create time)
 
@@ -317,6 +317,7 @@ See [configuration.md](../configuration.md) for validation rules and supervisor 
 | Doc | Content |
 | --- | --- |
 | [done-criteria.md](./done-criteria.md) | Full criteria lifecycle (companion article) |
+| [runner-adapters.md](./runner-adapters.md) | Runner registry, capabilities, supervisor wiring |
 | [harness.md](./harness.md) | Cycle loop, resume, recovery (orchestration) |
 | [verify-agent.md](./verify-agent.md) | Verify pass after execute (companion article) |
 | [data-model.md](../data-model.md) (Checklist) | Schema, report contracts, edit locks |

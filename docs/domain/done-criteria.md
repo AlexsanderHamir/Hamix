@@ -2,7 +2,7 @@
 
 Deep-dive for per-task acceptance requirements: how operators define them, how the agent worker verifies them, and what gets persisted. Schema tables and HTTP contracts remain authoritative in [data-model.md](../data-model.md) and [api.md](../api.md).
 
-**Related domain doc (planned):** [verify-agent.md](./verify-agent.md) — adversarial LLM judge that marks criteria `verified_by=verify_agent`. This doc covers the full criteria lifecycle; that doc focuses on the verify pass alone.
+**Related domain doc:** [verify-agent.md](./verify-agent.md) — adversarial LLM judge that marks criteria `verified_by=verify_agent`. This doc covers the full criteria lifecycle; that doc focuses on the verify pass alone.
 
 **Not covered here:** gate criteria on `task.gate.criteria[]` (operator checklist before dequeue release). See [data-model.md](../data-model.md) § Gate.
 

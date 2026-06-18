@@ -130,7 +130,7 @@ GORM + Postgres. Schema migration is `AutoMigrate` only — no versioned migrati
 | `task_events` | Append-only audit log. Every cycle/phase mutation appends a mirror row in the same SQL transaction. |
 | `task_cycles` / `task_cycle_phases` | Typed execution-cycle substrate (see [data-model.md](./data-model.md)). |
 | `task_cycle_stream_events` | Durable normalized Cursor `stream-json` progress for one attempt. |
-| `task_checklist_items` / `task_checklist_completions` | Per-task done criteria. |
+| `task_checklist_items` / `task_checklist_completions` | Per-task done criteria. See [domain/done-criteria.md](./domain/done-criteria.md). |
 | `task_dependencies` | Directed acyclic graph between tasks. |
 | `task_drafts` | Persisted create-form state (autosave + named drafts). |
 | `task_draft_evaluations` | Snapshots from `POST /tasks/evaluate`. |
@@ -152,7 +152,7 @@ In-memory ring buffer keyed by monotonic event id. Each `Publish` allocates a ne
 
 `pkgs/agents/worker` is the single in-process consumer of `pkgs/agents.MemoryQueue`. It handles queue admission (reload, readiness, ready→running, ack ordering) and delegates cycle choreography to `pkgs/agents/harness`. The worker is enabled by default whenever `app_settings.repo_root` is set; toggle from the SPA Settings page. Disabled by default if no workspace is configured.
 
-The **harness** (`pkgs/agents/harness`) is everything wrapped around `runner.Run`: execute/verify phase loop, criteria injection, report-file contracts, adversarial verification, git integrity checks, and crash/shutdown recovery of in-flight cycle state. See [ADR-0005](./adr/ADR-0005-extract-agent-harness.md) and the verify-phase deep-dive [domain/verify-agent.md](./domain/verify-agent.md).
+The **harness** (`pkgs/agents/harness`) is everything wrapped around `runner.Run`: execute/verify phase loop, criteria injection, report-file contracts, adversarial verification, git integrity checks, and crash/shutdown recovery of in-flight cycle state. See [ADR-0005](./adr/ADR-0005-extract-agent-harness.md), [domain/done-criteria.md](./domain/done-criteria.md), and [domain/verify-agent.md](./domain/verify-agent.md).
 
 ### Lifecycle of one task
 

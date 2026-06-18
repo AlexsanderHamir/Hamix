@@ -7,7 +7,7 @@ How the verify phase judges done criteria after execute succeeds: LLM verdict, c
 | **Applies to** | Agent worker harness, verify runner configuration, cycle verdict API |
 | **Audience** | Contributors touching `pkgs/agents/harness`, verify settings, or verdict UI |
 | **Prerequisite** | [done-criteria.md](./done-criteria.md) — full criteria lifecycle and completion ledger |
-| **Companion article** | [execute-agent.md](./execute-agent.md) — execute phase prompt composition and criteria self-report |
+| **Companion article** | [execute-agent.md](./execute-agent.md) — execute phase prompt composition and criteria self-report; [harness.md](./harness.md) — cycle loop and verify retry orchestration |
 
 ## In this article
 
@@ -276,6 +276,7 @@ Full reference: [configuration.md](../configuration.md).
 
 | Doc | Content |
 | --- | --- |
+| [harness.md](./harness.md) | Cycle loop, resume, recovery (orchestration) |
 | [execute-agent.md](./execute-agent.md) | Execute pass deep-dive (companion article) |
 | [done-criteria.md](./done-criteria.md) | Full criteria lifecycle (companion article) |
 | [data-model.md](../data-model.md) (Checklist) | Schema, worker loop summary, report contracts |

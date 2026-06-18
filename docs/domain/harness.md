@@ -1,0 +1,376 @@
+# Agent harness
+
+Cycle choreography around `runner.Run`: phase ledger, execute/verify loop, in-memory retry state, resume, recovery, and observability seams.
+
+| | |
+| --- | --- |
+| **Applies to** | `pkgs/agents/harness`, worker/harness boundary, cycle/phase store writes, agent metrics, cycle SSE |
+| **Audience** | Contributors extending harness behavior, debugging stuck cycles, or wiring new runners |
+| **Prerequisite** | [architecture.md](../architecture.md) — worker, runner, and SSE overview |
+| **Companion articles** | [execute-agent.md](./execute-agent.md), [verify-agent.md](./verify-agent.md), [done-criteria.md](./done-criteria.md) |
+
+## In this article
+
+- [Overview](#overview)
+- [Key concepts](#key-concepts)
+- [How it works](#how-it-works)
+- [Public API and construction](#public-api-and-construction)
+- [Cycle lifecycle workflow](#cycle-lifecycle-workflow)
+- [Resume and checkpoint reconstruction](#resume-and-checkpoint-reconstruction)
+- [Recovery and termination reasons](#recovery-and-termination-reasons)
+- [Side-channel report files](#side-channel-report-files)
+- [Observability seams](#observability-seams)
+- [Configuration](#configuration)
+- [Best practices](#best-practices)
+- [Limitations](#limitations)
+- [See also](#see-also)
+
+## Overview
+
+The **harness** (`pkgs/agents/harness`) is everything wrapped around `runner.Run` that turns "run a prompt in a working directory" into a trustworthy, auditable unit of work. It owns phase choreography, prompt composition (delegating phase-specific contracts to companion docs), agent↔worker report files, adversarial verification orchestration, and crash/shutdown recovery of in-flight cycle state.
+
+Package comment: [`doc.go`](../../pkgs/agents/harness/doc.go). Extraction rationale: [ADR-0005](../adr/ADR-0005-extract-agent-harness.md).
+
+### In scope
+
+- `Harness.Run` and `Harness.Resume` entry points
+- `runCycleLoop` execute↔verify retry semantics and `processState`
+- Store writes: `StartCycle`, `StartPhase`, `CompletePhase`, `TerminateCycle`, completion ledger
+- Report-dir side channel (scrub, GC)
+- Recovery paths (panic, shutdown, operator cancel) and stable termination reasons
+- SSE and metrics seams
+
+### Out of scope
+
+- Queue admission, ack ordering, reconcile tick — [`pkgs/agents/worker/admission.go`](../../pkgs/agents/worker/admission.go)
+- Runner adapter internals (Cursor CLI, env allowlist) — [architecture.md](../architecture.md)
+- Execute/verify prompt engineering — [execute-agent.md](./execute-agent.md), [verify-agent.md](./verify-agent.md)
+- Operator checklist CRUD and completion ledger semantics — [done-criteria.md](./done-criteria.md)
+
+> **Important** — The worker owns admission (`reloadTask`, readiness, `ready→running`, `AckAfterRecv` last). The harness assumes the task is already `running` when `Run` is called, or `running` with an open cycle when `Resume` is called.
+
+## Key concepts
+
+| Term | Definition |
+| --- | --- |
+| **Harness** | Concrete `harness.Harness` type; no interface or strategy registry ([ADR-0005](../adr/ADR-0005-extract-agent-harness.md)). |
+| **Cycle** | One `task_cycles` row from `StartCycle` through `TerminateCycle`. |
+| **Phase** | Execute or verify row in `task_cycle_phases`; each execute `runner.Run` maps to one execute phase. |
+| **processState** | In-memory scratch for one task run: cycle id, running phase seq, verify retry counters, `previouslyPassed`, `verifyFeedback`. |
+| **Report dir** | `Options.ReportDir/<cycle_id>/` — ephemeral agent↔worker files outside `repo_root`. |
+| **Atomic completion** | `task_checklist_completions` written only on terminal cycle success via `applyVerifiedCompletions`. |
+
+### Actors and trust
+
+| Actor | Role | Trust |
+| --- | --- | --- |
+| **Worker** | Queue consumer; admission; chooses `Run` vs `Resume`; ack after harness returns. | Trusted to dequeue eligible tasks only. |
+| **Harness** | Orchestrates cycle/phase ledger, prompt composition, verify pipeline, recovery. | Trusted orchestrator. |
+| **Runner** | Stateless LLM/CLI execution primitive. | Executes prompt; errors classified by harness. |
+| **Store** | Durable cycles, phases, verdict mirrors, completions. | Source of truth for audit and UI. |
+
+## How it works
+
+```mermaid
+flowchart LR
+  Q[MemoryQueue]
+  W[Worker processOne]
+  H[Harness Run or Resume]
+  Loop[runCycleLoop]
+  R[runner.Run]
+  S[(Store)]
+
+  Q --> W
+  W -->|admission| H
+  H --> Loop
+  Loop --> R
+  Loop --> S
+  R --> Loop
+```
+
+### Worker vs harness split
+
+From [`admission.go`](../../pkgs/agents/worker/admission.go):
+
+| Worker | Harness |
+| --- | --- |
+| `Receive`, `AckAfterRecv` (deferred last) | `StartCycle`, `StartPhase`, `CompletePhase`, `TerminateCycle` |
+| `reloadTask`, readiness, gate/deps | `composeExecutePrompt`, `runVerificationPipeline` |
+| `transitionTaskToRunning` (new runs) | Final `transitionTask` to `done` or `failed` |
+| Chooses `Run` vs `Resume` | Implements both; shared `runCycleLoop` |
+
+**Admission flow:**
+
+1. `status=running` + open cycle → `Harness.Resume`
+2. `status=ready` + pickup eligible → `transitionTaskToRunning` → `Harness.Run`
+3. Otherwise → defer or drop (stale / not ready)
+
+Domain article stack:
+
+```mermaid
+flowchart TB
+  arch[architecture.md]
+  harnessDoc[harness.md]
+  done[done-criteria.md]
+  exec[execute-agent.md]
+  verify[verify-agent.md]
+  arch --> harnessDoc
+  harnessDoc --> done
+  harnessDoc --> exec
+  harnessDoc --> verify
+```
+
+## Public API and construction
+
+From [`harness.go`](../../pkgs/agents/harness/harness.go):
+
+```go
+h := harness.New(store, executeRunner, harness.Options{...})
+h.Run(ctx, task)           // new cycle (task already running)
+h.Resume(ctx, task, cycle) // continue open cycle after restart
+h.CancelCurrentRun()       // operator cancel → cancels in-flight runner context
+```
+
+`cmd/taskapi/run_agentworker.go` builds `Options` from `app_settings` and passes SSE/metrics adapters. The worker wraps the harness internally and re-exports `CancelCurrentRun`.
+
+### Options
+
+| Field | Role |
+| --- | --- |
+| `RunTimeout` | Per-run wall clock on `runner.Request` (`0` = no cap) |
+| `ShutdownAbortTimeout` | Bounded background ctx for panic/shutdown cleanup (default 5s) |
+| `WorkingDir` | `app_settings.repo_root` |
+| `ReportDir` | `T2A_WORKER_REPORT_DIR` (default `<os.TempDir()>/t2a-worker`) |
+| `VerifyRunner` | Optional adversarial verify runner from supervisor |
+| `Notifier` | `CycleChangeNotifier` — must not block |
+| `ProgressNotifier` | Live progress SSE — must not block |
+| `Metrics` | `RunMetrics` Prometheus seam |
+| `Clock` | Injectable time source (tests) |
+
+## Cycle lifecycle workflow
+
+### Harness.Run
+
+Numbered path in [`cycle.go`](../../pkgs/agents/harness/cycle.go):
+
+1. Initialize `processState` with empty `previouslyPassed`; defer `recoverFromPanic`.
+2. **`startCycle`** — `StartCycle` with `meta_json`: `runner`, `runner_version`, `prompt_hash` (SHA-256 of **InitialPrompt only** — see [`meta.go`](../../pkgs/agents/harness/meta.go)).
+3. **`loadVerificationSnapshot`** — criteria list, `verify_max_retries`, verify runner (execute runner fallback when unset).
+4. **`runCycleLoop`** — shared with `Resume` (below).
+5. On terminal success: `applyVerifiedCompletions` (when criteria enabled), `TerminateCycle(succeeded)`, task `done`, report-dir GC, metrics.
+
+### runCycleLoop retry semantics
+
+Core loop in [`cycle_loop.go`](../../pkgs/agents/harness/cycle_loop.go):
+
+```mermaid
+flowchart TD
+  loopStart[runCycleLoop iteration]
+  exec[Execute phase]
+  verify[runVerificationPipeline]
+  success[applyVerifiedCompletions + TerminateCycle succeeded]
+  retry[verifyAttempt++ continue loop]
+  fail[TerminateCycle failed]
+  tampered[verify_tampered terminal]
+  legacy[completeChecklistLegacy]
+  loopStart --> exec
+  exec -->|runErr or cancel| fail
+  exec -->|ok + criteria| verify
+  exec -->|ok + no criteria| legacy
+  verify -->|all pass| success
+  verify -->|tampered| tampered
+  verify -->|fail + retries left| retry
+  verify -->|fail + exhausted| fail
+  legacy --> success
+  retry --> loopStart
+```
+
+**In-memory retry state** (`processState`):
+
+| Field | Role |
+| --- | --- |
+| `previouslyPassed` | Criterion verdicts that passed on earlier attempts; merged into final completions on success only |
+| `verifyFeedback` | Appended to next execute prompt after verify failure |
+| `verifyAttempt` | Compared to `verificationSnapshot.maxRetries` |
+
+**Resume loop options** (`cycleLoopOpts`):
+
+| Flag | Effect |
+| --- | --- |
+| `skipFirstExecute` | Skip execute phase (resume after execute success or during verify) |
+| `resumeNotice` | Prepend worker resume notice to execute prompt |
+| `interruptedPhase` | Which phase was running when `process_restart` finalization occurred |
+
+Phase-specific behavior:
+
+- **Execute** — [execute-agent.md](./execute-agent.md)
+- **Verify** — [verify-agent.md](./verify-agent.md)
+
+## Resume and checkpoint reconstruction
+
+[`Harness.Resume`](../../pkgs/agents/harness/resume.go) continues an open cycle after process interruption. The worker calls it when `status=running` and a `task_cycles` row is still `running`.
+
+[`reconstructCheckpoint`](../../pkgs/agents/harness/resume_state.go) derives resume branch and in-memory state — **no dedicated checkpoint table**:
+
+| Input | Used for |
+| --- | --- |
+| Phase ledger tail | Execute vs verify resume branch |
+| `task_cycle_verify_reports` | Locked passes, verify attempt, retry feedback |
+| Task row | Base prompt |
+| `task_context_snapshots` | Project context block |
+| Git log (`t2a:cycle=<id>`) | Fallback when working tree clean and commit policy on |
+
+| Branch | Harness behavior |
+| --- | --- |
+| `resumeEntryExecute` | `runCycleLoop` with resume notice; re-run execute |
+| `resumeEntryAfterExecuteSuccess` | Skip first execute; enter verify |
+| `resumeEntryVerifyOnly` | Skip execute (interrupted during verify) |
+
+Startup finalization (`FinalizeInterruptedPhases`), reconcile enqueue, and store transition rules: [ADR-0006](../adr/ADR-0006-phase-boundary-resume.md).
+
+> **Note** — Each resume starts a fresh `runner.Run`. The runner is stateless; checkpoint is encoded in composed prompts only.
+
+## Recovery and termination reasons
+
+Stable reason strings land on cycle rows and phase summaries. Recovery paths use a **bounded background context** (`ShutdownAbortTimeout`) when the parent ctx is cancelled so audit rows still persist.
+
+| Reason | Trigger | Cycle status | Task status |
+| --- | --- | --- | --- |
+| `runner_timeout` | `errors.Is(err, runner.ErrTimeout)` | failed | failed |
+| `runner_non_zero_exit` | `runner.ErrNonZeroExit` | failed | failed |
+| `runner_invalid_output` | `runner.ErrInvalidOutput` | failed | failed |
+| `runner_error` | Other adapter error | failed | failed |
+| `cancelled_by_operator` | `CancelCurrentRun` + operator flag | failed | failed |
+| `shutdown` | Parent ctx cancelled mid-run | aborted | failed |
+| `panic` | Deferred `recoverFromPanic` | failed | failed |
+| `verify_tampered` | Post-verify git integrity failure | failed | failed |
+| `verification_failed:<ids>` | Verify retries exhausted | failed | failed |
+| `complete_phase_failed` | `CompletePhase` store error after runner | failed | failed |
+| `checklist_completion_failed` | `applyVerifiedCompletions` error | failed | failed |
+| `execute_phase_start_failed` | `StartPhase(execute)` error | failed | failed |
+
+Recovery helpers in [`recovery.go`](../../pkgs/agents/harness/recovery.go):
+
+| Function | When |
+| --- | --- |
+| `handleShutdownAfterRun` | Parent ctx dead after `runner.Run` returns |
+| `recoverFromPanic` | Deferred panic safety net |
+| `bestEffortTerminate` | Phase pipeline failed before/during runner |
+| `bestEffortFailTask` | `StartCycle` failed (no cycle row to terminate) |
+| `cleanupCycleReports` | Every exit path — report-dir GC |
+
+If best-effort writes fail, startup orphan sweep in `cmd/taskapi` is the operator safety net.
+
+## Side-channel report files
+
+Worker-managed scratch under [`criteria_parse.go`](../../pkgs/agents/harness/criteria_parse.go):
+
+```text
+<ReportDir>/<cycle_id>/criteria-report.json
+<ReportDir>/<cycle_id>/verify-report.json
+<ReportDir>/<cycle_id>/checks/<criterion_id>/<seq>.*
+```
+
+| Operation | When |
+| --- | --- |
+| `scrubCycleArtifacts` | Start of each execute attempt — removes stale reports |
+| `ensureReportCycleDir` | Before agent writes reports |
+| `cleanupReportDir` | `TerminateCycle` and all recovery paths |
+
+Files live **outside** `repo_root` so customer git trees stay clean. See [execute-agent.md](./execute-agent.md).
+
+Durable mirrors (`task_cycle_criteria_reports`, `task_cycle_verify_reports`, `task_cycle_command_runs`) are upserted during the verify pipeline. Failures to mirror are logged but non-gating — forensics can use DB rows after ephemeral files are GC'd.
+
+## Observability seams
+
+From [`harness.go`](../../pkgs/agents/harness/harness.go) and [`metrics.go`](../../pkgs/agents/harness/metrics.go):
+
+| Seam | Behavior |
+| --- | --- |
+| `CycleChangeNotifier.PublishCycleChange` | After cycle/phase store writes → `task_cycle_changed` SSE |
+| `ProgressNotifier.PublishRunProgress` | Ephemeral `agent_run_progress` during `runner.Run` |
+| `AppendCycleStreamEvent` | Durable normalized progress in `task_cycle_stream_events` |
+| `RunMetrics.RecordRun` | Counter + duration histogram per terminal cycle |
+| `RunMetrics.RecordVerifyVerdict` | Per-criterion verify outcome |
+| `RunMetrics.ObserveVerifyDuration` | Wall clock per verify phase |
+| `RunMetrics.ObserveVerifyRetries` | Retry count on terminal cycles |
+
+> **Warning** — Notifier and metrics implementations must not block. The harness invokes them synchronously from the run loop and runner progress callbacks.
+
+`recordRun` funnels every `TerminateCycle` path (happy, panic, shutdown, best-effort) so new exit paths cannot skip metrics accidentally.
+
+## Configuration
+
+Supervisor wiring → `Options` (full reference: [configuration.md](../configuration.md)):
+
+| Source | Harness surface |
+| --- | --- |
+| `repo_root` | `Options.WorkingDir` |
+| `max_run_duration_seconds` | `Options.RunTimeout` |
+| `T2A_WORKER_REPORT_DIR` | `Options.ReportDir` |
+| Built verify runner | `Options.VerifyRunner` |
+| SSE hub adapter | `Options.Notifier`, `Options.ProgressNotifier` |
+| Prometheus adapter | `Options.Metrics` |
+
+Read at runtime from store inside harness methods:
+
+| Setting | Effect |
+| --- | --- |
+| `verify_max_retries` | Max execute↔verify loops per cycle |
+| `agent_commit_execute_work` | Commit-required vs forbidden execute prompt block |
+| `verify_command_timeout_seconds` | Per shell verify command |
+
+Task-level fields consumed in the loop: `cursor_model`, `automation_selections`, `project_id`, `project_context_item_ids`.
+
+## Best practices
+
+- Extend cycle behavior in **harness**, not worker — keep admission separate ([ADR-0005](../adr/ADR-0005-extract-agent-harness.md)).
+- New terminal paths must call `TerminateCycle`, `cleanupCycleReports`, and `recordRun`.
+- Preserve **atomic completion** — never write `task_checklist_completions` on failed or aborted cycles.
+- Phase-specific prompt changes belong in existing `*_prompt.go` files; update [execute-agent.md](./execute-agent.md) or [verify-agent.md](./verify-agent.md) when wire contracts change.
+- Prefer harness unit tests without queue plumbing (`pkgs/agents/harness/*_test.go`).
+- When adding verify behavior, consider metrics (`RecordVerifyVerdict`, `ObserveVerifyRetries`) and phase `details_json` normalization in [`verification_phase_details.go`](../../pkgs/agents/harness/verification_phase_details.go).
+
+## Limitations
+
+| Limitation | Detail |
+| --- | --- |
+| No Harness interface | Single concrete type; no strategy registry yet ([ADR-0005](../adr/ADR-0005-extract-agent-harness.md)) |
+| Single-process worker | `previouslyPassed` and retry counters are in-memory only |
+| Runner stateless | Each phase is a fresh `runner.Run`; no mid-CLI session resume ([ADR-0006](../adr/ADR-0006-phase-boundary-resume.md)) |
+| Composed prompt not in meta | Only `InitialPrompt` hashed in `meta_json` |
+| Verdict mirror upsert non-gating | DB mirror failures logged; verify continues |
+| Non-git repos | Integrity check bypassed per cycle |
+| Notifier blocking | Slow SSE/metrics would back-pressure the run loop |
+| Multi-replica workers | Not supported; two workers could race on the same task |
+
+## See also
+
+### Documentation
+
+| Doc | Content |
+| --- | --- |
+| [execute-agent.md](./execute-agent.md) | Execute phase prompt and self-report |
+| [verify-agent.md](./verify-agent.md) | Verify phase LLM, commands, integrity |
+| [done-criteria.md](./done-criteria.md) | Criteria lifecycle and completion ledger |
+| [architecture.md](../architecture.md) | Worker queue, runner, SSE in `taskapi` |
+| [configuration.md](../configuration.md) | Env vars and `app_settings` |
+| [ADR-0005](../adr/ADR-0005-extract-agent-harness.md) | Harness extraction |
+| [ADR-0006](../adr/ADR-0006-phase-boundary-resume.md) | Phase-boundary resume |
+| [ADR-0003](../adr/ADR-0003-verify-component-upgrade.md) | Adversarial verify |
+| [ADR-0012](../adr/ADR-0012-structured-verify-commands.md) | Shell verify commands |
+
+### Code map
+
+| Concern | Files |
+| --- | --- |
+| Entry + cycle | [`cycle.go`](../../pkgs/agents/harness/cycle.go), [`cycle_loop.go`](../../pkgs/agents/harness/cycle_loop.go) |
+| Execute composition | [`criteria_prompt.go`](../../pkgs/agents/harness/criteria_prompt.go), [`automation_prompt.go`](../../pkgs/agents/harness/automation_prompt.go), [`resume_prompt.go`](../../pkgs/agents/harness/resume_prompt.go), [`project_context.go`](../../pkgs/agents/harness/project_context.go) |
+| Verify pipeline | [`verification.go`](../../pkgs/agents/harness/verification.go), [`verify_commands.go`](../../pkgs/agents/harness/verify_commands.go), [`verify_integrity.go`](../../pkgs/agents/harness/verify_integrity.go), [`verification_phase_details.go`](../../pkgs/agents/harness/verification_phase_details.go) |
+| Reports | [`criteria_parse.go`](../../pkgs/agents/harness/criteria_parse.go) |
+| Resume | [`resume.go`](../../pkgs/agents/harness/resume.go), [`resume_state.go`](../../pkgs/agents/harness/resume_state.go) |
+| Recovery | [`recovery.go`](../../pkgs/agents/harness/recovery.go) |
+| Meta + metrics | [`meta.go`](../../pkgs/agents/harness/meta.go), [`metrics.go`](../../pkgs/agents/harness/metrics.go), [`effective_model.go`](../../pkgs/agents/harness/effective_model.go) |
+| Core | [`harness.go`](../../pkgs/agents/harness/harness.go), [`doc.go`](../../pkgs/agents/harness/doc.go) |
+| Worker boundary | [`pkgs/agents/worker/admission.go`](../../pkgs/agents/worker/admission.go) |
+| Package file map | [`pkgs/agents/harness/README.md`](../../pkgs/agents/harness/README.md) |

@@ -7,7 +7,7 @@ How the execute phase implements task work via the configured runner, composed p
 | **Applies to** | Agent worker harness, execute runner, task create/edit (prompt, automations, project context), cycle progress UI |
 | **Audience** | Contributors touching `pkgs/agents/harness`, runner adapters, or execute-phase settings |
 | **Prerequisite** | [done-criteria.md](./done-criteria.md) — criteria vocabulary and lifecycle |
-| **Companion article** | [verify-agent.md](./verify-agent.md) — adversarial judge that runs after execute |
+| **Companion article** | [verify-agent.md](./verify-agent.md) — adversarial judge that runs after execute; [harness.md](./harness.md) — cycle loop and worker boundary |
 
 ## In this article
 
@@ -95,7 +95,7 @@ flowchart TD
   Complete --> VerifyHandoff[runVerificationPipeline]
 ```
 
-Inside [`runCycleLoop`](../../pkgs/agents/harness/cycle_loop.go), execute always runs first (unless resume skips it). On success with criteria enabled, the verification pipeline reads `criteria-report.json` and continues — see [verify-agent.md](./verify-agent.md).
+Inside [`runCycleLoop`](../../pkgs/agents/harness/cycle_loop.go), execute always runs first (unless resume skips it). On success with criteria enabled, the verification pipeline reads `criteria-report.json` and continues — see [verify-agent.md](./verify-agent.md). Full loop semantics: [harness.md](./harness.md).
 
 ## Execute workflow
 
@@ -317,6 +317,7 @@ See [configuration.md](../configuration.md) for validation rules and supervisor 
 | Doc | Content |
 | --- | --- |
 | [done-criteria.md](./done-criteria.md) | Full criteria lifecycle (companion article) |
+| [harness.md](./harness.md) | Cycle loop, resume, recovery (orchestration) |
 | [verify-agent.md](./verify-agent.md) | Verify pass after execute (companion article) |
 | [data-model.md](../data-model.md) (Checklist) | Schema, report contracts, edit locks |
 | [architecture.md](../architecture.md) | Runner abstraction, Cursor adapter, worker lifecycle |

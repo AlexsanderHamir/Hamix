@@ -10,7 +10,7 @@ Use this file as the first pass before editing code. Contributor reference lives
 | 2 | [CONTRIBUTING.md](CONTRIBUTING.md) | PR checklist, `.env.example`, API/doc sync pointers. |
 | 3 | [docs/architecture.md](docs/architecture.md) | System overview, store, agent worker, SSE hub, limitations. |
 | 4 | [docs/data-model.md](docs/data-model.md) | Tasks, projects, execution cycles/phases, checklist, dependencies, gates. |
-| 4b | [docs/domain/](docs/domain/) | Behavioral deep-dives (done criteria, execute agent, verify agent, …). Schema stays in data-model. |
+| 4b | [docs/domain/](docs/domain/) | Behavioral deep-dives (harness orchestration, done criteria, execute/verify agents, …). Start with [harness.md](docs/domain/harness.md) for cycle loop context. Schema stays in data-model. |
 | 5 | [docs/api.md](docs/api.md) | REST + SSE endpoint list. Handler code is authoritative for status codes and error strings. |
 | 6 | [docs/configuration.md](docs/configuration.md) | Env vars + `app_settings` row. |
 | 7 | [docs/web.md](docs/web.md) | `web/src` layout, React Query + SSE, `parseTaskApi`, Vitest. |
@@ -36,7 +36,7 @@ Cursor rules are grouped by purpose under `.cursor/rules/`: shared structure and
 | Runner adapter kit | `pkgs/agents/runner/adapterkit/` | Shared CLI adapter mechanics: exec/stream execution, env policy, redaction, diagnostics, probes. |
 | Cursor CLI runner adapter | `pkgs/agents/runner/cursor/` | V1 `runner.Runner` implementation: `cursor --print --output-format stream-json`, env allowlist, secret redaction, live progress normalization, `Probe(cursor --version)`. |
 | Programmable test runner | `pkgs/agents/runner/runnerfake/` | In-memory `runner.Runner` for tests; not imported by production code. |
-| Agent harness | `pkgs/agents/harness/` | Cycle choreography around `runner.Run`: execute/verify phase loop, criteria injection, verification pipeline, git integrity, crash/shutdown recovery. Called by the worker after admission. See [ADR-0005](docs/adr/ADR-0005-extract-agent-harness.md). |
+| Agent harness | `pkgs/agents/harness/` | Cycle choreography around `runner.Run`: execute/verify phase loop, criteria injection, verification pipeline, git integrity, crash/shutdown recovery. Called by the worker after admission. See [docs/domain/harness.md](docs/domain/harness.md) and [ADR-0005](docs/adr/ADR-0005-extract-agent-harness.md). |
 | Agent worker (V1) | `pkgs/agents/worker/` | Single-goroutine consumer of `MemoryQueue` (admission + ack ordering); delegates cycle body to `harness`; `SweepOrphanRunningCycles` runs once at startup. Configured live from the SPA Settings page — see [docs/configuration.md](docs/configuration.md). |
 | Agent worker supervisor | `cmd/taskapi/run_agentworker.go` | Reads `app_settings`, builds the runner via `pkgs/agents/runner/registry`, probes the binary, starts/stops `worker.Worker`, hot-reloads on `PATCH /settings`. |
 | Runner registry | `pkgs/agents/runner/registry/` | Pluggable runner registration + lookup + probe; `cursor` is the only registered runner today. |

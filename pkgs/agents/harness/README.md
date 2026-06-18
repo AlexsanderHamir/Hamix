@@ -2,7 +2,7 @@
 
 Cycle choreography around `runner.Run`. The worker (`pkgs/agents/worker`) handles queue admission; the harness drives one task from `StartCycle` through terminal `TerminateCycle`, or resumes an open cycle after process restart.
 
-See [docs/architecture.md](../../docs/architecture.md) (Agent worker and harness), [docs/domain/execute-agent.md](../../docs/domain/execute-agent.md) (execute phase deep-dive), [docs/domain/verify-agent.md](../../docs/domain/verify-agent.md) (verify phase deep-dive), [ADR-0005](../../docs/adr/ADR-0005-extract-agent-harness.md), and [ADR-0006](../../docs/adr/ADR-0006-phase-boundary-resume.md).
+**Behavioral reference:** [docs/domain/harness.md](../../docs/domain/harness.md). See also [docs/architecture.md](../../docs/architecture.md), [docs/domain/execute-agent.md](../../docs/domain/execute-agent.md), [docs/domain/verify-agent.md](../../docs/domain/verify-agent.md), [ADR-0005](../../docs/adr/ADR-0005-extract-agent-harness.md), and [ADR-0006](../../docs/adr/ADR-0006-phase-boundary-resume.md).
 
 ## File map
 

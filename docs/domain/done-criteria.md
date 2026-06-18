@@ -6,7 +6,7 @@ Per-task acceptance requirements: how operators define them, how the agent worke
 | --- | --- |
 | **Applies to** | Checklist API, task create flow, agent worker harness, checklist UI |
 | **Audience** | Contributors touching store, harness, handlers, or SPA checklist surfaces |
-| **Companion article** | [verify-agent.md](./verify-agent.md) — verify-phase LLM judge; [execute-agent.md](./execute-agent.md) — execute-phase prompt composition |
+| **Companion article** | [verify-agent.md](./verify-agent.md) — verify-phase LLM judge; [execute-agent.md](./execute-agent.md) — execute-phase prompt composition; [harness.md](./harness.md) — cycle loop and retry orchestration |
 
 ## In this article
 
@@ -106,7 +106,7 @@ Three persistence layers cooperate:
 | **Ephemeral reports** | `<T2A_WORKER_REPORT_DIR>/<cycle_id>/` | GC at cycle terminate | Agent ↔ worker wire format |
 | **Durable ledger** | `task_checklist_completions`, `task_cycle_*_reports`, `task_cycle_command_runs` | Until task/cycle deleted | UI, audit, support |
 
-The worker runs verify inside [`runCycleLoop`](../../pkgs/agents/harness/cycle_loop.go) after a successful execute phase, **only when the task has ≥1 criterion** (`verificationSnapshot.enabled`). Zero-criteria legacy tasks skip verify; a successful execute alone completes the task via [`completeChecklistLegacy`](../../pkgs/agents/harness/verification.go).
+The worker runs verify inside [`runCycleLoop`](../../pkgs/agents/harness/cycle_loop.go) after a successful execute phase, **only when the task has ≥1 criterion** (`verificationSnapshot.enabled`). Harness orchestration (retry loop, `previouslyPassed`, termination): [harness.md](./harness.md). Zero-criteria legacy tasks skip verify; a successful execute alone completes the task via [`completeChecklistLegacy`](../../pkgs/agents/harness/verification.go).
 
 ## Operator workflow
 
@@ -286,6 +286,7 @@ See [configuration.md](../configuration.md) for validation rules and supervisor 
 
 | Doc | Why read it |
 | --- | --- |
+| [harness.md](./harness.md) | Cycle loop, resume, recovery (orchestration) |
 | [execute-agent.md](./execute-agent.md) | Execute pass deep-dive (companion article) |
 | [verify-agent.md](./verify-agent.md) | Verify pass deep-dive (companion article) |
 | [data-model.md](../data-model.md) (Checklist) | Schema, edit locks, verdict tables |

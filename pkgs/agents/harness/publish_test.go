@@ -32,10 +32,11 @@ type statusSnappingNotifier struct {
 }
 
 type progressCall struct {
-	TaskID   string
-	CycleID  string
-	PhaseSeq int64
-	Event    runner.ProgressEvent
+	TaskID             string
+	CycleID            string
+	PhaseSeq           int64
+	RunCorrelationID   string
+	Event              runner.ProgressEvent
 }
 
 type recordingProgressNotifier struct {
@@ -43,14 +44,15 @@ type recordingProgressNotifier struct {
 	calls []progressCall
 }
 
-func (n *recordingProgressNotifier) PublishRunProgress(taskID, cycleID string, phaseSeq int64, ev runner.ProgressEvent) {
+func (n *recordingProgressNotifier) PublishRunProgress(taskID, cycleID string, phaseSeq int64, runCorrelationID string, ev runner.ProgressEvent) {
 	n.mu.Lock()
 	defer n.mu.Unlock()
 	n.calls = append(n.calls, progressCall{
-		TaskID:   taskID,
-		CycleID:  cycleID,
-		PhaseSeq: phaseSeq,
-		Event:    ev,
+		TaskID:           taskID,
+		CycleID:          cycleID,
+		PhaseSeq:         phaseSeq,
+		RunCorrelationID: runCorrelationID,
+		Event:            ev,
 	})
 }
 
@@ -178,6 +180,9 @@ func TestWorker_PublishesRunnerProgressWithCycleAndPhaseContext(t *testing.T) {
 	}
 	if got.PhaseSeq != 1 {
 		t.Fatalf("PhaseSeq: got %d want execute phase seq 1", got.PhaseSeq)
+	}
+	if got.RunCorrelationID == "" {
+		t.Fatal("RunCorrelationID must be populated from StartPhase")
 	}
 	if got.Event.Kind != "tool_call" || got.Event.Tool != "ReadFile" {
 		t.Fatalf("Event: %+v", got.Event)

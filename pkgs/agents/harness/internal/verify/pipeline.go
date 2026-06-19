@@ -12,7 +12,7 @@ import (
 
 // PhaseCallbacks notify harness when verify phase rows open and close.
 type PhaseCallbacks struct {
-	OnStarted func(phaseSeq int64)
+	OnStarted func(phase *domain.TaskCyclePhase)
 	OnEnded   func()
 }
 
@@ -51,9 +51,11 @@ func (s *Service) RunPipeline(
 		return nil, "", fmt.Errorf("start verify phase: %w", err)
 	}
 	if phaseCB.OnStarted != nil {
-		phaseCB.OnStarted(phase.PhaseSeq)
+		phaseCB.OnStarted(phase)
 	}
 	s.publish(cycle.TaskID, cycle.ID)
+
+	runCorrelationID := domain.RunCorrelationIDFromDetailsJSON(phase.DetailsJSON)
 
 	pre, preErr := s.captureIntegritySnapshot(parentCtx)
 	if preErr != nil {
@@ -63,7 +65,7 @@ func (s *Service) RunPipeline(
 	}
 
 	attemptSeq := int64(verifyAttempt) + 1
-	verdicts, feedbackOut, verifyErr := s.runVerifyChecks(parentCtx, task, cycle, phase.PhaseSeq, attemptSeq, snap, previouslyPassed, feedback)
+	verdicts, feedbackOut, verifyErr := s.runVerifyChecks(parentCtx, task, cycle, phase.PhaseSeq, runCorrelationID, attemptSeq, snap, previouslyPassed, feedback)
 
 	tampered, tamperReason := s.checkIntegrity(parentCtx, cycle.ID, pre, preErr)
 

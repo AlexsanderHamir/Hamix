@@ -88,6 +88,9 @@ type Request struct {
 	// adapter. Empty means use the adapter default (from app settings at
 	// worker construction).
 	CursorModel string `json:"cursor_model,omitempty"`
+	// RunCorrelationID is the per-phase log correlation handle (ADR-0030).
+	// Minted by the store at StartPhase; propagated for grep isolation.
+	RunCorrelationID string `json:"run_correlation_id,omitempty"`
 	// OnProgress is an optional live-update callback. It is excluded from
 	// JSON so the persisted/tested request wire shape stays stable.
 	OnProgress func(ProgressEvent) `json:"-"`

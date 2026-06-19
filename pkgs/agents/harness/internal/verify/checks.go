@@ -14,6 +14,7 @@ func (s *Service) runVerifyChecks(
 	task *domain.Task,
 	cycle *domain.TaskCycle,
 	phaseSeq int64,
+	runCorrelationID string,
 	attemptSeq int64,
 	snap Snapshot,
 	previouslyPassed map[string]Verdict,
@@ -21,6 +22,7 @@ func (s *Service) runVerifyChecks(
 ) ([]Verdict, string, error) {
 	slog.Debug("trace", "cmd", logCmd, "operation", "agent.harness.verify.runVerifyChecks",
 		"task_id", task.ID, "cycle_id", cycle.ID,
+		"run_correlation_id", runCorrelationID,
 		"criteria_count", len(snap.Criteria), "previously_passed", len(previouslyPassed))
 	expected := make(map[string]struct{}, len(snap.Criteria))
 	for _, it := range snap.Criteria {
@@ -71,7 +73,7 @@ func (s *Service) runVerifyChecks(
 		if cmdErr != nil {
 			return nil, "", cmdErr
 		}
-		runErr := s.runLLMVerifyAgent(parentCtx, task, cycle, phaseSeq, snap, previouslyPassed, selfReport, feedback, cmdEvidence)
+		runErr := s.runLLMVerifyAgent(parentCtx, task, cycle, phaseSeq, runCorrelationID, snap, previouslyPassed, selfReport, feedback, cmdEvidence)
 		nextVerdicts, parseErr := s.assembleVerdictsFromVerifyReport(cycle.ID, expected, verdicts, selfReport, previouslyPassed)
 		if err := verifyLLMRunError(runErr, parseErr); err != nil {
 			return nil, "", err

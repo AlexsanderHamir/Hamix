@@ -54,9 +54,10 @@ func newRunProgressSSEAdapter(pub realtime.Publisher, minInterval time.Duration)
 	}
 }
 
-func (a *runProgressSSEAdapter) PublishRunProgress(taskID, cycleID string, phaseSeq int64, ev runner.ProgressEvent) {
+func (a *runProgressSSEAdapter) PublishRunProgress(taskID, cycleID string, phaseSeq int64, runCorrelationID string, ev runner.ProgressEvent) {
 	slog.Debug("trace", "cmd", logCmd, "operation", "taskapi.runProgressSSEAdapter.PublishRunProgress",
 		"task_id", taskID, "cycle_id", cycleID, "phase_seq", phaseSeq,
+		"run_correlation_id", runCorrelationID,
 		"kind", ev.Kind, "subtype", ev.Subtype)
 	if a == nil || a.pub == nil || taskID == "" || cycleID == "" || phaseSeq <= 0 || ev.Kind == "" {
 		return
@@ -65,10 +66,11 @@ func (a *runProgressSSEAdapter) PublishRunProgress(taskID, cycleID string, phase
 		return
 	}
 	a.pub.Publish(realtime.Event{
-		Type:     realtime.AgentRunProgress,
-		ID:       taskID,
-		CycleID:  cycleID,
-		PhaseSeq: phaseSeq,
+		Type:             realtime.AgentRunProgress,
+		ID:               taskID,
+		CycleID:          cycleID,
+		PhaseSeq:         phaseSeq,
+		RunCorrelationID: runCorrelationID,
 		Progress: &realtime.RunProgressPayload{
 			Kind:    ev.Kind,
 			Subtype: ev.Subtype,

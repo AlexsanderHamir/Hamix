@@ -30,7 +30,7 @@ func (h *Harness) verifySvc() *verify.Service {
 				Publish: h.publish,
 				PersistProgress: func(ctx context.Context, taskID, cycleID string, phaseSeq int64, ev runner.ProgressEvent) {
 					h.persistProgress(ctx, taskID, cycleID, phaseSeq, ev)
-					h.publishProgress(taskID, cycleID, phaseSeq, ev)
+					h.publishProgress(taskID, cycleID, phaseSeq, h.phaseRunCorrelationID(), ev)
 				},
 				RecordVerdict:   h.recordVerifyVerdict,
 				ObserveDuration: h.observeVerifyDuration,
@@ -73,13 +73,18 @@ func (h *Harness) runVerificationPipeline(
 	feedback string,
 ) ([]criterionVerdict, string, error) {
 	return h.verifySvc().RunPipeline(parentCtx, task, cycle, snap, state.verifyAttempt, state.previouslyPassed, feedback, verify.PhaseCallbacks{
-		OnStarted: func(phaseSeq int64) {
+		OnStarted: func(phase *domain.TaskCyclePhase) {
 			state.runningPhase = domain.PhaseVerify
-			state.runningPhaseSeq = phaseSeq
+			state.runningPhaseSeq = phase.PhaseSeq
+			id := domain.RunCorrelationIDFromDetailsJSON(phase.DetailsJSON)
+			state.runCorrelationID = id
+			h.setPhaseRunCorrelationID(id)
 		},
 		OnEnded: func() {
 			state.runningPhase = ""
 			state.runningPhaseSeq = 0
+			state.runCorrelationID = ""
+			h.setPhaseRunCorrelationID("")
 		},
 	})
 }

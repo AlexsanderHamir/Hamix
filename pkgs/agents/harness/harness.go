@@ -64,7 +64,7 @@ type CycleChangeNotifier interface {
 // Implementations MUST NOT block: the harness invokes PublishRunProgress from
 // the runner callback while the child process is still executing.
 type ProgressNotifier interface {
-	PublishRunProgress(taskID, cycleID string, phaseSeq int64, ev runner.ProgressEvent)
+	PublishRunProgress(taskID, cycleID string, phaseSeq int64, runCorrelationID string, ev runner.ProgressEvent)
 }
 
 // Options bundles the per-Harness tunables. Zero values pick documented
@@ -95,6 +95,7 @@ type Harness struct {
 
 	mu               sync.Mutex
 	currentRunCancel context.CancelFunc
+	currentRunCorrelationID string
 	cancelByOperator atomic.Bool
 }
 
@@ -147,6 +148,20 @@ func (h *Harness) setCurrentRunCancel(cancel context.CancelFunc) {
 }
 
 //funclogmeasure:skip category=hot-path reason="Pure helper without I/O; operation trace is emitted by the calling chokepoint."
+func (h *Harness) setPhaseRunCorrelationID(id string) {
+	h.mu.Lock()
+	h.currentRunCorrelationID = id
+	h.mu.Unlock()
+}
+
+//funclogmeasure:skip category=hot-path reason="Pure helper without I/O; operation trace is emitted by the calling chokepoint."
+func (h *Harness) phaseRunCorrelationID() string {
+	h.mu.Lock()
+	defer h.mu.Unlock()
+	return h.currentRunCorrelationID
+}
+
+//funclogmeasure:skip category=hot-path reason="Pure helper without I/O; operation trace is emitted by the calling chokepoint."
 func (h *Harness) consumeOperatorCancel() bool {
 	return h.cancelByOperator.Swap(false)
 }
@@ -160,9 +175,9 @@ func (h *Harness) publish(taskID, cycleID string) {
 }
 
 //funclogmeasure:skip category=hot-path reason="Pure helper without I/O; operation trace is emitted by the calling chokepoint."
-func (h *Harness) publishProgress(taskID, cycleID string, phaseSeq int64, ev runner.ProgressEvent) {
+func (h *Harness) publishProgress(taskID, cycleID string, phaseSeq int64, runCorrelationID string, ev runner.ProgressEvent) {
 	if h.opts.ProgressNotifier == nil || ev.Kind == "" {
 		return
 	}
-	h.opts.ProgressNotifier.PublishRunProgress(taskID, cycleID, phaseSeq, ev)
+	h.opts.ProgressNotifier.PublishRunProgress(taskID, cycleID, phaseSeq, runCorrelationID, ev)
 }

@@ -26,6 +26,7 @@ func (s *Service) runLLMVerifyAgent(
 	task *domain.Task,
 	cycle *domain.TaskCycle,
 	phaseSeq int64,
+	runCorrelationID string,
 	snap Snapshot,
 	previouslyPassed map[string]Verdict,
 	selfReport map[string]reports.CriteriaEntry,
@@ -35,7 +36,7 @@ func (s *Service) runLLMVerifyAgent(
 	slog.Debug("trace", "cmd", logCmd, "operation", "agent.harness.verify.runLLMVerifyAgent",
 		"task_id", task.ID, "cycle_id", cycle.ID, "locked_passes", len(previouslyPassed))
 	promptText := buildVerifyPrompt(ctx, s, snap, cycle.ID, previouslyPassed, selfReport, feedback, cmdEvidence)
-	_, err := s.runVerifyCursor(ctx, task, cycle, phaseSeq, snap, promptText)
+	_, err := s.runVerifyCursor(ctx, task, cycle, phaseSeq, runCorrelationID, snap, promptText)
 	return err
 }
 
@@ -92,11 +93,13 @@ func (s *Service) runVerifyCursor(
 	task *domain.Task,
 	cycle *domain.TaskCycle,
 	phaseSeq int64,
+	runCorrelationID string,
 	snap Snapshot,
 	promptText string,
 ) (runner.Result, error) {
 	slog.Debug("trace", "cmd", logCmd, "operation", "agent.harness.verify.runVerifyCursor",
-		"task_id", task.ID, "cycle_id", cycle.ID, "phase_seq", phaseSeq)
+		"task_id", task.ID, "cycle_id", cycle.ID, "phase_seq", phaseSeq,
+		"run_correlation_id", runCorrelationID)
 	runCtx, cancelCause := context.WithCancelCause(ctx)
 	cancel := func() { cancelCause(context.Canceled) }
 	if s.hooks.SetRunCancel != nil {
@@ -117,15 +120,16 @@ func (s *Service) runVerifyCursor(
 		}
 	}
 	return snap.VerifyRunner.Run(runCtx, runner.Request{
-		TaskID:          task.ID,
-		AttemptSeq:      cycle.AttemptSeq,
-		Phase:           domain.PhaseVerify,
-		Prompt:          promptText,
-		WorkingDir:      s.workingDir,
-		CursorModel:     snap.VerifyModel,
-		StreamIdleStuck: streamIdleStuck,
-		OnStreamIdle:    onStreamIdle,
-		OnProgress:      onProgress,
+		TaskID:           task.ID,
+		AttemptSeq:       cycle.AttemptSeq,
+		Phase:            domain.PhaseVerify,
+		Prompt:           promptText,
+		WorkingDir:       s.workingDir,
+		CursorModel:      snap.VerifyModel,
+		RunCorrelationID: runCorrelationID,
+		StreamIdleStuck:  streamIdleStuck,
+		OnStreamIdle:     onStreamIdle,
+		OnProgress:       onProgress,
 	})
 }
 

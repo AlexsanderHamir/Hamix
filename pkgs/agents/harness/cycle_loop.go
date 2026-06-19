@@ -162,7 +162,7 @@ func (h *Harness) runCycleLoopExecute(
 	if staleRecovery && effects.ContinueToVerify {
 		recovered := streamIdleRecoveredEvent()
 		h.persistProgress(parentCtx, task.ID, cycle.ID, execPhase.PhaseSeq, recovered)
-		h.publishProgress(task.ID, cycle.ID, execPhase.PhaseSeq, recovered)
+		h.publishProgress(task.ID, cycle.ID, execPhase.PhaseSeq, state.runCorrelationID, recovered)
 	}
 	cont := h.applyExecuteEffects(parentCtx, task, cycle, state, execPhase, result, effects, commitCount, snap, operatorCancelled, staleRecovery)
 	if cont {

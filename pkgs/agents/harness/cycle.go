@@ -29,6 +29,7 @@ type processState struct {
 	cycleStarted    bool
 	runningPhase    domain.Phase
 	runningPhaseSeq int64
+	runCorrelationID string
 	verifySnap      verificationSnapshot
 	verifyAttempt   int
 	verifyFeedback  string
@@ -154,6 +155,8 @@ func (h *Harness) startExecutePhase(ctx context.Context, cycle *domain.TaskCycle
 	}
 	state.runningPhase = domain.PhaseExecute
 	state.runningPhaseSeq = exec.PhaseSeq
+	state.runCorrelationID = domain.RunCorrelationIDFromDetailsJSON(exec.DetailsJSON)
+	h.setPhaseRunCorrelationID(state.runCorrelationID)
 	h.publish(cycle.TaskID, cycle.ID)
 	return exec, true
 }
@@ -170,8 +173,10 @@ func (h *Harness) invokeRunnerWithTask(parentCtx context.Context, task *domain.T
 // raw adapter error (typed via runner.Err* sentinels); classification
 // is done by the caller so the shutdown branch can short-circuit it.
 func (h *Harness) invokeRunner(parentCtx context.Context, task *domain.Task, cycle *domain.TaskCycle, exec *domain.TaskCyclePhase) (runner.Result, error) {
+	runCorrelationID := domain.RunCorrelationIDFromDetailsJSON(exec.DetailsJSON)
 	slog.Debug("trace", "cmd", harnessLogCmd, "operation", "agent.harness.Harness.invokeRunner",
 		"task_id", task.ID, "cycle_id", cycle.ID, "phase_seq", exec.PhaseSeq,
+		"run_correlation_id", runCorrelationID,
 		"run_timeout_ns", int64(h.opts.RunTimeout), "stream_idle_stuck_ns", int64(h.opts.StreamIdleStuck))
 	runCtx, cancelCause := context.WithCancelCause(parentCtx)
 	if h.opts.RunTimeout > 0 {
@@ -190,20 +195,21 @@ func (h *Harness) invokeRunner(parentCtx context.Context, task *domain.Task, cyc
 	defer h.setCurrentRunCancel(nil)
 	onProgress := func(ev runner.ProgressEvent) {
 		h.persistProgress(runCtx, task.ID, cycle.ID, exec.PhaseSeq, ev)
-		h.publishProgress(task.ID, cycle.ID, exec.PhaseSeq, ev)
+		h.publishProgress(task.ID, cycle.ID, exec.PhaseSeq, runCorrelationID, ev)
 	}
 	streamIdleStuck, onStreamIdle := h.streamIdleRunnerFields(onProgress)
 	return h.runner.Run(runCtx, runner.Request{
-		TaskID:          task.ID,
-		AttemptSeq:      cycle.AttemptSeq,
-		Phase:           domain.PhaseExecute,
-		Prompt:          prompt.WrapWithProjectContext(task.InitialPrompt, projectContext.Text),
-		WorkingDir:      h.opts.WorkingDir,
-		Timeout:         h.opts.RunTimeout,
-		CursorModel:     task.CursorModel,
-		StreamIdleStuck: streamIdleStuck,
-		OnStreamIdle:    onStreamIdle,
-		OnProgress:      onProgress,
+		TaskID:             task.ID,
+		AttemptSeq:         cycle.AttemptSeq,
+		Phase:              domain.PhaseExecute,
+		Prompt:             prompt.WrapWithProjectContext(task.InitialPrompt, projectContext.Text),
+		WorkingDir:         h.opts.WorkingDir,
+		Timeout:            h.opts.RunTimeout,
+		CursorModel:        task.CursorModel,
+		RunCorrelationID:   runCorrelationID,
+		StreamIdleStuck:    streamIdleStuck,
+		OnStreamIdle:       onStreamIdle,
+		OnProgress:         onProgress,
 	})
 }
 
@@ -300,10 +306,14 @@ func (h *Harness) completeExecutePhase(ctx context.Context, state *processState,
 		// TerminateCycle on the happy-error path.
 		state.runningPhase = ""
 		state.runningPhaseSeq = 0
+		state.runCorrelationID = ""
+		h.setPhaseRunCorrelationID("")
 		return false
 	}
 	state.runningPhase = ""
 	state.runningPhaseSeq = 0
+	state.runCorrelationID = ""
+	h.setPhaseRunCorrelationID("")
 	h.publish(cycle.TaskID, cycle.ID)
 	return true
 }

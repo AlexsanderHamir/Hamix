@@ -46,7 +46,7 @@ func TestRequest_jsonShape(t *testing.T) {
 		}
 	}
 	for k := range generic {
-		if !contains(wantKeys, k) && k != "cursor_model" {
+		if !contains(wantKeys, k) && k != "cursor_model" && k != "run_correlation_id" {
 			t.Errorf("unexpected JSON key %q (full payload: %s)", k, raw)
 		}
 	}

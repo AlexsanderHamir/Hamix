@@ -144,6 +144,7 @@ func (a *Adapter) Run(ctx context.Context, req runner.Request) (runner.Result, e
 	slog.Debug("trace", "cmd", cursorLogCmd, "operation", "cursor.Adapter.Run",
 		"task_id", req.TaskID, "phase", string(req.Phase),
 		"attempt_seq", req.AttemptSeq, "working_dir", req.WorkingDir,
+		"run_correlation_id", req.RunCorrelationID,
 		"timeout_ns", int64(req.Timeout))
 
 	if err := ctx.Err(); err != nil {

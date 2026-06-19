@@ -1,5 +1,5 @@
 import { useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
-import type { MutableRefObject, RefObject } from "react";
+import type { LegacyRef, MutableRefObject, RefObject } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { useTaskDetailPrefetcher } from "@/app/hooks/usePrefetchOnIntent";
 import type { Task } from "@/types";
@@ -385,7 +385,7 @@ function TaskListTableHeader({
         {showSelectionCol && selection ? (
           <th scope="col" className="task-list-select-col">
             <input
-              ref={headerCheckboxRef}
+              ref={headerCheckboxRef as LegacyRef<HTMLInputElement>}
               type="checkbox"
               className="task-list-select-checkbox"
               aria-label={

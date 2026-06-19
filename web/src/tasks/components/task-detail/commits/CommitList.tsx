@@ -1,11 +1,17 @@
 import { formatRelativeTime } from "@/shared/time/relativeTime";
 import { useNow } from "@/shared/useNow";
-import type { TaskCommit } from "@/types";
+import type { CycleCommit, TaskCommit } from "@/types";
 import { CommitStatusBadge } from "./CommitStatusBadge";
 import { shortSha } from "./commitDisplay";
 
+function attemptSeqForRow(commit: CycleCommit): number | undefined {
+  return "attempt_seq" in commit
+    ? (commit as TaskCommit).attempt_seq
+    : undefined;
+}
+
 type Props = {
-  commits: ReadonlyArray<TaskCommit>;
+  commits: ReadonlyArray<CycleCommit>;
   /** When true, show attempt number in each row (task-wide panel). */
   showAttempt?: boolean;
 };
@@ -15,7 +21,9 @@ export function CommitList({ commits, showAttempt = false }: Props) {
 
   return (
     <ul className="task-commits-list" data-testid="task-commits-list">
-      {commits.map((commit) => (
+      {commits.map((commit) => {
+        const attemptSeq = attemptSeqForRow(commit);
+        return (
         <li key={commit.sha} className="task-commit-row">
           <div className="task-commit-row-inner">
             <CommitStatusBadge
@@ -27,9 +35,9 @@ export function CommitList({ commits, showAttempt = false }: Props) {
             </code>
             <span className="task-commit-message">{commit.message}</span>
             <span className="task-commit-meta muted">
-              {showAttempt ? (
+              {showAttempt && attemptSeq != null ? (
                 <>
-                  Attempt #{commit.attempt_seq}
+                  Attempt #{attemptSeq}
                   <span className="task-commit-meta-sep" aria-hidden="true">
                     ·
                   </span>
@@ -39,7 +47,8 @@ export function CommitList({ commits, showAttempt = false }: Props) {
             </span>
           </div>
         </li>
-      ))}
+        );
+      })}
     </ul>
   );
 }

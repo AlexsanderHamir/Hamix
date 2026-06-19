@@ -537,6 +537,10 @@ var skipSlogRequirement = map[string]struct{}{
 	// formatters, and handler DTO mappers. runCycleLoop logs git snapshot and
 	// commit_ingest_err; getTaskCycleVerdicts logs the HTTP trace; captureExecuteGitSnapshot
 	// logs at entry. Per-git-call slog would flood execute ingest.
+	"github.com/AlexsanderHamir/T2A/pkgs/agents/harness\tapplyOperatorCancelToRunResult": {},
+	"github.com/AlexsanderHamir/T2A/pkgs/agents/harness\trecordPassedCriterionVerdicts":   {},
+	"github.com/AlexsanderHamir/T2A/pkgs/agents/harness\tunionPreviouslyPassedVerdicts":   {},
+	"github.com/AlexsanderHamir/T2A/pkgs/agents/harness\t*Harness.runCycleLoop":          {},
 	"github.com/AlexsanderHamir/T2A/pkgs/agents/harness\t*Harness.repoRootForGit":       {},
 	"github.com/AlexsanderHamir/T2A/pkgs/agents/harness\t*Harness.priorCycleBaseSHA":    {},
 	"github.com/AlexsanderHamir/T2A/pkgs/agents/harness\tgitCycleBaseFromPhaseDetails":  {},
@@ -544,6 +548,7 @@ var skipSlogRequirement = map[string]struct{}{
 	"github.com/AlexsanderHamir/T2A/pkgs/agents/harness\tmergeRunnerDetailsWithGit":     {},
 	"github.com/AlexsanderHamir/T2A/pkgs/agents/harness\tparseCommitReports":            {},
 	"github.com/AlexsanderHamir/T2A/pkgs/agents/harness\tgitRevListRange":               {},
+	"github.com/AlexsanderHamir/T2A/pkgs/agents/harness\tmatchReportedSHAInAncestry":  {},
 	"github.com/AlexsanderHamir/T2A/pkgs/agents/harness\tgitCommitDetails":              {},
 	"github.com/AlexsanderHamir/T2A/pkgs/agents/harness\tgitBranchContaining":           {},
 	"github.com/AlexsanderHamir/T2A/pkgs/agents/harness\tgitWorkingTreeDirty":           {},

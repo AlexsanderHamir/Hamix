@@ -139,7 +139,7 @@ Do not push.
 | Field | Writer | Notes |
 | --- | --- | --- |
 | `criteria[]` | Execute agent | Unchanged — self-claim gate for verify |
-| `commits[].sha` | Execute agent | Must appear in `cycle_base_sha..HEAD` when present |
+| `commits[].sha` | Execute agent | Full or abbreviated; must uniquely match a commit in `cycle_base_sha..HEAD` when present |
 | `commits[].branch` | Execute agent | Optional hint; worker falls back to `git branch --contains` then `base_branch` |
 
 Path: `<T2A_WORKER_REPORT_DIR>/<cycle_id>/criteria-report.json`. The worker discovers ancestry independently; `commits[]` is a cross-check, not the source of truth.

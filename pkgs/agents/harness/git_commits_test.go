@@ -1,6 +1,12 @@
 package harness
 
 import (
+	"context"
+	"errors"
+	"fmt"
+	"os"
+	"os/exec"
+	"path/filepath"
 	"strings"
 	"testing"
 	"time"
@@ -29,5 +35,108 @@ func TestFormatGitContextForPrompt_emptyReturnsEmpty(t *testing.T) {
 	t.Parallel()
 	if got := formatGitContextForPrompt(nil); got != "" {
 		t.Fatalf("got %q, want empty", got)
+	}
+}
+
+func TestMatchReportedSHAInAncestry_exactAndAbbreviated(t *testing.T) {
+	t.Parallel()
+	ancestry := []string{
+		"aa2e05b31bc583c6f54fd0673bb12879ed2edc45",
+		"26ff8c16c0e5de8e5ba64c1ce2ce6ecbfdeef4be",
+	}
+	got, err := matchReportedSHAInAncestry("aa2e05b", ancestry)
+	if err != nil {
+		t.Fatalf("abbreviated: %v", err)
+	}
+	if got != ancestry[0] {
+		t.Fatalf("got %q want %q", got, ancestry[0])
+	}
+	got, err = matchReportedSHAInAncestry(strings.ToUpper(ancestry[1]), ancestry)
+	if err != nil {
+		t.Fatalf("exact case-insensitive: %v", err)
+	}
+	if got != ancestry[1] {
+		t.Fatalf("got %q want %q", got, ancestry[1])
+	}
+}
+
+func TestMatchReportedSHAInAncestry_rejectsOutsideAncestry(t *testing.T) {
+	t.Parallel()
+	ancestry := []string{"aa2e05b31bc583c6f54fd0673bb12879ed2edc45"}
+	_, err := matchReportedSHAInAncestry("deadbeef", ancestry)
+	if !errors.Is(err, domain.ErrInvalidInput) {
+		t.Fatalf("got %v want ErrInvalidInput", err)
+	}
+}
+
+func TestMatchReportedSHAInAncestry_rejectsAmbiguousPrefix(t *testing.T) {
+	t.Parallel()
+	ancestry := []string{
+		"aaaa111111111111111111111111111111111111",
+		"aaaa222222222222222222222222222222222222",
+	}
+	_, err := matchReportedSHAInAncestry("aaaa", ancestry)
+	if !errors.Is(err, domain.ErrInvalidInput) {
+		t.Fatalf("got %v want ErrInvalidInput", err)
+	}
+	if !strings.Contains(err.Error(), "ambiguous") {
+		t.Fatalf("want ambiguous detail, got %v", err)
+	}
+}
+
+// Regression (2026-06-19): execute_invalid_commit when criteria-report listed
+// 7-char SHAs that matched real cycle commits but failed exact-string cross-check.
+func TestResolvePhaseCommits_acceptsAbbreviatedReportedSHA(t *testing.T) {
+	skipIfNoGit(t)
+	dir := t.TempDir()
+	gitInit(t, dir)
+
+	ctx := context.Background()
+	base, err := runGit(ctx, dir, "rev-parse", "HEAD")
+	if err != nil {
+		t.Fatalf("rev-parse base: %v", err)
+	}
+
+	name := fmt.Sprintf("work-%d.txt", time.Now().UnixNano())
+	path := filepath.Join(dir, name)
+	if err := os.WriteFile(path, []byte("work"), 0o644); err != nil {
+		t.Fatalf("write: %v", err)
+	}
+	for _, args := range [][]string{
+		{"add", name},
+		{"-c", "user.email=t@e.local", "-c", "user.name=t", "commit", "-m", "cycle work"},
+	} {
+		out, err := exec.Command("git", append([]string{"-C", dir}, args...)...).CombinedOutput()
+		if err != nil {
+			t.Fatalf("git %v: %v\n%s", args, err, out)
+		}
+	}
+
+	head, err := runGit(ctx, dir, "rev-parse", "HEAD")
+	if err != nil {
+		t.Fatalf("rev-parse head: %v", err)
+	}
+	short := head
+	if len(short) > 7 {
+		short = short[:7]
+	}
+
+	entries, err := resolvePhaseCommits(ctx, gitPhaseContext{
+		Repo:         dir,
+		Worktree:     dir,
+		CycleBaseSHA: base,
+		BaseBranch:   "main",
+	}, []commitReport{{SHA: short, Branch: "main"}})
+	if err != nil {
+		t.Fatalf("resolvePhaseCommits: %v", err)
+	}
+	if len(entries) != 1 {
+		t.Fatalf("entries: got %d want 1", len(entries))
+	}
+	if entries[0].SHA != head {
+		t.Fatalf("SHA: got %q want %q", entries[0].SHA, head)
+	}
+	if entries[0].Branch != "main" {
+		t.Fatalf("branch: got %q want main", entries[0].Branch)
 	}
 }

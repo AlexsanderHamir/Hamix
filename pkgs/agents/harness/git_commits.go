@@ -253,25 +253,55 @@ func gitWorkingTreeDirty(ctx context.Context, worktree string) (bool, error) {
 	return len(snap.changed) > 0, nil
 }
 
+// matchReportedSHAInAncestry maps an agent-reported SHA (full or abbreviated)
+// to the canonical hash from cycle ancestry. Matching is scoped to the
+// rev-list set only — we never call git rev-parse globally, so a reported
+// object outside cycle_base..HEAD cannot slip through.
+func matchReportedSHAInAncestry(reported string, ancestry []string) (string, error) {
+	reported = strings.ToLower(strings.TrimSpace(reported))
+	if reported == "" {
+		return "", fmt.Errorf("%w: empty reported sha", domain.ErrInvalidInput)
+	}
+	var prefixMatches []string
+	for _, full := range ancestry {
+		full = strings.TrimSpace(full)
+		if full == "" {
+			continue
+		}
+		lower := strings.ToLower(full)
+		if lower == reported {
+			return full, nil
+		}
+		if strings.HasPrefix(lower, reported) {
+			prefixMatches = append(prefixMatches, full)
+		}
+	}
+	switch len(prefixMatches) {
+	case 1:
+		return prefixMatches[0], nil
+	case 0:
+		return "", fmt.Errorf("%w: reported sha not in cycle ancestry", domain.ErrInvalidInput)
+	default:
+		return "", fmt.Errorf("%w: ambiguous abbreviated sha %q within cycle ancestry", domain.ErrInvalidInput, reported)
+	}
+}
+
 func resolvePhaseCommits(ctx context.Context, g gitPhaseContext, reported []commitReport) ([]store.CycleCommitEntry, error) {
 	shas, err := gitRevListRange(ctx, g.Worktree, g.CycleBaseSHA)
 	if err != nil {
 		return nil, err
 	}
-	set := make(map[string]struct{}, len(shas))
-	for _, sha := range shas {
-		set[strings.TrimSpace(sha)] = struct{}{}
-	}
 	reportedMap := make(map[string]string, len(reported))
 	for _, r := range reported {
-		sha := strings.TrimSpace(r.SHA)
-		if sha == "" {
+		raw := strings.TrimSpace(r.SHA)
+		if raw == "" {
 			continue
 		}
-		if _, ok := set[sha]; !ok {
-			return nil, fmt.Errorf("%w: reported sha not in cycle ancestry", domain.ErrInvalidInput)
+		full, err := matchReportedSHAInAncestry(raw, shas)
+		if err != nil {
+			return nil, err
 		}
-		reportedMap[sha] = strings.TrimSpace(r.Branch)
+		reportedMap[full] = strings.TrimSpace(r.Branch)
 	}
 	if len(shas) == 0 {
 		return nil, nil

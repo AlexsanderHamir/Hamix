@@ -1,4 +1,5 @@
 import { useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
+import type { MutableRefObject, RefObject } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { useTaskDetailPrefetcher } from "@/app/hooks/usePrefetchOnIntent";
 import type { Task } from "@/types";
@@ -68,189 +69,145 @@ type Props = {
   projectNameById?: Record<string, string>;
 };
 
-export function TaskListDataTable({
-  caption,
-  refreshing,
-  tasks,
-  filteredTasks,
-  saving,
-  emptyListAction,
-  onEdit,
-  onRequestDelete,
-  selection,
-  projectNameById = {},
-}: Props) {
-  const navigate = useNavigate();
-  // Prefetch task detail (chunk + GET /tasks/{id}) on hover/focus so
-  // the click → render path has zero wait for the common case. Both
-  // operations are idempotent: chunks are cached after first import
-  // and React Query dedups in-flight queries.
-  const prefetchTaskDetail = useTaskDetailPrefetcher();
-  const headerCheckboxRef = useRef<HTMLInputElement | null>(null);
+type ExitingRow = { task: TaskWithDepth; timeoutId: number };
 
-  // Drive the header checkbox's `indeterminate` flag — it isn't a
-  // settable HTML attribute, so we have to poke the DOM property
-  // ourselves whenever the upstream tri-state changes. (Standard
-  // React idiom; same shape used everywhere else a tri-state
-  // checkbox lives in the codebase.)
-  useEffect(() => {
-    if (!selection || !headerCheckboxRef.current) return;
-    headerCheckboxRef.current.indeterminate = selection.someVisibleSelected;
-  }, [selection]);
+type TaskListRowRenderState = {
+  task: TaskWithDepth;
+  isEntering: boolean;
+  isExiting: boolean;
+  isFilterExit: boolean;
+};
 
-  // Phase 3b: track ids we've already rendered so only newly-inserted
-  // rows animate in. A `useRef<Set<string>>` is used rather than state
-  // because we never want this to cause a re-render — it's a passive
-  // filter on top of React's own reconciliation. `enteringIds` is the
-  // mirror-state we compare against on render.
-  const seenIdsRef = useRef<Set<string>>(new Set());
-  const [enteringIds, setEnteringIds] = useState<Set<string>>(new Set());
+type TaskListRowAnimationRefs = {
+  seenIdsRef: MutableRefObject<Set<string>>;
+  exitingRef: MutableRefObject<Map<string, ExitingRow>>;
+  filterExitingRef: MutableRefObject<Map<string, TaskWithDepth>>;
+  displayOrderRef: MutableRefObject<TaskWithDepth[]>;
+  prevFilteredRef: MutableRefObject<TaskWithDepth[]>;
+};
 
-  // Phase 3c: track ids that just left `filteredTasks` so we can keep
-  // them mounted for ROW_EXIT_MS with the --exit class. The cached
-  // TaskWithDepth is pinned at the moment the id left so the row
-  // renders with its last-known data while it fades out (otherwise
-  // we'd have to look it back up in `tasks` and risk stale-column
-  // data races).
-  type ExitingRow = { task: TaskWithDepth; timeoutId: number };
-  const exitingRef = useRef<Map<string, ExitingRow>>(new Map());
-  const filterExitingRef = useRef<Map<string, TaskWithDepth>>(new Map());
-  const displayOrderRef = useRef<TaskWithDepth[]>([]);
-  const [exitingTick, setExitingTick] = useState(0);
+function syncHeaderCheckboxIndeterminate(
+  selection: BulkSelectionProps | undefined,
+  headerCheckboxRef: RefObject<HTMLInputElement | null>,
+): void {
+  if (!selection || !headerCheckboxRef.current) return;
+  headerCheckboxRef.current.indeterminate = selection.someVisibleSelected;
+}
 
-  const filteredIds = useMemo(
-    () => new Set(filteredTasks.map((t) => t.id)),
-    [filteredTasks],
-  );
-
-  const tasksIds = useMemo(() => new Set(tasks.map((t) => t.id)), [tasks]);
-
-  const prevFilteredRef = useRef<TaskWithDepth[]>([]);
-
-  useLayoutEffect(() => {
-    const prevOrder =
-      displayOrderRef.current.length > 0
-        ? displayOrderRef.current
-        : prevFilteredRef.current;
-    const nextIds = new Set(filteredTasks.map((t) => t.id));
-    let scheduledFilterExit = false;
-
-    for (const t of prevOrder) {
-      if (nextIds.has(t.id)) continue;
-      if (!tasksIds.has(t.id)) continue;
-      if (filterExitingRef.current.has(t.id)) continue;
-      filterExitingRef.current.set(t.id, t);
-      window.setTimeout(() => {
-        filterExitingRef.current.delete(t.id);
-        displayOrderRef.current = displayOrderRef.current.filter(
-          (row) => row.id !== t.id,
-        );
-        seenIdsRef.current.delete(t.id);
-        setExitingTick((x) => x + 1);
-      }, ROW_EXIT_MS);
-      scheduledFilterExit = true;
-    }
-
-    for (const t of filteredTasks) {
-      filterExitingRef.current.delete(t.id);
-    }
-
-    for (const pr of prevOrder) {
-      if (filteredIds.has(pr.id)) continue;
-      if (tasksIds.has(pr.id)) continue;
-      if (exitingRef.current.has(pr.id)) continue;
-      const timeoutId = window.setTimeout(() => {
-        exitingRef.current.delete(pr.id);
-        seenIdsRef.current.delete(pr.id);
-        setExitingTick((x) => x + 1);
-      }, ROW_EXIT_MS);
-      exitingRef.current.set(pr.id, { task: pr, timeoutId });
-    }
-
-    const nextOrder: TaskWithDepth[] = [];
-    const filteredById = new Map(filteredTasks.map((t) => [t.id, t]));
-    for (const t of prevOrder) {
-      const visible = filteredById.get(t.id);
-      if (visible) {
-        nextOrder.push(visible);
-      } else if (filterExitingRef.current.has(t.id)) {
-        nextOrder.push(filterExitingRef.current.get(t.id)!);
-      }
-    }
-    for (const t of filteredTasks) {
-      if (!nextOrder.some((row) => row.id === t.id)) {
-        nextOrder.push(t);
-      }
-    }
-
-    displayOrderRef.current = nextOrder;
-    prevFilteredRef.current = filteredTasks;
-    if (scheduledFilterExit) {
+function scheduleRemovedTaskExits(
+  prevOrder: TaskWithDepth[],
+  tasksIds: Set<string>,
+  exitingRef: MutableRefObject<Map<string, ExitingRow>>,
+  seenIdsRef: MutableRefObject<Set<string>>,
+  setExitingTick: (updater: (value: number) => number) => void,
+): void {
+  for (const pr of prevOrder) {
+    if (tasksIds.has(pr.id)) continue;
+    if (exitingRef.current.has(pr.id)) continue;
+    const timeoutId = window.setTimeout(() => {
+      exitingRef.current.delete(pr.id);
+      seenIdsRef.current.delete(pr.id);
       setExitingTick((x) => x + 1);
-    }
-  }, [filteredTasks, tasksIds, filteredIds]);
+    }, ROW_EXIT_MS);
+    exitingRef.current.set(pr.id, { task: pr, timeoutId });
+  }
+}
 
-  useEffect(() => {
-    const newlyEntering = new Set<string>();
-    for (const t of filteredTasks) {
-      if (!seenIdsRef.current.has(t.id)) {
-        newlyEntering.add(t.id);
-        seenIdsRef.current.add(t.id);
-      }
-      // If a row was in `exitingRef` (e.g. filter re-admitted an id
-      // that had just been removed) cancel its timeout and revive it.
-      const pendingExit = exitingRef.current.get(t.id);
-      if (pendingExit) {
-        clearTimeout(pendingExit.timeoutId);
-        exitingRef.current.delete(t.id);
-      }
+function scheduleFilterRemovedRowExits(
+  prevOrder: TaskWithDepth[],
+  nextIds: Set<string>,
+  tasksIds: Set<string>,
+  filterExitingRef: MutableRefObject<Map<string, TaskWithDepth>>,
+  displayOrderRef: MutableRefObject<TaskWithDepth[]>,
+  seenIdsRef: MutableRefObject<Set<string>>,
+  setExitingTick: (updater: (value: number) => number) => void,
+): boolean {
+  let scheduledFilterExit = false;
+  for (const t of prevOrder) {
+    if (nextIds.has(t.id)) continue;
+    if (!tasksIds.has(t.id)) continue;
+    if (filterExitingRef.current.has(t.id)) continue;
+    filterExitingRef.current.set(t.id, t);
+    window.setTimeout(() => {
       filterExitingRef.current.delete(t.id);
+      displayOrderRef.current = displayOrderRef.current.filter(
+        (row) => row.id !== t.id,
+      );
+      seenIdsRef.current.delete(t.id);
+      setExitingTick((x) => x + 1);
+    }, ROW_EXIT_MS);
+    scheduledFilterExit = true;
+  }
+  return scheduledFilterExit;
+}
+
+function computeTaskListDisplayOrder(
+  prevOrder: TaskWithDepth[],
+  filteredTasks: TaskWithDepth[],
+  filterExitingRef: MutableRefObject<Map<string, TaskWithDepth>>,
+): TaskWithDepth[] {
+  const nextOrder: TaskWithDepth[] = [];
+  const filteredById = new Map(filteredTasks.map((t) => [t.id, t]));
+  for (const t of prevOrder) {
+    const visible = filteredById.get(t.id);
+    if (visible) {
+      nextOrder.push(visible);
+    } else if (filterExitingRef.current.has(t.id)) {
+      nextOrder.push(filterExitingRef.current.get(t.id)!);
     }
-
-    const clientExitIds = new Set(filterExitingRef.current.keys());
-    for (const id of Array.from(seenIdsRef.current)) {
-      if (filteredIds.has(id)) continue;
-      if (exitingRef.current.has(id)) continue;
-      if (clientExitIds.has(id)) continue;
-      seenIdsRef.current.delete(id);
+  }
+  for (const t of filteredTasks) {
+    if (!nextOrder.some((row) => row.id === t.id)) {
+      nextOrder.push(t);
     }
+  }
+  return nextOrder;
+}
 
-    setEnteringIds((prevEntering) => {
-      if (prevEntering.size === 0 && newlyEntering.size === 0) return prevEntering;
-      return newlyEntering;
-    });
-  }, [filteredTasks, filteredIds, tasksIds]);
+function syncTaskListEnteringIds(
+  filteredTasks: TaskWithDepth[],
+  filteredIds: Set<string>,
+  refs: TaskListRowAnimationRefs,
+  setEnteringIds: (updater: (prev: Set<string>) => Set<string>) => void,
+): void {
+  const newlyEntering = new Set<string>();
+  for (const t of filteredTasks) {
+    if (!refs.seenIdsRef.current.has(t.id)) {
+      newlyEntering.add(t.id);
+      refs.seenIdsRef.current.add(t.id);
+    }
+    const pendingExit = refs.exitingRef.current.get(t.id);
+    if (pendingExit) {
+      clearTimeout(pendingExit.timeoutId);
+      refs.exitingRef.current.delete(t.id);
+    }
+    refs.filterExitingRef.current.delete(t.id);
+  }
 
-  useEffect(() => {
-    const exiting = exitingRef.current;
-    return () => {
-      for (const { timeoutId } of exiting.values()) {
-        clearTimeout(timeoutId);
-      }
-      exiting.clear();
-    };
-  }, []);
+  const clientExitIds = new Set(refs.filterExitingRef.current.keys());
+  for (const id of Array.from(refs.seenIdsRef.current)) {
+    if (filteredIds.has(id)) continue;
+    if (refs.exitingRef.current.has(id)) continue;
+    if (clientExitIds.has(id)) continue;
+    refs.seenIdsRef.current.delete(id);
+  }
 
-  // Walk `displayOrderRef` so filter/search exits stay in place while fading.
-  const rowsToRender: Array<{
-    task: TaskWithDepth;
-    isEntering: boolean;
-    isExiting: boolean;
-    isFilterExit: boolean;
-  }> = [];
-  const filteredMap = useMemo(
-    () => new Map(filteredTasks.map((t) => [t.id, t])),
-    [filteredTasks],
-  );
-  const filterExitIds = useMemo(
-    () => new Set(filterExitingRef.current.keys()),
-    // eslint-disable-next-line react-hooks/exhaustive-deps -- ref map is the source of truth
-    [exitingTick, filteredTasks],
-  );
-  const renderOrder =
-    displayOrderRef.current.length > 0
-      ? displayOrderRef.current
-      : filteredTasks;
+  setEnteringIds((prevEntering) => {
+    if (prevEntering.size === 0 && newlyEntering.size === 0) return prevEntering;
+    return newlyEntering;
+  });
+}
+
+function buildTaskListRowsToRender(
+  renderOrder: TaskWithDepth[],
+  filteredTasks: TaskWithDepth[],
+  filteredMap: Map<string, TaskWithDepth>,
+  filterExitIds: Set<string>,
+  filterExitingRef: MutableRefObject<Map<string, TaskWithDepth>>,
+  exitingRef: MutableRefObject<Map<string, ExitingRow>>,
+  enteringIds: Set<string>,
+): TaskListRowRenderState[] {
+  const rowsToRender: TaskListRowRenderState[] = [];
   const processed = new Set<string>();
   for (const t of renderOrder) {
     const visible = filteredMap.get(t.id);
@@ -294,7 +251,410 @@ export function TaskListDataTable({
       isFilterExit: false,
     });
   }
+  return rowsToRender;
+}
+
+function useTaskListRowAnimations(filteredTasks: TaskWithDepth[], tasks: TaskWithDepth[]) {
+  const seenIdsRef = useRef<Set<string>>(new Set());
+  const [enteringIds, setEnteringIds] = useState<Set<string>>(new Set());
+  const exitingRef = useRef<Map<string, ExitingRow>>(new Map());
+  const filterExitingRef = useRef<Map<string, TaskWithDepth>>(new Map());
+  const displayOrderRef = useRef<TaskWithDepth[]>([]);
+  const prevFilteredRef = useRef<TaskWithDepth[]>([]);
+  const [exitingTick, setExitingTick] = useState(0);
+
+  const filteredIds = useMemo(
+    () => new Set(filteredTasks.map((t) => t.id)),
+    [filteredTasks],
+  );
+  const tasksIds = useMemo(() => new Set(tasks.map((t) => t.id)), [tasks]);
+  const animationRefs: TaskListRowAnimationRefs = {
+    seenIdsRef,
+    exitingRef,
+    filterExitingRef,
+    displayOrderRef,
+    prevFilteredRef,
+  };
+
+  useLayoutEffect(() => {
+    const prevOrder =
+      displayOrderRef.current.length > 0
+        ? displayOrderRef.current
+        : prevFilteredRef.current;
+    const nextIds = new Set(filteredTasks.map((t) => t.id));
+    const scheduledFilterExit = scheduleFilterRemovedRowExits(
+      prevOrder,
+      nextIds,
+      tasksIds,
+      filterExitingRef,
+      displayOrderRef,
+      seenIdsRef,
+      setExitingTick,
+    );
+
+    for (const t of filteredTasks) {
+      filterExitingRef.current.delete(t.id);
+    }
+
+    scheduleRemovedTaskExits(
+      prevOrder,
+      tasksIds,
+      exitingRef,
+      seenIdsRef,
+      setExitingTick,
+    );
+
+    displayOrderRef.current = computeTaskListDisplayOrder(
+      prevOrder,
+      filteredTasks,
+      filterExitingRef,
+    );
+    prevFilteredRef.current = filteredTasks;
+    if (scheduledFilterExit) {
+      setExitingTick((x) => x + 1);
+    }
+  }, [filteredTasks, tasksIds, filteredIds]);
+
+  useEffect(() => {
+    syncTaskListEnteringIds(filteredTasks, filteredIds, animationRefs, setEnteringIds);
+  }, [filteredTasks, filteredIds, tasksIds]);
+
+  useEffect(() => {
+    const exiting = exitingRef.current;
+    return () => {
+      for (const { timeoutId } of exiting.values()) {
+        clearTimeout(timeoutId);
+      }
+      exiting.clear();
+    };
+  }, []);
+
+  const filteredMap = useMemo(
+    () => new Map(filteredTasks.map((t) => [t.id, t])),
+    [filteredTasks],
+  );
+  const filterExitIds = useMemo(
+    () => new Set(filterExitingRef.current.keys()),
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- ref map is the source of truth
+    [exitingTick, filteredTasks],
+  );
+  const renderOrder =
+    displayOrderRef.current.length > 0
+      ? displayOrderRef.current
+      : filteredTasks;
+  const rowsToRender = buildTaskListRowsToRender(
+    renderOrder,
+    filteredTasks,
+    filteredMap,
+    filterExitIds,
+    filterExitingRef,
+    exitingRef,
+    enteringIds,
+  );
   void exitingTick;
+
+  return rowsToRender;
+}
+
+type TaskListDataTableRowProps = {
+  row: TaskListRowRenderState;
+  showSelectionCol: boolean;
+  selection: BulkSelectionProps | undefined;
+  projectNameById: Record<string, string>;
+  saving: boolean;
+  onEdit: (t: Task) => void;
+  onRequestDelete: (t: DeleteTargetInput) => void;
+  prefetchTaskDetail: (id: string) => void;
+  navigate: (path: string) => void;
+};
+
+function TaskListTableHeader({
+  showSelectionCol,
+  selection,
+  headerCheckboxRef,
+  filteredTasksLength,
+}: {
+  showSelectionCol: boolean;
+  selection: BulkSelectionProps | undefined;
+  headerCheckboxRef: RefObject<HTMLInputElement | null>;
+  filteredTasksLength: number;
+}) {
+  return (
+    <thead>
+      <tr>
+        {showSelectionCol && selection ? (
+          <th scope="col" className="task-list-select-col">
+            <input
+              ref={headerCheckboxRef}
+              type="checkbox"
+              className="task-list-select-checkbox"
+              aria-label={
+                selection.allVisibleSelected
+                  ? "Deselect all visible tasks"
+                  : "Select all visible tasks"
+              }
+              checked={selection.allVisibleSelected}
+              onChange={selection.onToggleAllVisible}
+              data-testid="task-list-select-all"
+              disabled={filteredTasksLength === 0}
+            />
+          </th>
+        ) : null}
+        <th scope="col">Title</th>
+        <th scope="col">Status</th>
+        <th scope="col">Priority</th>
+        <th scope="col">Project</th>
+        <th scope="col">Actions</th>
+      </tr>
+    </thead>
+  );
+}
+
+function TaskListTableBody({
+  tasksLength,
+  rowsToRender,
+  colSpan,
+  emptyListAction,
+  showSelectionCol,
+  selection,
+  projectNameById,
+  saving,
+  onEdit,
+  onRequestDelete,
+  prefetchTaskDetail,
+  navigate,
+}: {
+  tasksLength: number;
+  rowsToRender: TaskListRowRenderState[];
+  colSpan: number;
+  emptyListAction?: EmptyStateAction;
+  showSelectionCol: boolean;
+  selection: BulkSelectionProps | undefined;
+  projectNameById: Record<string, string>;
+  saving: boolean;
+  onEdit: (t: Task) => void;
+  onRequestDelete: (t: DeleteTargetInput) => void;
+  prefetchTaskDetail: (id: string) => void;
+  navigate: (path: string) => void;
+}) {
+  return (
+    <tbody className="task-list-tbody">
+      {tasksLength === 0 ? (
+        <tr className="task-list-empty-row">
+          <td colSpan={colSpan} className="task-list-empty-cell">
+            <EmptyState
+              className="empty-state--in-table empty-state--task-list-fresh"
+              title="No tasks yet"
+              description=""
+              hideIcon
+              action={emptyListAction}
+            />
+          </td>
+        </tr>
+      ) : rowsToRender.length === 0 ? (
+        <tr className="task-list-empty-row">
+          <td colSpan={colSpan} className="task-list-empty-cell">
+            <EmptyState
+              className="empty-state--in-table"
+              icon={<EmptyStateFilterGlyph />}
+              title="No matching tasks"
+              description=""
+              hideIcon={false}
+            />
+          </td>
+        </tr>
+      ) : (
+        rowsToRender.map((row) => (
+          <TaskListDataTableRow
+            key={row.task.id}
+            row={row}
+            showSelectionCol={showSelectionCol}
+            selection={selection}
+            projectNameById={projectNameById}
+            saving={saving}
+            onEdit={onEdit}
+            onRequestDelete={onRequestDelete}
+            prefetchTaskDetail={prefetchTaskDetail}
+            navigate={navigate}
+          />
+        ))
+      )}
+    </tbody>
+  );
+}
+
+function TaskListDataTableRow({
+  row: { task: t, isEntering, isExiting, isFilterExit },
+  showSelectionCol,
+  selection,
+  projectNameById,
+  saving,
+  onEdit,
+  onRequestDelete,
+  prefetchTaskDetail,
+  navigate,
+}: TaskListDataTableRowProps) {
+  const promptPreview = previewTextFromPrompt(t.initial_prompt);
+  const projectLabel =
+    t.project_id != null && t.project_id !== ""
+      ? projectNameById[t.project_id]
+      : undefined;
+  const hasProject = Boolean(
+    t.project_id != null &&
+      t.project_id !== "" &&
+      projectLabel != null &&
+      projectLabel !== "",
+  );
+  const titleSubtitle = taskListRowSubtitle({
+    hasProject,
+    promptPreview,
+  });
+  const rowSelected =
+    !isExiting && selection ? selection.isSelected(t.id) : false;
+  const rowClass = [
+    "task-list-row",
+    isEntering ? "task-list-row--enter" : "",
+    isExiting ? "task-list-row--exit" : "",
+    isFilterExit ? "task-list-row--filter-exit" : "",
+    !isExiting ? "task-list-row--navigable" : "",
+  ]
+    .filter(Boolean)
+    .join(" ");
+  const taskHref = `/tasks/${t.id}`;
+  const onIntent = isExiting ? undefined : () => prefetchTaskDetail(t.id);
+
+  return (
+    <tr
+      key={t.id}
+      className={rowClass}
+      data-selected={rowSelected ? "true" : undefined}
+      aria-hidden={isExiting ? "true" : undefined}
+      onPointerEnter={onIntent}
+      onFocus={onIntent}
+      onClick={
+        isExiting
+          ? undefined
+          : (e) => {
+              if (isTaskListRowNavExcluded(e.target)) return;
+              navigate(taskHref);
+            }
+      }
+    >
+      {showSelectionCol && selection ? (
+        <td className="task-list-select-col">
+          <input
+            type="checkbox"
+            className="task-list-select-checkbox"
+            aria-label={
+              rowSelected
+                ? `Deselect task "${t.title}"`
+                : `Select task "${t.title}"`
+            }
+            checked={rowSelected}
+            onChange={() => selection.onRowToggle(t.id)}
+            data-testid={`task-list-select-row-${t.id}`}
+            disabled={isExiting}
+          />
+        </td>
+      ) : null}
+      <td className="cell-title">
+        <Link
+          to={taskHref}
+          className={["cell-title-link", "cell-title-link--cell"]
+            .filter(Boolean)
+            .join(" ")}
+          aria-label={`Open task details: ${t.title}`}
+        >
+          <div className="cell-title-stack">
+            <span className="cell-title-main">
+              <span className="cell-title-text cell-title-text--primary">
+                {t.title}
+              </span>
+              <span className="cell-title-open-hint" aria-hidden="true">
+                →
+              </span>
+            </span>
+            {titleSubtitle ? (
+              <div className="cell-title-sub">{titleSubtitle}</div>
+            ) : null}
+          </div>
+        </Link>
+      </td>
+      <td className="cell-status">
+        <Badge
+          status={t.status}
+          data-needs-user={
+            statusNeedsUserInput(t.status) ? "true" : undefined
+          }
+        >
+          {statusListLabel(t.status)}
+        </Badge>
+      </td>
+      <td className="cell-priority">
+        <span
+          className={priorityDotClass(t.priority)}
+          title={t.priority}
+          aria-label={`Priority: ${t.priority}`}
+        />
+      </td>
+      <td className="cell-project">
+        {projectLabel ? (
+          <span
+            className="task-list-project-badge"
+            data-tone={String(projectBadgeToneFromId(t.project_id ?? ""))}
+          >
+            {projectLabel}
+          </span>
+        ) : (
+          <span className="task-list-project-empty">—</span>
+        )}
+      </td>
+      <td className="cell-actions">
+        <div className="task-list-row-actions">
+          <button
+            type="button"
+            className="task-list-icon-btn task-list-icon-btn--edit"
+            aria-label={`Edit task "${t.title}"`}
+            onClick={() => onEdit(t)}
+            disabled={saving || isExiting}
+          >
+            <TaskListEditGlyph />
+          </button>
+          <button
+            type="button"
+            className="task-list-icon-btn task-list-icon-btn--delete"
+            aria-label={`Delete task "${t.title}"`}
+            onClick={() => onRequestDelete(t)}
+            disabled={saving || isExiting}
+          >
+            <TaskListDeleteGlyph />
+          </button>
+        </div>
+      </td>
+    </tr>
+  );
+}
+
+export function TaskListDataTable({
+  caption,
+  refreshing,
+  tasks,
+  filteredTasks,
+  saving,
+  emptyListAction,
+  onEdit,
+  onRequestDelete,
+  selection,
+  projectNameById = {},
+}: Props) {
+  const navigate = useNavigate();
+  const prefetchTaskDetail = useTaskDetailPrefetcher();
+  const headerCheckboxRef = useRef<HTMLInputElement | null>(null);
+  const rowsToRender = useTaskListRowAnimations(filteredTasks, tasks);
+
+  useEffect(() => {
+    syncHeaderCheckboxIndeterminate(selection, headerCheckboxRef);
+  }, [selection]);
 
   const colSpan = selection ? 6 : 5;
   const showSelectionCol = Boolean(selection);
@@ -310,211 +670,26 @@ export function TaskListDataTable({
           <col className="task-list-col-project" />
           <col className="task-list-col-actions" />
         </colgroup>
-        <thead>
-          <tr>
-            {showSelectionCol && selection ? (
-              <th scope="col" className="task-list-select-col">
-                <input
-                  ref={headerCheckboxRef}
-                  type="checkbox"
-                  className="task-list-select-checkbox"
-                  aria-label={
-                    selection.allVisibleSelected
-                      ? "Deselect all visible tasks"
-                      : "Select all visible tasks"
-                  }
-                  checked={selection.allVisibleSelected}
-                  onChange={selection.onToggleAllVisible}
-                  data-testid="task-list-select-all"
-                  disabled={filteredTasks.length === 0}
-                />
-              </th>
-            ) : null}
-            <th scope="col">Title</th>
-            <th scope="col">Status</th>
-            <th scope="col">Priority</th>
-            <th scope="col">Project</th>
-            <th scope="col">Actions</th>
-          </tr>
-        </thead>
-        <tbody className="task-list-tbody">
-          {tasks.length === 0 ? (
-            <tr className="task-list-empty-row">
-              <td colSpan={colSpan} className="task-list-empty-cell">
-                <EmptyState
-                  className="empty-state--in-table empty-state--task-list-fresh"
-                  title="No tasks yet"
-                  description=""
-                  hideIcon
-                  action={emptyListAction}
-                />
-              </td>
-            </tr>
-          ) : rowsToRender.length === 0 ? (
-            <tr className="task-list-empty-row">
-              <td colSpan={colSpan} className="task-list-empty-cell">
-                <EmptyState
-                  className="empty-state--in-table"
-                  icon={<EmptyStateFilterGlyph />}
-                  title="No matching tasks"
-                  description=""
-                  hideIcon={false}
-                />
-              </td>
-            </tr>
-          ) : (
-            rowsToRender.map(({ task: t, isEntering, isExiting, isFilterExit }) => {
-              const promptPreview = previewTextFromPrompt(t.initial_prompt);
-              const projectLabel =
-                t.project_id != null && t.project_id !== ""
-                  ? projectNameById[t.project_id]
-                  : undefined;
-              const hasProject = Boolean(
-                t.project_id != null &&
-                  t.project_id !== "" &&
-                  projectLabel != null &&
-                  projectLabel !== "",
-              );
-              const titleSubtitle = taskListRowSubtitle({
-                hasProject,
-                promptPreview,
-              });
-              const rowSelected =
-                !isExiting && selection ? selection.isSelected(t.id) : false;
-              const rowClass = [
-                "task-list-row",
-                isEntering ? "task-list-row--enter" : "",
-                isExiting ? "task-list-row--exit" : "",
-                isFilterExit ? "task-list-row--filter-exit" : "",
-                !isExiting ? "task-list-row--navigable" : "",
-              ]
-                .filter(Boolean)
-                .join(" ");
-              const taskHref = `/tasks/${t.id}`;
-              const onIntent = isExiting
-                ? undefined
-                : () => prefetchTaskDetail(t.id);
-              return (
-                <tr
-                  key={t.id}
-                  className={rowClass}
-                  data-selected={rowSelected ? "true" : undefined}
-                  aria-hidden={isExiting ? "true" : undefined}
-                  onPointerEnter={onIntent}
-                  onFocus={onIntent}
-                  onClick={
-                    isExiting
-                      ? undefined
-                      : (e) => {
-                          if (isTaskListRowNavExcluded(e.target)) return;
-                          navigate(taskHref);
-                        }
-                  }
-                >
-                  {showSelectionCol && selection ? (
-                    <td className="task-list-select-col">
-                      <input
-                        type="checkbox"
-                        className="task-list-select-checkbox"
-                        aria-label={
-                          rowSelected
-                            ? `Deselect task "${t.title}"`
-                            : `Select task "${t.title}"`
-                        }
-                        checked={rowSelected}
-                        onChange={() => selection.onRowToggle(t.id)}
-                        data-testid={`task-list-select-row-${t.id}`}
-                        disabled={isExiting}
-                      />
-                    </td>
-                  ) : null}
-                  <td className="cell-title">
-                    <Link
-                      to={taskHref}
-                      className={[
-                        "cell-title-link",
-                        "cell-title-link--cell",
-                      ]
-                        .filter(Boolean)
-                        .join(" ")}
-                      aria-label={`Open task details: ${t.title}`}
-                    >
-                      <div className="cell-title-stack">
-                        <span className="cell-title-main">
-                          <span className="cell-title-text cell-title-text--primary">
-                            {t.title}
-                          </span>
-                          <span
-                            className="cell-title-open-hint"
-                            aria-hidden="true"
-                          >
-                            →
-                          </span>
-                        </span>
-                        {titleSubtitle ? (
-                          <div className="cell-title-sub">{titleSubtitle}</div>
-                        ) : null}
-                      </div>
-                    </Link>
-                  </td>
-                  <td className="cell-status">
-                    <Badge
-                      status={t.status}
-                      data-needs-user={
-                        statusNeedsUserInput(t.status) ? "true" : undefined
-                      }
-                    >
-                      {statusListLabel(t.status)}
-                    </Badge>
-                  </td>
-                  <td className="cell-priority">
-                    <span
-                      className={priorityDotClass(t.priority)}
-                      title={t.priority}
-                      aria-label={`Priority: ${t.priority}`}
-                    />
-                  </td>
-                  <td className="cell-project">
-                    {projectLabel ? (
-                      <span
-                        className="task-list-project-badge"
-                        data-tone={String(
-                          projectBadgeToneFromId(t.project_id ?? ""),
-                        )}
-                      >
-                        {projectLabel}
-                      </span>
-                    ) : (
-                      <span className="task-list-project-empty">—</span>
-                    )}
-                  </td>
-                  <td className="cell-actions">
-                    <div className="task-list-row-actions">
-                      <button
-                        type="button"
-                        className="task-list-icon-btn task-list-icon-btn--edit"
-                        aria-label={`Edit task "${t.title}"`}
-                        onClick={() => onEdit(t)}
-                        disabled={saving || isExiting}
-                      >
-                        <TaskListEditGlyph />
-                      </button>
-                      <button
-                        type="button"
-                        className="task-list-icon-btn task-list-icon-btn--delete"
-                        aria-label={`Delete task "${t.title}"`}
-                        onClick={() => onRequestDelete(t)}
-                        disabled={saving || isExiting}
-                      >
-                        <TaskListDeleteGlyph />
-                      </button>
-                    </div>
-                  </td>
-                </tr>
-              );
-            })
-          )}
-        </tbody>
+        <TaskListTableHeader
+          showSelectionCol={showSelectionCol}
+          selection={selection}
+          headerCheckboxRef={headerCheckboxRef}
+          filteredTasksLength={filteredTasks.length}
+        />
+        <TaskListTableBody
+          tasksLength={tasks.length}
+          rowsToRender={rowsToRender}
+          colSpan={colSpan}
+          emptyListAction={emptyListAction}
+          showSelectionCol={showSelectionCol}
+          selection={selection}
+          projectNameById={projectNameById}
+          saving={saving}
+          onEdit={onEdit}
+          onRequestDelete={onRequestDelete}
+          prefetchTaskDetail={prefetchTaskDetail}
+          navigate={navigate}
+        />
       </table>
     </div>
   );

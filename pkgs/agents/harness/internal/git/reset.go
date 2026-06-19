@@ -142,14 +142,16 @@ func (s *Service) resolveFreshRetryAnchor(ctx context.Context, workdir, parentCy
 	return strings.TrimSpace(parent), nil
 }
 
-//funclogmeasure:skip category=hot-path reason="Pure helper without I/O; operation trace is emitted by the calling chokepoint."
 // ResolveFreshRetryAnchor resolves the git anchor for a fresh operator retry.
+//
+//funclogmeasure:skip category=hot-path reason="Pure helper without I/O; operation trace is emitted by the calling chokepoint."
 func (s *Service) ResolveFreshRetryAnchor(ctx context.Context, workingDir, parentCycleID string) (string, error) {
 	return s.resolveFreshRetryAnchor(ctx, workingDir, parentCycleID)
 }
 
-//funclogmeasure:skip category=hot-path reason="Pure helper without I/O; operation trace is emitted by the calling chokepoint."
 // ResetHardClean runs git reset --hard and git clean -fd (test seam).
+//
+//funclogmeasure:skip category=hot-path reason="Pure helper without I/O; operation trace is emitted by the calling chokepoint."
 func ResetHardClean(ctx context.Context, repo GitRepo, workdir, anchor string) error {
 	return resetHardClean(ctx, repo, workdir, anchor)
 }

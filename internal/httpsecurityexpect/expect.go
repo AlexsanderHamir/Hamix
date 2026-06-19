@@ -8,9 +8,10 @@ import (
 	"testing"
 )
 
-//funclogmeasure:skip category=tool-required-noop reason="Test-only HTTP wiring; not part of production trace paths."
 // AssertBaselineHeaders checks the same baseline hardening as production JSON,
 // SSE, and metrics responses.
+//
+//funclogmeasure:skip category=tool-required-noop reason="Test-only HTTP wiring; not part of production trace paths."
 func AssertBaselineHeaders(t *testing.T, h http.Header) {
 	t.Helper()
 	if got := h.Get("Cache-Control"); got != "no-store" {

@@ -11,8 +11,9 @@ const (
 	VerifierLegacy             VerifierKind = "legacy"
 )
 
-//funclogmeasure:skip category=hot-path reason="Pure helper without I/O; operation trace is emitted by the calling chokepoint."
 // ValidVerifierKind reports whether k is allowed on completion rows.
+//
+//funclogmeasure:skip category=hot-path reason="Pure helper without I/O; operation trace is emitted by the calling chokepoint."
 func ValidVerifierKind(k VerifierKind) bool {
 	switch k {
 	case VerifierAgentSelf, VerifierVerifyAgent, VerifierDeterministicCheck, VerifierHumanOverride, VerifierLegacy:

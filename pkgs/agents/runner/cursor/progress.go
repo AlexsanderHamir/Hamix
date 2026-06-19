@@ -378,10 +378,11 @@ func genericInputSummary(fields map[string]any) string {
 	return ""
 }
 
-//funclogmeasure:skip category=hot-path reason="Pure helper without I/O; operation trace is emitted by the calling chokepoint."
 // inputField returns the first non-empty string value for any of the given
 // keys. Cursor stream-json uses camelCase in nested tool_call args while
 // older flat input blobs use snake_case — accept both so summaries stay stable.
+//
+//funclogmeasure:skip category=hot-path reason="Pure helper without I/O; operation trace is emitted by the calling chokepoint."
 func inputField(fields map[string]any, keys ...string) string {
 	for _, key := range keys {
 		if s := stringField(fields, key); s != "" {

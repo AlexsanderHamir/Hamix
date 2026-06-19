@@ -19,8 +19,9 @@ type RedactionPolicy struct {
 	EnvPrefixes []string
 }
 
-//funclogmeasure:skip category=hot-path reason="Pure helper without I/O; operation trace is emitted by the calling chokepoint."
 // DefaultRedactionPolicy returns the repository's shared redaction floor.
+//
+//funclogmeasure:skip category=hot-path reason="Pure helper without I/O; operation trace is emitted by the calling chokepoint."
 func DefaultRedactionPolicy(homePaths []string) RedactionPolicy {
 	return RedactionPolicy{
 		HomePaths:   append([]string(nil), homePaths...),
@@ -28,9 +29,10 @@ func DefaultRedactionPolicy(homePaths []string) RedactionPolicy {
 	}
 }
 
-//funclogmeasure:skip category=hot-path reason="Pure helper without I/O; operation trace is emitted by the calling chokepoint."
 // Redact replaces secret-shaped substrings in s and rewrites configured home
 // paths to "~".
+//
+//funclogmeasure:skip category=hot-path reason="Pure helper without I/O; operation trace is emitted by the calling chokepoint."
 func Redact(s string, policy RedactionPolicy) string {
 	if s == "" {
 		return s

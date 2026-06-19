@@ -313,10 +313,11 @@ func phaseTerminatedPayload(cycleID string, p *domain.TaskCyclePhase) ([]byte, e
 	return b, nil
 }
 
-//funclogmeasure:skip category=hot-path reason="Pure helper without I/O; operation trace is emitted by the calling chokepoint."
 // phaseDetailsForEventPayload returns a deep-copied, size-clamped JSON object
 // suitable for task_events.data_json so the timeline can show stderr tails,
 // token usage, etc., without a separate cycle-phase fetch.
+//
+//funclogmeasure:skip category=hot-path reason="Pure helper without I/O; operation trace is emitted by the calling chokepoint."
 func phaseDetailsForEventPayload(detailsJSON datatypes.JSON) map[string]any {
 	if len(detailsJSON) == 0 {
 		return nil

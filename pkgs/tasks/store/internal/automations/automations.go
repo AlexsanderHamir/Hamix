@@ -167,8 +167,9 @@ func Archive(ctx context.Context, db *gorm.DB, id string) error {
 	return nil
 }
 
-//funclogmeasure:skip category=hot-path reason="Pure helper without I/O; operation trace is emitted by the calling chokepoint."
 // ValidateSelectionIDs ensures every id refers to a non-archived automation.
+//
+//funclogmeasure:skip category=hot-path reason="Pure helper without I/O; operation trace is emitted by the calling chokepoint."
 func ValidateSelectionIDs(ctx context.Context, db *gorm.DB, selections []domain.AutomationSelection) error {
 	if len(selections) == 0 {
 		return nil
@@ -189,9 +190,10 @@ func ValidateSelectionIDs(ctx context.Context, db *gorm.DB, selections []domain.
 	return nil
 }
 
-//funclogmeasure:skip category=hot-path reason="Pure helper without I/O; operation trace is emitted by the calling chokepoint."
 // ResolveForTask loads library rows for task selections. Missing or archived
 // ids are skipped — callers log warnings for audit.
+//
+//funclogmeasure:skip category=hot-path reason="Pure helper without I/O; operation trace is emitted by the calling chokepoint."
 func ResolveForTask(ctx context.Context, db *gorm.DB, selections []domain.AutomationSelection) ([]domain.ResolvedAutomation, error) {
 	if len(selections) == 0 {
 		return nil, nil

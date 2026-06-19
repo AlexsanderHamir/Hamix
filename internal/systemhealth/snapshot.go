@@ -163,10 +163,11 @@ func readBuildFromVersion() Build {
 	return Build{Version: v, Revision: r, GoVersion: gv}
 }
 
-//funclogmeasure:skip category=hot-path reason="Pure helper without I/O; operation trace is emitted by the calling chokepoint."
 // applyFamily routes one MetricFamily into the matching Snapshot
 // slot. Unrelated families are ignored so /system/health stays
 // independent of Go runtime metrics drift.
+//
+//funclogmeasure:skip category=hot-path reason="Pure helper without I/O; operation trace is emitted by the calling chokepoint."
 func applyFamily(snap *Snapshot, mf *dto.MetricFamily) {
 	if mf == nil {
 		return
@@ -291,12 +292,13 @@ func mergeHistograms(mf *dto.MetricFamily) mergedHistogram {
 	return mergedHistogram{count: count, buckets: out}
 }
 
-//funclogmeasure:skip category=hot-path reason="Pure helper without I/O; operation trace is emitted by the calling chokepoint."
 // percentileFromBuckets does a Prometheus-style linear interpolation
 // inside the bucket that contains the target rank. Behaviour matches
 // histogram_quantile() closely enough for an operator UI: it errs on
 // the side of returning the bucket's upper bound when the target sits
 // inside the +Inf bucket so very-slow tails are visible.
+//
+//funclogmeasure:skip category=hot-path reason="Pure helper without I/O; operation trace is emitted by the calling chokepoint."
 func percentileFromBuckets(mh mergedHistogram, q float64) float64 {
 	if mh.count == 0 || len(mh.buckets) == 0 {
 		return 0

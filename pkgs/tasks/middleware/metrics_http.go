@@ -320,22 +320,25 @@ func SSESubscriberEvictionsCounter() prometheus.Counter {
 	return taskapiSSESubscriberEvictionsTotal
 }
 
-//funclogmeasure:skip category=hot-path reason="Pure helper without I/O; operation trace is emitted by the calling chokepoint."
 // RUMEventsAcceptedCounter exposes the accepted-events counter for tests.
+//
+//funclogmeasure:skip category=hot-path reason="Pure helper without I/O; operation trace is emitted by the calling chokepoint."
 func RUMEventsAcceptedCounter() prometheus.Counter {
 	return taskapiRUMEventsAcceptedTotal
 }
 
-//funclogmeasure:skip category=hot-path reason="Pure helper without I/O; operation trace is emitted by the calling chokepoint."
 // RUMEventsDroppedCounter exposes the dropped-events counter for tests.
+//
+//funclogmeasure:skip category=hot-path reason="Pure helper without I/O; operation trace is emitted by the calling chokepoint."
 func RUMEventsDroppedCounter() prometheus.Counter {
 	return taskapiRUMEventsDroppedTotal
 }
 
-//funclogmeasure:skip category=hot-path reason="Pure helper without I/O; operation trace is emitted by the calling chokepoint."
 // RecordRUMAccepted bumps the accepted-events counter by n. Called once
 // per /v1/rum batch with the number of events the handler successfully
 // folded into metrics.
+//
+//funclogmeasure:skip category=hot-path reason="Pure helper without I/O; operation trace is emitted by the calling chokepoint."
 func RecordRUMAccepted(n int) {
 	if n <= 0 {
 		return
@@ -343,12 +346,13 @@ func RecordRUMAccepted(n int) {
 	taskapiRUMEventsAcceptedTotal.Add(float64(n))
 }
 
-//funclogmeasure:skip category=hot-path reason="Pure helper without I/O; operation trace is emitted by the calling chokepoint."
 // RecordRUMDropped bumps the dropped-events counter by n. Called once
 // per /v1/rum batch with the number of events the handler rejected
 // (unknown type, invalid duration, unknown web-vital name, …). Useful
 // alongside RecordRUMAccepted to spot SPA regressions that emit
 // malformed payloads.
+//
+//funclogmeasure:skip category=hot-path reason="Pure helper without I/O; operation trace is emitted by the calling chokepoint."
 func RecordRUMDropped(n int) {
 	if n <= 0 {
 		return
@@ -356,34 +360,38 @@ func RecordRUMDropped(n int) {
 	taskapiRUMEventsDroppedTotal.Add(float64(n))
 }
 
-//funclogmeasure:skip category=hot-path reason="Pure helper without I/O; operation trace is emitted by the calling chokepoint."
 // RecordRUMMutationStarted bumps the mutation-started counter for the
 // given kind. Denominator for both slo_optimistic_rollback_rate and
 // slo_mutation_error_rate.
+//
+//funclogmeasure:skip category=hot-path reason="Pure helper without I/O; operation trace is emitted by the calling chokepoint."
 func RecordRUMMutationStarted(kind string) {
 	taskapiRUMMutationStartedTotal.WithLabelValues(kind).Inc()
 }
 
-//funclogmeasure:skip category=hot-path reason="Pure helper without I/O; operation trace is emitted by the calling chokepoint."
 // RecordRUMMutationOptimisticApplied observes a click→optimistic-render
 // latency for the given kind. Powers the optimistic side of
 // slo_click_to_confirmed_p95_ms.
+//
+//funclogmeasure:skip category=hot-path reason="Pure helper without I/O; operation trace is emitted by the calling chokepoint."
 func RecordRUMMutationOptimisticApplied(kind string, seconds float64) {
 	taskapiRUMMutationOptimisticAppliedSeconds.WithLabelValues(kind).Observe(seconds)
 }
 
-//funclogmeasure:skip category=hot-path reason="Pure helper without I/O; operation trace is emitted by the calling chokepoint."
 // RecordRUMMutationSettled observes a click→server-confirmed latency for
 // the given kind, labelled by HTTP status bucket ("2xx"|"4xx"|"5xx"|
 // "network"). The non-2xx series feed slo_mutation_error_rate.
+//
+//funclogmeasure:skip category=hot-path reason="Pure helper without I/O; operation trace is emitted by the calling chokepoint."
 func RecordRUMMutationSettled(kind, status string, seconds float64) {
 	taskapiRUMMutationSettledSeconds.WithLabelValues(kind, status).Observe(seconds)
 }
 
-//funclogmeasure:skip category=hot-path reason="Pure helper without I/O; operation trace is emitted by the calling chokepoint."
 // RecordRUMMutationRolledBack records a rollback for the given kind and,
 // if seconds > 0, also observes the click→rollback latency. Numerator
 // for slo_optimistic_rollback_rate.
+//
+//funclogmeasure:skip category=hot-path reason="Pure helper without I/O; operation trace is emitted by the calling chokepoint."
 func RecordRUMMutationRolledBack(kind string, seconds float64) {
 	taskapiRUMMutationRolledBackTotal.WithLabelValues(kind).Inc()
 	if seconds > 0 {
@@ -391,10 +399,11 @@ func RecordRUMMutationRolledBack(kind string, seconds float64) {
 	}
 }
 
-//funclogmeasure:skip category=hot-path reason="Pure helper without I/O; operation trace is emitted by the calling chokepoint."
 // RecordRUMSSEReconnected counts EventSource reconnects reported by the
 // SPA. If gapSeconds > 0 the disconnect→reconnect gap is also observed
 // in the gap histogram.
+//
+//funclogmeasure:skip category=hot-path reason="Pure helper without I/O; operation trace is emitted by the calling chokepoint."
 func RecordRUMSSEReconnected(gapSeconds float64) {
 	taskapiRUMSSEReconnectedTotal.Inc()
 	if gapSeconds > 0 {
@@ -402,18 +411,20 @@ func RecordRUMSSEReconnected(gapSeconds float64) {
 	}
 }
 
-//funclogmeasure:skip category=hot-path reason="Pure helper without I/O; operation trace is emitted by the calling chokepoint."
 // RecordRUMSSEResyncReceived counts resync directives the SPA acted on.
 // Dashboards pair this with sse_resync_emitted_total to verify
 // "what the server emitted" matches "what the client observed".
+//
+//funclogmeasure:skip category=hot-path reason="Pure helper without I/O; operation trace is emitted by the calling chokepoint."
 func RecordRUMSSEResyncReceived() {
 	taskapiRUMSSEResyncReceivedTotal.Inc()
 }
 
-//funclogmeasure:skip category=hot-path reason="Pure helper without I/O; operation trace is emitted by the calling chokepoint."
 // RecordRUMWebVital observes a single Web Vitals measurement. The name
 // label is one of the entries in handler.validWebVitalNames so the
 // dashboard knows which units to apply.
+//
+//funclogmeasure:skip category=hot-path reason="Pure helper without I/O; operation trace is emitted by the calling chokepoint."
 func RecordRUMWebVital(name string, value float64) {
 	taskapiRUMWebVitals.WithLabelValues(name).Observe(value)
 }

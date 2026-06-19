@@ -7,10 +7,11 @@ import (
 	"github.com/AlexsanderHamir/T2A/pkgs/tasks/domain"
 )
 
-//funclogmeasure:skip category=hot-path reason="Pure helper without I/O; operation trace is emitted by the calling chokepoint."
 // AppendOperatorRetryResumeNotice is for cross-cycle "Resume from failure" attempts.
 // Unlike AppendResumeNotice (ADR-0006 in-process restart), this cycle is new while
 // git work and indexed commits may carry over from the parent attempt.
+//
+//funclogmeasure:skip category=hot-path reason="Pure helper without I/O; operation trace is emitted by the calling chokepoint."
 func AppendOperatorRetryResumeNotice(prompt string, cycle *domain.TaskCycle, parentCommits []domain.TaskCycleCommit) string {
 	if cycle == nil {
 		return prompt
@@ -34,8 +35,9 @@ func AppendOperatorRetryResumeNotice(prompt string, cycle *domain.TaskCycle, par
 	return b.String() + prompt
 }
 
-//funclogmeasure:skip category=hot-path reason="Pure helper without I/O; operation trace is emitted by the calling chokepoint."
 // AppendResumeNotice prepends an in-process worker resume notice.
+//
+//funclogmeasure:skip category=hot-path reason="Pure helper without I/O; operation trace is emitted by the calling chokepoint."
 func AppendResumeNotice(prompt string, cycle *domain.TaskCycle, interruptedPhase domain.Phase, knownCommits []domain.TaskCycleCommit) string {
 	if cycle == nil {
 		return prompt
@@ -59,8 +61,9 @@ func AppendResumeNotice(prompt string, cycle *domain.TaskCycle, interruptedPhase
 	return b.String() + prompt
 }
 
-//funclogmeasure:skip category=hot-path reason="Pure helper without I/O; operation trace is emitted by the calling chokepoint."
 // AppendGitCommitPolicy appends execute-phase git commit instructions.
+//
+//funclogmeasure:skip category=hot-path reason="Pure helper without I/O; operation trace is emitted by the calling chokepoint."
 func AppendGitCommitPolicy(prompt string, operatorResume bool) string {
 	var b strings.Builder
 	b.WriteString("## Git commits (required)\n\n")
@@ -79,8 +82,9 @@ func AppendGitCommitPolicy(prompt string, operatorResume bool) string {
 	return b.String() + prompt
 }
 
-//funclogmeasure:skip category=hot-path reason="Pure helper without I/O; operation trace is emitted by the calling chokepoint."
 // FormatKnownCommitsForResume lists commits already indexed for the task.
+//
+//funclogmeasure:skip category=hot-path reason="Pure helper without I/O; operation trace is emitted by the calling chokepoint."
 func FormatKnownCommitsForResume(commits []domain.TaskCycleCommit) string {
 	if len(commits) == 0 {
 		return ""
@@ -98,8 +102,9 @@ func FormatKnownCommitsForResume(commits []domain.TaskCycleCommit) string {
 	return b.String()
 }
 
-//funclogmeasure:skip category=hot-path reason="Pure helper without I/O; operation trace is emitted by the calling chokepoint."
 // FormatVerifyDiffSection renders the git diff block for verify prompts.
+//
+//funclogmeasure:skip category=hot-path reason="Pure helper without I/O; operation trace is emitted by the calling chokepoint."
 func FormatVerifyDiffSection(diff string, fetchErr error) string {
 	if fetchErr != nil {
 		return "(diff unavailable: " + fetchErr.Error() + ")"

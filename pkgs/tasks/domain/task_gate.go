@@ -19,9 +19,10 @@ type TaskGate struct {
 	Criteria                  []GateCriterion `json:"criteria,omitempty"`
 }
 
-//funclogmeasure:skip category=hot-path reason="Pure helper without I/O; operation trace is emitted by the calling chokepoint."
 // GateBlocksWorker reports whether the gate prevents the worker from dequeuing
 // the task. Only released (or absent) gates allow pickup.
+//
+//funclogmeasure:skip category=hot-path reason="Pure helper without I/O; operation trace is emitted by the calling chokepoint."
 func (g *TaskGate) GateBlocksWorker() bool {
 	if g == nil {
 		return false

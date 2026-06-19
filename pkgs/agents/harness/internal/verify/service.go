@@ -34,8 +34,9 @@ type Deps struct {
 	Hooks        Hooks
 }
 
-//funclogmeasure:skip category=hot-path reason="Pure helper without I/O; operation trace is emitted by the calling chokepoint."
 // NewService constructs a verify Service. VerifyRunner falls back to Runner when nil.
+//
+//funclogmeasure:skip category=hot-path reason="Pure helper without I/O; operation trace is emitted by the calling chokepoint."
 func NewService(deps Deps) *Service {
 	verifyRunner := deps.Runner
 	if deps.VerifyRunner != nil {

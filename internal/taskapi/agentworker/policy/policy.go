@@ -12,9 +12,10 @@ const SchedulingIdleHintReason = "awaiting_scheduled_task"
 // RepoRootChecker validates AppSettings.RepoRoot before the worker runs.
 type RepoRootChecker func(dir string) error
 
-//funclogmeasure:skip category=hot-path reason="Pure helper without I/O; operation trace is emitted by the calling chokepoint."
 // DecideSchedulingIdleHint reports the diagnostic hint when the queue
 // is empty but scheduled tasks exist. Errors from probes degrade to "".
+//
+//funclogmeasure:skip category=hot-path reason="Pure helper without I/O; operation trace is emitted by the calling chokepoint."
 func DecideSchedulingIdleHint(queueEmpty bool, scheduledCount int64) string {
 	if queueEmpty && scheduledCount > 0 {
 		return SchedulingIdleHintReason
@@ -22,10 +23,11 @@ func DecideSchedulingIdleHint(queueEmpty bool, scheduledCount int64) string {
 	return ""
 }
 
-//funclogmeasure:skip category=hot-path reason="Pure helper without I/O; operation trace is emitted by the calling chokepoint."
 // DecideIdle reports whether the worker should stay idle given settings.
 // checkRepo validates RepoRoot when non-empty; failures yield
 // repo_root_invalid.
+//
+//funclogmeasure:skip category=hot-path reason="Pure helper without I/O; operation trace is emitted by the calling chokepoint."
 func DecideIdle(cfg store.AppSettings, checkRepo RepoRootChecker) (idle bool, reason string) {
 	if cfg.AgentPaused {
 		return true, "paused_by_operator"
@@ -49,9 +51,10 @@ type InstanceSnapshot struct {
 	HasVerifyRunner bool
 }
 
-//funclogmeasure:skip category=hot-path reason="Pure helper without I/O; operation trace is emitted by the calling chokepoint."
 // InstanceMatchesSettings reports whether the running worker already
 // matches desired settings and probed runner version.
+//
+//funclogmeasure:skip category=hot-path reason="Pure helper without I/O; operation trace is emitted by the calling chokepoint."
 func InstanceMatchesSettings(inst *InstanceSnapshot, cfg store.AppSettings, version string) bool {
 	if inst == nil {
 		return false
@@ -89,9 +92,10 @@ func InstanceMatchesSettings(inst *InstanceSnapshot, cfg store.AppSettings, vers
 	return true
 }
 
-//funclogmeasure:skip category=hot-path reason="Pure helper without I/O; operation trace is emitted by the calling chokepoint."
 // VerifyRunnerStatus returns the effective-config verify_runner_status
 // label for an unchanged reload.
+//
+//funclogmeasure:skip category=hot-path reason="Pure helper without I/O; operation trace is emitted by the calling chokepoint."
 func VerifyRunnerStatus(hasVerifyRunner bool, cfg store.AppSettings) string {
 	if hasVerifyRunner {
 		return "ok"

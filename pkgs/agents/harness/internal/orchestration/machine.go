@@ -1,9 +1,10 @@
 package orchestration
 
-//funclogmeasure:skip category=hot-path reason="Pure helper without I/O; operation trace is emitted by the calling chokepoint."
 // DecideVerifyRetry maps verify pipeline outcome + retry budget to effects.
 // Attempt is the current verifyAttempt before any increment; the harness root
 // increments verifyAttempt when RetryLoop is true.
+//
+//funclogmeasure:skip category=hot-path reason="Pure helper without I/O; operation trace is emitted by the calling chokepoint."
 func DecideVerifyRetry(attempt, maxRetries int, result VerifyResult) VerifyEffects {
 	switch result {
 	case VerifyResultPass:
@@ -20,9 +21,10 @@ func DecideVerifyRetry(attempt, maxRetries int, result VerifyResult) VerifyEffec
 	}
 }
 
-//funclogmeasure:skip category=hot-path reason="Pure helper without I/O; operation trace is emitted by the calling chokepoint."
 // DecideVerifyRetryWithValidity extends DecideVerifyRetry with in-cycle
 // verify-only retry when execute artifacts remain valid (ADR-0028).
+//
+//funclogmeasure:skip category=hot-path reason="Pure helper without I/O; operation trace is emitted by the calling chokepoint."
 func DecideVerifyRetryWithValidity(attempt, maxRetries int, result VerifyResult, executeStillValid bool) VerifyEffects {
 	effects := DecideVerifyRetry(attempt, maxRetries, result)
 	if effects.RetryLoop && executeStillValid {
@@ -31,9 +33,10 @@ func DecideVerifyRetryWithValidity(attempt, maxRetries int, result VerifyResult,
 	return effects
 }
 
-//funclogmeasure:skip category=hot-path reason="Pure helper without I/O; operation trace is emitted by the calling chokepoint."
 // VerifyDisabled indicates verify is off for this task; the harness runs the
 // legacy checklist completion path instead of the adversarial pipeline.
+//
+//funclogmeasure:skip category=hot-path reason="Pure helper without I/O; operation trace is emitted by the calling chokepoint."
 func VerifyDisabled(enabled bool) bool {
 	return !enabled
 }

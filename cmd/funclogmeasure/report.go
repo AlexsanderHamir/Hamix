@@ -14,10 +14,10 @@ type violation struct {
 }
 
 type satisfactionCounts struct {
-	DirectSlog     int `json:"direct_slog"`
-	TraceDelegate  int `json:"trace_delegate"`
-	AutoExempt     int `json:"auto_exempt"`
-	Directive      int `json:"directive"`
+	DirectSlog    int `json:"direct_slog"`
+	TraceDelegate int `json:"trace_delegate"`
+	AutoExempt    int `json:"auto_exempt"`
+	Directive     int `json:"directive"`
 }
 
 type report struct {

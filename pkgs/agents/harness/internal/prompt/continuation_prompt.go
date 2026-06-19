@@ -22,8 +22,9 @@ type ContinuationInput struct {
 	Warnings        []string
 }
 
-//funclogmeasure:skip category=hot-path reason="Pure helper without I/O; operation trace is emitted by the calling chokepoint."
 // ComposeContinuation prepends continuation context before the base execute prompt.
+//
+//funclogmeasure:skip category=hot-path reason="Pure helper without I/O; operation trace is emitted by the calling chokepoint."
 func ComposeContinuation(base string, in ContinuationInput) string {
 	if in.Cycle == nil {
 		return base
@@ -82,8 +83,9 @@ func ComposeContinuation(base string, in ContinuationInput) string {
 	return b.String() + base
 }
 
-//funclogmeasure:skip category=hot-path reason="Pure helper without I/O; operation trace is emitted by the calling chokepoint."
 // FormatCommitsByStatusForResume groups known commits by eligibility status.
+//
+//funclogmeasure:skip category=hot-path reason="Pure helper without I/O; operation trace is emitted by the calling chokepoint."
 func FormatCommitsByStatusForResume(commits []domain.TaskCycleCommit) string {
 	if len(commits) == 0 {
 		return ""

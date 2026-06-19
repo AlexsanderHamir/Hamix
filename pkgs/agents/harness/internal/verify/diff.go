@@ -19,8 +19,9 @@ func gitDiff(dir, rev string) (string, error) {
 	return string(out), nil
 }
 
-//funclogmeasure:skip category=hot-path reason="Pure helper without I/O; operation trace is emitted by the calling chokepoint."
 // DiffSection renders the git diff block for verify and resume prompts.
+//
+//funclogmeasure:skip category=hot-path reason="Pure helper without I/O; operation trace is emitted by the calling chokepoint."
 func DiffSection(workingDir string) string {
 	diff, err := gitDiff(workingDir, "HEAD")
 	return prompt.FormatVerifyDiffSection(diff, err)

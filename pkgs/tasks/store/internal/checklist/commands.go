@@ -30,8 +30,9 @@ type VerifyCommandView struct {
 	ExpectedOutcome string `json:"expected_outcome,omitempty"`
 }
 
-//funclogmeasure:skip category=hot-path reason="Pure helper without I/O; operation trace is emitted by the calling chokepoint."
 // NormalizeVerifyCommandInputs trims, drops blank commands, and validates limits.
+//
+//funclogmeasure:skip category=hot-path reason="Pure helper without I/O; operation trace is emitted by the calling chokepoint."
 func NormalizeVerifyCommandInputs(in []VerifyCommandInput) ([]VerifyCommandInput, error) {
 	if len(in) == 0 {
 		return nil, nil

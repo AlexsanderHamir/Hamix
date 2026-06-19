@@ -24,8 +24,9 @@ type Worker struct {
 	opts    Options
 }
 
-//funclogmeasure:skip category=hot-path reason="Pure helper without I/O; operation trace is emitted by the calling chokepoint."
 // NewWorker constructs a Worker with sensible defaults applied to opts.
+//
+//funclogmeasure:skip category=hot-path reason="Pure helper without I/O; operation trace is emitted by the calling chokepoint."
 func NewWorker(st *store.Store, q *agents.MemoryQueue, r runner.Runner, opts Options) *Worker {
 	if opts.ShutdownAbortTimeout <= 0 {
 		opts.ShutdownAbortTimeout = DefaultShutdownAbortTimeout
@@ -34,8 +35,9 @@ func NewWorker(st *store.Store, q *agents.MemoryQueue, r runner.Runner, opts Opt
 	return &Worker{store: st, queue: q, harness: h, opts: opts}
 }
 
-//funclogmeasure:skip category=hot-path reason="Pure helper without I/O; operation trace is emitted by the calling chokepoint."
 // CancelCurrentRun cancels the in-flight runner.Run, if any.
+//
+//funclogmeasure:skip category=hot-path reason="Pure helper without I/O; operation trace is emitted by the calling chokepoint."
 func (w *Worker) CancelCurrentRun() bool {
 	if w == nil || w.harness == nil {
 		return false

@@ -14,8 +14,9 @@ import (
 // DefaultMaxPatchBytes caps commit patch payloads returned over HTTP.
 const DefaultMaxPatchBytes = 512 * 1024
 
-//funclogmeasure:skip category=hot-path reason="Pure helper without I/O; operation trace is emitted by the calling chokepoint."
 // Run invokes `git -C <dir> <args...>` and returns trimmed stdout.
+//
+//funclogmeasure:skip category=hot-path reason="Pure helper without I/O; operation trace is emitted by the calling chokepoint."
 func Run(ctx context.Context, dir string, args ...string) (string, error) {
 	dir = filepath.Clean(dir)
 	all := append([]string{"-C", dir}, args...)
@@ -29,9 +30,10 @@ func Run(ctx context.Context, dir string, args ...string) (string, error) {
 	return strings.TrimSpace(stdout.String()), nil
 }
 
-//funclogmeasure:skip category=hot-path reason="Pure helper without I/O; operation trace is emitted by the calling chokepoint."
 // ShowCommitPatch returns the unified diff for one commit (parent..commit).
 // maxBytes limits the returned patch size; truncated is true when the cap applies.
+//
+//funclogmeasure:skip category=hot-path reason="Pure helper without I/O; operation trace is emitted by the calling chokepoint."
 func ShowCommitPatch(ctx context.Context, dir, sha string, maxBytes int) (patch string, truncated bool, err error) {
 	if maxBytes <= 0 {
 		maxBytes = DefaultMaxPatchBytes

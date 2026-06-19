@@ -117,12 +117,13 @@ const DefaultVerifyCommandTimeoutSeconds = 120
 // of where their browser is.
 const DefaultDisplayTimezone = ""
 
-//funclogmeasure:skip category=hot-path reason="Pure helper without I/O; operation trace is emitted by the calling chokepoint."
 // DefaultAppSettings returns the hard-coded first-boot defaults. Used
 // by the store's Get path when the row doesn't exist yet, so callers
 // always observe a fully populated value. Skip-listed in
 // cmd/funclogmeasure/analyze.go: pure struct constructor; the calling
 // store.GetAppSettings already logs the seed-on-first-read decision.
+//
+//funclogmeasure:skip category=hot-path reason="Pure helper without I/O; operation trace is emitted by the calling chokepoint."
 func DefaultAppSettings() AppSettings {
 	return AppSettings{
 		ID:                          AppSettingsRowID,

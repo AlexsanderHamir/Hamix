@@ -98,8 +98,9 @@ type Harness struct {
 	cancelByOperator atomic.Bool
 }
 
-//funclogmeasure:skip category=hot-path reason="Pure helper without I/O; operation trace is emitted by the calling chokepoint."
 // New constructs a Harness with sensible defaults applied to opts.
+//
+//funclogmeasure:skip category=hot-path reason="Pure helper without I/O; operation trace is emitted by the calling chokepoint."
 func New(st *store.Store, r runner.Runner, opts Options) *Harness {
 	if opts.ShutdownAbortTimeout <= 0 {
 		opts.ShutdownAbortTimeout = DefaultShutdownAbortTimeout

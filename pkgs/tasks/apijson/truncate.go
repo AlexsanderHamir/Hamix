@@ -6,12 +6,13 @@ import (
 
 const maxJSONLogPreviewBytes = 16384
 
-//funclogmeasure:skip category=hot-path reason="Pure helper without I/O; operation trace is emitted by the calling chokepoint."
 // TruncateUTF8ByBytes returns s truncated to maxBytes UTF-8-safe, appending
 // "…" when truncated. Pure helper: callers (debugHTTPRequest /
 // debugHTTPResponse) already gate on slog.Default().Enabled, so per-call
 // logging here would just duplicate the surrounding trace line.
 // Skip-listed in cmd/funclogmeasure/analyze.go.
+//
+//funclogmeasure:skip category=hot-path reason="Pure helper without I/O; operation trace is emitted by the calling chokepoint."
 func TruncateUTF8ByBytes(s string, maxBytes int) string {
 	if maxBytes <= 0 {
 		return ""

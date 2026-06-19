@@ -5,7 +5,6 @@ import (
 	"log/slog"
 )
 
-//funclogmeasure:skip category=delegate-already-logs reason="Delegates to helperDebugIn/helperDebugOut which emit helper.io traces."
 // RunObserved runs f with call-stack and helper.io logging: helper_in before, helper_out after.
 // Use for helpers where you want explicit input/output key/value pairs in the JSON log (same
 // alternating style as slog). The function name is pushed onto call_path for nested correlation.
@@ -14,6 +13,8 @@ import (
 // slog directly but it always calls helperDebugIn / helperDebugOut, which
 // emit the helper.io trace pair through slog.Log. Adding a redundant
 // slog.Debug here would triple-count every observed helper invocation.
+//
+//funclogmeasure:skip category=delegate-already-logs reason="Delegates to helperDebugIn/helperDebugOut which emit helper.io traces."
 func RunObserved(ctx context.Context, function string, inPairs []any, f func(context.Context) (outPairs []any, err error)) (err error) {
 	if ctx == nil {
 		ctx = context.Background()

@@ -209,7 +209,6 @@ SELECT COUNT(*) FROM information_schema.columns
 
 var errEmptyDSN = errors.New("database DSN is empty")
 
-//funclogmeasure:skip category=hot-path reason="Pure helper without I/O; operation trace is emitted by the calling chokepoint."
 // ensureQueryExecModeSimpleProtocol appends pgx's default_query_exec_mode when
 // absent. Without this, ALTER TABLE / AutoMigrate can change the row type of
 // SELECT * while pooled connections still hold cached prepared statements,
@@ -217,6 +216,8 @@ var errEmptyDSN = errors.New("database DSN is empty")
 // Simple protocol avoids server-side plan caching for that failure mode.
 //
 // See pgx ParseConfig: default_query_exec_mode=simple_protocol.
+//
+//funclogmeasure:skip category=hot-path reason="Pure helper without I/O; operation trace is emitted by the calling chokepoint."
 func ensureQueryExecModeSimpleProtocol(dsn string) string {
 	dsn = strings.TrimSpace(dsn)
 	if dsn == "" {

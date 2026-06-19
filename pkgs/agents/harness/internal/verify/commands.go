@@ -209,8 +209,9 @@ func (s *Service) RunCriterionCommands(
 	return out, nil
 }
 
-//funclogmeasure:skip category=hot-path reason="Pure helper without I/O; operation trace is emitted by the calling chokepoint."
 // FormatCommandEvidenceSection renders worker command output for verify prompts.
+//
+//funclogmeasure:skip category=hot-path reason="Pure helper without I/O; operation trace is emitted by the calling chokepoint."
 func FormatCommandEvidenceSection(evidence []CommandEvidence) string {
 	if len(evidence) == 0 {
 		return ""

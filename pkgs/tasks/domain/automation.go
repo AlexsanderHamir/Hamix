@@ -48,8 +48,9 @@ type ResolvedAutomation struct {
 	State        AutomationState
 }
 
-//funclogmeasure:skip category=hot-path reason="Pure helper without I/O; operation trace is emitted by the calling chokepoint."
 // ValidateAutomationFields checks title and description for create/patch.
+//
+//funclogmeasure:skip category=hot-path reason="Pure helper without I/O; operation trace is emitted by the calling chokepoint."
 func ValidateAutomationFields(title, description string) (string, string, error) {
 	title = strings.TrimSpace(title)
 	description = strings.TrimSpace(description)
@@ -72,8 +73,9 @@ func ValidateAutomationFields(title, description string) (string, string, error)
 	return title, description, nil
 }
 
-//funclogmeasure:skip category=hot-path reason="Pure helper without I/O; operation trace is emitted by the calling chokepoint."
 // NormalizeAutomationState parses and validates a toggle state.
+//
+//funclogmeasure:skip category=hot-path reason="Pure helper without I/O; operation trace is emitted by the calling chokepoint."
 func NormalizeAutomationState(raw AutomationState) (AutomationState, error) {
 	switch AutomationState(strings.TrimSpace(string(raw))) {
 	case AutomationStateYes:
@@ -85,8 +87,9 @@ func NormalizeAutomationState(raw AutomationState) (AutomationState, error) {
 	}
 }
 
-//funclogmeasure:skip category=hot-path reason="Pure helper without I/O; operation trace is emitted by the calling chokepoint."
 // ValidateAutomationSelections normalizes and validates task automation bindings.
+//
+//funclogmeasure:skip category=hot-path reason="Pure helper without I/O; operation trace is emitted by the calling chokepoint."
 func ValidateAutomationSelections(in []AutomationSelection) ([]AutomationSelection, error) {
 	if len(in) == 0 {
 		return nil, nil

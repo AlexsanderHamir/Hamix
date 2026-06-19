@@ -11,8 +11,9 @@ var (
 	taskMilestonePattern = regexp.MustCompile(`^[a-zA-Z0-9][a-zA-Z0-9 ._-]{0,63}$`)
 )
 
-//funclogmeasure:skip category=hot-path reason="Pure helper without I/O; operation trace is emitted by the calling chokepoint."
 // ValidateTaskTag returns ErrInvalidInput when tag does not match the wire rules.
+//
+//funclogmeasure:skip category=hot-path reason="Pure helper without I/O; operation trace is emitted by the calling chokepoint."
 func ValidateTaskTag(tag string) error {
 	tag = strings.TrimSpace(tag)
 	if tag == "" {
@@ -24,8 +25,9 @@ func ValidateTaskTag(tag string) error {
 	return nil
 }
 
-//funclogmeasure:skip category=hot-path reason="Pure helper without I/O; operation trace is emitted by the calling chokepoint."
 // ValidateTaskTags validates every tag and rejects duplicates.
+//
+//funclogmeasure:skip category=hot-path reason="Pure helper without I/O; operation trace is emitted by the calling chokepoint."
 func ValidateTaskTags(tags []string) error {
 	seen := make(map[string]struct{}, len(tags))
 	for _, tag := range tags {
@@ -40,8 +42,9 @@ func ValidateTaskTags(tags []string) error {
 	return nil
 }
 
-//funclogmeasure:skip category=hot-path reason="Pure helper without I/O; operation trace is emitted by the calling chokepoint."
 // ValidateTaskMilestone returns ErrInvalidInput when milestone is non-empty but invalid.
+//
+//funclogmeasure:skip category=hot-path reason="Pure helper without I/O; operation trace is emitted by the calling chokepoint."
 func ValidateTaskMilestone(milestone string) error {
 	milestone = strings.TrimSpace(milestone)
 	if milestone == "" {
@@ -53,8 +56,9 @@ func ValidateTaskMilestone(milestone string) error {
 	return nil
 }
 
-//funclogmeasure:skip category=hot-path reason="Pure helper without I/O; operation trace is emitted by the calling chokepoint."
 // NormalizeTaskTags trims, drops empties, and de-duplicates while preserving order.
+//
+//funclogmeasure:skip category=hot-path reason="Pure helper without I/O; operation trace is emitted by the calling chokepoint."
 func NormalizeTaskTags(tags []string) []string {
 	if len(tags) == 0 {
 		return []string{}

@@ -16,8 +16,9 @@ const (
 	gateActionClearHold = "clear_hold"
 )
 
-//funclogmeasure:skip category=hot-path reason="Pure helper without I/O; operation trace is emitted by the calling chokepoint."
 // ApplyTaskGateAction mutates a task's gate per operator action and persists.
+//
+//funclogmeasure:skip category=hot-path reason="Pure helper without I/O; operation trace is emitted by the calling chokepoint."
 func ApplyTaskGateAction(ctx context.Context, db *gorm.DB, taskID, action string, by domain.Actor) (*domain.Task, error) {
 	action = strings.TrimSpace(strings.ToLower(action))
 	if action == "" {

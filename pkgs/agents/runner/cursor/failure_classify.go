@@ -27,10 +27,11 @@ func titleForFailureKind(kind string) string {
 	}
 }
 
-//funclogmeasure:skip category=hot-path reason="Pure helper without I/O; operation trace is emitted by the calling chokepoint."
 // classifyCursorFailure inspects combined CLI output (stderr + stdout) and
 // returns a stable failure_kind plus a user-facing standardized_message
 // when the CLI failure matches a known pattern.
+//
+//funclogmeasure:skip category=hot-path reason="Pure helper without I/O; operation trace is emitted by the calling chokepoint."
 func classifyCursorFailure(combined string) (kind string, standardizedMsg string) {
 	lower := strings.ToLower(combined)
 	switch {

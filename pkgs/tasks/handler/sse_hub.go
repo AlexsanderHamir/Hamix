@@ -69,10 +69,11 @@ type SSEHubOptions struct {
 	HeartbeatPeriod  time.Duration
 }
 
-//funclogmeasure:skip category=hot-path reason="Pure helper without I/O; operation trace is emitted by the calling chokepoint."
 // DefaultSSEHubOptions are the production-grade defaults documented in
 // the architecture plan: 1024-event ring, 256-frame per-subscriber
 // buffer, 50ms coalescing window, 15s heartbeats.
+//
+//funclogmeasure:skip category=hot-path reason="Pure helper without I/O; operation trace is emitted by the calling chokepoint."
 func DefaultSSEHubOptions() SSEHubOptions {
 	return SSEHubOptions{
 		RingSize:         1024,
@@ -97,10 +98,11 @@ func NewSSEHub() *SSEHub {
 	return NewSSEHubWith(opts)
 }
 
-//funclogmeasure:skip category=hot-path reason="Pure helper without I/O; operation trace is emitted by the calling chokepoint."
 // NewSSEHubWith builds a hub with caller-supplied tuning. Invalid values
 // (zero or negative) fall back to the matching DefaultSSEHubOptions
 // field so callers can override one knob at a time.
+//
+//funclogmeasure:skip category=hot-path reason="Pure helper without I/O; operation trace is emitted by the calling chokepoint."
 func NewSSEHubWith(opts SSEHubOptions) *SSEHub {
 	d := DefaultSSEHubOptions()
 	if opts.RingSize <= 0 {
@@ -289,8 +291,9 @@ func (h *SSEHub) evictSubscriber(s *subscriber) {
 	middleware.RecordSSESubscriberGauge(n)
 }
 
-//funclogmeasure:skip category=hot-path reason="Pure helper without I/O; operation trace is emitted by the calling chokepoint."
 // LastEventID returns the highest event id allocated by the hub.
+//
+//funclogmeasure:skip category=hot-path reason="Pure helper without I/O; operation trace is emitted by the calling chokepoint."
 func (h *SSEHub) LastEventID() uint64 {
 	if h == nil {
 		return 0

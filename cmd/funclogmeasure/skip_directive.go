@@ -7,12 +7,12 @@ import (
 )
 
 const (
-	directivePrefix     = "//funclogmeasure:skip"
-	minDirectiveReason  = 20
-	categoryToolNoop    = "tool-required-noop"
-	categoryHotPath     = "hot-path"
-	categoryDelegate    = "delegate-already-logs"
-	categoryReExport    = "re-export-wrapper"
+	directivePrefix    = "//funclogmeasure:skip"
+	minDirectiveReason = 20
+	categoryToolNoop   = "tool-required-noop"
+	categoryHotPath    = "hot-path"
+	categoryDelegate   = "delegate-already-logs"
+	categoryReExport   = "re-export-wrapper"
 )
 
 var validSkipCategories = map[string]struct{}{

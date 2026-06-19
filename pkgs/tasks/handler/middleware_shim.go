@@ -53,8 +53,9 @@ func IdempotencyCacheLimits() (int, int) { return middleware.IdempotencyCacheLim
 //funclogmeasure:skip category=hot-path reason="Pure helper without I/O; operation trace is emitted by the calling chokepoint."
 func clearIdempotencyStateForTest() { middleware.ClearIdempotencyStateForTest() }
 
-//funclogmeasure:skip category=hot-path reason="Pure helper without I/O; operation trace is emitted by the calling chokepoint."
 // HasValidBearerToken re-exports middleware bearer parsing for handler package tests.
+//
+//funclogmeasure:skip category=hot-path reason="Pure helper without I/O; operation trace is emitted by the calling chokepoint."
 func HasValidBearerToken(rawAuth, configuredToken string) bool {
 	return middleware.HasValidBearerToken(rawAuth, configuredToken)
 }

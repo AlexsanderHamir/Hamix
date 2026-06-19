@@ -3,10 +3,11 @@ package version
 
 import "runtime/debug"
 
-//funclogmeasure:skip category=hot-path reason="Pure helper without I/O; operation trace is emitted by the calling chokepoint."
 // String returns a short identifier for this binary (release module version, short
 // vcs.revision, "devel", or "unknown"). Safe to log and expose on HTTP health JSON
 // (no secrets).
+//
+//funclogmeasure:skip category=hot-path reason="Pure helper without I/O; operation trace is emitted by the calling chokepoint."
 func String() string {
 	info, ok := debug.ReadBuildInfo()
 	if !ok {

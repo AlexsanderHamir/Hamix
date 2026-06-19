@@ -74,9 +74,10 @@ func ValidateCanAddCriterionInTx(tx *gorm.DB, t *domain.Task) error {
 	return validateCriteriaMutable(t)
 }
 
-//funclogmeasure:skip category=hot-path reason="Pure helper without I/O; operation trace is emitted by the calling chokepoint."
 // ValidateCriteriaMutable rejects user-driven checklist mutations while the
 // task is in progress. Done tasks remain editable for post-completion tweaks.
+//
+//funclogmeasure:skip category=hot-path reason="Pure helper without I/O; operation trace is emitted by the calling chokepoint."
 func ValidateCriteriaMutable(t *domain.Task) error {
 	return validateCriteriaMutable(t)
 }
@@ -92,10 +93,11 @@ func validateCriteriaMutable(t *domain.Task) error {
 	return nil
 }
 
-//funclogmeasure:skip category=hot-path reason="Pure helper without I/O; operation trace is emitted by the calling chokepoint."
 // criterionLockedByCompletion reports whether existing completion rows block
 // definition edits. Satisfied criteria stay locked while the task is still
 // active; once status=done operators may revise definitions.
+//
+//funclogmeasure:skip category=hot-path reason="Pure helper without I/O; operation trace is emitted by the calling chokepoint."
 func criterionLockedByCompletion(taskStatus domain.Status, doneCount int64) bool {
 	if doneCount == 0 {
 		return false

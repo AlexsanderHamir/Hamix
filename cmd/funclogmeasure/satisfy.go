@@ -8,11 +8,11 @@ import (
 )
 
 const (
-	layerDirectSlog     = "direct_slog"
-	layerTraceDelegate  = "trace_delegate"
-	layerAutoExempt     = "auto_exempt"
-	layerDirective      = "directive"
-	layerUnsatisfied    = "unsatisfied"
+	layerDirectSlog    = "direct_slog"
+	layerTraceDelegate = "trace_delegate"
+	layerAutoExempt    = "auto_exempt"
+	layerDirective     = "directive"
+	layerUnsatisfied   = "unsatisfied"
 )
 
 type pkgSatisfyCache struct {

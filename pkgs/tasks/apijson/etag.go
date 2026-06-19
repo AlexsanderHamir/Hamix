@@ -21,11 +21,12 @@ const RevalidatableCacheControl = "private, no-cache, must-revalidate"
 // number of revisions of a single resource, and yields a short header.
 const etagPrefixBytes = 16
 
-//funclogmeasure:skip category=hot-path reason="Pure helper without I/O; operation trace is emitted by the calling chokepoint."
 // ApplyRevalidatableHeaders writes the same hardening as ApplySecurityHeaders
 // but swaps Cache-Control: no-store for the revalidatable directive so
 // callers can serve 304 on If-None-Match without the browser refusing to
 // keep the cached body.
+//
+//funclogmeasure:skip category=hot-path reason="Pure helper without I/O; operation trace is emitted by the calling chokepoint."
 func ApplyRevalidatableHeaders(w http.ResponseWriter) {
 	h := w.Header()
 	h.Set("Cache-Control", RevalidatableCacheControl)
@@ -36,22 +37,24 @@ func ApplyRevalidatableHeaders(w http.ResponseWriter) {
 	h.Set("Permissions-Policy", "camera=(), microphone=(), geolocation=(), payment=()")
 }
 
-//funclogmeasure:skip category=hot-path reason="Pure helper without I/O; operation trace is emitted by the calling chokepoint."
 // ComputeETag returns a strong-form ETag header value for body, using a
 // SHA-256 prefix. The result includes the surrounding double quotes per
 // RFC 7232 §2.3 and is safe to pass directly to Header().Set("ETag", ...).
+//
+//funclogmeasure:skip category=hot-path reason="Pure helper without I/O; operation trace is emitted by the calling chokepoint."
 func ComputeETag(body []byte) string {
 	sum := sha256.Sum256(body)
 	return `"` + hex.EncodeToString(sum[:etagPrefixBytes]) + `"`
 }
 
-//funclogmeasure:skip category=hot-path reason="Pure helper without I/O; operation trace is emitted by the calling chokepoint."
 // IfNoneMatchMatches reports whether the client's If-None-Match header
 // (possibly a comma-separated list, possibly "*") would be satisfied by
 // the given strong ETag value. It treats weak validators ("W/...") as
 // equivalent for the purpose of revalidation; we never emit weak tags
 // ourselves but the spec encourages tolerant comparison on the receive
 // side. Returns false for an empty header or when no entry matches.
+//
+//funclogmeasure:skip category=hot-path reason="Pure helper without I/O; operation trace is emitted by the calling chokepoint."
 func IfNoneMatchMatches(headerValue, etag string) bool {
 	if headerValue == "" || etag == "" {
 		return false

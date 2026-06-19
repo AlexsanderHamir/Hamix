@@ -49,8 +49,8 @@ func injectDirectivesInFile(path string, viols []violation) (int, error) {
 	}
 
 	type insertAt struct {
-		line int
-		text string
+		line  int
+		lines []string
 	}
 	var inserts []insertAt
 
@@ -68,11 +68,9 @@ func injectDirectivesInFile(path string, viols []violation) (int, error) {
 			continue
 		}
 		cat, reason := directiveCategoryFor(v)
-		line := directiveInsertLine(fset, fd)
-		inserts = append(inserts, insertAt{
-			line: line,
-			text: fmt.Sprintf("//funclogmeasure:skip category=%s reason=%q", cat, reason),
-		})
+		directive := fmt.Sprintf("//funclogmeasure:skip category=%s reason=%q", cat, reason)
+		line, lines := directiveInsert(fset, fd, directive)
+		inserts = append(inserts, insertAt{line: line, lines: lines})
 	}
 
 	if len(inserts) == 0 {
@@ -86,7 +84,7 @@ func injectDirectivesInFile(path string, viols []violation) (int, error) {
 		if idx < 0 || idx > len(lines) {
 			return 0, fmt.Errorf("insert line %d out of range in %s", ins.line, path)
 		}
-		lines = append(lines[:idx], append([]string{ins.text}, lines[idx:]...)...)
+		lines = append(lines[:idx], append(ins.lines, lines[idx:]...)...)
 	}
 	out := strings.Join(lines, "\n")
 	if !strings.HasSuffix(out, "\n") {
@@ -95,11 +93,12 @@ func injectDirectivesInFile(path string, viols []violation) (int, error) {
 	return len(inserts), os.WriteFile(path, []byte(out), 0o644)
 }
 
-func directiveInsertLine(fset *token.FileSet, fd *ast.FuncDecl) int {
+func directiveInsert(fset *token.FileSet, fd *ast.FuncDecl, directive string) (line int, lines []string) {
 	if fd.Doc != nil && len(fd.Doc.List) > 0 {
-		return fset.Position(fd.Doc.List[0].Pos()).Line
+		last := fd.Doc.List[len(fd.Doc.List)-1]
+		return fset.Position(last.End()).Line + 1, []string{"//", directive}
 	}
-	return fset.Position(fd.Type.Pos()).Line
+	return fset.Position(fd.Type.Pos()).Line, []string{directive}
 }
 
 func directiveCategoryFor(v violation) (string, string) {

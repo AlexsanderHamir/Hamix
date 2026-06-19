@@ -8,8 +8,9 @@ import (
 	"github.com/AlexsanderHamir/T2A/pkgs/tasks/domain"
 )
 
-//funclogmeasure:skip category=hot-path reason="Pure helper without I/O; operation trace is emitted by the calling chokepoint."
 // FormatGitContextForPrompt renders worker-indexed commit context for verify prompts.
+//
+//funclogmeasure:skip category=hot-path reason="Pure helper without I/O; operation trace is emitted by the calling chokepoint."
 func FormatGitContextForPrompt(commits []domain.TaskCycleCommit) string {
 	if len(commits) == 0 {
 		return ""
@@ -45,8 +46,9 @@ func FormatGitContextForPrompt(commits []domain.TaskCycleCommit) string {
 	return b.String()
 }
 
-//funclogmeasure:skip category=hot-path reason="Pure helper without I/O; operation trace is emitted by the calling chokepoint."
 // FormatKnownCommitsForResume lists prior indexed commits for resume prompts.
+//
+//funclogmeasure:skip category=hot-path reason="Pure helper without I/O; operation trace is emitted by the calling chokepoint."
 func FormatKnownCommitsForResume(commits []domain.TaskCycleCommit) string {
 	if len(commits) == 0 {
 		return ""
@@ -64,8 +66,9 @@ func FormatKnownCommitsForResume(commits []domain.TaskCycleCommit) string {
 	return b.String()
 }
 
-//funclogmeasure:skip category=hot-path reason="Pure helper without I/O; operation trace is emitted by the calling chokepoint."
 // ReasonRemediation returns operator-facing guidance for execute gate reasons.
+//
+//funclogmeasure:skip category=hot-path reason="Pure helper without I/O; operation trace is emitted by the calling chokepoint."
 func ReasonRemediation(reason string) string {
 	switch strings.TrimSpace(reason) {
 	case ExecuteUncommittedWorkReason:
@@ -84,8 +87,9 @@ func ReasonRemediation(reason string) string {
 	}
 }
 
-//funclogmeasure:skip category=hot-path reason="Pure helper without I/O; operation trace is emitted by the calling chokepoint."
 // IsExecuteGateReason reports whether reason is an execute commit gate failure.
+//
+//funclogmeasure:skip category=hot-path reason="Pure helper without I/O; operation trace is emitted by the calling chokepoint."
 func IsExecuteGateReason(reason string) bool {
 	switch strings.TrimSpace(reason) {
 	case ExecuteNoCommitsReason, ExecuteUncommittedWorkReason, ExecuteInvalidCommitReason, ExecuteRewrittenHistoryReason:

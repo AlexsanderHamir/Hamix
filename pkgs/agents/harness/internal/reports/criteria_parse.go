@@ -56,7 +56,6 @@ type VerifyEntry struct {
 	Reasoning string `json:"reasoning"`
 }
 
-//funclogmeasure:skip category=hot-path reason="Pure helper without I/O; operation trace is emitted by the calling chokepoint."
 // ReportCycleDir is the worker-managed scratch directory for one
 // cycle's report files. Lives under Options.ReportDir (defaulted by
 // NewWorker to <os.TempDir()>/t2a-worker) so the operator's RepoRoot
@@ -65,6 +64,8 @@ type VerifyEntry struct {
 // are scrubbed at startExecutePhase via ScrubCycleArtifacts so a
 // stale file from an aborted-without-cleanup cycle never poisons
 // ParseCriteriaReport.
+//
+//funclogmeasure:skip category=hot-path reason="Pure helper without I/O; operation trace is emitted by the calling chokepoint."
 func ReportCycleDir(reportDir, cycleID string) string {
 	return filepath.Join(reportDir, cycleID)
 }
@@ -79,33 +80,36 @@ func VerifyReportPath(reportDir, cycleID string) string {
 	return filepath.Join(ReportCycleDir(reportDir, cycleID), "verify-report.json")
 }
 
-//funclogmeasure:skip category=hot-path reason="Pure helper without I/O; operation trace is emitted by the calling chokepoint."
 // EnsureReportCycleDir creates <reportDir>/<cycleID>/ with a permissive
 // directory mode so the agent CLI can write its report into it.
 // Idempotent — repeated calls within a cycle are no-ops. The directory
 // lives outside any git repo, so unlike the prior .t2a/ helper there
 // is no .gitignore to write here; a stray entry would be a bug.
+//
+//funclogmeasure:skip category=hot-path reason="Pure helper without I/O; operation trace is emitted by the calling chokepoint."
 func EnsureReportCycleDir(reportDir, cycleID string) error {
 	return os.MkdirAll(ReportCycleDir(reportDir, cycleID), 0o755)
 }
 
-//funclogmeasure:skip category=hot-path reason="Pure helper without I/O; operation trace is emitted by the calling chokepoint."
 // ScrubCycleArtifacts removes the per-cycle report subdirectory before
 // the next execute attempt writes into it. Used at the top of every
 // execute phase so a stale criteria-report.json from a previous
 // attempt cannot satisfy ParseCriteriaReport against this attempt's
 // expected-IDs set.
+//
+//funclogmeasure:skip category=hot-path reason="Pure helper without I/O; operation trace is emitted by the calling chokepoint."
 func ScrubCycleArtifacts(reportDir, cycleID string) error {
 	return os.RemoveAll(ReportCycleDir(reportDir, cycleID))
 }
 
-//funclogmeasure:skip category=hot-path reason="Pure helper without I/O; operation trace is emitted by the calling chokepoint."
 // CleanupReportDir removes <reportDir>/<cycleID>/ at cycle terminate
 // time. Closes the unbounded-disk-growth gap that existed when files
 // were written under .t2a/ — there was no per-cycle GC. Called from
 // terminateCycle and the cleanup paths (handleShutdownAfterRun,
 // recoverFromPanic, bestEffortTerminate) so every exit point clears
 // its scratch.
+//
+//funclogmeasure:skip category=hot-path reason="Pure helper without I/O; operation trace is emitted by the calling chokepoint."
 func CleanupReportDir(reportDir, cycleID string) error {
 	return os.RemoveAll(ReportCycleDir(reportDir, cycleID))
 }

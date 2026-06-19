@@ -63,11 +63,12 @@ func debugHTTPOut(ctx context.Context, op string, httpStatus int, extra ...any) 
 	slog.Log(ctx, slog.LevelDebug, "http.io", args...)
 }
 
-//funclogmeasure:skip category=hot-path reason="Pure helper without I/O; operation trace is emitted by the calling chokepoint."
 // truncateRunes is a pure helper called only from taskCreateInputFields /
 // taskPatchInputFields, which themselves only run inside the
 // debugHTTPRequest gate. Skip-listed in cmd/funclogmeasure/analyze.go
 // rather than logging per-call (would emit per-trace-line per truncation).
+//
+//funclogmeasure:skip category=hot-path reason="Pure helper without I/O; operation trace is emitted by the calling chokepoint."
 func truncateRunes(s string, maxRunes int) string {
 	if maxRunes <= 0 {
 		return ""
@@ -85,11 +86,12 @@ func truncateRunes(s string, maxRunes int) string {
 	return b.String()
 }
 
-//funclogmeasure:skip category=hot-path reason="Pure helper without I/O; operation trace is emitted by the calling chokepoint."
 // taskCreateInputFields builds the body_* slog attribute slice for the
 // debugHTTPRequest http.io trace. Pure transformation; the trace itself
 // logs and is gated by Enabled() upstream so this helper never runs when
 // debug is off. Skip-listed in cmd/funclogmeasure/analyze.go.
+//
+//funclogmeasure:skip category=hot-path reason="Pure helper without I/O; operation trace is emitted by the calling chokepoint."
 func taskCreateInputFields(body *taskCreateJSON, actor string) []any {
 	if body == nil {
 		return nil
@@ -118,10 +120,11 @@ func taskCreateInputFields(body *taskCreateJSON, actor string) []any {
 	return out
 }
 
-//funclogmeasure:skip category=hot-path reason="Pure helper without I/O; operation trace is emitted by the calling chokepoint."
 // taskPatchInputFields is the PATCH /tasks/{id} mirror of
 // taskCreateInputFields above; same pure-helper rationale and skip-list
 // entry.
+//
+//funclogmeasure:skip category=hot-path reason="Pure helper without I/O; operation trace is emitted by the calling chokepoint."
 func taskPatchInputFields(body *taskPatchJSON) []any {
 	if body == nil {
 		return nil

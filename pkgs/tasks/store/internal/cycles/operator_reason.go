@@ -9,7 +9,6 @@ import (
 // mirrors and /tasks/stats recent_failures so payloads stay bounded.
 const MaxFailureSurfaceRunes = 800
 
-//funclogmeasure:skip category=hot-path reason="Pure helper without I/O; operation trace is emitted by the calling chokepoint."
 // FailureSurfaceMessage returns the best human-facing explanation for a
 // failed terminal cycle, preferring execute-phase classification
 // (standardized_message, summary, failure_kind) over the cycle mirror
@@ -19,6 +18,8 @@ const MaxFailureSurfaceRunes = 800
 // cycle-only projection). When hasPhase is true but no richer fields
 // exist, cycleReason is returned so Observability still has a stable
 // string.
+//
+//funclogmeasure:skip category=hot-path reason="Pure helper without I/O; operation trace is emitted by the calling chokepoint."
 func FailureSurfaceMessage(hasPhase bool, cycleReason, phaseSummary string, phaseDetails map[string]any) string {
 	if !hasPhase {
 		return ""

@@ -216,11 +216,12 @@ type cycleFailuresResponse struct {
 	Failures            []taskStatsFailureJSON `json:"failures"`
 }
 
-//funclogmeasure:skip category=hot-path reason="Pure helper without I/O; operation trace is emitted by the calling chokepoint."
 // taskStatsResponseFromStore projects the store-level TaskStats onto
 // the wire envelope. The store guarantees every map is non-nil and
 // RecentFailures is a non-nil slice; this projector preserves both
 // invariants so JSON encoding never emits `null` for those fields.
+//
+//funclogmeasure:skip category=hot-path reason="Pure helper without I/O; operation trace is emitted by the calling chokepoint."
 func recentFailuresToJSON(failures []store.RecentFailure) []taskStatsFailureJSON {
 	out := make([]taskStatsFailureJSON, 0, len(failures))
 	for _, f := range failures {

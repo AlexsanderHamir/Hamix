@@ -11,7 +11,6 @@ type ChecklistItem struct {
 	Text string
 }
 
-//funclogmeasure:skip category=hot-path reason="Pure helper without I/O; operation trace is emitted by the calling chokepoint."
 // InjectCriteria prepends the Done-criteria block before the operator's
 // initial prompt. alreadyVerified is the set of criterion IDs proven
 // passed in earlier retry attempts; when non-empty, those items render
@@ -21,6 +20,8 @@ type ChecklistItem struct {
 // reportPath is the absolute path the worker has chosen for this
 // cycle's criteria-report.json (under Options.ReportDir, not under
 // the operator's RepoRoot).
+//
+//funclogmeasure:skip category=hot-path reason="Pure helper without I/O; operation trace is emitted by the calling chokepoint."
 func InjectCriteria(prompt string, items []ChecklistItem, reportPath string, alreadyVerified map[string]struct{}) string {
 	if len(items) == 0 {
 		return prompt
@@ -65,8 +66,9 @@ func InjectCriteria(prompt string, items []ChecklistItem, reportPath string, alr
 	return strings.TrimPrefix(criteria.String(), "\n\n") + "\n\n" + prompt
 }
 
-//funclogmeasure:skip category=hot-path reason="Pure helper without I/O; operation trace is emitted by the calling chokepoint."
 // AppendVerifyFeedback appends prior verification feedback when non-empty.
+//
+//funclogmeasure:skip category=hot-path reason="Pure helper without I/O; operation trace is emitted by the calling chokepoint."
 func AppendVerifyFeedback(prompt string, feedback string) string {
 	feedback = strings.TrimSpace(feedback)
 	if feedback == "" {
@@ -75,8 +77,9 @@ func AppendVerifyFeedback(prompt string, feedback string) string {
 	return prompt + "\n\n## Previous verification feedback\n\n" + feedback + "\n"
 }
 
-//funclogmeasure:skip category=hot-path reason="Pure helper without I/O; operation trace is emitted by the calling chokepoint."
 // AppendExecuteHarnessFeedback appends execute-phase harness feedback when non-empty.
+//
+//funclogmeasure:skip category=hot-path reason="Pure helper without I/O; operation trace is emitted by the calling chokepoint."
 func AppendExecuteHarnessFeedback(prompt string, feedback string) string {
 	feedback = strings.TrimSpace(feedback)
 	if feedback == "" {

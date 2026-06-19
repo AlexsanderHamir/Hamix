@@ -192,8 +192,9 @@ func parsePorcelainZ(out string) map[string]struct{} {
 	return result
 }
 
-//funclogmeasure:skip category=hot-path reason="Pure helper without I/O; operation trace is emitted by the calling chokepoint."
 // WorkingTreeDirty reports whether the worktree has uncommitted changes.
+//
+//funclogmeasure:skip category=hot-path reason="Pure helper without I/O; operation trace is emitted by the calling chokepoint."
 func WorkingTreeDirty(ctx context.Context, repo GitRepo, worktree string) (bool, error) {
 	snap, err := CaptureIntegritySnapshot(ctx, repo, worktree)
 	if err != nil {
@@ -205,8 +206,9 @@ func WorkingTreeDirty(ctx context.Context, repo GitRepo, worktree string) (bool,
 	return len(snap.Changed) > 0, nil
 }
 
-//funclogmeasure:skip category=hot-path reason="Pure helper without I/O; operation trace is emitted by the calling chokepoint."
 // StatusPorcelain returns trimmed porcelain status, truncated for prompts.
+//
+//funclogmeasure:skip category=hot-path reason="Pure helper without I/O; operation trace is emitted by the calling chokepoint."
 func StatusPorcelain(ctx context.Context, repo GitRepo, workdir string) (string, error) {
 	if repo == nil {
 		repo = DefaultRepo()
@@ -223,8 +225,9 @@ func StatusPorcelain(ctx context.Context, repo GitRepo, workdir string) (string,
 	return out, nil
 }
 
-//funclogmeasure:skip category=hot-path reason="Pure helper without I/O; operation trace is emitted by the calling chokepoint."
 // ScopeFilesFromPhaseDetails lists paths changed between cycle base and HEAD.
+//
+//funclogmeasure:skip category=hot-path reason="Pure helper without I/O; operation trace is emitted by the calling chokepoint."
 func ScopeFilesFromPhaseDetails(ctx context.Context, repo GitRepo, workdir string, details []byte) []string {
 	if repo == nil {
 		repo = DefaultRepo()
@@ -251,6 +254,7 @@ func ScopeFilesFromPhaseDetails(ctx context.Context, repo GitRepo, workdir strin
 	return files
 }
 
-//funclogmeasure:skip category=hot-path reason="Pure helper without I/O; operation trace is emitted by the calling chokepoint."
 // Itoa is exported for tests that assert truncated integrity summaries.
+//
+//funclogmeasure:skip category=hot-path reason="Pure helper without I/O; operation trace is emitted by the calling chokepoint."
 func Itoa(n int) string { return itoa(n) }

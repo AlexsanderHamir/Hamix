@@ -177,10 +177,11 @@ func (h *Handler) postRUM(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusNoContent)
 }
 
-//funclogmeasure:skip category=hot-path reason="Pure helper without I/O; operation trace is emitted by the calling chokepoint."
 // foldRUMEvent updates Prometheus state for one event. Returns false
 // if the event was dropped (unknown type, invalid duration, unknown
 // web vital name) so postRUM can count the drop separately.
+//
+//funclogmeasure:skip category=hot-path reason="Pure helper without I/O; operation trace is emitted by the calling chokepoint."
 func foldRUMEvent(ev rumEvent) bool {
 	if _, ok := validRUMTypes[ev.Type]; !ok {
 		return false
@@ -231,19 +232,21 @@ func foldRUMEvent(ev rumEvent) bool {
 	return false
 }
 
-//funclogmeasure:skip category=hot-path reason="Pure helper without I/O; operation trace is emitted by the calling chokepoint."
 // validDurationSeconds rejects negative or absurdly-long observations.
 // 600 s upper bound covers even pathologically slow networks; anything
 // above is almost certainly a clock skew / browser tab-suspended bug.
+//
+//funclogmeasure:skip category=hot-path reason="Pure helper without I/O; operation trace is emitted by the calling chokepoint."
 func validDurationSeconds(v float64) bool {
 	return v >= 0 && v <= 600
 }
 
-//funclogmeasure:skip category=hot-path reason="Pure helper without I/O; operation trace is emitted by the calling chokepoint."
 // rumStatusBucket collapses the HTTP status code into a low-cardinality
 // bucket label for the histogram. Without this we'd get one histogram
 // series per (kind, exact status) — fine for 200/400/404/500 but bad
 // when a misbehaving server returns 999 ad-hoc codes.
+//
+//funclogmeasure:skip category=hot-path reason="Pure helper without I/O; operation trace is emitted by the calling chokepoint."
 func rumStatusBucket(code int) string {
 	switch {
 	case code == 0:

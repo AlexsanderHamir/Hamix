@@ -8,9 +8,10 @@ import (
 
 const orchestrationLogCmd = "taskapi"
 
-//funclogmeasure:skip category=hot-path reason="Pure helper without I/O; operation trace is emitted by the calling chokepoint."
 // DecideExecutePostRun maps execute post-run facts to effects. The harness root
 // applies store writes; this function is pure policy only.
+//
+//funclogmeasure:skip category=hot-path reason="Pure helper without I/O; operation trace is emitted by the calling chokepoint."
 func DecideExecutePostRun(in ExecutePostRunInput) ExecuteEffects {
 	if in.ContextCancelled {
 		return ExecuteEffects{StopLoop: true}

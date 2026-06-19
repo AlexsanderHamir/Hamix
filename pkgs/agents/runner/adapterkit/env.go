@@ -15,10 +15,11 @@ type EnvPolicy struct {
 	Lookup            func(string) string
 }
 
-//funclogmeasure:skip category=hot-path reason="Pure helper without I/O; operation trace is emitted by the calling chokepoint."
 // BuildEnv assembles an os/exec-style env slice ("KEY=VALUE"). Parent env is
 // read only for explicitly allowed keys; reqEnv may add or override values
 // except for denied keys/prefixes.
+//
+//funclogmeasure:skip category=hot-path reason="Pure helper without I/O; operation trace is emitted by the calling chokepoint."
 func BuildEnv(reqEnv map[string]string, policy EnvPolicy) []string {
 	lookup := policy.Lookup
 	if lookup == nil {
@@ -58,8 +59,9 @@ func BuildEnv(reqEnv map[string]string, policy EnvPolicy) []string {
 	return out
 }
 
-//funclogmeasure:skip category=hot-path reason="Pure helper without I/O; operation trace is emitted by the calling chokepoint."
 // IsDeniedEnvKey reports whether key is blocked by policy.
+//
+//funclogmeasure:skip category=hot-path reason="Pure helper without I/O; operation trace is emitted by the calling chokepoint."
 func IsDeniedEnvKey(key string, policy EnvPolicy) bool {
 	for _, denied := range policy.DeniedKeys {
 		if key == denied {
@@ -74,9 +76,10 @@ func IsDeniedEnvKey(key string, policy EnvPolicy) bool {
 	return false
 }
 
-//funclogmeasure:skip category=hot-path reason="Pure helper without I/O; operation trace is emitted by the calling chokepoint."
 // LiveHomePaths returns the absolute home paths usually worth scrubbing from
 // durable runner output.
+//
+//funclogmeasure:skip category=hot-path reason="Pure helper without I/O; operation trace is emitted by the calling chokepoint."
 func LiveHomePaths() []string {
 	out := make([]string, 0, 2)
 	for _, k := range []string{"HOME", "USERPROFILE"} {

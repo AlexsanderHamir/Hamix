@@ -100,8 +100,9 @@ func ListDependencyEdges(ctx context.Context, db *gorm.DB, taskID string) ([]dom
 	return out, nil
 }
 
-//funclogmeasure:skip category=hot-path reason="Pure helper without I/O; operation trace is emitted by the calling chokepoint."
 // ListDependencies returns predecessor task ids for taskID.
+//
+//funclogmeasure:skip category=hot-path reason="Pure helper without I/O; operation trace is emitted by the calling chokepoint."
 func ListDependencies(ctx context.Context, db *gorm.DB, taskID string) ([]string, error) {
 	edges, err := ListDependencyEdges(ctx, db, taskID)
 	if err != nil {

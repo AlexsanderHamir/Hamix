@@ -6,9 +6,10 @@ import (
 	"unicode/utf8"
 )
 
-//funclogmeasure:skip category=hot-path reason="Pure helper without I/O; operation trace is emitted by the calling chokepoint."
 // CombineStreams returns one human-readable blob containing stdout and stderr,
 // preserving which stream each section came from.
+//
+//funclogmeasure:skip category=hot-path reason="Pure helper without I/O; operation trace is emitted by the calling chokepoint."
 func CombineStreams(stdout, stderr []byte) string {
 	var b strings.Builder
 	b.Grow(len(stdout) + len(stderr) + 16)
@@ -26,8 +27,9 @@ func CombineStreams(stdout, stderr []byte) string {
 	return b.String()
 }
 
-//funclogmeasure:skip category=hot-path reason="Pure helper without I/O; operation trace is emitted by the calling chokepoint."
 // ClipRunes clips s to maxRunes and appends an ellipsis when clipping occurs.
+//
+//funclogmeasure:skip category=hot-path reason="Pure helper without I/O; operation trace is emitted by the calling chokepoint."
 func ClipRunes(s string, maxRunes int) string {
 	if maxRunes <= 0 {
 		return ""
@@ -48,8 +50,9 @@ func ClipRunes(s string, maxRunes int) string {
 	return b.String()
 }
 
-//funclogmeasure:skip category=hot-path reason="Pure helper without I/O; operation trace is emitted by the calling chokepoint."
 // RedactedTail returns a redacted, UTF-8-safe trailing slice of b.
+//
+//funclogmeasure:skip category=hot-path reason="Pure helper without I/O; operation trace is emitted by the calling chokepoint."
 func RedactedTail(b []byte, policy RedactionPolicy, maxBytes int) string {
 	if len(b) == 0 || maxBytes <= 0 {
 		return ""
@@ -61,9 +64,10 @@ func RedactedTail(b []byte, policy RedactionPolicy, maxBytes int) string {
 	return Redact(string(tail), policy)
 }
 
-//funclogmeasure:skip category=hot-path reason="Pure helper without I/O; operation trace is emitted by the calling chokepoint."
 // TrimLeadingPartialRune drops leading UTF-8 continuation bytes from a byte
 // slice cut that may have landed in the middle of a multibyte rune.
+//
+//funclogmeasure:skip category=hot-path reason="Pure helper without I/O; operation trace is emitted by the calling chokepoint."
 func TrimLeadingPartialRune(b []byte) []byte {
 	for len(b) > 0 && !utf8.RuneStart(b[0]) {
 		b = b[1:]

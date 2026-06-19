@@ -6,20 +6,21 @@ import (
 	"time"
 
 	"github.com/AlexsanderHamir/T2A/pkgs/tasks/domain"
+	"github.com/AlexsanderHamir/T2A/pkgs/tasks/scheduling"
 	"gorm.io/gorm"
 )
 
 // ReadyForAgentPickup applies the same predicates as ListQueueCandidates for one task row.
-func ReadyForAgentPickup(ctx context.Context, db *gorm.DB, t *domain.Task, now time.Time) (bool, error) {
+func ReadyForAgentPickup(ctx context.Context, db *gorm.DB, t *domain.Task, now time.Time) (bool, scheduling.FailedPredicate, error) {
 	slog.Debug("trace", "cmd", logCmd, "operation", "tasks.store.tasks.ReadyForAgentPickup")
-	if t == nil || t.Status != domain.StatusReady {
-		return false, nil
+	partial := scheduling.EvaluateWorkerReadiness(t, now, false)
+	if !partial.Ready && partial.FailedPredicate != scheduling.FailedPredicateDependencies {
+		return false, partial.FailedPredicate, nil
 	}
-	if t.PickupNotBefore != nil && t.PickupNotBefore.After(now) {
-		return false, nil
+	depsMet, err := DependenciesSatisfied(ctx, db, t.ID)
+	if err != nil {
+		return false, scheduling.FailedPredicateDependencies, err
 	}
-	if t.Gate != nil && t.Gate.GateBlocksWorker() {
-		return false, nil
-	}
-	return DependenciesSatisfied(ctx, db, t.ID)
+	result := scheduling.EvaluateWorkerReadiness(t, now, depsMet)
+	return result.Ready, result.FailedPredicate, nil
 }

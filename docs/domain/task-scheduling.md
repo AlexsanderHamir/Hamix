@@ -4,7 +4,7 @@ The four predicates that decide when a `ready` task may run, how the store unblo
 
 | | |
 | --- | --- |
-| **Applies to** | `pkgs/tasks/store/internal/tasks/readiness.go`, `pkgs/tasks/store/internal/ready/`, `pkgs/tasks/store/facade_tasks.go`, `pkgs/agents/worker/admission.go` |
+| **Applies to** | [`pkgs/tasks/scheduling/`](../../pkgs/tasks/scheduling/), `pkgs/tasks/store/internal/ready/`, `pkgs/tasks/store/facade_tasks.go`, `pkgs/agents/worker/admission.go` |
 | **Audience** | Contributors debugging tasks that stay `ready` but never run, dependents that never wake, or dequeue-then-skip behavior |
 | **Prerequisite** | [data-model.md](../data-model.md) (dependencies, gate, `pickup_not_before`, worker readiness) |
 | **Companion articles** | [agent-queue.md](./agent-queue.md) (in-memory enqueue), [harness.md](./harness.md) (cycle body after admission) |
@@ -40,9 +40,9 @@ Scheduling answers: *"Is this `ready` row eligible for agent pickup right now?"*
 
 ### In scope
 
-- Four worker-readiness predicates (`status`, `pickup_not_before`, dependencies, gate)
-- `ReadyForAgentPickup` and `DependenciesSatisfied`
-- `ShouldNotifyReadyNow` (pickup-time gate at enqueue)
+- Four worker-readiness predicates (`status`, `pickup_not_before`, dependencies, gate) — authoritative Go path: [`scheduling/predicates.go`](../../pkgs/tasks/scheduling/predicates.go)
+- `ReadyForAgentPickup` and `DependenciesSatisfied` (store delegates to scheduling)
+- `ShouldNotifyReadyNow` (pickup-time gate at enqueue) — [`scheduling/pickup.go`](../../pkgs/tasks/scheduling/pickup.go)
 - `notifyUnblockedDependents` / `NotifyUnblockedDependents`
 - Worker `processOne` admission: reload, readiness, defer, `ready→running`
 - SQL `ListQueueCandidates` / `applyDequeuableTaskPredicates`
@@ -59,9 +59,9 @@ Scheduling answers: *"Is this `ready` row eligible for agent pickup right now?"*
 
 | Term | Definition |
 | --- | --- |
-| **Worker readiness** | All four predicates pass for a task row at time `now` |
-| **ReadyForAgentPickup** | Single-task evaluation of the four predicates (Go); mirrors SQL intent for one row |
-| **ShouldNotifyReadyNow** | Pickup-time-only check: may this row enter the in-memory queue *immediately* after commit? |
+| **Worker readiness** | All four predicates pass for a task row at time `now` — evaluated by `scheduling.EvaluateWorkerReadiness` |
+| **ReadyForAgentPickup** | Store wrapper: loads dependencies then delegates to scheduling |
+| **ShouldNotifyReadyNow** | Pickup-time-only check via `scheduling.ShouldNotifyReadyNow` |
 | **Enqueue** | `notifyReadyTask` → `MemoryQueue` (or reconcile SQL scan → notify); does not start a cycle |
 | **Admission** | Worker `processOne`: reload row, re-check readiness, `ready→running`, then `Harness.Run` |
 | **Dequeuable** | Passes SQL `applyDequeuableTaskPredicates` (deps + gate) in addition to `status=ready` and pickup time |
@@ -357,13 +357,16 @@ Worker process enabled when `app_settings.repo_root` is set and agent not paused
 
 | Layer | Files / focus |
 | --- | --- |
+| Pure policy | [`pkgs/tasks/scheduling/`](../../pkgs/tasks/scheduling/) — `predicates_test.go`, `pickup_test.go`, `decide_notify_test.go` |
+| **Go ≡ SQL (I3)** | [`store/scheduling_parity_test.go`](../../pkgs/tasks/store/scheduling_parity_test.go) — merge blocker |
 | SQL vs deps/gate | [`readiness_test.go`](../../pkgs/tasks/store/internal/tasks/readiness_test.go) — `ListQueueCandidates` excludes open dependency and held gate |
 | Pickup boundary | [`facade_tasks_test.go`](../../pkgs/tasks/store/facade_tasks_test.go) — `TestShouldNotifyReadyNow_unitTable` |
+| Worker admission defer | [`admission.go`](../../pkgs/agents/worker/admission.go) — logs `failed_predicate` at Debug |
 | `on_hold` contract | [`handler_http_on_hold_contract_test.go`](../../pkgs/tasks/handler/handler_http_on_hold_contract_test.go) |
 | Worker admission | [`worker_test.go`](../../pkgs/agents/worker/) with harness + `runnerfake` |
 | Integration | [`pkgs/tasks/agentreconcile/`](../../pkgs/tasks/agentreconcile/) |
 
-When adding a new readiness predicate, update **Go** (`ReadyForAgentPickup`), **SQL** (`applyDequeuableTaskPredicates`), [data-model.md](../data-model.md), and this article in the same change.
+When adding a new readiness predicate, update **Go** (`scheduling/predicates.go`), **SQL** (`applyDequeuableTaskPredicates`), **`store/scheduling_parity_test.go`**, [data-model.md](../data-model.md), and this article in the same change.
 
 ## Best practices
 

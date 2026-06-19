@@ -110,13 +110,16 @@ func (w *Worker) processOne(parentCtx context.Context, task domain.Task) {
 	}
 
 	now := w.clock()
-	ready, err := w.store.ReadyForAgentPickup(parentCtx, fresh, now)
+	ready, failedPredicate, err := w.store.ReadyForAgentPickup(parentCtx, fresh, now)
 	if err != nil {
 		slog.Warn("agent worker readiness check failed", "cmd", workerLogCmd,
 			"operation", "agent.worker.Worker.processOne.readiness", "task_id", task.ID, "err", err)
 		return
 	}
 	if !ready {
+		slog.Debug("agent worker admission deferred", "cmd", workerLogCmd,
+			"operation", "agent.worker.Worker.processOne.defer",
+			"task_id", task.ID, "failed_predicate", string(failedPredicate))
 		w.deferTaskPickup(parentCtx, task.ID, 60*time.Second)
 		return
 	}

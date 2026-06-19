@@ -19,6 +19,13 @@ fi
 echo "go vet..."
 go vet ./...
 
+echo "scheduling import boundary..."
+if rg -q 'gorm|store/|handler/|agents/' pkgs/tasks/scheduling/ -g '*.go' -g '!*_test.go'; then
+  echo "scheduling must not import persistence or transport:" >&2
+  rg -n 'gorm|store/|handler/|agents/' pkgs/tasks/scheduling/ -g '*.go' -g '!*_test.go' >&2
+  exit 1
+fi
+
 echo "go test..."
 go test ./... -count=1
 

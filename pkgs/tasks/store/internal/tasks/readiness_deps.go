@@ -4,6 +4,7 @@ import (
 	"context"
 	"log/slog"
 
+	"github.com/AlexsanderHamir/T2A/pkgs/tasks/scheduling"
 	"gorm.io/gorm"
 )
 
@@ -19,7 +20,7 @@ func DependenciesSatisfied(ctx context.Context, db *gorm.DB, taskID string) (boo
 		if err != nil {
 			return false, err
 		}
-		if !EdgeSatisfied(predecessor, e.Satisfies) {
+		if !scheduling.EdgeSatisfied(predecessor, e.Satisfies) {
 			return false, nil
 		}
 	}

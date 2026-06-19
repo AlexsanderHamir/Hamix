@@ -41,11 +41,3 @@ func DependencyEdgeIDs(edges []domain.DependencyEdge) []string {
 	}
 	return ids
 }
-
-// EdgeSatisfied reports whether predecessor meets the edge predicate.
-func EdgeSatisfied(predecessor *domain.Task, satisfies domain.DependencySatisfies) bool {
-	if predecessor == nil {
-		return false
-	}
-	return predecessor.Status == domain.StatusDone
-}

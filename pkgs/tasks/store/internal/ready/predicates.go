@@ -5,6 +5,8 @@ import (
 	"gorm.io/gorm"
 )
 
+// SQL dequeuable predicates MUST stay aligned with pkgs/tasks/scheduling.
+// Contract tests: store/scheduling_parity_test.go
 func applyDequeuableTaskPredicates(q *gorm.DB, db *gorm.DB) *gorm.DB {
 	q = q.Where(`NOT EXISTS (
 		SELECT 1 FROM task_dependencies td

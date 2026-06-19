@@ -6,8 +6,12 @@ import (
 	"time"
 
 	"github.com/AlexsanderHamir/T2A/pkgs/tasks/domain"
+	"github.com/AlexsanderHamir/T2A/pkgs/tasks/scheduling"
 	"github.com/AlexsanderHamir/T2A/pkgs/tasks/store/internal/tasks"
 )
+
+// FailedPredicate identifies the first worker readiness check that failed.
+type FailedPredicate = scheduling.FailedPredicate
 
 // ShouldNotifyReadyNow returns true when a freshly-ready task should
 // be pushed to the in-memory ready queue immediately. The invariant
@@ -26,10 +30,7 @@ import (
 func ShouldNotifyReadyNow(pickupNotBefore *time.Time, now time.Time) bool {
 	slog.Debug("trace", "cmd", storeLogCmd, "operation", "tasks.store.ShouldNotifyReadyNow",
 		"has_pickup", pickupNotBefore != nil)
-	if pickupNotBefore == nil {
-		return true
-	}
-	return !pickupNotBefore.After(now)
+	return scheduling.ShouldNotifyReadyNow(pickupNotBefore, now)
 }
 
 // CreateTaskInput is the public re-export of the task creation payload.
@@ -73,19 +74,8 @@ func (s *Store) RequestTaskRetry(ctx context.Context, in tasks.RequestRetryInput
 	if updated == nil {
 		return nil, nil
 	}
-	if updated.Status != domain.StatusReady {
-		return updated, nil
-	}
 	now := time.Now().UTC()
-	if updated.PickupNotBefore != nil && updated.PickupNotBefore.After(now) {
-		s.schedulePickupWake(ctx, updated.ID, *updated.PickupNotBefore)
-		return updated, nil
-	}
-	s.cancelPickupWake(updated.ID)
-	transitionedToReady := prev != domain.StatusReady
-	if transitionedToReady {
-		s.notifyReadyTask(ctx, *updated)
-	}
+	s.applyNotifyDecision(ctx, *updated, scheduling.DecideNotifyAfterReadyTransition(prev, updated, false, now))
 	return updated, nil
 }
 
@@ -99,16 +89,7 @@ func (s *Store) Create(ctx context.Context, in CreateTaskInput, by domain.Actor)
 		return nil, err
 	}
 	now := time.Now().UTC()
-	if t.Status != domain.StatusReady {
-		return t, nil
-	}
-	if t.PickupNotBefore != nil && t.PickupNotBefore.After(now) {
-		s.schedulePickupWake(ctx, t.ID, *t.PickupNotBefore)
-		return t, nil
-	}
-	if ShouldNotifyReadyNow(t.PickupNotBefore, now) {
-		s.notifyReadyTask(ctx, *t)
-	}
+	s.applyNotifyDecision(ctx, *t, scheduling.DecideNotifyAfterReadyTransition("", t, false, now))
 	return t, nil
 }
 
@@ -127,22 +108,9 @@ func (s *Store) Update(ctx context.Context, id string, in UpdateTaskInput, by do
 		s.notifyUnblockedDependents(ctx, updated.ID)
 	}
 
-	if updated.Status != domain.StatusReady {
-		s.cancelPickupWake(updated.ID)
-		return updated, nil
-	}
-
 	now := time.Now().UTC()
-	if updated.PickupNotBefore != nil && updated.PickupNotBefore.After(now) {
-		s.schedulePickupWake(ctx, updated.ID, *updated.PickupNotBefore)
-		return updated, nil
-	}
-	s.cancelPickupWake(updated.ID)
-	transitionedToReady := prev != domain.StatusReady
 	pickupTouched := in.PickupNotBefore != nil
-	if transitionedToReady || pickupTouched {
-		s.notifyReadyTask(ctx, *updated)
-	}
+	s.applyNotifyDecision(ctx, *updated, scheduling.DecideNotifyAfterReadyTransition(prev, updated, pickupTouched, now))
 	return updated, nil
 }
 
@@ -159,7 +127,7 @@ func (s *Store) notifyUnblockedDependents(ctx context.Context, predecessorID str
 		if err != nil {
 			continue
 		}
-		ok, err := tasks.ReadyForAgentPickup(ctx, s.db, t, now)
+		ok, _, err := tasks.ReadyForAgentPickup(ctx, s.db, t, now)
 		if err != nil || !ok {
 			continue
 		}
@@ -233,9 +201,22 @@ func (s *Store) SetTaskDependencies(ctx context.Context, taskID string, dependsO
 }
 
 // ReadyForAgentPickup reports whether the task passes dequeue predicates.
-func (s *Store) ReadyForAgentPickup(ctx context.Context, t *domain.Task, now time.Time) (bool, error) {
+func (s *Store) ReadyForAgentPickup(ctx context.Context, t *domain.Task, now time.Time) (bool, FailedPredicate, error) {
 	slog.Debug("trace", "cmd", storeLogCmd, "operation", "tasks.store.ReadyForAgentPickup")
 	return tasks.ReadyForAgentPickup(ctx, s.db, t, now)
+}
+
+func (s *Store) applyNotifyDecision(ctx context.Context, task domain.Task, d scheduling.NotifyDecision) {
+	if d.ScheduleWake != nil {
+		s.schedulePickupWake(ctx, task.ID, *d.ScheduleWake)
+		return
+	}
+	if d.CancelWake {
+		s.cancelPickupWake(task.ID)
+	}
+	if d.NotifyQueue {
+		s.notifyReadyTask(ctx, task)
+	}
 }
 
 // ApplyTaskGateAction applies release/hold/clear_hold to a task gate.

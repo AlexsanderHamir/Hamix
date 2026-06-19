@@ -19,6 +19,14 @@ Write-Host "go vet..." -ForegroundColor Cyan
 & go vet ./...
 if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
 
+Write-Host "scheduling import boundary..." -ForegroundColor Cyan
+$boundaryHits = & rg -n "gorm|store/|handler/|agents/" pkgs/tasks/scheduling/ -g "*.go" -g "!*_test.go" 2>$null
+if ($boundaryHits) {
+    Write-Host "scheduling must not import persistence or transport:" -ForegroundColor Red
+    $boundaryHits
+    exit 1
+}
+
 Write-Host "go test..." -ForegroundColor Cyan
 & go test ./... -count=1
 if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }

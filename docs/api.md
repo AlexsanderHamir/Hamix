@@ -86,9 +86,9 @@ Model semantics (tags, milestone, `depends_on`, gate, worker readiness): [data-m
 | Method | Path | Notes |
 |---|---|---|
 | GET | `/tasks/{id}/checklist` | `{ items: [...] }` ordered by `sort_order`. Each item includes optional `verify_commands: [{ sort_order, command, expected_outcome }]`. |
-| POST | `/tasks/{id}/checklist/items` | Body `{ text, verify_commands? }`. Rejected `409` when the task is `running` or `done`, or when a cycle is running. Publishes `task_updated`. |
-| PATCH | `/tasks/{id}/checklist/items/{itemId}` | Body: exactly one of `{ text }`, `{ verify_commands }`, or `{ done: true|false }`. `done:true` requires `X-Actor: agent` plus `evidence` + optional `verified_by`. Publishes `task_updated`. |
-| DELETE | `/tasks/{id}/checklist/items/{itemId}` | `204`. Publishes `task_updated`. |
+| POST | `/tasks/{id}/checklist/items` | Body `{ text, verify_commands? }`. Rejected `409` when the task is `running` or a cycle is running. Allowed on `done` tasks for post-completion edits. Publishes `task_updated`. |
+| PATCH | `/tasks/{id}/checklist/items/{itemId}` | Body: exactly one of `{ text }`, `{ verify_commands }`, or `{ done: true|false }`. Rejected `409` when the task is `running` or a cycle is running. Satisfied criteria remain locked until the task is `done`. `done:true` requires `X-Actor: agent` plus `evidence` + optional `verified_by`. Publishes `task_updated`. |
+| DELETE | `/tasks/{id}/checklist/items/{itemId}` | `204`. Rejected `409` when the task is `running` or a cycle is running. Publishes `task_updated`. |
 
 ### Task drafts
 

@@ -29,16 +29,23 @@ const DONE_VERIFIED: TaskChecklistItemView = {
     "CODEBASE_TOUR.md paragraph explicitly names Go 1.25+ (matches go.mod go 1.25.0).",
 };
 
-function renderList(items: TaskChecklistItemView[], overrides?: Partial<{
-  editCriterionPending: boolean;
-  removeItemPending: boolean;
-  addCriterionPending: boolean;
-}>) {
+function renderList(
+  items: TaskChecklistItemView[],
+  overrides?: Partial<{
+    taskStatus: import("@/types").Status;
+    criteriaLocked: boolean;
+    editCriterionPending: boolean;
+    removeItemPending: boolean;
+    addCriterionPending: boolean;
+  }>,
+) {
   const onOpenEditCriterionModal = vi.fn();
   const onRemoveChecklistItem = vi.fn();
   render(
     <TaskDetailChecklistItemList
       items={items}
+      taskStatus={overrides?.taskStatus ?? "ready"}
+      criteriaLocked={overrides?.criteriaLocked ?? false}
       editCriterionPending={overrides?.editCriterionPending ?? false}
       removeItemPending={overrides?.removeItemPending ?? false}
       addCriterionPending={overrides?.addCriterionPending ?? false}
@@ -56,8 +63,8 @@ describe("TaskDetailChecklistItemList", () => {
   // already-emitted checklist_item_toggled audit row's meaning. The
   // backend rejects this with ErrInvalidInput; this test guards the
   // UI half so users can't even attempt the bogus write.
-  it("locks the Edit button on done criteria and explains why", () => {
-    renderList([PENDING, DONE]);
+  it("locks the Edit button on satisfied criteria while the task is still active", () => {
+    renderList([PENDING, DONE], { taskStatus: "ready" });
 
     const editButtons = screen.getAllByRole("button", { name: /^edit$/i });
     expect(editButtons).toHaveLength(1);
@@ -71,9 +78,23 @@ describe("TaskDetailChecklistItemList", () => {
     );
   });
 
+  it("allows editing satisfied criteria when the task is done", () => {
+    renderList([DONE], { taskStatus: "done" });
+
+    const editDone = screen.getByRole("button", { name: /^edit$/i });
+    expect(editDone).toBeEnabled();
+  });
+
+  it("locks edit and remove while the task is running", () => {
+    renderList([PENDING, DONE], { taskStatus: "running", criteriaLocked: true });
+
+    expect(screen.getAllByRole("button", { name: /edit \(locked/i })).toHaveLength(2);
+    expect(screen.getAllByRole("button", { name: /remove.*locked/i })).toHaveLength(2);
+  });
+
   it("does not call onOpenEditCriterionModal when the locked Edit button is clicked", async () => {
     const user = userEvent.setup();
-    const { onOpenEditCriterionModal } = renderList([DONE]);
+    const { onOpenEditCriterionModal } = renderList([DONE], { taskStatus: "ready" });
 
     const editDone = screen.getByRole("button", { name: /edit \(locked/i });
     // userEvent honors `disabled` and skips the click; we still
@@ -83,7 +104,7 @@ describe("TaskDetailChecklistItemList", () => {
     expect(onOpenEditCriterionModal).not.toHaveBeenCalled();
   });
 
-  it("locks the Remove button on done criteria and explains why", () => {
+  it("locks the Remove button on satisfied criteria while the task is still active", () => {
     // Mirrors the Edit lock: removing a done criterion would orphan
     // the persisted checklist_item_toggled (done=true) audit row and
     // silently cascade away the per-subject completion row, erasing
@@ -94,7 +115,7 @@ describe("TaskDetailChecklistItemList", () => {
     // "escape hatch" for wrong auto-completes — that was rejected as
     // an audit-trail violation; the agent's acceptance is the
     // source of truth.)
-    renderList([PENDING, DONE]);
+    renderList([PENDING, DONE], { taskStatus: "ready" });
 
     const removeButtons = screen.getAllByRole("button", { name: /^remove/i });
     expect(removeButtons).toHaveLength(2);
@@ -118,7 +139,7 @@ describe("TaskDetailChecklistItemList", () => {
 
   it("does not call onRemoveChecklistItem when the locked Remove button is clicked", async () => {
     const user = userEvent.setup();
-    const { onRemoveChecklistItem } = renderList([DONE]);
+    const { onRemoveChecklistItem } = renderList([DONE], { taskStatus: "ready" });
 
     const removeDone = screen.getByRole("button", { name: /remove.*locked/i });
     await user.click(removeDone);
@@ -207,9 +228,22 @@ describe("TaskDetailChecklistItemList", () => {
     );
   });
 
-  it("opens view when anywhere on a done criterion row is clicked", async () => {
+  it("opens edit when anywhere on a done criterion row is clicked on a done task", async () => {
     const user = userEvent.setup();
-    const { onOpenEditCriterionModal } = renderList([DONE]);
+    const { onOpenEditCriterionModal } = renderList([DONE], { taskStatus: "done" });
+
+    await user.click(screen.getByText("123.md file created"));
+
+    expect(onOpenEditCriterionModal).toHaveBeenCalledWith(
+      DONE.id,
+      DONE.text,
+      undefined,
+    );
+  });
+
+  it("opens view-only when a satisfied row is clicked while the task is still active", async () => {
+    const user = userEvent.setup();
+    const { onOpenEditCriterionModal } = renderList([DONE], { taskStatus: "ready" });
 
     await user.click(screen.getByText("123.md file created"));
 

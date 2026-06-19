@@ -8,6 +8,7 @@ import {
   EmptyStateChecklistGlyph,
 } from "@/shared/EmptyState";
 import { ChecklistCriterionModal } from "../../task-compose";
+import { canEditChecklistItem } from "../../../task-display/canMutateTaskCriteria";
 import { TaskDetailChecklistItemList } from "./TaskDetailChecklistItemList";
 import { TaskChecklistSkeleton } from "../../skeletons";
 
@@ -50,8 +51,10 @@ export type TaskDetailChecklistSectionProps = {
   addCriterionError?: unknown;
   editCriterionError?: unknown;
   removeItemError?: unknown;
-  /** False when the task is running or done — criteria are locked after agent pickup. */
+  /** False when the task is running — criteria are locked while in progress. */
   canAddCriterion?: boolean;
+  /** Task status drives per-row edit/remove affordances. */
+  taskStatus?: import("@/types").Status;
 };
 
 export function TaskDetailChecklistSection({
@@ -84,6 +87,7 @@ export function TaskDetailChecklistSection({
   editCriterionError = null,
   removeItemError = null,
   canAddCriterion = true,
+  taskStatus = "ready",
 }: TaskDetailChecklistSectionProps) {
   const showProgress =
     !checklistQuery.isPending &&
@@ -97,7 +101,9 @@ export function TaskDetailChecklistSection({
   const editingItem = editingItemId
     ? checklistQuery.data?.items.find((item) => item.id === editingItemId)
     : null;
-  const editModalReadOnly = editingItem?.done === true;
+  const editModalReadOnly =
+    editingItem != null &&
+    !canEditChecklistItem(taskStatus, editingItem.done === true);
 
   return (
     <div className="task-detail-section" id="task-detail-checklist">
@@ -119,7 +125,7 @@ export function TaskDetailChecklistSection({
           title={
             canAddCriterion
               ? undefined
-              : "Criteria cannot be added while the agent is working on this task or after it is done."
+              : "Criteria cannot be changed while the agent is working on this task."
           }
         >
           Add criterion
@@ -209,6 +215,8 @@ export function TaskDetailChecklistSection({
         ) : (
           <TaskDetailChecklistItemList
             items={checklistQuery.data?.items ?? []}
+            taskStatus={taskStatus}
+            criteriaLocked={!canAddCriterion}
             editCriterionPending={editCriterionPending}
             removeItemPending={removeItemPending}
             addCriterionPending={addCriterionPending}

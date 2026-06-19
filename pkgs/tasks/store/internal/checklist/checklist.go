@@ -131,8 +131,8 @@ func List(ctx context.Context, db *gorm.DB, taskID string) ([]ItemView, error) {
 	return out, nil
 }
 
-// Add appends a definition row; the task must exist and not be running
-// or done. Appends EventChecklistItemAdded in the same TX.
+// Add appends a definition row; rejected while status=running. Appends
+// EventChecklistItemAdded in the same TX.
 func Add(ctx context.Context, db *gorm.DB, taskID, text string, verifyCommands []VerifyCommandInput, by domain.Actor) (*domain.TaskChecklistItem, error) {
 	defer kernel.DeferLatency(kernel.OpAddChecklistItem)()
 	slog.Debug("trace", "cmd", logCmd, "operation", "tasks.store.checklist.Add")
@@ -157,7 +157,7 @@ func Add(ctx context.Context, db *gorm.DB, taskID, text string, verifyCommands [
 		if err != nil {
 			return err
 		}
-		if err := ValidateCanAddCriterionInTx(tx, t); err != nil {
+		if err := ValidateCriteriaMutable(t); err != nil {
 			return err
 		}
 		var maxOrder int
@@ -213,7 +213,9 @@ func Delete(ctx context.Context, db *gorm.DB, taskID, itemID string, by domain.A
 		if err != nil {
 			return err
 		}
-		_ = t
+		if err := ValidateCriteriaMutable(t); err != nil {
+			return err
+		}
 		var it domain.TaskChecklistItem
 		if err := tx.Where("id = ? AND task_id = ?", itemID, taskID).First(&it).Error; err != nil {
 			if errors.Is(err, gorm.ErrRecordNotFound) {
@@ -246,8 +248,13 @@ func Delete(ctx context.Context, db *gorm.DB, taskID, itemID string, by domain.A
 			Count(&doneCount).Error; err != nil {
 			return fmt.Errorf("count completions: %w", err)
 		}
-		if doneCount > 0 {
+		if criterionLockedByCompletion(t.Status, doneCount) {
 			return fmt.Errorf("%w: cannot remove a criterion that has already been marked done", domain.ErrInvalidInput)
+		}
+		if doneCount > 0 {
+			if err := tx.Where("item_id = ?", itemID).Delete(&domain.TaskChecklistCompletion{}).Error; err != nil {
+				return fmt.Errorf("delete checklist completions: %w", err)
+			}
 		}
 		seq, err := kernel.NextEventSeq(tx, taskID)
 		if err != nil {
@@ -285,7 +292,9 @@ func UpdateText(ctx context.Context, db *gorm.DB, taskID, itemID, text string, b
 		if err != nil {
 			return err
 		}
-		_ = t
+		if err := ValidateCriteriaMutable(t); err != nil {
+			return err
+		}
 		var it domain.TaskChecklistItem
 		if err := tx.Where("id = ? AND task_id = ?", itemID, taskID).First(&it).Error; err != nil {
 			if errors.Is(err, gorm.ErrRecordNotFound) {
@@ -317,7 +326,7 @@ func UpdateText(ctx context.Context, db *gorm.DB, taskID, itemID, text string, b
 			Count(&doneCount).Error; err != nil {
 			return fmt.Errorf("count completions: %w", err)
 		}
-		if doneCount > 0 {
+		if criterionLockedByCompletion(t.Status, doneCount) {
 			return fmt.Errorf("%w: cannot edit a criterion that has already been marked done", domain.ErrInvalidInput)
 		}
 		if it.Text == text {

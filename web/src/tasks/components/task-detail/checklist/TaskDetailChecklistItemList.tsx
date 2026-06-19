@@ -1,11 +1,14 @@
 import { useState } from "react";
-import type { TaskChecklistItemView } from "@/types";
+import type { TaskChecklistItemView, Status } from "@/types";
+import { canEditChecklistItem } from "../../../task-display/canMutateTaskCriteria";
 import { ChecklistStatusIcon } from "./ChecklistStatusIcon";
 import { ChecklistVerifyBadge } from "./ChecklistVerifyBadge";
 import { ChecklistVerificationModal } from "./ChecklistVerificationModal";
 
 type Props = {
   items: TaskChecklistItemView[];
+  taskStatus: Status;
+  criteriaLocked: boolean;
   editCriterionPending: boolean;
   removeItemPending: boolean;
   addCriterionPending: boolean;
@@ -19,6 +22,8 @@ type Props = {
 
 export function TaskDetailChecklistItemList({
   items,
+  taskStatus,
+  criteriaLocked,
   editCriterionPending,
   removeItemPending,
   addCriterionPending,
@@ -48,26 +53,31 @@ export function TaskDetailChecklistItemList({
               (typeof item.verifier_reasoning === "string" &&
                 item.verifier_reasoning.length > 0));
           const showRowMeta = hasVerificationDetail;
-          const canEditRow =
-            !item.done &&
+          const rowEditable =
+            !criteriaLocked &&
+            canEditChecklistItem(taskStatus, item.done) &&
             !editCriterionPending &&
             !removeItemPending &&
             !addCriterionPending;
           const canViewRow =
             item.done &&
+            !rowEditable &&
             !editCriterionPending &&
             !removeItemPending &&
             !addCriterionPending;
-          const canOpenRow = canEditRow || canViewRow;
+          const canOpenRow = rowEditable || canViewRow;
+          const lockedByProgress = criteriaLocked;
+          const lockedSatisfiedRow =
+            item.done && !rowEditable && !lockedByProgress;
           return (
             <li
               key={item.id}
               className={
                 item.done
-                  ? canViewRow
+                  ? canOpenRow
                     ? "task-checklist-row task-checklist-row--done task-checklist-row--interactive"
                     : "task-checklist-row task-checklist-row--done"
-                  : canEditRow
+                  : rowEditable
                     ? "task-checklist-row task-checklist-row--pending task-checklist-row--interactive"
                     : "task-checklist-row task-checklist-row--pending"
               }
@@ -101,21 +111,20 @@ export function TaskDetailChecklistItemList({
                     // text that didn't exist at completion time). The
                     // backend rejects this with ErrInvalidInput as well —
                     // disabling here just keeps the affordance honest.
-                    disabled={
-                      item.done ||
-                      editCriterionPending ||
-                      removeItemPending ||
-                      addCriterionPending
-                    }
+                    disabled={!rowEditable}
                     title={
-                      item.done
-                        ? "Already marked done — cannot edit a satisfied criterion."
-                        : undefined
+                      lockedByProgress
+                        ? "Criteria cannot be changed while the agent is working on this task."
+                        : lockedSatisfiedRow
+                          ? "Already marked done — cannot edit a satisfied criterion."
+                          : undefined
                     }
                     aria-label={
-                      item.done
-                        ? "Edit (locked: already marked done)"
-                        : undefined
+                      lockedByProgress
+                        ? "Edit (locked: task in progress)"
+                        : lockedSatisfiedRow
+                          ? "Edit (locked: already marked done)"
+                          : undefined
                     }
                     onClick={() =>
                       onOpenEditCriterionModal(
@@ -138,16 +147,20 @@ export function TaskDetailChecklistItemList({
                     // this with ErrInvalidInput; disabling here keeps the
                     // affordance honest so users don't trigger a bogus
                     // 400 round-trip.
-                    disabled={item.done || removeItemPending}
+                    disabled={!rowEditable}
                     title={
-                      item.done
-                        ? "Already marked done — cannot remove a satisfied criterion."
-                        : undefined
+                      lockedByProgress
+                        ? "Criteria cannot be changed while the agent is working on this task."
+                        : lockedSatisfiedRow
+                          ? "Already marked done — cannot remove a satisfied criterion."
+                          : undefined
                     }
                     aria-label={
-                      item.done
-                        ? `Remove criterion (locked: already marked done): ${item.text}`
-                        : undefined
+                      lockedByProgress
+                        ? `Remove criterion (locked: task in progress): ${item.text}`
+                        : lockedSatisfiedRow
+                          ? `Remove criterion (locked: already marked done): ${item.text}`
+                          : undefined
                     }
                     onClick={() => onRemoveChecklistItem(item.id)}
                   >

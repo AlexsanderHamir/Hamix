@@ -135,7 +135,9 @@ func loadItemForCommandEdit(tx *gorm.DB, taskID, itemID string) (*domain.TaskChe
 	if err != nil {
 		return nil, err
 	}
-	_ = t
+	if err := ValidateCriteriaMutable(t); err != nil {
+		return nil, err
+	}
 	var it domain.TaskChecklistItem
 	if err := tx.Where("id = ? AND task_id = ?", itemID, taskID).First(&it).Error; err != nil {
 		if errors.Is(err, gorm.ErrRecordNotFound) {
@@ -149,7 +151,7 @@ func loadItemForCommandEdit(tx *gorm.DB, taskID, itemID string) (*domain.TaskChe
 		Count(&doneCount).Error; err != nil {
 		return nil, fmt.Errorf("count completions: %w", err)
 	}
-	if doneCount > 0 {
+	if criterionLockedByCompletion(t.Status, doneCount) {
 		return nil, fmt.Errorf("%w: cannot edit verify commands on a criterion that has already been marked done", domain.ErrInvalidInput)
 	}
 	return &it, nil

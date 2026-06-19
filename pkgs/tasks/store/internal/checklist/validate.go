@@ -67,19 +67,37 @@ func ValidateCanMarkDoneInTx(tx *gorm.DB, taskID string) error {
 	return validateChecklistCompleteInTx(tx, taskID)
 }
 
-// ValidateCanAddCriterionInTx rejects appending definition rows once the
-// agent has picked up the task or it has reached a terminal done state.
+// ValidateCanAddCriterionInTx rejects appending definition rows while the
+// agent is actively working the task (status=running).
 func ValidateCanAddCriterionInTx(tx *gorm.DB, t *domain.Task) error {
 	slog.Debug("trace", "cmd", logCmd, "operation", "tasks.store.checklist.ValidateCanAddCriterionInTx")
+	return validateCriteriaMutable(t)
+}
+
+// ValidateCriteriaMutable rejects user-driven checklist mutations while the
+// task is in progress. Done tasks remain editable for post-completion tweaks.
+func ValidateCriteriaMutable(t *domain.Task) error {
+	return validateCriteriaMutable(t)
+}
+
+func validateCriteriaMutable(t *domain.Task) error {
 	if t == nil {
 		return fmt.Errorf("%w: id", domain.ErrInvalidInput)
 	}
-	switch t.Status {
-	case domain.StatusRunning, domain.StatusDone:
-		return fmt.Errorf("%w: cannot add criteria while task is %s", domain.ErrConflict, t.Status)
-	default:
-		return nil
+	if t.Status == domain.StatusRunning {
+		return fmt.Errorf("%w: cannot change criteria while task is running", domain.ErrConflict)
 	}
+	return nil
+}
+
+// criterionLockedByCompletion reports whether existing completion rows block
+// definition edits. Satisfied criteria stay locked while the task is still
+// active; once status=done operators may revise definitions.
+func criterionLockedByCompletion(taskStatus domain.Status, doneCount int64) bool {
+	if doneCount == 0 {
+		return false
+	}
+	return taskStatus != domain.StatusDone
 }
 
 // DeleteOwnedItemsInTx removes every checklist definition row owned

@@ -9,22 +9,36 @@ import (
 	"github.com/AlexsanderHamir/T2A/pkgs/tasks/domain"
 )
 
-func TestStore_AddChecklistItem_rejects_running_and_done(t *testing.T) {
+func TestStore_AddChecklistItem_rejects_running(t *testing.T) {
 	s := NewStore(tasktestdb.OpenSQLite(t))
 	ctx := context.Background()
-	for _, status := range []domain.Status{domain.StatusRunning, domain.StatusDone} {
-		t.Run(string(status), func(t *testing.T) {
-			tsk, err := s.Create(ctx, CreateTaskInput{
-				Title: "t", Priority: domain.PriorityMedium, Status: status,
-			}, domain.ActorUser)
-			if err != nil {
-				t.Fatal(err)
-			}
-			_, err = s.AddChecklistItem(ctx, tsk.ID, "criterion", nil, domain.ActorUser)
-			if !errors.Is(err, domain.ErrConflict) {
-				t.Fatalf("status=%s got %v want ErrConflict", status, err)
-			}
-		})
+	tsk, err := s.Create(ctx, CreateTaskInput{
+		Title: "t", Priority: domain.PriorityMedium, Status: domain.StatusRunning,
+	}, domain.ActorUser)
+	if err != nil {
+		t.Fatal(err)
+	}
+	_, err = s.AddChecklistItem(ctx, tsk.ID, "criterion", nil, domain.ActorUser)
+	if !errors.Is(err, domain.ErrConflict) {
+		t.Fatalf("got %v want ErrConflict", err)
+	}
+}
+
+func TestStore_AddChecklistItem_allows_done_task(t *testing.T) {
+	s := NewStore(tasktestdb.OpenSQLite(t))
+	ctx := context.Background()
+	tsk, err := s.Create(ctx, CreateTaskInput{
+		Title: "t", Priority: domain.PriorityMedium, Status: domain.StatusDone,
+	}, domain.ActorUser)
+	if err != nil {
+		t.Fatal(err)
+	}
+	it, err := s.AddChecklistItem(ctx, tsk.ID, "criterion", nil, domain.ActorUser)
+	if err != nil {
+		t.Fatalf("Add on done task: %v", err)
+	}
+	if it == nil || it.Text != "criterion" {
+		t.Fatalf("item=%+v", it)
 	}
 }
 
@@ -201,15 +215,10 @@ func TestStore_UpdateChecklistItemText_updates_row(t *testing.T) {
 	}
 }
 
-// TestStore_UpdateChecklistItemText_rejects_done_item pins the rule
-// that a checklist criterion can no longer be edited once the agent
-// has marked it done. Without this guard a stale UI (or any other
-// client) could rewrite the definition text after the fact, silently
-// changing the meaning of the already-persisted
-// EventChecklistItemToggled (done=true) row in the audit timeline.
-// The SPA also disables its Edit button for done rows, but the
-// authoritative rule lives here.
-func TestStore_UpdateChecklistItemText_rejects_done_item(t *testing.T) {
+// TestStore_UpdateChecklistItemText_rejects_done_item_while_active pins the rule
+// that a checklist criterion can no longer be edited once the agent has marked
+// it done while the task is still in flight.
+func TestStore_UpdateChecklistItemText_rejects_done_item_while_active(t *testing.T) {
 	s := NewStore(tasktestdb.OpenSQLite(t))
 	ctx := context.Background()
 	tsk, err := s.Create(ctx, CreateTaskInput{Priority: domain.PriorityMedium, Title: "t"}, domain.ActorUser)
@@ -249,17 +258,39 @@ func TestStore_UpdateChecklistItemText_rejects_done_item(t *testing.T) {
 	}
 }
 
-// TestStore_DeleteChecklistItem_rejects_done_item pins the rule that
-// a checklist criterion can no longer be removed once the agent has
-// marked it done, mirroring the equivalent guard on UpdateText.
-// Removing a done definition would orphan the persisted
-// EventChecklistItemToggled (done=true) audit row — replaying the
-// timeline would show "item X marked done" with no record of what X
-// was — and silently cascade away the per-subject completion row,
-// erasing the historical fact that the subject task ever satisfied
-// the requirement. The SPA also disables its Remove button for done
-// rows; the authoritative rule lives here.
-func TestStore_DeleteChecklistItem_rejects_done_item(t *testing.T) {
+func TestStore_UpdateChecklistItemText_allows_done_item_when_task_done(t *testing.T) {
+	s := NewStore(tasktestdb.OpenSQLite(t))
+	ctx := context.Background()
+	done := domain.StatusDone
+	tsk, err := s.Create(ctx, CreateTaskInput{
+		Title: "t", Priority: domain.PriorityMedium, Status: done,
+	}, domain.ActorUser)
+	if err != nil {
+		t.Fatal(err)
+	}
+	it, err := s.AddChecklistItem(ctx, tsk.ID, "before", nil, domain.ActorUser)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := s.SetChecklistItemDone(ctx, tsk.ID, it.ID, true, domain.ActorAgent); err != nil {
+		t.Fatalf("mark done: %v", err)
+	}
+	if err := s.UpdateChecklistItemText(ctx, tsk.ID, it.ID, "after", domain.ActorUser); err != nil {
+		t.Fatalf("edit done criterion on done task: %v", err)
+	}
+	items, err := s.ListChecklistForSubject(ctx, tsk.ID)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(items) != 1 || items[0].Text != "after" {
+		t.Fatalf("checklist: %+v", items)
+	}
+}
+
+// TestStore_DeleteChecklistItem_rejects_done_item_while_active pins the rule that
+// a checklist criterion can no longer be removed once the agent has marked it
+// done while the task is still active.
+func TestStore_DeleteChecklistItem_rejects_done_item_while_active(t *testing.T) {
 	s := NewStore(tasktestdb.OpenSQLite(t))
 	ctx := context.Background()
 	tsk, err := s.Create(ctx, CreateTaskInput{Priority: domain.PriorityMedium, Title: "t"}, domain.ActorUser)
@@ -297,6 +328,34 @@ func TestStore_DeleteChecklistItem_rejects_done_item(t *testing.T) {
 		if e.Type == domain.EventChecklistItemRemoved {
 			t.Fatalf("unexpected checklist_item_removed event after rejected delete: %+v", e)
 		}
+	}
+}
+
+func TestStore_DeleteChecklistItem_allows_done_item_when_task_done(t *testing.T) {
+	s := NewStore(tasktestdb.OpenSQLite(t))
+	ctx := context.Background()
+	tsk, err := s.Create(ctx, CreateTaskInput{
+		Title: "t", Priority: domain.PriorityMedium, Status: domain.StatusDone,
+	}, domain.ActorUser)
+	if err != nil {
+		t.Fatal(err)
+	}
+	it, err := s.AddChecklistItem(ctx, tsk.ID, "keep", nil, domain.ActorUser)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := s.SetChecklistItemDone(ctx, tsk.ID, it.ID, true, domain.ActorAgent); err != nil {
+		t.Fatalf("mark done: %v", err)
+	}
+	if err := s.DeleteChecklistItem(ctx, tsk.ID, it.ID, domain.ActorUser); err != nil {
+		t.Fatalf("delete done criterion on done task: %v", err)
+	}
+	items, err := s.ListChecklistForSubject(ctx, tsk.ID)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(items) != 0 {
+		t.Fatalf("checklist: %+v", items)
 	}
 }
 

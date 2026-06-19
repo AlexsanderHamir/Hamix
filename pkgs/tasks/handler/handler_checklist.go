@@ -123,36 +123,13 @@ func (h *Handler) patchChecklistItem(w http.ResponseWriter, r *http.Request) {
 			writeStoreError(w, r, op, fmt.Errorf("%w: cycle running; cannot edit criteria", domain.ErrConflict))
 			return
 		}
-		items, err := h.store.ListChecklistForSubject(r.Context(), taskID)
-		if err != nil {
-			writeStoreError(w, r, op, err)
-			return
-		}
-		for _, it := range items {
-			if it.ID == itemID && it.Done {
-				writeStoreError(w, r, op, fmt.Errorf("%w: criterion verified; cannot edit", domain.ErrConflict))
-				return
-			}
-		}
-	}
-	if body.VerifyCommands != nil {
+	} else if body.VerifyCommands != nil {
 		if running, err := h.store.IsTaskCycleRunning(r.Context(), taskID); err != nil {
 			writeStoreError(w, r, op, err)
 			return
 		} else if running {
 			writeStoreError(w, r, op, fmt.Errorf("%w: cycle running; cannot edit criteria", domain.ErrConflict))
 			return
-		}
-		items, err := h.store.ListChecklistForSubject(r.Context(), taskID)
-		if err != nil {
-			writeStoreError(w, r, op, err)
-			return
-		}
-		for _, it := range items {
-			if it.ID == itemID && it.Done {
-				writeStoreError(w, r, op, fmt.Errorf("%w: criterion verified; cannot edit", domain.ErrConflict))
-				return
-			}
 		}
 	}
 	if body.Text != nil {

@@ -33,6 +33,7 @@ import { AutonomyConfirmDialog, TaskRetryConfirmDialog } from "../components/dia
 import type { TaskRetryMode } from "../components/dialogs/TaskRetryConfirmDialog";
 import { sanitizePromptHtml } from "../task-prompt";
 import { userAttention } from "../task-display";
+import { canMutateTaskCriteria } from "../task-display/canMutateTaskCriteria";
 import { TaskDetailPageSkeleton } from "../components/skeletons";
 import { useTaskDetailChecklist } from "../hooks/useTaskDetailChecklist";
 import { useTaskDetailDeleteNavigate } from "../hooks/useTaskDetailDeleteNavigate";
@@ -401,9 +402,8 @@ export function TaskDetailPage({ app }: Props) {
 
       <TaskDetailChecklistSection
         saving={app.saving}
-        canAddCriterion={
-          task.status !== "running" && task.status !== "done"
-        }
+        canAddCriterion={canMutateTaskCriteria(task.status)}
+        taskStatus={task.status}
         checklistQuery={checklistQuery}
         doneCount={checklistDoneCount}
         totalCount={checklistTotal}

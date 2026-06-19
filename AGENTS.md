@@ -25,7 +25,7 @@ Cursor rules are grouped by purpose under `.cursor/rules/`: shared structure and
 |------|------|--------|
 | HTTP API + SSE | `pkgs/tasks/handler/` | REST `/tasks`, `GET /events`, `/repo/*` when `app_settings.repo_root` is set; `/health*`, `/settings*`, `/metrics`. SSE deep dive: [docs/domain/sse-hub.md](docs/domain/sse-hub.md). File map: `pkgs/tasks/handler/README.md`. Split conventions: [docs/contributing.md](docs/contributing.md). |
 | Request call stack / helper.io | `pkgs/tasks/calltrace/` | `Push`, `Path`, `WithRequestRoot`, `RunObserved` for `call_path` in logs. README: `pkgs/tasks/calltrace/README.md`. |
-| Request log correlation | `pkgs/tasks/logctx/` | `request_id` on context, per-request `log_seq`, `slog.Handler` wrappers; stdlib-only, no cycle with `handler`. |
+| Request log correlation | `pkgs/tasks/logctx/` | `request_id` on context, per-request `log_seq`, `slog.Handler` wrappers; stdlib-only, no cycle with `handler`. Trace-line enforcement: [observability-trace-lines.md](docs/domain/observability-trace-lines.md), `cmd/funclogmeasure/`. |
 | JSON API response helpers | `pkgs/tasks/apijson/` | Shared security headers + `WriteJSONError`; depends on `logctx` only. |
 | Persistence | `pkgs/tasks/store/`, `pkgs/tasks/postgres/` | Thin facade over `internal/<domain>/`; dual-write to `task_events`. Deep dive: [docs/domain/persistence.md](docs/domain/persistence.md). File map: `pkgs/tasks/store/README.md`. |
 | Domain types | `pkgs/tasks/domain/` | Status, priority, task model, audit events; `TaskCycle` / `TaskCyclePhase` + `Phase` / `CycleStatus` / `PhaseStatus` enums + `ValidPhaseTransition`. |

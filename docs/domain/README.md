@@ -82,3 +82,4 @@ Use Microsoft-style callouts where they add clarity:
 | [resume-continuation.md](./resume-continuation.md) | ContinuationBundle loader, failure taxonomy, verify-only routing |
 | [retry-start-over.md](./retry-start-over.md) | Operator Start over after failure: git reset, new cycle, no checkpoint carry-forward |
 | [retry-resume.md](./retry-resume.md) | Operator Resume from failure: new cycle with parent checkpoint; three-way recovery comparison |
+| [observability-trace-lines.md](./observability-trace-lines.md) | Trace-line contract, funclogmeasure satisfaction layers, `//funclogmeasure:skip` directives |

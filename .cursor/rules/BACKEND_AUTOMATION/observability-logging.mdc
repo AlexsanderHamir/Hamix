@@ -45,3 +45,4 @@ This file is a **short implementation guide** for agents touching **`cmd/taskapi
 1. New failure paths: **log once** with enough context to debug (task id, operation), not enough to exfiltrate secrets.
 2. Hot paths: avoid **per-row Debug** logging in tight loops.
 3. Metrics: verify **`GET /metrics`** still scrapes after middleware changes.
+4. **Trace-line contract:** production functions must satisfy `funclogmeasure -enforce` via direct `slog`, `calltrace` delegates, structural auto-exempt, or `//funclogmeasure:skip` at the function — see [observability-trace-lines.md](../../docs/domain/observability-trace-lines.md).

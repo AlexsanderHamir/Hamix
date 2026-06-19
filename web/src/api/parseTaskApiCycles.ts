@@ -259,7 +259,7 @@ const COMMIT_STATUSES = new Set([
   "superseded",
 ]);
 
-function parseCommitStatus(value: unknown, field: string): CommitStatus {
+function parseCommitStatus(value: unknown): CommitStatus {
   if (typeof value !== "string" || !COMMIT_STATUSES.has(value)) {
     return "eligible";
   }
@@ -287,7 +287,7 @@ export function parseCycleCommit(value: unknown): CycleCommit {
     sha: parseNonEmptyString(value.sha, "sha"),
     committed_at: parseISO8601Required(value.committed_at, "committed_at"),
     message: typeof value.message === "string" ? value.message : "",
-    status: parseCommitStatus(value.status, "status"),
+    status: parseCommitStatus(value.status),
     ...(gateReason !== undefined ? { gate_reason: gateReason } : {}),
     ...(sourceCycleId !== undefined ? { source_cycle_id: sourceCycleId } : {}),
   };

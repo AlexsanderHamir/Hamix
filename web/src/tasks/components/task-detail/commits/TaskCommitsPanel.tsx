@@ -1,6 +1,6 @@
 import { useMemo } from "react";
 import { useTaskCommits } from "@/tasks/hooks/useTaskCommits";
-import type { CommitStatus, TaskCommit } from "@/types";
+import type { CommitStatus } from "@/types";
 import { formatRelativeTime } from "@/shared/time/relativeTime";
 import { useNow } from "@/shared/useNow";
 
@@ -11,7 +11,10 @@ type Props = {
 
 export function TaskCommitsPanel({ taskId, enabled = true }: Props) {
   const commitsQuery = useTaskCommits(taskId, { enabled });
-  const commits = commitsQuery.data?.commits ?? [];
+  const commits = useMemo(
+    () => commitsQuery.data?.commits ?? [],
+    [commitsQuery.data?.commits],
+  );
   const now = useNow();
 
   const gitContext = useMemo(() => {

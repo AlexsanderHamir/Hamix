@@ -3,7 +3,6 @@ import type {
   CycleVerdictsResponse,
   StartTaskCycleInput,
   StartTaskCyclePhaseInput,
-  TaskCommit,
   TaskCommitsResponse,
   TaskCycle,
   TaskCycleDetail,

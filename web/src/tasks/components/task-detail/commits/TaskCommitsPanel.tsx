@@ -38,12 +38,8 @@ export function TaskCommitsPanel({ taskId, enabled = true }: Props) {
       aria-labelledby="task-commits-heading"
     >
       <h3 id="task-commits-heading" className="task-detail-section-heading">
-        Git commits
+        Commits
       </h3>
-      <p className="task-detail-section-hint">
-        Commits indexed across all execution attempts. Eligible commits passed
-        execute gates and were admitted for verify.
-      </p>
 
       {commitsQuery.isPending ? (
         <CommitsLoading />
@@ -90,7 +86,7 @@ function CommitsLoading() {
     <ul
       className="task-commits-list task-commits-list--loading"
       aria-busy="true"
-      aria-label="Loading git commits"
+      aria-label="Loading commits"
     >
       <li className="task-commit-row task-commit-row--skeleton" />
       <li className="task-commit-row task-commit-row--skeleton" />

@@ -24,12 +24,13 @@ import type {
 import type { UseQueryResult } from "@tanstack/react-query";
 import type { UseTaskCycleStreamResult } from "../hooks/useTaskCycles";
 import { AttemptAuditTimeline } from "../components/task-detail/attempt/AttemptAuditTimeline";
+import { CycleLiveProgressList } from "../components/task-detail/cycles/CycleLiveProgressList";
 import { TaskTimelineSkeleton } from "../components/skeletons";
 import {
   useAgentRunProgress,
-  type AgentRunProgressItem,
 } from "../hooks/useAgentRunProgress";
 import { useTaskCycle, useTaskCycleStream } from "../hooks/useTaskCycles";
+import { agentProgressKindDescriptor } from "../cycleDisplay/agentProgressDisplay";
 import { taskQueryKeys } from "../task-query";
 
 const STREAM_VISIBLE_INITIAL = 6;
@@ -697,53 +698,19 @@ function LivePhaseTail({
     intervalMs: 1000,
   });
   if (phase.status !== "running" || live.length === 0) return null;
-  const newestFirst = [...live].sort((a, b) => b.receivedAt - a.receivedAt);
-  const latest = newestFirst[0];
   return (
     <div className="task-attempt-live-tail" aria-live="polite">
       <div className="task-attempt-live-tail-heading">
-        <span className="task-attempt-live-dot" aria-hidden="true" />
+        <span className="cycle-live-dot task-attempt-live-dot" aria-hidden="true" />
         <span>Live</span>
       </div>
-      <ul className="task-cycle-progress-list" aria-label="Recent live updates">
-        <li
-          className="task-cycle-progress-item task-cycle-progress-item--pending"
-          aria-label="Waiting for the next agent update"
-        >
-          <span className="task-cycle-progress-pulse" aria-hidden="true">
-            <span />
-            <span />
-            <span />
-          </span>
-          <span className="task-cycle-progress-message">Waiting…</span>
-          <span className="task-cycle-progress-time" aria-hidden="true">
-            {latest ? `Last ${formatElapsedSince(latest.receivedAt, now)}` : ""}
-          </span>
-        </li>
-        {newestFirst.slice(0, 3).map((item, i) => (
-          <li
-            key={`${item.receivedAt}:${i}:${item.progress.kind}:${item.progress.subtype ?? ""}`}
-            className={`task-cycle-progress-item${i === 0 ? " task-cycle-progress-item--latest" : ""}`}
-          >
-            <span className="task-cycle-progress-kind">
-              {streamKindLabel(
-                item.progress.kind,
-                item.progress.subtype,
-                item.progress.tool,
-              )}
-            </span>
-            <span className="task-cycle-progress-message">
-              {streamMessage(item)}
-            </span>
-            <time
-              className="task-cycle-progress-time"
-              dateTime={new Date(item.receivedAt).toISOString()}
-            >
-              {formatLiveProgressTime(item.receivedAt)}
-            </time>
-          </li>
-        ))}
-      </ul>
+      <CycleLiveProgressList
+        items={live}
+        now={now}
+        listAriaLabel="Recent live updates"
+        timestampMode="clock"
+        showPendingRow
+      />
     </div>
   );
 }
@@ -887,7 +854,7 @@ function StreamEventRow({
   showPhaseBadge: boolean;
 }) {
   const preview = ev.message || ev.tool || "Agent reported progress.";
-  const kind = streamKindDescriptor(ev.kind, ev.subtype, ev.tool);
+  const kind = agentProgressKindDescriptor(ev.kind, ev.subtype, ev.tool);
   return (
     <li className="task-attempt-stream-row">
       <details className="task-attempt-stream-details">
@@ -966,103 +933,4 @@ function formatAttemptStartedParts(startedAt: string): {
       minute: "2-digit",
     }),
   };
-}
-
-type StreamKindTone =
-  | "reply"
-  | "tool"
-  | "done"
-  | "failed"
-  | "session"
-  | "error"
-  | "neutral";
-
-type StreamKindDescriptor = {
-  label: string;
-  title: string;
-  tone: StreamKindTone;
-};
-
-function streamKindDescriptor(
-  kind: string,
-  subtype?: string,
-  tool?: string,
-): StreamKindDescriptor {
-  const toolName = tool?.trim();
-  if (kind === "tool_call" || kind === "tool") {
-    if (subtype === "completed" || subtype === "success" || subtype === "done") {
-      return {
-        label: "Tool done",
-        title: toolName
-          ? `Tool finished successfully: ${toolName}`
-          : "Cursor tool finished successfully",
-        tone: "done",
-      };
-    }
-    if (subtype === "failed" || subtype === "error") {
-      return {
-        label: "Tool failed",
-        title: toolName
-          ? `Tool returned an error: ${toolName}`
-          : "Cursor tool returned an error",
-        tone: "failed",
-      };
-    }
-    return {
-      label: "Tool call",
-      title: toolName
-        ? `Cursor invoked a tool: ${toolName}`
-        : "Cursor started running a tool",
-      tone: "tool",
-    };
-  }
-  if (kind === "assistant" || kind === "message") {
-    return {
-      label: "Agent reply",
-      title: "Message from the Cursor agent",
-      tone: "reply",
-    };
-  }
-  if (kind === "system") {
-    return {
-      label: "Session",
-      title: "Cursor CLI session event",
-      tone: "session",
-    };
-  }
-  if (kind === "error") {
-    return {
-      label: "Error",
-      title: "Cursor stream reported an error",
-      tone: "error",
-    };
-  }
-  const normalized = kind.replace(/_/g, " ");
-  return {
-    label: normalized,
-    title: `Cursor stream event: ${normalized}`,
-    tone: "neutral",
-  };
-}
-
-function streamKindLabel(kind: string, subtype?: string, tool?: string): string {
-  return streamKindDescriptor(kind, subtype, tool).label;
-}
-
-function streamMessage(item: AgentRunProgressItem): string {
-  return item.progress.message || item.progress.tool || "Working…";
-}
-
-function formatLiveProgressTime(receivedAt: number): string {
-  return new Date(receivedAt).toLocaleTimeString(undefined, {
-    hour: "numeric",
-    minute: "2-digit",
-  });
-}
-
-function formatElapsedSince(receivedAt: number, now: number): string {
-  const elapsedSeconds = Math.max(0, Math.floor((now - receivedAt) / 1000));
-  if (elapsedSeconds < 1) return "just now";
-  if (elapsedSeconds < 60) return `${elapsedSeconds}s ago`;
-  return `${Math.floor(elapsedSeconds / 60)}m ago`;
 }

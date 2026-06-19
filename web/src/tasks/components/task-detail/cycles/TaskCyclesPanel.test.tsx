@@ -299,11 +299,10 @@ describe("TaskCyclesPanel", () => {
     const phaseLine = await within(ticker).findByTestId(
       "task-cycle-ticker-phase",
     );
-    expect(phaseLine).toHaveTextContent(/Now running/);
     expect(phaseLine).toHaveTextContent(/Execute/);
     // Phase started 19 s ago (11:00:30 - 11:00:11 = 19 s).
-    expect(phaseLine).toHaveTextContent(/for 19\.0 s/);
-    expect(within(phaseLine).getByText(/for 19\.0 s/)).toHaveAttribute(
+    expect(phaseLine).toHaveTextContent(/19\.0 s/);
+    expect(within(phaseLine).getByText(/19\.0 s/)).toHaveAttribute(
       "aria-hidden",
       "true",
     );
@@ -314,7 +313,7 @@ describe("TaskCyclesPanel", () => {
     expect(
       within(ticker).getByTestId("task-cycle-ticker-elapsed"),
     ).toHaveTextContent(/Started 35\.0 s ago/);
-    expect(phaseLine).toHaveTextContent(/for 24\.0 s/);
+    expect(phaseLine).toHaveTextContent(/24\.0 s/);
 
     // The running cycle ALSO appears in the history list, with a
     // small "↑ live" hint pointing the user up to the ticker.
@@ -464,7 +463,9 @@ describe("TaskCyclesPanel", () => {
     renderPanel();
 
     const phaseLine = await screen.findByTestId("task-cycle-ticker-phase");
-    expect(phaseLine).toHaveTextContent(/Between phases/);
+    await waitFor(() => {
+      expect(phaseLine).toHaveTextContent(/Between phases/);
+    });
     expect(phaseLine).toHaveTextContent(/Execute/);
     expect(phaseLine).toHaveTextContent(/succeeded/);
   });
@@ -538,8 +539,11 @@ describe("TaskCyclesPanel", () => {
 
     const progressList = await within(ticker).findByTestId("task-cycle-progress-list");
     expect(progressList).toHaveAttribute("aria-label", "Recent agent progress");
-    expect(progressList).toHaveTextContent(/Tool/);
+    expect(progressList).toHaveTextContent(/Tool call/);
     expect(progressList).toHaveTextContent(/Reading README\.md/);
+    expect(
+      progressList.querySelector(".task-cycle-progress-item--latest"),
+    ).not.toBeNull();
   });
 
   it("renders per-criterion verdict reasoning when a cycle row is expanded", async () => {

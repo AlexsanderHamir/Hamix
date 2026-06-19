@@ -7,6 +7,7 @@ export {
   EmptyStateChecklistGlyph,
   EmptyStateSubtasksGlyph,
   EmptyStateFilterGlyph,
+  EmptyStateCommitsGlyph,
 } from "./EmptyStateGlyphs";
 
 export type EmptyStateAction = {

@@ -171,3 +171,45 @@ export function EmptyStateFilterGlyph() {
     </svg>
   );
 }
+
+export function EmptyStateCommitsGlyph() {
+  return (
+    <svg
+      className="empty-state__glyph"
+      width={40}
+      height={40}
+      viewBox="0 0 48 48"
+      fill="none"
+      xmlns="http://www.w3.org/2000/svg"
+      aria-hidden
+    >
+      <circle
+        cx={18}
+        cy={14}
+        r={3.25}
+        stroke="currentColor"
+        strokeWidth={1.75}
+      />
+      <circle
+        cx={30}
+        cy={22}
+        r={3.25}
+        stroke="currentColor"
+        strokeWidth={1.75}
+      />
+      <circle
+        cx={20}
+        cy={34}
+        r={3.25}
+        stroke="currentColor"
+        strokeWidth={1.75}
+      />
+      <path
+        d="M20.5 15.5 27.5 20M21.5 31.5 27 24"
+        stroke="currentColor"
+        strokeWidth={1.75}
+        strokeLinecap="round"
+      />
+    </svg>
+  );
+}

@@ -30,7 +30,6 @@ import type {
 } from "@/types/cycle";
 import {
   useAgentRunProgress,
-  type AgentRunProgress,
 } from "../../../hooks/useAgentRunProgress";
 import {
   useTaskCycle,
@@ -38,6 +37,7 @@ import {
   useTaskCycles,
 } from "../../../hooks/useTaskCycles";
 import { formatCycleLineageLabel } from "../../../cycleDisplay/cycleLineage";
+import { CycleLiveProgressList } from "./CycleLiveProgressList";
 import { CommitList } from "../commits/CommitList";
 import { GitContextMeta } from "../commits/GitContextMeta";
 
@@ -194,31 +194,14 @@ function CurrentPhaseTicker({
       className="task-cycle-ticker"
       data-testid="task-cycle-ticker"
     >
-      <div className="task-cycle-ticker-row">
+      <div className="task-cycle-ticker-head">
+        <span className="cycle-live-dot" aria-hidden="true" />
         <span className="task-cycle-ticker-eyebrow">Live</span>
         <span
           className={`cell-pill ${cycleStatusFillClass(cycle.status)}`}
           data-testid="task-cycle-ticker-status"
         >
           {cycleStatusLabel(cycle.status)}
-        </span>
-        <span className="task-cycle-ticker-attempt">
-          Attempt #{cycle.attempt_seq}
-          {lineage ? (
-            <span className="task-cycle-lineage muted"> · {lineage}</span>
-          ) : null}
-        </span>
-        <span
-          className={`cell-pill ${cycleRunnerChipClass()}`}
-          data-testid="task-cycle-ticker-runner"
-        >
-          {formatRunnerModel(cycle.cycle_meta)}
-        </span>
-        <span
-          className="task-cycle-ticker-elapsed"
-          data-testid="task-cycle-ticker-elapsed"
-        >
-          Started {formatDurationSeconds(elapsedSeconds(cycle.started_at, now))} ago
         </span>
       </div>
       <CurrentPhaseLine
@@ -227,6 +210,32 @@ function CurrentPhaseTicker({
         detailQuery={detailQuery}
         now={now}
       />
+      <div className="task-cycle-ticker-meta">
+        <span className="task-cycle-ticker-attempt">
+          Attempt #{cycle.attempt_seq}
+          {lineage ? (
+            <span className="task-cycle-lineage muted"> · {lineage}</span>
+          ) : null}
+        </span>
+        <span className="task-cycle-ticker-meta-sep" aria-hidden="true">
+          ·
+        </span>
+        <span
+          className={`cell-pill ${cycleRunnerChipClass()}`}
+          data-testid="task-cycle-ticker-runner"
+        >
+          {formatRunnerModel(cycle.cycle_meta)}
+        </span>
+        <span className="task-cycle-ticker-meta-sep" aria-hidden="true">
+          ·
+        </span>
+        <span
+          className="task-cycle-ticker-elapsed"
+          data-testid="task-cycle-ticker-elapsed"
+        >
+          Started {formatDurationSeconds(elapsedSeconds(cycle.started_at, now))} ago
+        </span>
+      </div>
     </div>
   );
 }
@@ -251,7 +260,8 @@ function CurrentPhaseLine({
   if (detailQuery.isPending) {
     return (
       <p
-        className="task-cycle-ticker-phase task-cycle-ticker-phase--pending"
+        className="task-cycle-ticker-focus task-cycle-ticker-focus--pending"
+        data-testid="task-cycle-ticker-phase"
         aria-busy="true"
       >
         Resolving current phase…
@@ -259,11 +269,11 @@ function CurrentPhaseLine({
     );
   }
   if (detailQuery.isError) {
-    // Don't yell at the user — the cycle list still rendered. The
-    // ticker is best-effort live state; the history below remains
-    // authoritative.
     return (
-      <p className="task-cycle-ticker-phase task-cycle-ticker-phase--error">
+      <p
+        className="task-cycle-ticker-focus task-cycle-ticker-focus--error"
+        data-testid="task-cycle-ticker-phase"
+      >
         Could not resolve current phase ({errorMessage(detailQuery.error, "unknown error")}).
       </p>
     );
@@ -271,15 +281,11 @@ function CurrentPhaseLine({
   const detail = detailQuery.data;
   const runningPhase = pickRunningPhase(detail.phases);
   if (!runningPhase) {
-    // The cycle is "running" but no phase row is currently in the
-    // running state — happens between phases (the worker has just
-    // closed one and not yet started the next). Show the most
-    // recently active phase so the operator has context.
     const lastPhase = pickLatestPhase(detail.phases);
     if (!lastPhase) {
       return (
         <p
-          className="task-cycle-ticker-phase task-cycle-ticker-phase--idle"
+          className="task-cycle-ticker-focus task-cycle-ticker-focus--idle"
           data-testid="task-cycle-ticker-phase"
         >
           No phase started yet.
@@ -288,7 +294,7 @@ function CurrentPhaseLine({
     }
     return (
       <p
-        className="task-cycle-ticker-phase"
+        className="task-cycle-ticker-focus"
         data-testid="task-cycle-ticker-phase"
       >
         Between phases · last:{" "}
@@ -300,25 +306,27 @@ function CurrentPhaseLine({
   }
   return (
     <>
-      <p
-        className="task-cycle-ticker-phase task-cycle-ticker-phase--running"
+      <div
+        className="task-cycle-ticker-focus task-cycle-ticker-focus--running"
         data-testid="task-cycle-ticker-phase"
       >
-        <span aria-live="polite">
-          Now running:{" "}
+        <span className="task-cycle-ticker-focus-label" aria-live="polite">
           <span className={`cell-pill ${phaseStatusFillClass(runningPhase.status)}`}>
             {phaseLabel(runningPhase.phase)}
           </span>
-        </span>{" "}
-        <span className="task-cycle-ticker-phase-elapsed" aria-hidden="true">
-          for {formatDurationSeconds(elapsedSeconds(runningPhase.started_at, now))}
         </span>
-      </p>
-      <PhaseProgress
-        taskId={taskId}
-        cycleId={cycleId}
-        phaseSeq={runningPhase.phase_seq}
-      />
+        <span className="task-cycle-ticker-focus-elapsed" aria-hidden="true">
+          {formatDurationSeconds(elapsedSeconds(runningPhase.started_at, now))}
+        </span>
+      </div>
+      <div className="task-cycle-ticker-feed">
+        <PhaseProgress
+          taskId={taskId}
+          cycleId={cycleId}
+          phaseSeq={runningPhase.phase_seq}
+          now={now}
+        />
+      </div>
     </>
   );
 }
@@ -327,39 +335,21 @@ function PhaseProgress({
   taskId,
   cycleId,
   phaseSeq,
+  now,
 }: {
   taskId: string;
   cycleId: string;
   phaseSeq: number;
+  now: number;
 }) {
   const items = useAgentRunProgress(taskId, cycleId, phaseSeq);
-  if (items.length === 0) {
-    return (
-      <p className="task-cycle-progress-empty" data-testid="task-cycle-progress-empty">
-        Waiting for the next agent update…
-      </p>
-    );
-  }
   return (
-    <ol
-      className="task-cycle-progress-list"
-      aria-label="Recent agent progress"
-      data-testid="task-cycle-progress-list"
-    >
-      {items.map((item, idx) => (
-        <li
-          key={`${item.receivedAt}:${idx}:${item.progress.kind}:${item.progress.subtype ?? ""}`}
-          className="task-cycle-progress-item"
-        >
-          <span className="task-cycle-progress-kind">
-            {progressKindLabel(item.progress.kind, item.progress.subtype)}
-          </span>
-          <span className="task-cycle-progress-message">
-            {progressMessage(item.progress)}
-          </span>
-        </li>
-      ))}
-    </ol>
+    <CycleLiveProgressList
+      items={items}
+      now={now}
+      showPendingRow={items.length > 0}
+      emptyMessage="Waiting for the next agent update…"
+    />
   );
 }
 
@@ -921,35 +911,6 @@ function formatPhaseDuration(phase: TaskCyclePhase, now: number): string {
   const end = phase.ended_at ? Date.parse(phase.ended_at) : now;
   if (!Number.isFinite(end) || end < start) return "—";
   return formatDurationSeconds((end - start) / 1000);
-}
-
-function progressKindLabel(kind: string, subtype: string | undefined): string {
-  if (kind === "tool_call") {
-    if (subtype === "completed" || subtype === "success" || subtype === "done") {
-      return "Done";
-    }
-    if (subtype === "failed" || subtype === "error") {
-      return "Failed";
-    }
-    return "Tool";
-  }
-  if (kind === "assistant") {
-    return "Agent";
-  }
-  if (kind === "system") {
-    return "Session";
-  }
-  return "Update";
-}
-
-function progressMessage(progress: AgentRunProgress): string {
-  if (progress.message) {
-    return progress.message;
-  }
-  if (progress.tool) {
-    return progress.tool;
-  }
-  return "Working…";
 }
 
 // Re-exported for tests so they can construct fixtures without

@@ -12,26 +12,42 @@
   gap: 0.75rem;
 }
 
-/* Live ticker: a single horizontal row of metadata + a phase line below.
-   Using a soft brand-tinted surface so it visually pops above the neutral
-   history list without screaming for attention (the running cycle is
-   the user's focus, but they're already looking at the task page —
-   no need for a banner). */
+/* Live ticker: neutral surface with a left live stripe. Phase name is the
+   hero line; attempt/runner/elapsed sit in a muted meta row below. */
 .task-cycle-ticker {
   display: flex;
   flex-direction: column;
-  gap: 0.4rem;
-  padding: 0.7rem 0.85rem;
-  border: 1px solid var(--brand-border-soft);
-  background: var(--brand-muted);
-  border-radius: var(--radius-md);
+  gap: var(--space-3);
+  padding: var(--space-4) var(--space-5);
+  border: 1px solid var(--border-soft);
+  border-inline-start: 3px solid var(--brand);
+  background: var(--surface-1);
+  border-radius: var(--radius-lg);
+  animation: task-cycle-ticker-enter var(--duration-moderate) var(--ease-out) both;
 }
 
-.task-cycle-ticker-row {
+@keyframes task-cycle-ticker-enter {
+  from {
+    opacity: 0;
+    transform: translateY(0.5rem);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .task-cycle-ticker {
+    animation: none;
+  }
+}
+
+.task-cycle-ticker-head {
   display: flex;
   flex-wrap: wrap;
   align-items: center;
-  gap: 0.55rem 0.7rem;
+  gap: var(--space-2);
 }
 
 .task-cycle-ticker-eyebrow {
@@ -39,16 +55,77 @@
   font-weight: 600;
   letter-spacing: 0.04em;
   text-transform: uppercase;
-  color: var(--brand-deep);
-  /* A tiny pulsing dot would be nice but is easy to overuse — leaving
-     this as a static eyebrow keeps the ticker calm, matching the
-     SystemStatusChip rhythm in the header. */
+  color: var(--text-primary);
+}
+
+.task-cycle-ticker-focus {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: center;
+  gap: var(--space-3);
+  margin: 0;
+  padding-bottom: var(--space-3);
+  border-bottom: 1px solid var(--border-hairline);
+  font-size: var(--text-sm);
+  color: var(--text-primary);
+}
+
+.task-cycle-ticker-focus--running {
+  padding-bottom: var(--space-3);
+}
+
+.task-cycle-ticker-focus-label {
+  min-width: 0;
+  font-size: var(--text-md);
+  font-weight: 600;
+  color: var(--text-primary);
+}
+
+.task-cycle-ticker-focus-elapsed {
+  font-size: var(--text-sm);
+  font-weight: 500;
+  color: var(--text-secondary);
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
+.task-cycle-ticker-focus--pending,
+.task-cycle-ticker-focus--idle,
+.task-cycle-ticker-focus--error {
+  display: block;
+  color: var(--text-secondary);
+  border-bottom: none;
+  padding-bottom: 0;
+}
+
+.task-cycle-ticker-meta {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-2);
+  font-size: var(--text-xs);
+  color: var(--text-secondary);
 }
 
 .task-cycle-ticker-attempt,
 .task-cycle-ticker-elapsed {
   font-size: var(--text-xs);
   color: var(--text-secondary);
+}
+
+.task-cycle-ticker-meta-sep {
+  color: var(--text-tertiary);
+}
+
+.task-cycle-ticker-feed {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+}
+
+/* Legacy class aliases — tests and older selectors may still reference these. */
+.task-cycle-ticker-row {
+  display: contents;
 }
 
 .task-cycle-ticker-phase {
@@ -68,56 +145,19 @@
   font-size: var(--text-xs);
 }
 
-.task-cycle-progress-empty {
-  margin: 0.1rem 0 0;
-  color: var(--text-secondary);
-  font-size: var(--text-xs);
-}
+@media (max-width: 40rem) {
+  .task-cycle-ticker {
+    padding: var(--space-4);
+  }
 
-.task-cycle-progress-list {
-  list-style: none;
-  margin: 0.1rem 0 0;
-  padding: 0;
-  display: flex;
-  flex-direction: column;
-  gap: 0.25rem;
-}
+  .task-cycle-ticker-focus--running {
+    grid-template-columns: 1fr;
+    gap: var(--space-1);
+  }
 
-.task-cycle-progress-item {
-  display: flex;
-  align-items: center;
-  gap: 0.5rem;
-  padding: 0.35rem 0.45rem;
-  border: 1px solid var(--brand-border-soft);
-  background: var(--surface-1);
-  border-radius: var(--radius-sm);
-  font-size: var(--text-xs);
-}
-
-.task-cycle-progress-kind {
-  flex: 0 0 auto;
-  padding: 0.05rem 0.35rem;
-  border: 1px solid var(--brand-border-soft);
-  border-radius: var(--radius-full);
-  color: var(--brand-deep);
-  font-weight: 600;
-  line-height: 1.4;
-}
-
-.task-cycle-progress-message {
-  min-width: 0;
-  flex: 1 1 auto;
-  color: var(--text-primary);
-  font-weight: 600;
-  overflow-wrap: anywhere;
-}
-
-.task-cycle-progress-time {
-  flex: 0 0 auto;
-  margin-left: auto;
-  color: var(--text-tertiary);
-  font-variant-numeric: tabular-nums;
-  white-space: nowrap;
+  .task-cycle-ticker-focus-elapsed {
+    justify-self: start;
+  }
 }
 
 /* History list — neutral rows that expand to reveal phases. */

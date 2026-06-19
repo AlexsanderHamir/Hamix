@@ -9,6 +9,38 @@
   gap: 0.75rem;
 }
 
+.task-commits-empty-well {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 10.5rem;
+  padding: var(--space-8);
+  border: 1px solid var(--border-soft);
+  background: var(--surface-1);
+  border-radius: var(--radius-lg);
+}
+
+.task-commits-empty-state.empty-state {
+  max-width: 28rem;
+  margin: 0;
+}
+
+.task-commits-empty-state .empty-state__icon-wrap {
+  margin-bottom: var(--space-4);
+}
+
+.task-commits-empty-state .empty-state__description {
+  display: block;
+  -webkit-line-clamp: unset;
+  overflow: visible;
+  max-width: 40ch;
+}
+
+.task-commits-empty-well .task-commits-list--loading {
+  width: 100%;
+  max-width: 32rem;
+}
+
 .task-commits-context {
   padding: 0.55rem 0.75rem;
   border: 1px solid var(--border-soft);

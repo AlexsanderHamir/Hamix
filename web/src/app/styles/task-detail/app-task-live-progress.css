@@ -1,0 +1,131 @@
+/* Shared live agent progress feed — ticker + cycle detail page. */
+
+.cycle-live-dot,
+.task-attempt-live-dot {
+  width: 0.45rem;
+  height: 0.45rem;
+  border-radius: 999px;
+  background: var(--brand, currentColor);
+  box-shadow: 0 0 0 0.2rem var(--brand-soft, transparent);
+}
+
+.task-cycle-progress-empty {
+  margin: 0.1rem 0 0;
+  color: var(--text-secondary);
+  font-size: var(--text-xs);
+}
+
+.task-cycle-progress-list {
+  list-style: none;
+  margin: 0.1rem 0 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+}
+
+.task-cycle-progress-item {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.5rem;
+  padding: 0.35rem 0.45rem;
+  border: 1px solid var(--border-soft);
+  background: var(--surface-1);
+  border-radius: var(--radius-sm);
+  font-size: var(--text-xs);
+}
+
+.task-cycle-progress-kind {
+  flex: 0 0 auto;
+  padding: 0.05rem 0.35rem;
+  border: 1px solid var(--border-soft);
+  border-radius: var(--radius-full);
+  color: var(--text-secondary);
+  font-weight: 600;
+  line-height: 1.4;
+}
+
+.task-cycle-progress-message {
+  min-width: 0;
+  flex: 1 1 auto;
+  color: var(--text-primary);
+  font-weight: 500;
+  overflow-wrap: anywhere;
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+  overflow: hidden;
+}
+
+.task-cycle-progress-time {
+  flex: 0 0 auto;
+  margin-left: auto;
+  color: var(--text-tertiary);
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
+.task-cycle-progress-item--latest {
+  background: var(--surface-2);
+  animation: task-attempt-live-row-in var(--duration-moderate) var(--ease-out) both;
+}
+
+.task-cycle-progress-item--pending {
+  border-style: dashed;
+  color: var(--text-secondary);
+  background: var(--surface-1);
+}
+
+.task-cycle-progress-pulse {
+  display: inline-flex;
+  flex: 0 0 auto;
+  align-items: center;
+  gap: 0.2rem;
+  margin-top: 0.15rem;
+}
+
+.task-cycle-progress-pulse span {
+  width: 0.3rem;
+  height: 0.3rem;
+  border-radius: 999px;
+  background: var(--brand, currentColor);
+  animation: task-attempt-live-pulse 1.2s var(--ease-in-out) infinite;
+}
+
+.task-cycle-progress-pulse span:nth-child(2) {
+  animation-delay: 0.15s;
+}
+
+.task-cycle-progress-pulse span:nth-child(3) {
+  animation-delay: 0.3s;
+}
+
+@keyframes task-attempt-live-row-in {
+  from {
+    opacity: 0;
+    transform: translateY(0.5rem);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes task-attempt-live-pulse {
+  0%,
+  100% {
+    opacity: 0.35;
+    transform: scale(0.8);
+  }
+  50% {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .task-cycle-progress-item--latest,
+  .task-cycle-progress-pulse span {
+    animation: none;
+  }
+}

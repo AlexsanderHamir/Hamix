@@ -2,7 +2,7 @@ import { useMemo } from "react";
 import { errorMessage } from "@/lib/errorMessage";
 import {
   EmptyState,
-  EmptyStateTimelineGlyph,
+  EmptyStateCommitsGlyph,
 } from "@/shared/EmptyState";
 import { useTaskCommits } from "@/tasks/hooks/useTaskCommits";
 import { CommitList } from "./CommitList";
@@ -64,13 +64,14 @@ export function TaskCommitsPanel({ taskId, enabled = true }: Props) {
           </div>
         </div>
       ) : commits.length === 0 ? (
-        <EmptyState
-          icon={<EmptyStateTimelineGlyph />}
-          title="No commits indexed yet"
-          description="Commits appear here when an agent run records them in a git worktree."
-          density="compact"
-          className="task-detail-section-empty empty-state--compact"
-        />
+        <div className="task-commits-empty-well" data-testid="task-commits-empty-well">
+          <EmptyState
+            icon={<EmptyStateCommitsGlyph />}
+            title="No commits indexed yet"
+            description="Recorded when an agent run commits to git."
+            className="task-commits-empty-state"
+          />
+        </div>
       ) : (
         <>
           {gitContext ? <GitContextMeta context={gitContext} /> : null}
@@ -83,14 +84,15 @@ export function TaskCommitsPanel({ taskId, enabled = true }: Props) {
 
 function CommitsLoading() {
   return (
-    <ul
-      className="task-commits-list task-commits-list--loading"
-      aria-busy="true"
-      aria-label="Loading commits"
-    >
-      <li className="task-commit-row task-commit-row--skeleton" />
-      <li className="task-commit-row task-commit-row--skeleton" />
-    </ul>
+    <div className="task-commits-empty-well" aria-busy="true">
+      <ul
+        className="task-commits-list task-commits-list--loading"
+        aria-label="Loading commits"
+      >
+        <li className="task-commit-row task-commit-row--skeleton" />
+        <li className="task-commit-row task-commit-row--skeleton" />
+      </ul>
+    </div>
   );
 }
 

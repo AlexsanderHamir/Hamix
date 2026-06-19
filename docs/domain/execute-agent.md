@@ -278,6 +278,8 @@ Execute-specific resume prompts tell the agent to inspect the working tree (and 
 
 > **Note** — The runner is stateless. Resume does not continue a mid-CLI session; it starts a fresh `runner.Run` with a rehydrated prompt.
 
+**Operator cross-cycle resume** (task `failed`, new cycle): `RunWithRetry` resume mode loads the parent checkpoint and always re-enters execute with resume notice — see [retry-resume.md](./retry-resume.md).
+
 ## Configuration
 
 | Setting | Source | Effect on execute |

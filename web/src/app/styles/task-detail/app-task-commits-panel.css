@@ -322,10 +322,6 @@
   font-size: var(--text-xs);
 }
 
-.task-commit-diff-parent-link {
-  font-weight: 500;
-}
-
 @media (max-width: 640px) {
   .task-commit-diff-page-hero {
     grid-template-columns: 1fr;

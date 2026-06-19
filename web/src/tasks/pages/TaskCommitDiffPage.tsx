@@ -11,7 +11,6 @@ import { CommitStatusBadge } from "../components/task-detail/commits/CommitStatu
 import {
   commitShaParamPattern,
   shortSha,
-  taskCommitDiffPath,
 } from "../components/task-detail/commits/commitDisplay";
 import { useCommitDiff } from "../hooks/useCommitDiff";
 import { useTaskCommits } from "../hooks/useTaskCommits";
@@ -71,7 +70,6 @@ export function TaskCommitDiffPage() {
 
   const backTo = `/tasks/${encodeURIComponent(taskId)}`;
   const gitAuthor = diffQuery.data?.author;
-  const parentSha = diffQuery.data?.parent_sha?.trim();
 
   return (
     <section
@@ -145,22 +143,6 @@ export function TaskCommitDiffPage() {
                 }
               >
                 {gitAuthor}
-              </span>
-            </>
-          ) : null}
-          {parentSha ? (
-            <>
-              <span className="task-commit-meta-sep" aria-hidden="true">
-                ·
-              </span>
-              <span>
-                Parent{" "}
-                <Link
-                  to={taskCommitDiffPath(taskId, parentSha)}
-                  className="task-commit-diff-parent-link"
-                >
-                  {shortSha(parentSha)}
-                </Link>
               </span>
             </>
           ) : null}

@@ -1,9 +1,9 @@
+import { Link } from "react-router-dom";
 import { formatRelativeTime } from "@/shared/time/relativeTime";
 import { useNow } from "@/shared/useNow";
 import type { CycleCommit, TaskCommit } from "@/types";
 import { CommitStatusBadge } from "./CommitStatusBadge";
-import { CommitDiffInline } from "./CommitDiffInline";
-import { shortSha } from "./commitDisplay";
+import { shortSha, taskCommitDiffPath } from "./commitDisplay";
 
 function attemptSeqForRow(commit: CycleCommit): number | undefined {
   return "attempt_seq" in commit
@@ -12,26 +12,25 @@ function attemptSeqForRow(commit: CycleCommit): number | undefined {
 }
 
 type Props = {
+  taskId: string;
   commit: CycleCommit;
   showAttempt?: boolean;
-  open: boolean;
-  onToggle: (sha: string, nextOpen: boolean) => void;
 };
 
-export function CommitRow({ commit, showAttempt = false, open, onToggle }: Props) {
+export function CommitRow({ taskId, commit, showAttempt = false }: Props) {
   const now = useNow();
   const attemptSeq = attemptSeqForRow(commit);
+  const diffTo = taskCommitDiffPath(taskId, commit.sha);
+  const ariaLabel = `View diff for ${shortSha(commit.sha)}: ${commit.message}`;
 
   return (
-    <li className="task-commit-row" data-commit-open={open ? "true" : "false"}>
-      <details
-        open={open}
-        onToggle={(e) => {
-          onToggle(commit.sha, (e.currentTarget as HTMLDetailsElement).open);
-        }}
+    <li className="task-commit-row">
+      <Link
+        to={diffTo}
+        className="task-commit-row-link"
+        aria-label={ariaLabel}
       >
-        <summary className="task-commit-row-summary">
-          <span className="task-commit-row-chevron" aria-hidden="true" />
+        <span className="task-commit-row-inner">
           <CommitStatusBadge
             status={commit.status}
             gateReason={commit.gate_reason}
@@ -51,13 +50,8 @@ export function CommitRow({ commit, showAttempt = false, open, onToggle }: Props
             ) : null}
             {formatRelativeTime(commit.committed_at, new Date(now))}
           </span>
-        </summary>
-        {open ? (
-          <div className="task-commit-diff-panel">
-            <CommitDiffInline sha={commit.sha} enabled={open} />
-          </div>
-        ) : null}
-      </details>
+        </span>
+      </Link>
     </li>
   );
 }

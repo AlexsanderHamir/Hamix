@@ -74,7 +74,7 @@ export function TaskCommitsPanel({ taskId, enabled = true }: Props) {
       ) : (
         <>
           {gitContext ? <GitContextMeta context={gitContext} /> : null}
-          <CommitList commits={commits} showAttempt />
+          <CommitList taskId={taskId} commits={commits} showAttempt />
         </>
       )}
     </section>

@@ -2,10 +2,14 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import type { ReactNode } from "react";
+import { MemoryRouter, Route, Routes } from "react-router-dom";
 import { afterEach, describe, expect, it, vi } from "vitest";
+import { ROUTER_FUTURE_FLAGS } from "@/lib/routerFutureFlags";
 import type { CycleCommit } from "@/types";
 import { CommitList } from "./CommitList";
+import { TaskCommitDiffPage } from "@/tasks/pages/TaskCommitDiffPage";
 
+const taskId = "task-1";
 const sampleCommits: CycleCommit[] = [
   {
     seq: 1,
@@ -19,14 +23,26 @@ const sampleCommits: CycleCommit[] = [
   },
 ];
 
-function createWrapper() {
+function createWrapper(initialEntries = ["/"]) {
   const qc = new QueryClient({
     defaultOptions: {
       queries: { retry: false, gcTime: 0, staleTime: 0 },
     },
   });
   return function Wrapper({ children }: { children: ReactNode }) {
-    return <QueryClientProvider client={qc}>{children}</QueryClientProvider>;
+    return (
+      <QueryClientProvider client={qc}>
+        <MemoryRouter future={ROUTER_FUTURE_FLAGS} initialEntries={initialEntries}>
+          <Routes>
+            <Route path="/" element={<>{children}</>} />
+            <Route
+              path="/tasks/:taskId/commits/:sha"
+              element={<TaskCommitDiffPage />}
+            />
+          </Routes>
+        </MemoryRouter>
+      </QueryClientProvider>
+    );
   };
 }
 
@@ -51,7 +67,7 @@ describe("CommitList", () => {
     vi.restoreAllMocks();
   });
 
-  it("lazy-loads diff on row expansion", async () => {
+  it("does not fetch diff until the commit row is opened", async () => {
     const diffCalls: string[] = [];
     vi.spyOn(globalThis, "fetch").mockImplementation(async (input) => {
       const url = typeof input === "string" ? input : (input as Request).url;
@@ -67,27 +83,69 @@ describe("CommitList", () => {
       throw new Error(`unexpected fetch ${url}`);
     });
 
-    const user = userEvent.setup();
     const Wrapper = createWrapper();
     render(
       <Wrapper>
-        <CommitList commits={sampleCommits} />
+        <CommitList taskId={taskId} commits={sampleCommits} />
       </Wrapper>,
     );
 
     expect(diffCalls).toHaveLength(0);
-
-    const summary = screen.getByText("refactor(web): split helpers").closest(
-      "summary",
+    expect(
+      screen.getByRole("link", {
+        name: /view diff for abc1234: refactor\(web\): split helpers/i,
+      }),
+    ).toHaveAttribute(
+      "href",
+      `/tasks/${encodeURIComponent(taskId)}/commits/${encodeURIComponent(sampleCommits[0].sha)}`,
     );
-    expect(summary).not.toBeNull();
-    await user.click(summary!);
+  });
 
+  it("navigates to the commit diff page and loads the patch", async () => {
+    const diffCalls: string[] = [];
+    vi.spyOn(globalThis, "fetch").mockImplementation(async (input) => {
+      const url = typeof input === "string" ? input : (input as Request).url;
+      if (url.includes("/repo/diff")) {
+        diffCalls.push(url);
+        return okJSON({
+          sha: sampleCommits[0].sha,
+          patch: samplePatch,
+          truncated: false,
+          size_bytes: samplePatch.length,
+        });
+      }
+      if (url.includes(`/tasks/${taskId}/commits`) && !url.includes("/repo/")) {
+        return okJSON({ commits: sampleCommits });
+      }
+      throw new Error(`unexpected fetch ${url}`);
+    });
+
+    const user = userEvent.setup();
+    const Wrapper = createWrapper();
+    render(
+      <Wrapper>
+        <CommitList taskId={taskId} commits={sampleCommits} />
+      </Wrapper>,
+    );
+
+    await user.click(
+      screen.getByRole("link", {
+        name: /view diff for abc1234: refactor\(web\): split helpers/i,
+      }),
+    );
+
+    expect(await screen.findByTestId("task-commit-diff-page")).toBeInTheDocument();
     await waitFor(() => {
       expect(diffCalls.length).toBeGreaterThanOrEqual(1);
     });
     expect(diffCalls[0]).toContain("/repo/diff?sha=");
     await screen.findByText("note.txt");
+  });
+});
+
+describe("TaskCommitDiffPage", () => {
+  afterEach(() => {
+    vi.restoreAllMocks();
   });
 
   it("shows error state and retries when diff fetch fails", async () => {
@@ -101,18 +159,17 @@ describe("CommitList", () => {
           headers: { "Content-Type": "application/json" },
         });
       }
+      if (url.includes(`/tasks/${taskId}/commits`) && !url.includes("/repo/")) {
+        return okJSON({ commits: sampleCommits });
+      }
       throw new Error(`unexpected fetch ${url}`);
     });
 
     const user = userEvent.setup();
-    const Wrapper = createWrapper();
-    render(
-      <Wrapper>
-        <CommitList commits={sampleCommits} />
-      </Wrapper>,
-    );
-
-    await user.click(screen.getByText("refactor(web): split helpers"));
+    const Wrapper = createWrapper([
+      `/tasks/${taskId}/commits/${sampleCommits[0].sha}`,
+    ]);
+    render(<Wrapper>{null}</Wrapper>);
 
     await waitFor(
       () => {
@@ -132,7 +189,7 @@ describe("CommitList", () => {
     );
   });
 
-  it("shows truncation banner and full diff action when truncated", async () => {
+  it("shows truncation notice when the patch is truncated", async () => {
     vi.spyOn(globalThis, "fetch").mockImplementation(async (input) => {
       const url = typeof input === "string" ? input : (input as Request).url;
       if (url.includes("/repo/diff")) {
@@ -143,24 +200,19 @@ describe("CommitList", () => {
           size_bytes: samplePatch.length,
         });
       }
+      if (url.includes(`/tasks/${taskId}/commits`) && !url.includes("/repo/")) {
+        return okJSON({ commits: sampleCommits });
+      }
       throw new Error(`unexpected fetch ${url}`);
     });
 
-    const user = userEvent.setup();
-    const Wrapper = createWrapper();
-    render(
-      <Wrapper>
-        <CommitList commits={sampleCommits} />
-      </Wrapper>,
-    );
-
-    await user.click(screen.getByText("refactor(web): split helpers"));
+    const Wrapper = createWrapper([
+      `/tasks/${taskId}/commits/${sampleCommits[0].sha}`,
+    ]);
+    render(<Wrapper>{null}</Wrapper>);
 
     expect(
-      await screen.findByText(/Diff preview is truncated/i),
-    ).toBeInTheDocument();
-    expect(
-      screen.getByRole("button", { name: /view full diff/i }),
+      await screen.findByText(/truncated at the server limit/i),
     ).toBeInTheDocument();
   });
 });

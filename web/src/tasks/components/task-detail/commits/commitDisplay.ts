@@ -28,6 +28,13 @@ export function shortSha(sha: string): string {
   return trimmed.length > 7 ? trimmed.slice(0, 7) : trimmed;
 }
 
+/** Matches GET /repo/diff SHA validation (7–40 hex). */
+export const commitShaParamPattern = /^[0-9a-fA-F]{7,40}$/;
+
+export function taskCommitDiffPath(taskId: string, sha: string): string {
+  return `/tasks/${encodeURIComponent(taskId)}/commits/${encodeURIComponent(sha)}`;
+}
+
 /** Labeled repo context for the commits panel (avoids ambiguous breadcrumbs). */
 export function buildGitContextItems(ctx: GitContextFields): GitContextItem[] {
   const branch = ctx.branch.trim() || "detached";

@@ -550,6 +550,7 @@ function CycleRowVerdicts({
       data-testid="task-cycle-verdicts"
     >
       <CycleCommitsSummary
+        taskId={taskId}
         gitContext={data.git_context}
         commits={data.commits}
       />
@@ -638,9 +639,11 @@ function commandRunAttemptSeqs(runs: ReadonlyArray<CycleCommandRun>): number[] {
 }
 
 function CycleCommitsSummary({
+  taskId,
   gitContext,
   commits,
 }: {
+  taskId: string;
   gitContext?: CycleGitContext;
   commits: ReadonlyArray<CycleCommit>;
 }) {
@@ -660,7 +663,7 @@ function CycleCommitsSummary({
     >
       <h4 className="task-cycle-row-verdicts-heading">Commits</h4>
       <GitContextMeta context={ctx} />
-      <CommitList commits={commits} />
+      <CommitList taskId={taskId} commits={commits} />
     </section>
   );
 }

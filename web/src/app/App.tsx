@@ -31,6 +31,11 @@ const TaskEventDetailPage = lazy(() =>
     default: m.TaskEventDetailPage,
   })),
 );
+const TaskCommitDiffPage = lazy(() =>
+  import("@/tasks/pages/TaskCommitDiffPage").then((m) => ({
+    default: m.TaskCommitDiffPage,
+  })),
+);
 const SettingsPage = lazy(() =>
   import("@/settings/SettingsPage").then((m) => ({
     default: m.SettingsPage,
@@ -261,6 +266,10 @@ export default function App() {
           <Route
             path="tasks/:taskId/events/:eventSeq"
             element={<TaskEventDetailPage />}
+          />
+          <Route
+            path="tasks/:taskId/commits/:sha"
+            element={<TaskCommitDiffPage />}
           />
           <Route
             path="tasks/:taskId/cycles/:cycleId"

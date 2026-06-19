@@ -3,6 +3,7 @@ import {
   buildGitContextItems,
   normalizeGitPath,
   shortSha,
+  taskCommitDiffPath,
 } from "./commitDisplay";
 
 describe("commitDisplay", () => {
@@ -39,5 +40,11 @@ describe("commitDisplay", () => {
 
   it("shortSha trims to seven characters", () => {
     expect(shortSha("0fc23bf2d0b5d5e8fc0d3638df57ac4de38053c1")).toBe("0fc23bf");
+  });
+
+  it("taskCommitDiffPath encodes task and sha segments", () => {
+    expect(taskCommitDiffPath("task 1", "abc1234")).toBe(
+      "/tasks/task%201/commits/abc1234",
+    );
   });
 });

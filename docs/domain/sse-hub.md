@@ -190,8 +190,8 @@ Constants: [`TaskChangeType`](../../pkgs/tasks/handler/sse.go). Authoritative li
 
 | Type | Typical publisher | Coalesced? | `data` enrichment |
 | --- | --- | --- | --- |
-| `task_created` | HTTP create | Hint-only yes | Often full task tree |
-| `task_updated` | HTTP patch, checklist, etc. | Hint-only yes | Often on PATCH |
+| `task_created` | HTTP create | Hint-only yes | Full task tree |
+| `task_updated` | HTTP patch, checklist, gate, retry | Hint-only yes | Full `domain.Task` on task-row mutations ([ADR-0026](../adr/ADR-0026-backend-data-coherence.md)) |
 | `task_deleted` | HTTP delete | Yes | No |
 | `task_cycle_changed` | Harness via worker adapter | **Never** | Sometimes cycle detail |
 | `agent_run_progress` | Worker progress adapter | **Never** | N/A (progress sub-object) |

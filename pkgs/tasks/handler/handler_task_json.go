@@ -90,6 +90,15 @@ type listResponse struct {
 	HasMore bool          `json:"has_more"`
 }
 
+func buildListResponse(tasks []domain.Task, limit, offset int, hasMore bool) listResponse {
+	return listResponse{
+		Tasks:   tasks,
+		Limit:   limit,
+		Offset:  offset,
+		HasMore: hasMore,
+	}
+}
+
 type taskStatsResponse struct {
 	Total    int64 `json:"total"`
 	Ready    int64 `json:"ready"`

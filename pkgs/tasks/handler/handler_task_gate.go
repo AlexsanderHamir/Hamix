@@ -40,6 +40,6 @@ func (h *Handler) patchTaskGate(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	h.notifyChange(TaskGateChanged, id)
-	h.notifyChange(TaskUpdated, id)
+	h.notifyTaskChanged(TaskUpdated, id, task)
 	writeJSON(w, r, op, http.StatusOK, task)
 }

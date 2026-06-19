@@ -181,7 +181,7 @@ func (h *Handler) list(w http.ResponseWriter, r *http.Request) {
 		)
 		return
 	}
-	writeJSONWithETag(w, r, op, http.StatusOK, listResponse{Tasks: tasks, Limit: limit, Offset: offset, HasMore: hasMore})
+	writeJSONWithETag(w, r, op, http.StatusOK, buildListResponse(tasks, limit, offset, hasMore))
 }
 
 func (h *Handler) stats(w http.ResponseWriter, r *http.Request) {

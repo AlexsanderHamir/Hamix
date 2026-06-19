@@ -25,7 +25,7 @@ Data model semantics: [data-model.md](./data-model.md). Configuration: [configur
 | GET | `/metrics` | Prometheus text. Standard Go / process collectors + `taskapi_build_info` + `taskapi_db_pool_*` + `taskapi_http_*` + `t2a_agent_runs_*` + `taskapi_sse_*` + `taskapi_agent_queue_*`. |
 | GET | `/system/health` | Aggregated JSON for the SPA observability page: build, DB pool gauges, HTTP totals, SSE totals, agent queue + runs + paused. |
 | POST | `/v1/rum` | Browser RUM ingest; one batched line per call, capped fields. |
-| GET | `/v1/bootstrap` | Cold-start aggregate. Returns `{ settings, tasks: {tasks, limit, offset, has_more}, stats, projects: {projects, limit}, automations: {automations, limit}, drafts: {drafts} }` in a single round trip; each field mirrors the corresponding per-endpoint wire shape. Honors `ETag` / `If-None-Match` (`304` on match). 5xx on any sub-call failure; clients must tolerate absence and fall back to per-endpoint fan-out. |
+| GET | `/v1/bootstrap` | Cold-start aggregate. Returns `{ settings, tasks: {tasks, limit, offset, has_more}, stats, projects: {projects, limit}, automations: {automations, limit}, drafts: {drafts} }` in a single round trip; each field mirrors the corresponding per-endpoint wire shape. Default limits match [`readpolicy`](../../pkgs/tasks/handler/readpolicy/readpolicy.go) (`BootstrapListLimit` 20, `BootstrapProjectsLimit` 100, `BootstrapDraftsLimit` 50, `BootstrapAutomationsLimit` 200). Honors `ETag` / `If-None-Match` (`304` on match). 5xx on any sub-call failure; clients must tolerate absence and fall back to per-endpoint fan-out. |
 
 ## Projects
 

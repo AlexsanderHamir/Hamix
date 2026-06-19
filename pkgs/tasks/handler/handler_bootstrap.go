@@ -8,18 +8,14 @@ import (
 
 	"github.com/AlexsanderHamir/T2A/pkgs/tasks/calltrace"
 	"github.com/AlexsanderHamir/T2A/pkgs/tasks/domain"
+	"github.com/AlexsanderHamir/T2A/pkgs/tasks/handler/readpolicy"
 	"github.com/AlexsanderHamir/T2A/pkgs/tasks/store"
 )
 
 // bootstrapTasksPayload mirrors listResponse so the SPA can seed
 // taskQueryKeys.list directly from bootstrap without a follow-up
 // GET /tasks call. The wire shape is identical on purpose.
-type bootstrapTasksPayload struct {
-	Tasks   []domain.Task `json:"tasks"`
-	Limit   int           `json:"limit"`
-	Offset  int           `json:"offset"`
-	HasMore bool          `json:"has_more"`
-}
+type bootstrapTasksPayload = listResponse
 
 // bootstrapDraftsPayload mirrors the GET /task-drafts envelope so the
 // SPA's existing draft list parser consumes it unchanged.
@@ -47,23 +43,6 @@ type bootstrapResponse struct {
 	Automations automationsListResponse `json:"automations"`
 	Drafts      bootstrapDraftsPayload  `json:"drafts"`
 }
-
-// bootstrapDefaultListLimit matches the SPA home-page list fetch
-// (web/src/tasks/hooks/useTasksApp.ts: limit 20). Matching the SPA
-// guarantees the seeded cache is byte-identical to a fresh
-// GET /tasks?limit=20.
-const bootstrapDefaultListLimit = 20
-
-// bootstrapDefaultProjectsLimit matches the SPA's AppShell-level
-// useProjects call (limit 100) — keeps the seeded projects cache
-// useful for the create-task modal and project navigation.
-const bootstrapDefaultProjectsLimit = 100
-
-// bootstrapDefaultDraftsLimit matches useTaskCreateFlow.draftsQuery.
-const bootstrapDefaultDraftsLimit = 50
-
-// bootstrapDefaultAutomationsLimit seeds the SPA automation library cache.
-const bootstrapDefaultAutomationsLimit = 200
 
 // bootstrap serves GET /v1/bootstrap. It composes the five cold-start
 // reads in parallel via errgroup so the SPA can seed its TanStack
@@ -96,7 +75,7 @@ func (h *Handler) bootstrap(w http.ResponseWriter, r *http.Request) {
 		return err
 	})
 	g.Go(func() error {
-		rows, more, err := h.store.ListFlatPage(gctx, bootstrapDefaultListLimit, 0, nil)
+		rows, more, err := h.store.ListFlatPage(gctx, readpolicy.BootstrapListLimit, 0, nil)
 		if err == nil {
 			taskRows = rows
 			hasMore = more
@@ -111,21 +90,21 @@ func (h *Handler) bootstrap(w http.ResponseWriter, r *http.Request) {
 		return err
 	})
 	g.Go(func() error {
-		v, err := h.store.ListProjects(gctx, false, bootstrapDefaultProjectsLimit)
+		v, err := h.store.ListProjects(gctx, false, readpolicy.BootstrapProjectsLimit)
 		if err == nil {
 			projects = v
 		}
 		return err
 	})
 	g.Go(func() error {
-		v, err := h.store.ListAutomations(gctx, false, bootstrapDefaultAutomationsLimit)
+		v, err := h.store.ListAutomations(gctx, false, readpolicy.BootstrapAutomationsLimit)
 		if err == nil {
 			automationRows = v
 		}
 		return err
 	})
 	g.Go(func() error {
-		v, err := h.store.ListDrafts(gctx, bootstrapDefaultDraftsLimit)
+		v, err := h.store.ListDrafts(gctx, readpolicy.BootstrapDraftsLimit)
 		if err == nil {
 			drafts = v
 		}
@@ -138,20 +117,15 @@ func (h *Handler) bootstrap(w http.ResponseWriter, r *http.Request) {
 
 	resp := bootstrapResponse{
 		Settings: settingsResponseFrom(settings),
-		Tasks: bootstrapTasksPayload{
-			Tasks:   taskRows,
-			Limit:   bootstrapDefaultListLimit,
-			Offset:  0,
-			HasMore: hasMore,
-		},
-		Stats: taskStatsResponseFromStore(stats),
+		Tasks:    buildListResponse(taskRows, readpolicy.BootstrapListLimit, 0, hasMore),
+		Stats:    taskStatsResponseFromStore(stats),
 		Projects: projectsListResponse{
 			Projects: projects,
-			Limit:    bootstrapDefaultProjectsLimit,
+			Limit:    readpolicy.BootstrapProjectsLimit,
 		},
 		Automations: automationsListResponse{
 			Automations: automationRows,
-			Limit:       bootstrapDefaultAutomationsLimit,
+			Limit:       readpolicy.BootstrapAutomationsLimit,
 		},
 		Drafts: bootstrapDraftsPayload{Drafts: drafts},
 	}

@@ -95,6 +95,19 @@ func mustEqualEvents(t *testing.T, route string, got, want []string) {
 	}
 }
 
+func mustHaveTaskUpdatedData(t *testing.T, route string, events []TaskChangeEvent, taskID string) {
+	t.Helper()
+	for _, ev := range events {
+		if ev.Type == TaskUpdated && ev.ID == taskID {
+			if ev.Data == nil {
+				t.Fatalf("%s: task_updated:%s missing data enrichment (ADR-0026)", route, taskID)
+			}
+			return
+		}
+	}
+	t.Fatalf("%s: no task_updated:%s in events %v", route, taskID, summarize(events))
+}
+
 // TestHTTP_SSE_triggerSurface pins the SSE trigger table documented in
 // docs/api.md. Each subtest exercises one HTTP write and asserts the exact
 // set of {type,id} events published on the hub. If a future change adds or

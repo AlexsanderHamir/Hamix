@@ -366,8 +366,10 @@ func TestHTTP_postChecklistItem_publishesTaskUpdated(t *testing.T) {
 		t.Fatalf("status %d (want 201) body=%s", res.StatusCode, raw)
 	}
 
-	got := summarize(drainSSE(t, ch, 1, 2*time.Second))
+	events := drainSSE(t, ch, 1, 2*time.Second)
+	got := summarize(events)
 	mustEqualEvents(t, "POST /tasks/{id}/checklist/items", got, []string{"task_updated:" + taskID})
+	mustHaveTaskUpdatedData(t, "POST /tasks/{id}/checklist/items", events, taskID)
 }
 
 // TestHTTP_postChecklistItem_errorPathsNeverPublish pins the negative-side SSE
@@ -550,8 +552,10 @@ func TestHTTP_patchChecklistItem_publishesTaskUpdated(t *testing.T) {
 		t.Fatalf("status %d (want 200) body=%s", res.StatusCode, raw)
 	}
 
-	got := summarize(drainSSE(t, ch, 1, 2*time.Second))
+	events := drainSSE(t, ch, 1, 2*time.Second)
+	got := summarize(events)
 	mustEqualEvents(t, "PATCH /tasks/{id}/checklist/items/{itemId}", got, []string{"task_updated:" + taskID})
+	mustHaveTaskUpdatedData(t, "PATCH /tasks/{id}/checklist/items/{itemId}", events, taskID)
 }
 
 // TestHTTP_patchChecklistItem_errorPathsNeverPublish pins the negative-side SSE
@@ -633,8 +637,10 @@ func TestHTTP_deleteChecklistItem_publishesTaskUpdated(t *testing.T) {
 		t.Fatalf("status %d (want 204) body=%s", res.StatusCode, raw)
 	}
 
-	got := summarize(drainSSE(t, ch, 1, 2*time.Second))
+	events := drainSSE(t, ch, 1, 2*time.Second)
+	got := summarize(events)
 	mustEqualEvents(t, "DELETE /tasks/{id}/checklist/items/{itemId}", got, []string{"task_updated:" + taskID})
+	mustHaveTaskUpdatedData(t, "DELETE /tasks/{id}/checklist/items/{itemId}", events, taskID)
 }
 
 // TestHTTP_deleteChecklistItem_errorPathsNeverPublish pins the negative-side

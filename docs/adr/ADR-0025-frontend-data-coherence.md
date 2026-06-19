@@ -68,5 +68,5 @@ Introduce [`web/src/tasks/mutations/`](../../web/src/tasks/mutations/) — share
 
 ## Related
 
-- [ADR-0022](ADR-0022-task-sync-policy.md), [ADR-0024](ADR-0024-task-create-flow-slice.md)
+- [ADR-0022](ADR-0022-task-sync-policy.md), [ADR-0024](ADR-0024-task-create-flow-slice.md), [ADR-0026](ADR-0026-backend-data-coherence.md)
 - [docs/web.md](../web.md)

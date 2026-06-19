@@ -76,7 +76,10 @@ func (h *Handler) postChecklistItem(w http.ResponseWriter, r *http.Request) {
 		writeStoreError(w, r, op, err)
 		return
 	}
-	h.notifyChange(TaskUpdated, id)
+	if err := h.notifyTaskUpdatedEnriched(r.Context(), id); err != nil {
+		writeStoreError(w, r, op, err)
+		return
+	}
 	writeJSON(w, r, op, http.StatusCreated, it)
 }
 
@@ -180,7 +183,10 @@ func (h *Handler) patchChecklistItem(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 	}
-	h.notifyChange(TaskUpdated, taskID)
+	if err := h.notifyTaskUpdatedEnriched(r.Context(), taskID); err != nil {
+		writeStoreError(w, r, op, err)
+		return
+	}
 	items, err := h.store.ListChecklistForSubject(r.Context(), taskID)
 	if err != nil {
 		writeStoreError(w, r, op, err)
@@ -216,7 +222,10 @@ func (h *Handler) deleteChecklistItem(w http.ResponseWriter, r *http.Request) {
 		writeStoreError(w, r, op, err)
 		return
 	}
-	h.notifyChange(TaskUpdated, id)
+	if err := h.notifyTaskUpdatedEnriched(r.Context(), id); err != nil {
+		writeStoreError(w, r, op, err)
+		return
+	}
 	debugHTTPOut(r.Context(), op, http.StatusNoContent, "task_id", id, "item_id", itemID, "response_empty", true)
 	w.WriteHeader(http.StatusNoContent)
 }

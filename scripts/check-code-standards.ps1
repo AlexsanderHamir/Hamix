@@ -85,6 +85,24 @@ if (Test-Path $handlerRoot) {
     }
 }
 
+# Go: readpolicy/writepolicy pure subpackages must not import HTTP or DB stack.
+$policyDirs = @(
+    (Join-Path $handlerRoot "readpolicy"),
+    (Join-Path $handlerRoot "writepolicy")
+)
+foreach ($dir in $policyDirs) {
+    if (-not (Test-Path $dir)) { continue }
+    $policyFiles = Get-ChildItem -Path $dir -Filter *.go -File |
+        Where-Object { $_.Name -notmatch '_test\.go$' }
+    foreach ($f in $policyFiles) {
+        $text = Get-Content -LiteralPath $f.FullName -Raw
+        if ($text -match 'database/sql|jackc/pgx|gorm\.io/gorm|net/http') {
+            Write-Host "VIOLATION: handler policy subpackage imports HTTP/DB: $($f.FullName)" -ForegroundColor Red
+            $failed = $true
+        }
+    }
+}
+
 # TypeScript: mutations pure modules must not import React.
 $mutationsRoot = Join-Path $srcRoot (Join-Path "tasks" "mutations")
 if (Test-Path $mutationsRoot) {

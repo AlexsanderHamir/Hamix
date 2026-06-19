@@ -57,6 +57,7 @@ Cursor rules are grouped by purpose under `.cursor/rules/`: shared structure and
 | Web SPA | `web/` | Vite + React; `fetch` only under `web/src/api/`; import `@/types`, `@/api`. Task UI under `web/src/tasks/components/` groups families with per-folder `index.ts` barrels — see [docs/web.md](docs/web.md). Global styles: `web/src/app/App.css` `@import`s partials under `web/src/app/styles/`. |
 | Task create flow (Decide) | `web/src/tasks/create/` | Create modal policy, draft autosave, mutations; ADR-0024. UI in `task-create-modal/`; public hook via `hooks/useTaskCreateFlow.ts` shim. |
 | Frontend data coherence | `web/src/tasks/queryPolicy.ts`, `tasks/mutations/`, `tasks/checklist/`, `tasks/app/` | Query staleTime tiers, guarded mutations, checklist slice, TasksAppProvider; ADR-0025. |
+| Backend data coherence | `pkgs/tasks/handler/readpolicy/`, `writepolicy/`, `handler_writepolicy.go` | Bootstrap read limits, commit-then-notify enriched SSE; ADR-0026. |
 
 API contracts (paths, query params, JSON shapes) are authoritative in [docs/api.md](docs/api.md) (and `pkgs/tasks/handler/` godoc for exhaustive behavior). [docs/architecture.md](docs/architecture.md) is the system overview.
 

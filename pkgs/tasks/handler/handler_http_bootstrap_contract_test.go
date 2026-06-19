@@ -5,6 +5,8 @@ import (
 	"io"
 	"net/http"
 	"testing"
+
+	"github.com/AlexsanderHamir/T2A/pkgs/tasks/handler/readpolicy"
 )
 
 func TestHTTP_bootstrap_returns_aggregate_envelope(t *testing.T) {
@@ -48,8 +50,8 @@ func TestHTTP_bootstrap_returns_aggregate_envelope(t *testing.T) {
 	if err := json.Unmarshal(body["tasks"], &tasksPayload); err != nil {
 		t.Fatalf("decode tasks payload: %v", err)
 	}
-	if tasksPayload.Limit != bootstrapDefaultListLimit {
-		t.Errorf("tasks.limit = %d, want %d", tasksPayload.Limit, bootstrapDefaultListLimit)
+	if tasksPayload.Limit != readpolicy.BootstrapListLimit {
+		t.Errorf("tasks.limit = %d, want %d", tasksPayload.Limit, readpolicy.BootstrapListLimit)
 	}
 }
 

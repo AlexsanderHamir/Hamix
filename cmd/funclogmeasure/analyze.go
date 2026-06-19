@@ -124,7 +124,6 @@ var skipSlogRequirement = map[string]struct{}{
 	// sink is configured would emit on stderr before the file exists
 	// (see the in-file comment).
 	"github.com/AlexsanderHamir/T2A/cmd/taskapi\tmain": {},
-	"github.com/AlexsanderHamir/T2A/cmd/resumequality\tmain": {},
 	// pkgs/tasks/handler/httplog_io.go: pure attribute-builder helpers
 	// for the http.io trace line. The actual slog.Log call lives on the
 	// calling function (logHTTPRequest / logHTTPResponse); these helpers

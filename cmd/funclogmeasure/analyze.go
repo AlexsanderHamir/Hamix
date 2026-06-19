@@ -347,7 +347,12 @@ var skipSlogRequirement = map[string]struct{}{
 	"github.com/AlexsanderHamir/T2A/pkgs/tasks/handler\twriteBufferedEvent":                                {},
 	"github.com/AlexsanderHamir/T2A/pkgs/tasks/handler\twriteResyncFrame":                                  {},
 	"github.com/AlexsanderHamir/T2A/cmd/taskapi\tresolveTaskAPILogDir":                                     {},
-	"github.com/AlexsanderHamir/T2A/internal/taskapi/agentworker\trunProgressSSEAdapter.shouldDrop":                        {},
+	"github.com/AlexsanderHamir/T2A/internal/taskapi/agentworker\t*runProgressSSEAdapter.shouldDrop":                        {},
+	"github.com/AlexsanderHamir/T2A/internal/taskapi/agentworker/policy\tDecideSchedulingIdleHint":                        {},
+	"github.com/AlexsanderHamir/T2A/internal/taskapi/agentworker/policy\tDecideIdle":                                        {},
+	"github.com/AlexsanderHamir/T2A/internal/taskapi/agentworker/policy\tInstanceMatchesSettings":                           {},
+	"github.com/AlexsanderHamir/T2A/internal/taskapi/agentworker/policy\tVerifyRunnerStatus":                                {},
+	"github.com/AlexsanderHamir/T2A/internal/taskapi/agentworker\tinstanceSnapshot":                                         {},
 	"github.com/AlexsanderHamir/T2A/internal/taskapi/agentworker\t*Supervisor.loadApplySettingsSnapshot":         {},
 	"github.com/AlexsanderHamir/T2A/internal/taskapi/agentworker\tbaseEffectiveSettings":                                    {},
 	"github.com/AlexsanderHamir/T2A/internal/taskapi/agentworker\t*Supervisor.finishApplySettings":               {},
@@ -356,6 +361,14 @@ var skipSlogRequirement = map[string]struct{}{
 	"github.com/AlexsanderHamir/T2A/internal/taskapi/agentworker\t*Supervisor.probeExecuteRunner":                {},
 	"github.com/AlexsanderHamir/T2A/internal/taskapi/agentworker\tverifyRunnerStatusForInstance":                            {},
 	"github.com/AlexsanderHamir/T2A/internal/taskapi/agentworker\t*Supervisor.handleApplySettingsUnchanged":      {},
+	"github.com/AlexsanderHamir/T2A/internal/taskapi/agentworker\t*Supervisor.HasRunningInstance":               {},
+	"github.com/AlexsanderHamir/T2A/internal/taskapi/agentworker\t*Supervisor.RunningInstanceIdentity":           {},
+	"github.com/AlexsanderHamir/T2A/internal/taskapi/agentworker\t*Supervisor.RunningInstanceRepoRoot":           {},
+	"github.com/AlexsanderHamir/T2A/internal/taskapi/agentworker\t*Supervisor.RunningInstanceRunnerVersion":     {},
+	"github.com/AlexsanderHamir/T2A/internal/taskapi/agentworker\t*Supervisor.SetProbeForTest":                  {},
+	"github.com/AlexsanderHamir/T2A/internal/taskapi/agentworker\t*Supervisor.SetProbeBudgetForTest":            {},
+	"github.com/AlexsanderHamir/T2A/internal/taskapi/agentworker\t*Supervisor.BuildVerifyRunnerForTest":           {},
+	"github.com/AlexsanderHamir/T2A/internal/taskapi/agentworker\t*Supervisor.ProbeSchedulingHintForTest":         {},
 
 	// Session 41 — Projects / project-context vertical slice. Same categories
 	// as existing skips: GORM TableName constant returns (reflection-time only;

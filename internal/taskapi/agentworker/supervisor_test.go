@@ -1,4 +1,4 @@
-package main
+package agentworker_test
 
 import (
 	"context"
@@ -361,31 +361,6 @@ func ptrBool(v bool) *bool           { return &v }
 func ptrString(v string) *string     { return &v }
 func ptrTime(v time.Time) *time.Time { return &v }
 
-func TestDecideSchedulingIdleHint_unitTable(t *testing.T) {
-	t.Parallel()
-	cases := []struct {
-		name           string
-		queueEmpty     bool
-		scheduledCount int64
-		want           string
-	}{
-		{"queue-non-empty/some-scheduled", false, 5, ""},
-		{"queue-non-empty/no-scheduled", false, 0, ""},
-		{"queue-empty/some-scheduled", true, 1, policy.SchedulingIdleHintReason},
-		{"queue-empty/many-scheduled", true, 42, policy.SchedulingIdleHintReason},
-		{"queue-empty/no-scheduled", true, 0, ""},
-		{"queue-empty/negative-defensive", true, -1, ""},
-	}
-	for _, c := range cases {
-		t.Run(c.name, func(t *testing.T) {
-			if got := policy.DecideSchedulingIdleHint(c.queueEmpty, c.scheduledCount); got != c.want {
-				t.Fatalf("DecideSchedulingIdleHint(%v, %d) = %q, want %q",
-					c.queueEmpty, c.scheduledCount, got, c.want)
-			}
-		})
-	}
-}
-
 func TestSupervisor_probeSchedulingHint_emitsAwaitingScheduledTask(t *testing.T) {
 	t.Parallel()
 	ctx, cancel := context.WithCancel(context.Background())
@@ -502,35 +477,5 @@ func TestSupervisor_buildVerifyRunner_reuseExecuteRunnerWhenSameName(t *testing.
 	})
 	if r != nil || status != "reuse_execute_runner" {
 		t.Fatalf("buildVerifyRunner(same name) = (%v, %q), want (nil, reuse_execute_runner)", r, status)
-	}
-}
-
-func TestInstanceMatchesSettings_restartsOnVerifyRunnerChange(t *testing.T) {
-	t.Parallel()
-	prev := &policy.InstanceSnapshot{
-		Settings: store.AppSettings{
-			Runner:            "cursor",
-			VerifyRunnerName:  "claudecode",
-			VerifyRunnerModel: "opus",
-			RepoRoot:          "/x",
-		},
-	}
-	matches := policy.InstanceMatchesSettings(prev, store.AppSettings{
-		Runner:            "cursor",
-		VerifyRunnerName:  "claudecode",
-		VerifyRunnerModel: "sonnet-4.5",
-		RepoRoot:          "/x",
-	}, "")
-	if matches {
-		t.Fatal("expected restart trigger on VerifyRunnerModel change")
-	}
-	matches = policy.InstanceMatchesSettings(prev, store.AppSettings{
-		Runner:            "cursor",
-		VerifyRunnerName:  "cursor",
-		VerifyRunnerModel: "opus",
-		RepoRoot:          "/x",
-	}, "")
-	if matches {
-		t.Fatal("expected restart trigger on VerifyRunnerName change")
 	}
 }

@@ -8,7 +8,8 @@ The **`taskapi`** HTTP server binary (`package main`). Contracts and env tables:
 |------|------|
 | `main.go` | `main()` → `run()`; process-wide HTTP server constants (read header/read/idle timeouts, shutdown, max headers). |
 | `run.go` | Flag parse, `.env` preload, JSON log bootstrap (**`pkgs/tasks/logctx`** wraps the JSON `slog` handler), DB open/migrate, store + SSE hub + optional repo, agent queue + reconcile goroutine, **`internal/taskapi.NewHTTPHandler`**, devsim ticker, mux (`/` + `GET /metrics`), `ListenAndServe`, graceful shutdown. |
-| `run_helpers.go` | `emitTaskAPIFileLoggingConfig` (structured line after JSON handler is live). |
+| `run_helpers.go` | `buildTaskAPIApp`, `runTaskAPIService`, startup config log helpers. |
+| `run_agentworker.go` | Queue + reconcile + pickup wake boot; **`internal/taskapi/agentworker`** supervisor `New` + `Start`. |
 | `logfile.go` | Create log directory and open per-run `taskapi-*.jsonl` (`-logdir` / `T2A_LOG_DIR`). |
 | `logging_startup_test.go` | Logging config line shape. |
 | `logfile_test.go` | Log path / directory behavior. |
@@ -19,7 +20,7 @@ The **`taskapi`** HTTP server binary (`package main`). Contracts and env tables:
 |---------|------|
 | [`internal/envload`](../../internal/envload) | Resolve and load `.env`; require `DATABASE_URL`. |
 | [`internal/taskapiconfig`](../../internal/taskapiconfig) | Listen host, log level, minimized logging, agent queue cap, dev SSE ticker interval. Reconcile tick: [`pkgs/agents`](../../pkgs/agents) `ReconcileTickInterval`. |
-| [`internal/taskapi`](../../internal/taskapi) | `NewHTTPHandler` → `middleware.Stack(handler.NewHandler(...), calltrace.Path)` (`pkgs/tasks/middleware/stack.go` defines the `With*` order). |
+| [`internal/taskapi`](../../internal/taskapi) | `NewHTTPHandler` → `middleware.Stack(handler.NewHandler(...), calltrace.Path)`; agent worker metrics. Supervisor: [`internal/taskapi/agentworker`](../../internal/taskapi/agentworker). |
 | [`pkgs/tasks/postgres`](../../pkgs/tasks/postgres) | GORM open + `AutoMigrate`. |
 | [`pkgs/tasks/store`](../../pkgs/tasks/store) | Persistence; `SetReadyTaskNotifier` for the agent queue. |
 | [`pkgs/tasks/handler`](../../pkgs/tasks/handler) | REST + SSE inner mux; see [`handler/README.md`](../../pkgs/tasks/handler/README.md). |

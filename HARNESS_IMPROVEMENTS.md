@@ -61,7 +61,7 @@ Passes run against [HARNESS_LANDSCAPE.md](HARNESS_LANDSCAPE.md), [docs/domain/ha
 
 | | |
 | --- | --- |
-| **Status** | Shipped — [ADR-0028](docs/adr/ADR-0028-in-cycle-verify-only-retry.md), commit `9b9bc2c` |
+| **Status** | Shipped — [ADR-0028](docs/adr/ADR-0028-in-cycle-verify-only-retry.md), commit `c01e3fe` |
 | **ROI_score** | ~4.1 |
 | **Problem** | Any verify failure triggers a full execute phase (`runner.Run`), even when execute succeeded, commits ingested, and `criteria-report.json` is still valid. Wastes tokens and time ([HARNESS_LANDSCAPE.md](HARNESS_LANDSCAPE.md) PEV gap; validated in [`cycle_loop.go`](pkgs/agents/harness/cycle_loop.go)). |
 | **Proposed change** | Extend orchestration: on retryable verify failure, if execute artifacts + commit ingest are still valid, set `skipFirstExecute` (same branch as `resumeEntryAfterExecuteSuccess`) and only re-run verify. Preserve locked `previouslyPassed`. |

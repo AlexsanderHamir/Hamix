@@ -282,6 +282,13 @@ func (s *agentWorkerSupervisor) Drain() {
 	stopWorkerInstance(inst, "shutdown")
 }
 
+// applySettingsSnapshot is the supervisor state read at the start of
+// applySettings before any long-running probe/build work.
+type applySettingsSnapshot struct {
+	cfg  store.AppSettings
+	prev *agentWorkerInstance
+}
+
 // applySettings is the shared implementation behind Start and Reload.
 // Reads settings, decides whether to spawn / replace / stop the worker,
 // publishes a settings_changed SSE event so the SPA refreshes, and
@@ -300,86 +307,119 @@ func (s *agentWorkerSupervisor) applySettings(ctx context.Context, phase string)
 	// concurrent Reloads to both spawn workers and leak one).
 	s.applyMu.Lock()
 	defer s.applyMu.Unlock()
+
+	snap, err := s.loadApplySettingsSnapshot(ctx)
+	if err != nil {
+		return err
+	}
+
+	if idle, reason := decideIdle(snap.cfg); idle {
+		return s.handleApplySettingsIdle(phase, snap.cfg, snap.prev, reason)
+	}
+
+	version, probeErr := s.probeExecuteRunner(ctx, snap.cfg)
+	if probeErr != nil {
+		return s.handleApplySettingsProbeFailed(phase, snap.cfg, snap.prev, probeErr)
+	}
+
+	if snap.prev != nil && instanceMatchesSettings(snap.prev, snap.cfg, version) {
+		return s.handleApplySettingsUnchanged(ctx, phase, snap.cfg, snap.prev, version)
+	}
+
+	return s.restartWorkerWithSettings(ctx, phase, snap.cfg, snap.prev, version)
+}
+
+func (s *agentWorkerSupervisor) loadApplySettingsSnapshot(ctx context.Context) (*applySettingsSnapshot, error) {
 	cfg, err := s.store.GetSettings(ctx)
 	if err != nil {
-		return fmt.Errorf("agent worker supervisor: read settings: %w", err)
+		return nil, fmt.Errorf("agent worker supervisor: read settings: %w", err)
 	}
 
 	s.mu.Lock()
 	if s.drained {
 		s.mu.Unlock()
-		return errors.New("agent worker supervisor: already drained")
+		return nil, errors.New("agent worker supervisor: already drained")
 	}
 	prev := s.current
 	s.mu.Unlock()
 
-	idle, reason := decideIdle(cfg)
-	if idle {
-		stopWorkerInstance(prev, "idle:"+reason)
-		s.mu.Lock()
-		if !s.drained {
-			s.current = nil
-		}
-		s.mu.Unlock()
-		s.logEffective(phase, effectiveSettingsLog{
-			AgentPaused: cfg.AgentPaused,
-			Runner:      cfg.Runner,
-			RepoRoot:    cfg.RepoRoot, CursorBin: cfg.CursorBin,
-			CursorModel:           cfg.CursorModel,
-			MaxRunDurationSeconds: cfg.MaxRunDurationSeconds,
-			Idle:                  true, IdleReason: reason,
-		})
-		s.publishSettingsChanged()
-		return nil
-	}
+	return &applySettingsSnapshot{cfg: cfg, prev: prev}, nil
+}
 
+func baseEffectiveSettings(cfg store.AppSettings) effectiveSettingsLog {
+	return effectiveSettingsLog{
+		AgentPaused:           cfg.AgentPaused,
+		Runner:                cfg.Runner,
+		RepoRoot:              cfg.RepoRoot,
+		CursorBin:             cfg.CursorBin,
+		CursorModel:           cfg.CursorModel,
+		MaxRunDurationSeconds: cfg.MaxRunDurationSeconds,
+	}
+}
+
+func (s *agentWorkerSupervisor) finishApplySettings(phase string, eff effectiveSettingsLog) {
+	s.logEffective(phase, eff)
+	s.publishSettingsChanged()
+}
+
+func (s *agentWorkerSupervisor) clearCurrentInstance(prev *agentWorkerInstance, stopReason string) {
+	stopWorkerInstance(prev, stopReason)
+	s.mu.Lock()
+	if !s.drained {
+		s.current = nil
+	}
+	s.mu.Unlock()
+}
+
+func (s *agentWorkerSupervisor) handleApplySettingsIdle(phase string, cfg store.AppSettings, prev *agentWorkerInstance, reason string) error {
+	s.clearCurrentInstance(prev, "idle:"+reason)
+	eff := baseEffectiveSettings(cfg)
+	eff.Idle = true
+	eff.IdleReason = reason
+	s.finishApplySettings(phase, eff)
+	return nil
+}
+
+func (s *agentWorkerSupervisor) probeExecuteRunner(ctx context.Context, cfg store.AppSettings) (string, error) {
 	probeCtx, cancel := context.WithTimeout(ctx, s.probeBudge)
+	defer cancel()
 	version, _, probeErr := s.probe(probeCtx, cfg.Runner, cfg.CursorBin, s.probeBudge)
-	cancel()
-	if probeErr != nil {
-		stopWorkerInstance(prev, "probe_failed")
-		s.mu.Lock()
-		if !s.drained {
-			s.current = nil
-		}
-		s.mu.Unlock()
-		slog.Warn("agent worker probe failed; staying idle", "cmd", cmdName,
-			"operation", "taskapi.agent_worker.probe_err", "phase", phase,
-			"runner", cfg.Runner, "binary", cfg.CursorBin, "err", probeErr)
-		s.logEffective(phase, effectiveSettingsLog{
-			AgentPaused: cfg.AgentPaused,
-			Runner:      cfg.Runner,
-			RepoRoot:    cfg.RepoRoot, CursorBin: cfg.CursorBin,
-			CursorModel:           cfg.CursorModel,
-			MaxRunDurationSeconds: cfg.MaxRunDurationSeconds,
-			Idle:                  true, IdleReason: "probe_failed",
-		})
-		s.publishSettingsChanged()
-		return nil
-	}
+	return version, probeErr
+}
 
-	if prev != nil && instanceMatchesSettings(prev, cfg, version) {
-		prevStatus := ""
-		if prev.verifyRunner != nil {
-			prevStatus = "ok"
-		} else if cfg.VerifyRunnerName == cfg.Runner && cfg.VerifyRunnerName != "" {
-			prevStatus = "reuse_execute_runner"
-		}
-		s.logEffective(phase, effectiveSettingsLog{
-			AgentPaused: cfg.AgentPaused,
-			Runner:      cfg.Runner,
-			RepoRoot:    cfg.RepoRoot, CursorBin: cfg.CursorBin,
-			CursorModel:           cfg.CursorModel,
-			MaxRunDurationSeconds: cfg.MaxRunDurationSeconds,
-			RunnerVersion:         version,
-			IdleReason:            s.probeSchedulingHint(ctx),
-			VerifyRunner:          cfg.VerifyRunnerName,
-			VerifyRunnerStatus:    prevStatus,
-		})
-		s.publishSettingsChanged()
-		return nil
-	}
+func (s *agentWorkerSupervisor) handleApplySettingsProbeFailed(phase string, cfg store.AppSettings, prev *agentWorkerInstance, probeErr error) error {
+	s.clearCurrentInstance(prev, "probe_failed")
+	slog.Warn("agent worker probe failed; staying idle", "cmd", cmdName,
+		"operation", "taskapi.agent_worker.probe_err", "phase", phase,
+		"runner", cfg.Runner, "binary", cfg.CursorBin, "err", probeErr)
+	eff := baseEffectiveSettings(cfg)
+	eff.Idle = true
+	eff.IdleReason = "probe_failed"
+	s.finishApplySettings(phase, eff)
+	return nil
+}
 
+func verifyRunnerStatusForInstance(prev *agentWorkerInstance, cfg store.AppSettings) string {
+	if prev.verifyRunner != nil {
+		return "ok"
+	}
+	if cfg.VerifyRunnerName == cfg.Runner && cfg.VerifyRunnerName != "" {
+		return "reuse_execute_runner"
+	}
+	return ""
+}
+
+func (s *agentWorkerSupervisor) handleApplySettingsUnchanged(ctx context.Context, phase string, cfg store.AppSettings, prev *agentWorkerInstance, version string) error {
+	eff := baseEffectiveSettings(cfg)
+	eff.RunnerVersion = version
+	eff.IdleReason = s.probeSchedulingHint(ctx)
+	eff.VerifyRunner = cfg.VerifyRunnerName
+	eff.VerifyRunnerStatus = verifyRunnerStatusForInstance(prev, cfg)
+	s.finishApplySettings(phase, eff)
+	return nil
+}
+
+func (s *agentWorkerSupervisor) restartWorkerWithSettings(ctx context.Context, phase string, cfg store.AppSettings, prev *agentWorkerInstance, version string) error {
 	if err := s.runStartupSweep(ctx); err != nil {
 		slog.Warn("agent worker startup sweep failed (continuing)",
 			"cmd", cmdName, "operation", "taskapi.agent_worker.sweep_err",
@@ -392,15 +432,34 @@ func (s *agentWorkerSupervisor) applySettings(ctx context.Context, phase string)
 		CursorModel: cfg.CursorModel,
 	})
 	if err != nil {
-		stopWorkerInstance(prev, "build_failed")
-		s.mu.Lock()
-		if !s.drained {
-			s.current = nil
-		}
-		s.mu.Unlock()
+		s.clearCurrentInstance(prev, "build_failed")
 		return fmt.Errorf("agent worker build runner %q: %w", cfg.Runner, err)
 	}
 
+	next, verifyStatus := s.spawnWorkerInstance(ctx, cfg, r)
+
+	s.mu.Lock()
+	if s.drained {
+		s.mu.Unlock()
+		next.cancelCtx()
+		<-next.doneCh
+		return errors.New("agent worker supervisor: drained mid-start")
+	}
+	s.current = next
+	s.mu.Unlock()
+
+	stopWorkerInstance(prev, "reload")
+
+	eff := baseEffectiveSettings(cfg)
+	eff.RunnerVersion = version
+	eff.IdleReason = s.probeSchedulingHint(ctx)
+	eff.VerifyRunner = cfg.VerifyRunnerName
+	eff.VerifyRunnerStatus = verifyStatus
+	s.finishApplySettings(phase, eff)
+	return nil
+}
+
+func (s *agentWorkerSupervisor) spawnWorkerInstance(ctx context.Context, cfg store.AppSettings, r runner.Runner) (*agentWorkerInstance, string) {
 	runTimeout := time.Duration(cfg.MaxRunDurationSeconds) * time.Second
 	notifier := newCycleChangeSSEAdapter(s.hub)
 	progressNotifier := newRunProgressSSEAdapter(s.hub, agentRunProgressMinInterval)
@@ -436,37 +495,11 @@ func (s *agentWorkerSupervisor) applySettings(ctx context.Context, phase string)
 		}
 	}()
 
-	next := &agentWorkerInstance{
+	return &agentWorkerInstance{
 		worker: w, cancelCtx: cancelWorker, doneCh: done,
 		runTimeout: runTimeout, settings: cfg, runner: r,
 		verifyRunner: verifyRunner,
-	}
-
-	s.mu.Lock()
-	if s.drained {
-		s.mu.Unlock()
-		cancelWorker()
-		<-done
-		return errors.New("agent worker supervisor: drained mid-start")
-	}
-	s.current = next
-	s.mu.Unlock()
-
-	stopWorkerInstance(prev, "reload")
-
-	s.logEffective(phase, effectiveSettingsLog{
-		AgentPaused: cfg.AgentPaused,
-		Runner:      cfg.Runner,
-		RepoRoot:    cfg.RepoRoot, CursorBin: cfg.CursorBin,
-		CursorModel:           cfg.CursorModel,
-		MaxRunDurationSeconds: cfg.MaxRunDurationSeconds,
-		RunnerVersion:         version,
-		IdleReason:            s.probeSchedulingHint(ctx),
-		VerifyRunner:          cfg.VerifyRunnerName,
-		VerifyRunnerStatus:    verifyStatus,
-	})
-	s.publishSettingsChanged()
-	return nil
+	}, verifyStatus
 }
 
 // buildVerifyRunner returns the verify-pass runner the worker should

@@ -31,37 +31,24 @@ export function TaskCommitsPanel({ taskId, enabled = true }: Props) {
     };
   }, [commits]);
 
-  const commitCount = commits.length;
-
   return (
     <section
       className="task-detail-section task-commits-panel"
       data-testid="task-commits-panel"
       aria-labelledby="task-commits-heading"
     >
-      <header className="task-commits-panel-header">
-        <div className="task-commits-panel-intro">
-          <div className="task-commits-panel-title-row">
-            <h2 id="task-commits-heading" className="task-detail-section-heading">
-              Git commits
-            </h2>
-            {!commitsQuery.isPending && commitCount > 0 ? (
-              <span className="task-commits-count" aria-label={`${commitCount} commits`}>
-                {commitCount}
-              </span>
-            ) : null}
-          </div>
-          <p className="task-detail-section-hint task-commits-panel-hint">
-            Commits indexed across all execution attempts. Eligible commits passed
-            execute gates and were admitted for verify.
-          </p>
-        </div>
-      </header>
+      <h3 id="task-commits-heading" className="task-detail-section-heading">
+        Git commits
+      </h3>
+      <p className="task-detail-section-hint">
+        Commits indexed across all execution attempts. Eligible commits passed
+        execute gates and were admitted for verify.
+      </p>
 
       {commitsQuery.isPending ? (
         <CommitsLoading />
       ) : commitsQuery.isError ? (
-        <div className="task-commits-error err" role="alert">
+        <div className="err" role="alert">
           <p>
             {errorMessage(
               commitsQuery.error,
@@ -89,10 +76,10 @@ export function TaskCommitsPanel({ taskId, enabled = true }: Props) {
           className="task-detail-section-empty empty-state--compact"
         />
       ) : (
-        <div className="task-commits-board">
+        <>
           {gitContext ? <GitContextMeta context={gitContext} /> : null}
           <CommitList commits={commits} showAttempt />
-        </div>
+        </>
       )}
     </section>
   );

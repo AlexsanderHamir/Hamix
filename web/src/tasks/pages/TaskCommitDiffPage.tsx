@@ -94,6 +94,7 @@ export function TaskCommitDiffPage() {
             <CommitStatusBadge
               status={commit.status}
               gateReason={commit.gate_reason}
+              sourceCycleId={commit.source_cycle_id}
             />
           ) : null}
         </div>

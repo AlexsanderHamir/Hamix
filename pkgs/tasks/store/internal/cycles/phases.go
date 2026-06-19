@@ -75,6 +75,13 @@ func StartPhase(ctx context.Context, db *gorm.DB, cycleID string, phase domain.P
 			return err
 		}
 		now := time.Now().UTC()
+		runCorrelationID := uuid.NewString()
+		startDetails, err := json.Marshal(map[string]string{
+			domain.PhaseDetailsRunCorrelationID: runCorrelationID,
+		})
+		if err != nil {
+			return fmt.Errorf("marshal phase start details: %w", err)
+		}
 		row := &domain.TaskCyclePhase{
 			ID:          uuid.NewString(),
 			CycleID:     cycle.ID,
@@ -82,7 +89,7 @@ func StartPhase(ctx context.Context, db *gorm.DB, cycleID string, phase domain.P
 			PhaseSeq:    nextSeq,
 			Status:      domain.PhaseStatusRunning,
 			StartedAt:   now,
-			DetailsJSON: datatypes.JSON([]byte("{}")),
+			DetailsJSON: datatypes.JSON(startDetails),
 		}
 		if err := tx.Omit("Cycle").Create(row).Error; err != nil {
 			return fmt.Errorf("insert task_cycle_phase: %w", err)
@@ -155,11 +162,15 @@ func CompletePhase(ctx context.Context, db *gorm.DB, in CompletePhaseInput) (*do
 		if domain.TerminalPhaseStatus(ph.Status) {
 			return fmt.Errorf("%w: phase already terminal", domain.ErrInvalidInput)
 		}
+		mergedDetails, err := mergePhaseDetailsJSON(ph.DetailsJSON, details)
+		if err != nil {
+			return fmt.Errorf("merge phase details: %w", err)
+		}
 		now := time.Now().UTC()
 		updates := map[string]any{
 			"status":       in.Status,
 			"ended_at":     now,
-			"details_json": datatypes.JSON(details),
+			"details_json": datatypes.JSON(mergedDetails),
 		}
 		if in.Summary != nil {
 			updates["summary"] = *in.Summary
@@ -169,7 +180,7 @@ func CompletePhase(ctx context.Context, db *gorm.DB, in CompletePhaseInput) (*do
 		}
 		ph.Status = in.Status
 		ph.EndedAt = &now
-		ph.DetailsJSON = datatypes.JSON(details)
+		ph.DetailsJSON = datatypes.JSON(mergedDetails)
 		if in.Summary != nil {
 			s := *in.Summary
 			ph.Summary = &s
@@ -237,6 +248,39 @@ func loadPhaseByCycleSeqInTx(tx *gorm.DB, cycleID string, phaseSeq int64) (*doma
 	return &p, nil
 }
 
+// mergePhaseDetailsJSON shallow-merges incoming details over existing
+// details_json. run_correlation_id from the existing row is never dropped
+// (ADR-0030).
+//
+//funclogmeasure:skip category=hot-path reason="Pure merge helper without I/O; operation trace is emitted by CompletePhase."
+func mergePhaseDetailsJSON(existing datatypes.JSON, incoming []byte) ([]byte, error) {
+	base := map[string]any{}
+	if len(existing) > 0 {
+		if err := json.Unmarshal(existing, &base); err != nil {
+			return nil, fmt.Errorf("unmarshal existing details: %w", err)
+		}
+	}
+	preservedID := domain.RunCorrelationIDFromDetailsJSON(existing)
+
+	patch := map[string]any{}
+	if len(incoming) > 0 {
+		if err := json.Unmarshal(incoming, &patch); err != nil {
+			return nil, fmt.Errorf("unmarshal incoming details: %w", err)
+		}
+	}
+	for k, v := range patch {
+		base[k] = v
+	}
+	if preservedID != "" {
+		base[domain.PhaseDetailsRunCorrelationID] = preservedID
+	}
+	out, err := json.Marshal(base)
+	if err != nil {
+		return nil, fmt.Errorf("marshal merged details: %w", err)
+	}
+	return out, nil
+}
+
 func assertNoRunningPhaseForCycleInTx(tx *gorm.DB, cycleID string) error {
 	slog.Debug("trace", "cmd", logCmd, "operation", "tasks.store.cycles.assertNoRunningPhaseForCycleInTx")
 	var n int64
@@ -281,6 +325,9 @@ func phaseStartedPayload(cycleID string, p *domain.TaskCyclePhase) ([]byte, erro
 		"cycle_id":  cycleID,
 		"phase":     string(p.Phase),
 		"phase_seq": p.PhaseSeq,
+	}
+	if id := domain.RunCorrelationIDFromDetailsJSON(p.DetailsJSON); id != "" {
+		out[domain.PhaseDetailsRunCorrelationID] = id
 	}
 	b, err := json.Marshal(out)
 	if err != nil {

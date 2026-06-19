@@ -513,8 +513,64 @@ func TestStore_CompletePhase_updates_summary_and_details(t *testing.T) {
 	if out.Summary == nil || *out.Summary != summary {
 		t.Fatalf("summary = %v", out.Summary)
 	}
-	if string(out.DetailsJSON) != `{"files":3}` {
-		t.Fatalf("details = %q", string(out.DetailsJSON))
+	startID := domain.RunCorrelationIDFromDetailsJSON(d.DetailsJSON)
+	if startID == "" {
+		t.Fatal("StartPhase did not mint run_correlation_id")
+	}
+	gotID := domain.RunCorrelationIDFromDetailsJSON(out.DetailsJSON)
+	if gotID != startID {
+		t.Fatalf("run_correlation_id after complete = %q, want %q", gotID, startID)
+	}
+	var details map[string]any
+	if err := json.Unmarshal(out.DetailsJSON, &details); err != nil {
+		t.Fatal(err)
+	}
+	if details["files"] != float64(3) {
+		t.Fatalf("details files = %v", details["files"])
+	}
+}
+
+func TestStore_StartPhase_mints_run_correlation_id(t *testing.T) {
+	s, ctx := newCycleStore(t)
+	tsk := mustCreateTask(t, s, ctx)
+	c, err := s.StartCycle(ctx, StartCycleInput{TaskID: tsk.ID, TriggeredBy: domain.ActorAgent})
+	if err != nil {
+		t.Fatal(err)
+	}
+	ph, err := s.StartPhase(ctx, c.ID, domain.PhaseExecute, domain.ActorAgent)
+	if err != nil {
+		t.Fatal(err)
+	}
+	id := domain.RunCorrelationIDFromDetailsJSON(ph.DetailsJSON)
+	if id == "" {
+		t.Fatal("expected run_correlation_id on new phase")
+	}
+}
+
+func TestStore_CompletePhase_preserves_run_correlation_id(t *testing.T) {
+	s, ctx := newCycleStore(t)
+	tsk := mustCreateTask(t, s, ctx)
+	c, err := s.StartCycle(ctx, StartCycleInput{TaskID: tsk.ID, TriggeredBy: domain.ActorAgent})
+	if err != nil {
+		t.Fatal(err)
+	}
+	ph, err := s.StartPhase(ctx, c.ID, domain.PhaseExecute, domain.ActorAgent)
+	if err != nil {
+		t.Fatal(err)
+	}
+	startID := domain.RunCorrelationIDFromDetailsJSON(ph.DetailsJSON)
+	out, err := s.CompletePhase(ctx, CompletePhaseInput{
+		CycleID:  c.ID,
+		PhaseSeq: ph.PhaseSeq,
+		Status:   domain.PhaseStatusSucceeded,
+		Details:  []byte(`{"exit_code":0,"run_correlation_id":"attacker"}`),
+		By:       domain.ActorAgent,
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if got := domain.RunCorrelationIDFromDetailsJSON(out.DetailsJSON); got != startID {
+		t.Fatalf("run_correlation_id = %q, want preserved %q", got, startID)
 	}
 }
 
@@ -720,8 +776,16 @@ func TestStore_CompletePhase_details_normalizes_and_validates(t *testing.T) {
 	if err != nil {
 		t.Fatalf("complete phase with null details: %v", err)
 	}
-	if string(out.DetailsJSON) != "{}" {
-		t.Fatalf("details_json = %q, want {}", string(out.DetailsJSON))
+	startID := domain.RunCorrelationIDFromDetailsJSON(phase.DetailsJSON)
+	if got := domain.RunCorrelationIDFromDetailsJSON(out.DetailsJSON); got != startID {
+		t.Fatalf("run_correlation_id after null complete = %q, want %q", got, startID)
+	}
+	var nullComplete map[string]any
+	if err := json.Unmarshal(out.DetailsJSON, &nullComplete); err != nil {
+		t.Fatal(err)
+	}
+	if len(nullComplete) != 1 {
+		t.Fatalf("details_json after null complete = %v, want only run_correlation_id", nullComplete)
 	}
 
 	// Start a fresh cycle so we can run another phase end-to-end.
@@ -937,14 +1001,19 @@ func TestStore_DualWrite_StartPhase_backfills_event_seq(t *testing.T) {
 	if ph.EventSeq == nil {
 		t.Fatal("phase.EventSeq nil after StartPhase")
 	}
+	runID := domain.RunCorrelationIDFromDetailsJSON(ph.DetailsJSON)
+	if runID == "" {
+		t.Fatal("expected run_correlation_id on phase")
+	}
 
 	ev := assertEvent(t, db, tsk.ID, *ph.EventSeq, cycleEventCheck{
 		wantType: domain.EventPhaseStarted,
 		wantBy:   domain.ActorAgent,
 		wantPayload: map[string]any{
-			"cycle_id":  cyc.ID,
-			"phase":     "execute",
-			"phase_seq": int(ph.PhaseSeq),
+			"cycle_id":             cyc.ID,
+			"phase":                "execute",
+			"phase_seq":            int(ph.PhaseSeq),
+			"run_correlation_id":   runID,
 		},
 	})
 	if ev.Seq != *ph.EventSeq {

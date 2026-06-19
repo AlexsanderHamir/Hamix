@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"context"
 	"encoding/json"
+	"fmt"
 	"testing"
 
 	"github.com/AlexsanderHamir/T2A/pkgs/agents/harness"
@@ -139,7 +140,20 @@ func TestRegression_Worker_object_details_pass_through_unchanged(t *testing.T) {
 		t.Fatalf("list phases: %v", err)
 	}
 	exec := phases[0]
-	if !bytes.Equal(exec.DetailsJSON, []byte(original)) {
-		t.Fatalf("phase details_json = %q, want %q", string(exec.DetailsJSON), string(original))
+	var got map[string]any
+	if err := json.Unmarshal(exec.DetailsJSON, &got); err != nil {
+		t.Fatalf("unmarshal details: %v", err)
+	}
+	var want map[string]any
+	if err := json.Unmarshal(original, &want); err != nil {
+		t.Fatal(err)
+	}
+	for k, v := range want {
+		if fmt.Sprint(got[k]) != fmt.Sprint(v) {
+			t.Fatalf("details[%q] = %v, want %v", k, got[k], v)
+		}
+	}
+	if domain.RunCorrelationIDFromDetailsJSON(exec.DetailsJSON) == "" {
+		t.Fatal("expected run_correlation_id preserved on completed phase")
 	}
 }

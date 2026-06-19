@@ -8,6 +8,11 @@
   padding-right: max(var(--layout-gutter-x), env(safe-area-inset-right, 0px));
 }
 
+/* Commit diff needs more horizontal room for split view and long paths. */
+.app:has(.task-commit-diff-page) {
+  --layout-max-width: 90rem;
+}
+
 /* Screen-reader-only copy (captions, live regions, etc.) */
 .visually-hidden {
   position: absolute;

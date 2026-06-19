@@ -93,7 +93,7 @@
 
 .task-commit-row-link:focus-visible {
   outline: none;
-  box-shadow: var(--shadow-focus, 0 0 0 3px rgba(99, 91, 255, 0.35));
+  box-shadow: var(--shadow-focus);
 }
 
 .task-commit-row-inner {
@@ -203,7 +203,7 @@
 .task-commit-diff-error {
   margin: 0;
   font-size: var(--text-sm);
-  color: var(--danger-ink, var(--color-error));
+  color: var(--danger);
 }
 
 .task-commit-diff-retry {
@@ -222,6 +222,7 @@
 }
 
 .task-commit-diff-view {
+  min-width: 0;
   max-height: 20rem;
   overflow: auto;
   border: 1px solid var(--border-chrome-hairline);
@@ -231,16 +232,6 @@
 
 .task-commit-diff-view--modal {
   max-height: min(70vh, 40rem);
-}
-
-.task-commit-diff-file + .task-commit-diff-file {
-  border-top: 1px solid var(--border-chrome-hairline);
-}
-
-.task-commit-diff-file-head {
-  padding: 0.35rem 0.5rem;
-  background: var(--surface-2);
-  border-bottom: 1px solid var(--border-chrome-hairline);
 }
 
 .task-commit-diff-file-path {
@@ -260,16 +251,20 @@
 }
 
 .task-commit-diff-view .diff-code-insert {
-  background: color-mix(in srgb, var(--success-ink, #00a96e) 12%, transparent);
+  background: color-mix(in srgb, var(--success) 12%, transparent);
 }
 
 .task-commit-diff-view .diff-code-delete {
-  background: color-mix(in srgb, var(--danger-ink, #ef4444) 12%, transparent);
+  background: color-mix(in srgb, var(--danger) 12%, transparent);
 }
 
 .task-commit-diff-view--page {
   max-height: none;
   min-height: 12rem;
+  border: 1px solid var(--border-chrome-hairline);
+  border-radius: var(--radius-md);
+  background: var(--surface-0, var(--surface-1));
+  padding: 0.35rem;
 }
 
 .task-commit-diff-page {
@@ -312,3 +307,508 @@
   margin: 0;
   font-size: var(--text-sm);
 }
+
+.task-commit-diff-page-meta-group {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+}
+
+.task-commit-diff-page-sha .copyable-id__value {
+  font-size: var(--text-sm);
+}
+
+.task-commit-diff-parent-link {
+  font-weight: 500;
+}
+
+.task-commit-diff-layout {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.task-commit-diff-layout-body {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 1rem;
+}
+
+@media (min-width: 1024px) {
+  .task-commit-diff-layout-body:not(.task-commit-diff-layout-body--single) {
+    grid-template-columns: minmax(11rem, 16rem) minmax(0, 1fr);
+    align-items: start;
+  }
+}
+
+.task-commit-diff-toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  padding: 0.5rem 0.75rem;
+  border: 1px solid var(--border-chrome-hairline);
+  border-radius: var(--radius-md);
+  background: var(--surface-1);
+}
+
+.task-commit-diff-summary {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.5rem 0.75rem;
+  margin: 0;
+  font-size: var(--text-sm);
+}
+
+.task-commit-diff-summary-add {
+  color: var(--success);
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+}
+
+.task-commit-diff-summary-del {
+  color: var(--danger);
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+}
+
+@media (prefers-color-scheme: dark) {
+  .task-commit-diff-summary-add {
+    color: var(--pill-success-fill-text, var(--success));
+  }
+
+  .task-commit-diff-summary-del {
+    color: var(--pill-danger-fill-text, var(--danger));
+  }
+}
+
+.task-commit-diff-summary-truncated {
+  font-size: var(--text-xs);
+  font-weight: 600;
+  color: var(--warning-ink);
+}
+
+.task-commit-diff-toolbar-actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.task-commit-diff-file-bulk {
+  display: inline-flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.35rem;
+}
+
+.task-commit-diff-summary-expanded {
+  font-size: var(--text-xs);
+}
+
+.task-commit-diff-toolbar .btn-utility {
+  min-height: 1.75rem;
+  padding: 0.28rem 0.6rem;
+  background: var(--bg-elevated);
+  border: 1px solid var(--border-chrome-muted);
+  color: var(--text-primary);
+  box-shadow: var(--shadow-chrome-xs);
+  font-weight: 500;
+  transition:
+    background var(--duration-normal) var(--ease-out),
+    border-color var(--duration-normal) var(--ease-out),
+    color var(--duration-normal) var(--ease-out),
+    box-shadow var(--duration-normal) var(--ease-out),
+    transform var(--duration-fast) var(--ease-out);
+}
+
+@media (hover: hover) {
+  .task-commit-diff-toolbar .btn-utility:not(:disabled):hover {
+    background: color-mix(in srgb, var(--brand-muted) 22%, var(--bg-elevated));
+    border-color: var(--border-interactive-hover);
+    color: var(--text-primary);
+    box-shadow: var(--shadow-chrome-sm);
+    transform: translateY(-1px);
+  }
+
+  .task-commit-diff-toolbar .btn-utility:not(:disabled):active {
+    transform: translateY(0);
+    box-shadow: var(--shadow-chrome-xs);
+  }
+}
+
+.task-commit-diff-view-toggle {
+  display: inline-flex;
+  align-items: stretch;
+  box-sizing: border-box;
+  padding: var(--space-1);
+  gap: 2px;
+  border: 1px solid var(--border-hairline);
+  border-radius: var(--radius-md);
+  background: var(--bg-subtle);
+}
+
+.task-commit-diff-view-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: unset;
+  min-width: unset;
+  margin: 0;
+  border: none;
+  border-radius: var(--radius-sm);
+  background: transparent;
+  padding: 0.35rem 0.65rem;
+  font: inherit;
+  font-size: var(--text-xs);
+  font-weight: 500;
+  letter-spacing: var(--text-button-tracking);
+  line-height: 1.25;
+  color: var(--text-secondary);
+  cursor: pointer;
+  transition:
+    background-color var(--duration-normal) var(--ease-out),
+    color var(--duration-normal) var(--ease-out),
+    box-shadow var(--duration-normal) var(--ease-out),
+    transform var(--duration-fast) var(--ease-out);
+}
+
+@media (hover: hover) {
+  .task-commit-diff-view-btn:not(.task-commit-diff-view-btn--active):not(:disabled):hover {
+    color: var(--text-primary);
+    background: color-mix(in srgb, var(--bg-elevated) 72%, var(--brand-muted));
+    transform: translateY(-1px);
+  }
+
+  .task-commit-diff-view-btn--active:not(:disabled):hover {
+    background: var(--bg-elevated);
+    color: var(--text-primary);
+    box-shadow: 0 0 0 1px var(--border-soft), var(--shadow-chrome-xs);
+    transform: translateY(-1px);
+  }
+
+  .task-commit-diff-view-btn:not(:disabled):active {
+    transform: translateY(0);
+  }
+}
+
+.task-commit-diff-view-btn--active {
+  background: var(--bg-elevated);
+  color: var(--text-primary);
+  font-weight: 600;
+  box-shadow: 0 0 0 1px var(--border-hairline);
+}
+
+.task-commit-diff-view-btn:focus-visible {
+  outline: none;
+  box-shadow: 0 0 0 2px var(--bg-subtle), 0 0 0 4px var(--focus-ring);
+  z-index: 1;
+}
+
+.task-commit-diff-view-btn--active:focus-visible {
+  box-shadow:
+    0 0 0 1px var(--border-hairline),
+    0 0 0 2px var(--bg-subtle),
+    0 0 0 4px var(--focus-ring);
+}
+
+.task-commit-diff-truncation--severe {
+  color: var(--danger);
+  font-size: var(--text-sm);
+  font-weight: 500;
+}
+
+.task-commit-diff-nav {
+  position: sticky;
+  top: 4.5rem;
+  max-height: calc(100vh - 6rem);
+  overflow: auto;
+  padding: 0.5rem;
+  border: 1px solid var(--border-chrome-hairline);
+  border-radius: var(--radius-md);
+  background: var(--surface-1);
+}
+
+.task-commit-diff-nav-label {
+  margin: 0 0 0.35rem;
+  font-size: var(--text-xs);
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--text-tertiary);
+}
+
+.task-commit-diff-nav-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.2rem;
+}
+
+.task-commit-diff-nav-item {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 0.25rem 0.4rem;
+  width: 100%;
+  border: none;
+  background: transparent;
+  text-align: left;
+  padding: 0.35rem 0.4rem;
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+  font-size: var(--text-xs);
+}
+
+.task-commit-diff-nav-item:hover {
+  background: var(--surface-2);
+}
+
+.task-commit-diff-nav-item--active {
+  background: var(--surface-2);
+}
+
+.task-commit-diff-nav-dot {
+  width: 0.45rem;
+  height: 0.45rem;
+  border-radius: var(--radius-full);
+  background: var(--text-tertiary);
+  flex: 0 0 auto;
+}
+
+.task-commit-diff-nav-dot--add {
+  background: var(--success);
+}
+
+.task-commit-diff-nav-dot--delete {
+  background: var(--danger);
+}
+
+.task-commit-diff-nav-dot--modify,
+.task-commit-diff-nav-dot--rename,
+.task-commit-diff-nav-dot--copy {
+  background: var(--color-info);
+}
+
+.task-commit-diff-nav-path {
+  font-family: var(--font-mono, ui-monospace, monospace);
+  font-weight: 500;
+  overflow-wrap: anywhere;
+}
+
+.task-commit-diff-nav-meta {
+  font-size: var(--text-xs);
+}
+
+.task-commit-diff-file-head {
+  position: sticky;
+  top: 0;
+  z-index: 1;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
+  padding: 0.5rem 0.65rem;
+  background: var(--bg-subtle);
+  border-bottom: 1px solid var(--border-chrome-hairline);
+}
+
+.task-commit-diff-file-head-main {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.4rem 0.55rem;
+  min-width: 0;
+}
+
+.task-commit-diff-file-head-actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.4rem;
+  flex-shrink: 0;
+}
+
+.task-commit-diff-file-head-actions .btn-utility {
+  min-height: 1.75rem;
+  padding: 0.28rem 0.6rem;
+  background: var(--bg-elevated);
+  border: 1px solid var(--border-chrome-muted);
+  color: var(--text-primary);
+  box-shadow: var(--shadow-chrome-xs);
+  font-weight: 500;
+  transition:
+    background var(--duration-normal) var(--ease-out),
+    border-color var(--duration-normal) var(--ease-out),
+    color var(--duration-normal) var(--ease-out),
+    box-shadow var(--duration-normal) var(--ease-out),
+    transform var(--duration-fast) var(--ease-out);
+}
+
+@media (hover: hover) {
+  .task-commit-diff-file-head-actions .btn-utility:not(:disabled):hover {
+    background: color-mix(in srgb, var(--brand-muted) 22%, var(--bg-elevated));
+    border-color: var(--border-interactive-hover);
+    color: var(--text-primary);
+    box-shadow: var(--shadow-chrome-sm);
+    transform: translateY(-1px);
+  }
+
+  .task-commit-diff-file-head-actions .btn-utility:not(:disabled):active {
+    transform: translateY(0);
+    box-shadow: var(--shadow-chrome-xs);
+  }
+}
+
+.task-commit-diff-file-head-actions .btn-utility:focus-visible {
+  outline: none;
+  border-color: var(--brand-border-focus, var(--link));
+  box-shadow: var(--shadow-chrome-xs), 0 0 0 3px var(--brand-muted, var(--focus-ring));
+}
+
+.task-commit-diff-file-status {
+  font-size: var(--text-xs);
+  font-weight: 600;
+  letter-spacing: 0.02em;
+  padding: 0.1rem 0.4rem;
+  border-radius: var(--radius-sm);
+  background: var(--surface-1);
+  color: var(--text-secondary);
+}
+
+.task-commit-diff-file-status--add {
+  color: var(--success);
+}
+
+.task-commit-diff-file-status--delete {
+  color: var(--danger);
+}
+
+.task-commit-diff-file-paths {
+  display: inline-flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.35rem;
+}
+
+.task-commit-diff-file-rename-arrow {
+  color: var(--text-tertiary);
+}
+
+.task-commit-diff-file-lang {
+  font-size: var(--text-xs);
+}
+
+.task-commit-diff-file-stat {
+  font-size: var(--text-xs);
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+}
+
+.task-commit-diff-file-stat--add {
+  color: var(--success);
+}
+
+.task-commit-diff-file-stat--del {
+  color: var(--danger);
+}
+
+.task-commit-diff-file-body {
+  overflow-x: auto;
+}
+
+.task-commit-diff-file-body .diff {
+  font-size: var(--text-sm);
+}
+
+.task-commit-diff-code .token.comment,
+.task-commit-diff-code .token.prolog,
+.task-commit-diff-code .token.doctype,
+.task-commit-diff-code .token.cdata {
+  color: var(--text-tertiary);
+}
+
+.task-commit-diff-code .token.keyword,
+.task-commit-diff-code .token.operator,
+.task-commit-diff-code .token.atrule,
+.task-commit-diff-code .token.tag {
+  color: var(--mention-syntax-keyword);
+}
+
+.task-commit-diff-code .token.string,
+.task-commit-diff-code .token.attr-value,
+.task-commit-diff-code .token.char,
+.task-commit-diff-code .token.inserted {
+  color: var(--mention-syntax-string);
+}
+
+.task-commit-diff-code .token.number,
+.task-commit-diff-code .token.boolean,
+.task-commit-diff-code .token.constant {
+  color: var(--mention-syntax-number);
+}
+
+.task-commit-diff-code .token.function,
+.task-commit-diff-code .token.class-name {
+  color: var(--mention-syntax-function);
+}
+
+.task-commit-diff-code .token.punctuation {
+  color: color-mix(in srgb, var(--text-primary) 72%, var(--text-secondary));
+}
+
+.task-commit-diff-file-body .diff-gutter {
+  font-variant-numeric: tabular-nums;
+}
+
+.task-commit-diff-view .diff-code-edit {
+  border-radius: 2px;
+}
+
+.task-commit-diff-file--collapsed .task-commit-diff-file-head {
+  border-bottom: none;
+}
+
+.task-commit-diff-file-collapsed-hint {
+  font-size: var(--text-xs);
+  white-space: nowrap;
+}
+
+.task-commit-diff-file + .task-commit-diff-file {
+  margin-top: 0.5rem;
+  border-top: none;
+}
+
+.task-commit-diff-file--collapsed + .task-commit-diff-file {
+  margin-top: 0.35rem;
+}
+
+.task-commit-diff-binary {
+  margin: 0;
+  padding: 0.65rem 0.75rem;
+  font-size: var(--text-sm);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .task-commit-diff-toolbar .btn-utility,
+  .task-commit-diff-file-head-actions .btn-utility,
+  .task-commit-diff-view-btn {
+    transition:
+      background var(--duration-normal) var(--ease-out),
+      border-color var(--duration-normal) var(--ease-out),
+      color var(--duration-normal) var(--ease-out),
+      box-shadow var(--duration-normal) var(--ease-out);
+  }
+
+  .task-commit-diff-toolbar .btn-utility:not(:disabled):hover,
+  .task-commit-diff-file-head-actions .btn-utility:not(:disabled):hover,
+  .task-commit-diff-view-btn:not(:disabled):hover {
+    transform: none;
+  }
+}
+

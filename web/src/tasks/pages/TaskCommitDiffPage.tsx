@@ -2,6 +2,7 @@ import { useMemo } from "react";
 import { Link, useParams } from "react-router-dom";
 import { maxRepoShaQueryBytes } from "@/api/repo";
 import { errorMessage } from "@/lib/errorMessage";
+import { CopyableId } from "@/shared/CopyableId";
 import { formatRelativeTime } from "@/shared/time/relativeTime";
 import { useDocumentTitle } from "@/shared/useDocumentTitle";
 import { useNow } from "@/shared/useNow";
@@ -10,7 +11,9 @@ import { CommitStatusBadge } from "../components/task-detail/commits/CommitStatu
 import {
   commitShaParamPattern,
   shortSha,
+  taskCommitDiffPath,
 } from "../components/task-detail/commits/commitDisplay";
+import { useCommitDiff } from "../hooks/useCommitDiff";
 import { useTaskCommits } from "../hooks/useTaskCommits";
 
 export function TaskCommitDiffPage() {
@@ -26,6 +29,7 @@ export function TaskCommitDiffPage() {
     commitShaParamPattern.test(sha);
 
   const commitsQuery = useTaskCommits(taskId, { enabled: Boolean(taskId) && shaValid });
+  const diffQuery = useCommitDiff(sha, { enabled: Boolean(taskId) && shaValid });
   const commit = useMemo(
     () => commitsQuery.data?.commits.find((c) => c.sha === sha),
     [commitsQuery.data?.commits, sha],
@@ -66,6 +70,8 @@ export function TaskCommitDiffPage() {
   }
 
   const backTo = `/tasks/${encodeURIComponent(taskId)}`;
+  const gitAuthor = diffQuery.data?.author;
+  const parentSha = diffQuery.data?.parent_sha?.trim();
 
   return (
     <section
@@ -79,9 +85,7 @@ export function TaskCommitDiffPage() {
         </Link>
         <p className="task-commit-diff-page-eyebrow">Commit diff</p>
         <div className="task-commit-diff-page-title-row">
-          <code className="task-commit-sha" title={sha}>
-            {shortSha(sha)}
-          </code>
+          <CopyableId value={sha} className="task-commit-diff-page-sha" />
           {commit ? (
             <CommitStatusBadge
               status={commit.status}
@@ -96,15 +100,44 @@ export function TaskCommitDiffPage() {
             {shortSha(sha)}
           </h1>
         )}
-        {commit ? (
-          <p className="task-commit-diff-page-meta muted">
-            {formatRelativeTime(commit.committed_at, new Date(now))}
-          </p>
-        ) : commitsQuery.isError ? (
-          <p className="task-commit-diff-page-meta muted" role="status">
-            {errorMessage(commitsQuery.error, "Could not load commit metadata.")}
-          </p>
-        ) : null}
+        <div className="task-commit-diff-page-meta-group">
+          {commit ? (
+            <p className="task-commit-diff-page-meta muted">
+              {formatRelativeTime(commit.committed_at, new Date(now))}
+              {commit.branch ? (
+                <>
+                  <span className="task-commit-meta-sep" aria-hidden="true">
+                    ·
+                  </span>
+                  {commit.branch}
+                </>
+              ) : null}
+            </p>
+          ) : commitsQuery.isError ? (
+            <p className="task-commit-diff-page-meta muted" role="status">
+              {errorMessage(commitsQuery.error, "Could not load commit metadata.")}
+            </p>
+          ) : null}
+          {gitAuthor ? (
+            <p className="task-commit-diff-page-meta muted">
+              {gitAuthor}
+              {diffQuery.data?.author_email
+                ? ` <${diffQuery.data.author_email}>`
+                : ""}
+            </p>
+          ) : null}
+          {parentSha ? (
+            <p className="task-commit-diff-page-meta muted">
+              Parent{" "}
+              <Link
+                to={taskCommitDiffPath(taskId, parentSha)}
+                className="task-commit-diff-parent-link"
+              >
+                {shortSha(parentSha)}
+              </Link>
+            </p>
+          ) : null}
+        </div>
       </header>
       <CommitDiffPanel
         sha={sha}

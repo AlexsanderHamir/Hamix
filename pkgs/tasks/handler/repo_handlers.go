@@ -50,10 +50,16 @@ const maxRepoShaQueryBytes = 64
 var repoShaQueryPattern = regexp.MustCompile(`^[0-9a-fA-F]{7,40}$`)
 
 type repoDiffResponse struct {
-	SHA       string `json:"sha"`
-	Patch     string `json:"patch"`
-	Truncated bool   `json:"truncated"`
-	SizeBytes int    `json:"size_bytes"`
+	SHA          string `json:"sha"`
+	Patch        string `json:"patch"`
+	Truncated    bool   `json:"truncated"`
+	SizeBytes    int    `json:"size_bytes"`
+	Author       string `json:"author,omitempty"`
+	AuthorEmail  string `json:"author_email,omitempty"`
+	ParentSHA    string `json:"parent_sha,omitempty"`
+	FilesChanged int    `json:"files_changed,omitempty"`
+	Insertions   int    `json:"insertions,omitempty"`
+	Deletions    int    `json:"deletions,omitempty"`
 }
 
 // repoUnavailableErrorBody is the JSON envelope the SPA expects when
@@ -293,6 +299,7 @@ func (h *Handler) repoDiff(w http.ResponseWriter, r *http.Request) {
 	}
 	t0 := time.Now()
 	patch, truncated, err := gitexec.ShowCommitPatch(r.Context(), root.Abs(), sha, gitexec.DefaultMaxPatchBytes)
+	meta, metaErr := gitexec.LoadCommitMeta(r.Context(), root.Abs(), sha)
 	dur := time.Since(t0)
 	if err != nil {
 		if errors.Is(err, gitexec.ErrNotFound) {
@@ -304,12 +311,22 @@ func (h *Handler) repoDiff(w http.ResponseWriter, r *http.Request) {
 		writeJSONError(w, r, op, http.StatusInternalServerError, "diff failed")
 		return
 	}
+	if metaErr != nil && !errors.Is(metaErr, gitexec.ErrNotFound) {
+		slog.Log(r.Context(), slog.LevelWarn, "repo diff meta failed",
+			"cmd", calltrace.LogCmd, "operation", op, "duration_ms", dur.Milliseconds(), "err", metaErr)
+	}
 	slog.Info("repo diff completed", "cmd", calltrace.LogCmd, "operation", op,
 		"duration_ms", dur.Milliseconds(), "truncated", truncated, "size_bytes", len(patch))
 	writeJSON(w, r, op, http.StatusOK, repoDiffResponse{
-		SHA:       sha,
-		Patch:     patch,
-		Truncated: truncated,
-		SizeBytes: len(patch),
+		SHA:          sha,
+		Patch:        patch,
+		Truncated:    truncated,
+		SizeBytes:    len(patch),
+		Author:       meta.Author,
+		AuthorEmail:  meta.AuthorEmail,
+		ParentSHA:    meta.ParentSHA,
+		FilesChanged: meta.FilesChanged,
+		Insertions:   meta.Insertions,
+		Deletions:    meta.Deletions,
 	})
 }

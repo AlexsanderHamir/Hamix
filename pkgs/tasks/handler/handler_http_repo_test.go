@@ -349,16 +349,26 @@ func TestHTTP_repo_diff_ok(t *testing.T) {
 		t.Fatalf("status %d %s", res.StatusCode, b)
 	}
 	var payload struct {
-		SHA       string `json:"sha"`
-		Patch     string `json:"patch"`
-		Truncated bool   `json:"truncated"`
-		SizeBytes int    `json:"size_bytes"`
+		SHA          string `json:"sha"`
+		Patch        string `json:"patch"`
+		Truncated    bool   `json:"truncated"`
+		SizeBytes    int    `json:"size_bytes"`
+		Author       string `json:"author"`
+		AuthorEmail  string `json:"author_email"`
+		FilesChanged int    `json:"files_changed"`
+		Insertions   int    `json:"insertions"`
 	}
 	if err := json.NewDecoder(res.Body).Decode(&payload); err != nil {
 		t.Fatal(err)
 	}
 	if payload.SHA != sha || payload.Truncated || payload.SizeBytes <= 0 {
 		t.Fatalf("payload %#v", payload)
+	}
+	if payload.Author != "Test" || payload.AuthorEmail != "t@example.com" {
+		t.Fatalf("author %#v", payload)
+	}
+	if payload.FilesChanged < 1 || payload.Insertions < 1 {
+		t.Fatalf("shortstat %#v", payload)
 	}
 	if !strings.Contains(payload.Patch, "diff --git") {
 		t.Fatalf("patch %#v", payload.Patch)

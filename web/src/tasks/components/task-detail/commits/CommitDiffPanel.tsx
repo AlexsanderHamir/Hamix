@@ -1,6 +1,7 @@
 import { errorMessage } from "@/lib/errorMessage";
+import type { RepoDiffResult } from "@/api/repo";
 import { useCommitDiff } from "@/tasks/hooks/useCommitDiff";
-import { CommitDiffView } from "./CommitDiffView";
+import { CommitDiffLayout } from "./CommitDiffLayout";
 
 type Props = {
   sha: string;
@@ -53,20 +54,29 @@ export function CommitDiffPanel({ sha, viewClassName }: Props) {
     );
   }
 
-  const { patch, truncated } = diffQuery.data;
-
   return (
-    <div className="task-commit-diff-panel">
-      {truncated ? (
-        <p className="task-commit-diff-truncation muted" role="status">
-          This patch was truncated at the server limit. The view shows the available
-          portion only.
-        </p>
-      ) : null}
-      <CommitDiffView
-        patch={patch}
-        className={viewClassName ?? "task-commit-diff-view"}
-      />
-    </div>
+    <CommitDiffLayout
+      patch={diffQuery.data.patch}
+      truncated={diffQuery.data.truncated}
+      serverStats={pickServerStats(diffQuery.data)}
+      viewClassName={viewClassName}
+    />
   );
+}
+
+function pickServerStats(
+  data: RepoDiffResult,
+): Pick<RepoDiffResult, "files_changed" | "insertions" | "deletions"> | undefined {
+  if (
+    data.files_changed == null &&
+    data.insertions == null &&
+    data.deletions == null
+  ) {
+    return undefined;
+  }
+  return {
+    files_changed: data.files_changed,
+    insertions: data.insertions,
+    deletions: data.deletions,
+  };
 }

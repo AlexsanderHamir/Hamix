@@ -279,4 +279,22 @@ describe("parseRepoDiffResponse", () => {
       /unexpected diff response shape/,
     );
   });
+
+  it("parses optional author and shortstat fields", () => {
+    const parsed = parseRepoDiffResponse({
+      sha: "abc1234",
+      patch: "diff --git",
+      truncated: false,
+      size_bytes: 12,
+      author: "Test",
+      author_email: "t@example.com",
+      parent_sha: "deadbeef",
+      files_changed: 2,
+      insertions: 3,
+      deletions: 1,
+    });
+    expect(parsed.author).toBe("Test");
+    expect(parsed.parent_sha).toBe("deadbeef");
+    expect(parsed.files_changed).toBe(2);
+  });
 });

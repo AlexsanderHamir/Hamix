@@ -281,6 +281,12 @@ export type RepoDiffResult = {
   patch: string;
   truncated: boolean;
   size_bytes: number;
+  author?: string;
+  author_email?: string;
+  parent_sha?: string;
+  files_changed?: number;
+  insertions?: number;
+  deletions?: number;
 };
 
 function assertRepoSha(sha: string): string {
@@ -314,12 +320,31 @@ export function parseRepoDiffResponse(raw: unknown): RepoDiffResult {
   ) {
     throw new Error("unexpected diff response shape");
   }
-  return {
+  const out: RepoDiffResult = {
     sha: shaVal,
     patch: patchVal,
     truncated: truncatedVal,
     size_bytes: sizeVal,
   };
+  if (typeof o.author === "string" && o.author !== "") {
+    out.author = o.author;
+  }
+  if (typeof o.author_email === "string" && o.author_email !== "") {
+    out.author_email = o.author_email;
+  }
+  if (typeof o.parent_sha === "string" && o.parent_sha !== "") {
+    out.parent_sha = o.parent_sha;
+  }
+  if (typeof o.files_changed === "number") {
+    out.files_changed = o.files_changed;
+  }
+  if (typeof o.insertions === "number") {
+    out.insertions = o.insertions;
+  }
+  if (typeof o.deletions === "number") {
+    out.deletions = o.deletions;
+  }
+  return out;
 }
 
 /** Unified diff for one commit, or null if repo is not configured (409/503). */

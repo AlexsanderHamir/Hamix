@@ -189,9 +189,9 @@ Query limits mirror the web client guards in [`web/src/api/repo.ts`](../../web/s
 ### `GET /repo/diff?sha=`
 
 - Returns the unified diff for one commit in the configured `repo_root` worktree (`git show`).
-- Response: `{ sha, patch, truncated, size_bytes }`; patch capped at **512 KiB** (`truncated: true` when clipped).
+- Response: `{ sha, patch, truncated, size_bytes, author?, author_email?, parent_sha?, files_changed?, insertions?, deletions? }`; patch capped at **512 KiB** (`truncated: true` when clipped). Author and shortstat come from `git show --format` / `--shortstat`.
 - `sha` must be 7–40 hex characters (query ≤ **64** bytes). Unknown SHA → **404**; malformed → **400**.
-- Used by the SPA commit panel for lazy-loaded per-commit diffs ([`CommitList`](../../web/src/tasks/components/task-detail/commits/CommitList.tsx)).
+- Used by the SPA commit diff page at `/tasks/{id}/commits/{sha}` ([`TaskCommitDiffPage`](../../web/src/tasks/pages/TaskCommitDiffPage.tsx)).
 
 ## @-mention syntax and validation
 

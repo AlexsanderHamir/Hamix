@@ -74,3 +74,19 @@ func TestShowCommitPatch_truncates(t *testing.T) {
 		t.Fatal("expected truncated")
 	}
 }
+
+func TestLoadCommitMeta_returns_author_and_shortstat(t *testing.T) {
+	dir := t.TempDir()
+	sha := initGitRepo(t, dir)
+
+	meta, err := gitexec.LoadCommitMeta(context.Background(), dir, sha)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if meta.Author != "Test" || meta.AuthorEmail != "t@example.com" {
+		t.Fatalf("author %#v", meta)
+	}
+	if meta.FilesChanged < 1 || meta.Insertions < 1 {
+		t.Fatalf("shortstat %#v", meta)
+	}
+}

@@ -158,12 +158,12 @@ func (r *recordingNotifier) PublishCycleChange(taskID, cycleID string) {
 }
 
 type blockingRunner struct {
-	name    string
-	version string
-	starts  chan runner.Request
-	release chan struct{}
-	result  runner.Result
-	err     error
+	name     string
+	version  string
+	starts   chan runner.Request
+	release  chan struct{}
+	result   runner.Result
+	err      error
 	panicMsg string
 	onStart  func(req runner.Request)
 	honorCtx bool

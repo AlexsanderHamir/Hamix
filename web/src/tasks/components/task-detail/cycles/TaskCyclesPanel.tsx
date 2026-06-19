@@ -4,7 +4,6 @@ import {
   EmptyState,
   EmptyStateTimelineGlyph,
 } from "@/shared/EmptyState";
-import { formatRelativeTime } from "@/shared/time/relativeTime";
 import { useNow } from "@/shared/useNow";
 import {
   cycleStatusLabel,

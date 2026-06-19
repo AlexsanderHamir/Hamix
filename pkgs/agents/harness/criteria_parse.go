@@ -119,6 +119,23 @@ func readJSONFile(path string, dest any) error {
 	return nil
 }
 
+func parseCriteriaReportPartial(reportDir, cycleID string) (map[string]criteriaReportEntry, error) {
+	path := criteriaReportPath(reportDir, cycleID)
+	var rep criteriaReport
+	if err := readJSONFile(path, &rep); err != nil {
+		return nil, err
+	}
+	out := make(map[string]criteriaReportEntry, len(rep.Criteria))
+	for _, e := range rep.Criteria {
+		id := strings.TrimSpace(e.ID)
+		if id == "" {
+			continue
+		}
+		out[id] = e
+	}
+	return out, nil
+}
+
 func parseCriteriaReport(reportDir, cycleID string, expectedIDs map[string]struct{}) (map[string]criteriaReportEntry, error) {
 	path := criteriaReportPath(reportDir, cycleID)
 	var rep criteriaReport

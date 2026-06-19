@@ -3,6 +3,8 @@ import type {
   CycleVerdictsResponse,
   StartTaskCycleInput,
   StartTaskCyclePhaseInput,
+  TaskCommit,
+  TaskCommitsResponse,
   TaskCycle,
   TaskCycleDetail,
   TaskCyclePhase,
@@ -12,6 +14,7 @@ import type {
 } from "@/types";
 import {
   parseCycleVerdictsResponse,
+  parseTaskCommitsResponse,
   parseTaskCycle,
   parseTaskCycleDetail,
   parseTaskCyclePhase,
@@ -237,4 +240,21 @@ export async function patchTaskCyclePhase(
   if (!res.ok) throw await apiErrorFromResponse(res);
   const raw: unknown = await res.json();
   return parseTaskCyclePhase(raw);
+}
+
+export async function listTaskCommits(
+  taskId: string,
+  options?: { signal?: AbortSignal },
+): Promise<TaskCommitsResponse> {
+  const tid = assertTaskPathId(taskId, "task id");
+  const res = await fetchWithTimeout(
+    `/tasks/${encodeURIComponent(tid)}/commits`,
+    {
+      headers: { Accept: "application/json" },
+      signal: options?.signal,
+    },
+  );
+  if (!res.ok) throw await apiErrorFromResponse(res);
+  const raw: unknown = await res.json();
+  return parseTaskCommitsResponse(raw);
 }

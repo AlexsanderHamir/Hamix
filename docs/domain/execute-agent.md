@@ -161,6 +161,7 @@ Always required in git worktrees ([ADR-0014](../adr/ADR-0014-cycle-commit-tracki
 - The agent must commit all work that satisfies claimed criteria before finishing execute.
 - List every commit SHA and branch in `criteria-report.json` under `commits` — **no** `t2a:` markers in commit messages.
 - Create **new commits only**; never amend, rebase, or rewrite SHAs from this cycle.
+- **Observe-first (ADR-0016):** after runner exit the harness always upserts ancestry into `task_cycle_commits`. Gate failures (`execute_uncommitted_work`, etc.) fail the execute phase but rows persist as `observed` with `gate_reason`. Only `eligible` commits count toward verify admission.
 - Do not push.
 
 When `WorkingDir` is empty or not a git repo, snapshot/ingest/gates are skipped.
@@ -278,7 +279,7 @@ Execute-specific resume prompts tell the agent to inspect the working tree (and 
 
 > **Note** — The runner is stateless. Resume does not continue a mid-CLI session; it starts a fresh `runner.Run` with a rehydrated prompt.
 
-**Operator cross-cycle resume** (task `failed`, new cycle): `RunWithRetry` resume mode loads the parent checkpoint and always re-enters execute with resume notice — see [retry-resume.md](./retry-resume.md).
+**Operator cross-cycle resume** (task `failed`, new cycle): `RunWithRetry` resume mode loads a **ContinuationBundle** from the parent ([resume-continuation.md](./resume-continuation.md)). When parent execute succeeded, verify failed, and eligible commits exist, the child skips execute (`verifyOnly`). Otherwise the continuation prompt carries scope lock, status-grouped commits, and anti-discovery rules — see [retry-resume.md](./retry-resume.md) and [commit-eligibility.md](./commit-eligibility.md).
 
 ## Configuration
 

@@ -24,6 +24,7 @@ type resumeCheckpoint struct {
 	verifyAttempt    int
 	verifyFeedback   string
 	knownCommits     []domain.TaskCycleCommit
+	continuation     *ContinuationBundle
 }
 
 func (h *Harness) reconstructCheckpoint(ctx context.Context, cycle *domain.TaskCycle) (resumeCheckpoint, error) {
@@ -78,7 +79,7 @@ func (h *Harness) reconstructCheckpoint(ctx context.Context, cycle *domain.TaskC
 		cp.verifyFeedback = verifyFeedback
 	}
 
-	commits, err := h.store.ListCommitsForCycle(ctx, cycle.ID)
+	commits, err := h.loadKnownCommitsForTask(ctx, cycle.TaskID)
 	if err != nil {
 		return cp, err
 	}
@@ -90,33 +91,21 @@ func (h *Harness) reconstructCheckpoint(ctx context.Context, cycle *domain.TaskC
 func (h *Harness) loadCheckpointFromParent(ctx context.Context, parentCycleID string) (resumeCheckpoint, error) {
 	slog.Debug("trace", "cmd", harnessLogCmd, "operation", "agent.harness.loadCheckpointFromParent",
 		"parent_cycle_id", parentCycleID)
-	var cp resumeCheckpoint
-	cp.previouslyPassed = map[string]criterionVerdict{}
-	parentCycleID = strings.TrimSpace(parentCycleID)
-	if parentCycleID == "" {
-		return cp, fmt.Errorf("resume parent: empty cycle id")
-	}
-	cycle, err := h.store.GetCycle(ctx, parentCycleID)
+	bundle, err := h.loadContinuationBundle(ctx, parentCycleID)
 	if err != nil {
-		return cp, err
+		return resumeCheckpoint{previouslyPassed: map[string]criterionVerdict{}}, err
 	}
-	if !domain.TerminalCycleStatus(cycle.Status) {
-		return cp, fmt.Errorf("resume parent: cycle status %q is not terminal", cycle.Status)
+	if !bundle.Sufficient {
+		return resumeCheckpoint{previouslyPassed: map[string]criterionVerdict{}},
+			fmt.Errorf("continuation: insufficient data for parent %s", parentCycleID)
 	}
-	previouslyPassed, maxAttempt, verifyFeedback, err := h.loadVerifyCheckpointData(ctx, parentCycleID)
-	if err != nil {
-		return cp, err
-	}
-	cp.previouslyPassed = previouslyPassed
-	cp.verifyFeedback = verifyFeedback
-	_ = maxAttempt // cross-cycle resume always starts verifyAttempt at 0 in runResumeRetry
-	commits, err := h.store.ListCommitsForCycle(ctx, parentCycleID)
-	if err != nil {
-		return cp, err
-	}
-	cp.knownCommits = commits
-	cp.entry = resumeEntryExecute
-	return cp, nil
+	return bundleToCheckpoint(bundle), nil
+}
+
+func (h *Harness) loadKnownCommitsForTask(ctx context.Context, taskID string) ([]domain.TaskCycleCommit, error) {
+	slog.Debug("trace", "cmd", harnessLogCmd, "operation", "agent.harness.loadKnownCommitsForTask",
+		"task_id", taskID)
+	return h.store.ListCommitsForTask(ctx, taskID)
 }
 
 func (h *Harness) loadVerifyCheckpointData(ctx context.Context, cycleID string) (map[string]criterionVerdict, int64, string, error) {

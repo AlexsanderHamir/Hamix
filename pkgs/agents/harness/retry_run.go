@@ -3,6 +3,7 @@ package harness
 import (
 	"context"
 	"errors"
+	"fmt"
 	"log/slog"
 	"strings"
 
@@ -57,6 +58,8 @@ func (h *Harness) runFreshRetry(parentCtx context.Context, task *domain.Task, in
 	})
 }
 
+const crossCycleExecuteCarriedForward = "cross_cycle_execute_carried_forward"
+
 func (h *Harness) runResumeRetry(parentCtx context.Context, task *domain.Task, intent *domain.PendingRetry) {
 	cp, err := h.loadCheckpointFromParent(parentCtx, intent.ParentCycleID)
 	if err != nil {
@@ -84,12 +87,93 @@ func (h *Harness) runResumeRetry(parentCtx context.Context, task *domain.Task, i
 		h.bestEffortFailTask(parentCtx, task.ID)
 		return
 	}
+	if cp.entry == resumeEntryVerifyOnly {
+		if err := h.seedCrossCycleExecuteFromParent(parentCtx, cycle, intent.ParentCycleID); err != nil {
+			slog.Warn("agent harness verify-only resume seed execute failed", "cmd", harnessLogCmd,
+				"operation", "agent.harness.Harness.runResumeRetry.seed_execute_err",
+				"task_id", task.ID, "parent_cycle_id", intent.ParentCycleID, "err", err)
+			h.failTaskAfterRetryPrep(parentCtx, task.ID, "retry_verify_only_seed_failed")
+			return
+		}
+		if err := h.mirrorParentCriteriaForVerifyOnly(parentCtx, cycle.ID, intent.ParentCycleID); err != nil {
+			slog.Warn("agent harness verify-only resume mirror criteria failed", "cmd", harnessLogCmd,
+				"operation", "agent.harness.Harness.runResumeRetry.mirror_criteria_err",
+				"task_id", task.ID, "parent_cycle_id", intent.ParentCycleID, "err", err)
+			h.failTaskAfterRetryPrep(parentCtx, task.ID, "retry_verify_only_mirror_failed")
+			return
+		}
+	}
 	state.verifySnap, _ = h.loadVerificationSnapshot(parentCtx, task.ID)
 	h.runCycleLoop(parentCtx, task, cycle, &state, cycleLoopOpts{
 		resumeNotice:     true,
 		interruptedPhase: domain.PhaseExecute,
+		skipFirstExecute: cp.entry == resumeEntryVerifyOnly,
 		knownCommits:     cp.knownCommits,
+		continuation:     cp.continuation,
 	})
+}
+
+// seedCrossCycleExecuteFromParent records a succeeded execute phase on a new
+// retry cycle so verify can start when the parent attempt already passed execute.
+func (h *Harness) seedCrossCycleExecuteFromParent(ctx context.Context, cycle *domain.TaskCycle, parentCycleID string) error {
+	slog.Debug("trace", "cmd", harnessLogCmd, "operation", "agent.harness.seedCrossCycleExecuteFromParent",
+		"cycle_id", cycle.ID, "parent_cycle_id", parentCycleID)
+	phases, err := h.store.ListPhasesForCycle(ctx, parentCycleID)
+	if err != nil {
+		return err
+	}
+	var parentExec *domain.TaskCyclePhase
+	for i := range phases {
+		p := &phases[i]
+		if p.Phase != domain.PhaseExecute {
+			continue
+		}
+		if parentExec == nil || p.PhaseSeq > parentExec.PhaseSeq {
+			parentExec = p
+		}
+	}
+	if parentExec == nil || parentExec.Status != domain.PhaseStatusSucceeded {
+		return fmt.Errorf("parent %q has no succeeded execute phase", parentCycleID)
+	}
+	exec, err := h.store.StartPhase(ctx, cycle.ID, domain.PhaseExecute, domain.ActorAgent)
+	if err != nil {
+		return err
+	}
+	summary := crossCycleExecuteCarriedForward
+	details := []byte(parentExec.DetailsJSON)
+	if len(details) == 0 {
+		details = nil
+	}
+	_, err = h.store.CompletePhase(ctx, store.CompletePhaseInput{
+		CycleID: cycle.ID, PhaseSeq: exec.PhaseSeq,
+		Status: domain.PhaseStatusSucceeded, Summary: &summary,
+		Details: details, By: domain.ActorAgent,
+	})
+	return err
+}
+
+func (h *Harness) mirrorParentCriteriaForVerifyOnly(ctx context.Context, childCycleID, parentCycleID string) error {
+	slog.Debug("trace", "cmd", harnessLogCmd, "operation", "agent.harness.mirrorParentCriteriaForVerifyOnly",
+		"child_cycle_id", childCycleID, "parent_cycle_id", parentCycleID)
+	rows, err := h.store.ListCriteriaReportsForCycle(ctx, parentCycleID)
+	if err != nil {
+		return err
+	}
+	byAttempt := map[int64][]store.CriteriaReportEntry{}
+	for _, row := range rows {
+		byAttempt[row.AttemptSeq] = append(byAttempt[row.AttemptSeq], store.CriteriaReportEntry{
+			CriterionID: row.CriterionID, ClaimedDone: row.ClaimedDone, Evidence: row.Evidence,
+		})
+	}
+	for attempt, entries := range byAttempt {
+		if len(entries) == 0 {
+			continue
+		}
+		if err := h.store.UpsertCriteriaReports(ctx, childCycleID, attempt, entries); err != nil {
+			return err
+		}
+	}
+	return nil
 }
 
 func (h *Harness) runFreshCycle(parentCtx context.Context, task *domain.Task, opts startCycleOpts) {

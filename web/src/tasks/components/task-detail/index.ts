@@ -1,4 +1,5 @@
 export * from "./cycles/TaskCyclesPanel";
+export * from "./commits/TaskCommitsPanel";
 export * from "./layout/TaskDetailAttentionBar";
 export * from "./checklist/TaskDetailChecklistItemList";
 export * from "./checklist/TaskDetailChecklistSection";

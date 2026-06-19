@@ -1,5 +1,6 @@
 import { errorMessage } from "@/lib/errorMessage";
 import {
+  type CommitStatus,
   type CycleCommandRun,
   type CycleCommit,
   type CycleCriteriaReport,
@@ -7,6 +8,8 @@ import {
   type CycleMeta,
   type CycleVerdictsResponse,
   type CycleVerifyReport,
+  type TaskCommit,
+  type TaskCommitsResponse,
   type TaskCycle,
   type TaskCycleDetail,
   type TaskCyclePhase,
@@ -249,10 +252,33 @@ function parseCycleGitContext(value: unknown): CycleGitContext | undefined {
   };
 }
 
+const COMMIT_STATUSES = new Set([
+  "eligible",
+  "observed",
+  "inherited",
+  "superseded",
+]);
+
+function parseCommitStatus(value: unknown, field: string): CommitStatus {
+  if (typeof value !== "string" || !COMMIT_STATUSES.has(value)) {
+    return "eligible";
+  }
+  return value as CommitStatus;
+}
+
 export function parseCycleCommit(value: unknown): CycleCommit {
   if (!isRecord(value)) {
     throw new Error("Invalid API response: commit must be an object");
   }
+  const gateReason =
+    typeof value.gate_reason === "string" && value.gate_reason.trim() !== ""
+      ? value.gate_reason
+      : undefined;
+  const sourceCycleId =
+    typeof value.source_cycle_id === "string" &&
+    value.source_cycle_id.trim() !== ""
+      ? value.source_cycle_id
+      : undefined;
   return {
     seq: parseFiniteNumber(value.seq, "seq"),
     repo: typeof value.repo === "string" ? value.repo : "",
@@ -261,6 +287,41 @@ export function parseCycleCommit(value: unknown): CycleCommit {
     sha: parseNonEmptyString(value.sha, "sha"),
     committed_at: parseISO8601Required(value.committed_at, "committed_at"),
     message: typeof value.message === "string" ? value.message : "",
+    status: parseCommitStatus(value.status, "status"),
+    ...(gateReason !== undefined ? { gate_reason: gateReason } : {}),
+    ...(sourceCycleId !== undefined ? { source_cycle_id: sourceCycleId } : {}),
+  };
+}
+
+export function parseTaskCommit(value: unknown): TaskCommit {
+  if (!isRecord(value)) {
+    throw new Error("Invalid API response: task commit must be an object");
+  }
+  const base = parseCycleCommit(value);
+  return {
+    ...base,
+    cycle_id: parseNonEmptyString(value.cycle_id, "cycle_id"),
+    attempt_seq: parseFiniteNumber(value.attempt_seq, "attempt_seq"),
+  };
+}
+
+export function parseTaskCommitsResponse(value: unknown): TaskCommitsResponse {
+  if (!isRecord(value)) {
+    throw new Error("Invalid API response: commits payload must be an object");
+  }
+  const raw = value.commits;
+  if (!Array.isArray(raw)) {
+    throw new Error("Invalid API response: commits must be an array");
+  }
+  return {
+    task_id: parseNonEmptyString(value.task_id, "task_id"),
+    commits: raw.map((item, i) => {
+      try {
+        return parseTaskCommit(item);
+      } catch (e) {
+        throw new Error(`Invalid API response: commits[${i}]: ${errorMessage(e)}`);
+      }
+    }),
   };
 }
 

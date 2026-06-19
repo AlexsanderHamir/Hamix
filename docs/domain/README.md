@@ -78,5 +78,8 @@ Use Microsoft-style callouts where they add clarity:
 | [execute-agent.md](./execute-agent.md) | Execute phase: prompt composition, runner invocation, criteria self-report, resume |
 | [verify-agent.md](./verify-agent.md) | Verify phase: LLM judge, criterion commands, integrity checks, retries |
 | [cycle-commits.md](./cycle-commits.md) | Cycle commit tracking: ancestry ingest, execute gates, verify/resume/API consumption |
+| [commit-eligibility.md](./commit-eligibility.md) | ADR-0016 observe-vs-admit statuses and consumer filters |
+| [resume-continuation.md](./resume-continuation.md) | ContinuationBundle loader, failure taxonomy, verify-only routing |
+| [resume-quality-runbook.md](./resume-quality-runbook.md) | Live resume validation scorecard (operator-only) |
 | [retry-start-over.md](./retry-start-over.md) | Operator Start over after failure: git reset, new cycle, no checkpoint carry-forward |
 | [retry-resume.md](./retry-resume.md) | Operator Resume from failure: new cycle with parent checkpoint; three-way recovery comparison |

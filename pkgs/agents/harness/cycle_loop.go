@@ -15,6 +15,7 @@ type cycleLoopOpts struct {
 	interruptedPhase domain.Phase
 	skipFirstExecute bool
 	knownCommits     []domain.TaskCycleCommit
+	continuation     *ContinuationBundle
 }
 
 func (h *Harness) composeExecutePrompt(ctx context.Context, task *domain.Task, cycle *domain.TaskCycle, state *processState, opts cycleLoopOpts) string {
@@ -46,7 +47,12 @@ func (h *Harness) composeExecutePrompt(ctx context.Context, task *domain.Task, c
 	)
 	prompt = appendVerifyFeedback(prompt, state.verifyFeedback)
 	retryMode := retryModeFromCycleMeta(cycle)
-	if opts.resumeNotice {
+	if bundle := opts.continuation; bundle != nil {
+		prompt = composeContinuationPrompt(prompt, cycle, bundle)
+		if bundle.ExecuteFeedback != "" {
+			prompt = appendExecuteHarnessFeedback(prompt, bundle.ExecuteFeedback)
+		}
+	} else if opts.resumeNotice {
 		if retryMode == domain.RetryResume {
 			prompt = appendOperatorRetryResumeNotice(prompt, cycle, opts.knownCommits)
 		} else {
@@ -191,6 +197,9 @@ func (h *Harness) runCycleLoopExecute(
 		runErr, operatorCancelled, snap, cycle.ID, ingestErr, ingestOutcome,
 		phaseStatus, cycleStatus, taskStatus, reason, result,
 	)
+	if runErr == nil && !operatorCancelled {
+		h.bestEffortMirrorExecuteCriteria(parentCtx, cycle.ID, state)
+	}
 	phaseDetails := mergeRunnerDetailsWithGit(detailsBytes(result), snap, commitCount)
 
 	if !h.completeExecutePhase(parentCtx, state, cycle, execPhase, phaseStatus, result, phaseDetails) {

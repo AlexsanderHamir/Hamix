@@ -19,6 +19,7 @@ import {
 import type { Task } from "@/types";
 import {
   TaskCyclesPanel,
+  TaskCommitsPanel,
   TaskDetailAttentionBar,
   TaskDetailChecklistSection,
   TaskDetailHeader,
@@ -439,6 +440,8 @@ export function TaskDetailPage({ app }: Props) {
       />
 
       <TaskCyclesPanel taskId={taskId} enabled={taskQuery.isSuccess} />
+
+      <TaskCommitsPanel taskId={taskId} enabled={taskQuery.isSuccess} />
     </section>
   );
 }

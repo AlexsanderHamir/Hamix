@@ -39,6 +39,7 @@ import {
   useTaskCycles,
 } from "../../../hooks/useTaskCycles";
 import { formatCycleLineageLabel } from "../../../cycleDisplay/cycleLineage";
+import { CommitStatusBadge } from "../commits/TaskCommitsPanel";
 
 type Props = {
   taskId: string;
@@ -665,6 +666,7 @@ function CycleCommitsSummary({
       <ul className="task-cycle-commits-list">
         {commits.map((commit) => (
           <li key={commit.sha} className="task-cycle-commit-row">
+            <CommitStatusBadge status={commit.status} gateReason={commit.gate_reason} />
             <span className="task-cycle-commit-sha">{shortSha(commit.sha)}</span>
             <span className="task-cycle-commit-sep" aria-hidden="true">
               ·

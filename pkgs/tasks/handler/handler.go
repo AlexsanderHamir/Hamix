@@ -106,6 +106,7 @@ func NewHandler(s *store.Store, hub *SSEHub, rep *repo.Root, opts ...HandlerOpti
 	m.Handle("POST /tasks/{id}/cycles", http.HandlerFunc(h.postTaskCycle))
 	m.Handle("GET /tasks/{id}/cycles", http.HandlerFunc(h.getTaskCycles))
 	m.Handle("GET /tasks/{id}/cycles/{cycleId}/stream", http.HandlerFunc(h.getTaskCycleStream))
+	m.Handle("GET /tasks/{id}/commits", http.HandlerFunc(h.getTaskCommits))
 	m.Handle("GET /tasks/{id}/cycles/{cycleId}/verdicts", http.HandlerFunc(h.getTaskCycleVerdicts))
 	m.Handle("GET /tasks/{id}/cycles/{cycleId}", http.HandlerFunc(h.getTaskCycle))
 	m.Handle("PATCH /tasks/{id}/cycles/{cycleId}", http.HandlerFunc(h.patchTaskCycle))

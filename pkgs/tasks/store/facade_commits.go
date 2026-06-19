@@ -22,3 +22,21 @@ func (s *Store) ListCommitsForCycle(ctx context.Context, cycleID string) ([]doma
 	slog.Debug("trace", "cmd", storeLogCmd, "operation", "tasks.store.ListCommitsForCycle")
 	return commits.ListCommitsForCycle(ctx, s.db, cycleID)
 }
+
+// ListEligibleCommitsForCycle returns eligible commits for verify on one cycle.
+func (s *Store) ListEligibleCommitsForCycle(ctx context.Context, cycleID string) ([]domain.TaskCycleCommit, error) {
+	slog.Debug("trace", "cmd", storeLogCmd, "operation", "tasks.store.ListEligibleCommitsForCycle")
+	return commits.ListEligibleCommitsForCycle(ctx, s.db, cycleID)
+}
+
+// MarkCycleCommitsSuperseded marks commits removed from ancestry as superseded.
+func (s *Store) MarkCycleCommitsSuperseded(ctx context.Context, cycleID string, keepSHAs map[string]struct{}) error {
+	slog.Debug("trace", "cmd", storeLogCmd, "operation", "tasks.store.MarkCycleCommitsSuperseded")
+	return commits.MarkCycleCommitsSuperseded(ctx, s.db, cycleID, keepSHAs)
+}
+
+// ListCommitsForTask returns distinct commits indexed for a task across all cycles.
+func (s *Store) ListCommitsForTask(ctx context.Context, taskID string) ([]domain.TaskCycleCommit, error) {
+	slog.Debug("trace", "cmd", storeLogCmd, "operation", "tasks.store.ListCommitsForTask")
+	return commits.ListCommitsForTask(ctx, s.db, taskID)
+}

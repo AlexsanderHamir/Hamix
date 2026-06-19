@@ -220,7 +220,9 @@ Phase-specific behavior:
 | `task_cycle_verify_reports` | Locked passes, verify attempt, retry feedback |
 | Task row | Base prompt |
 | `task_context_snapshots` | Project context block |
-| `task_cycle_commits` | Worker-indexed SHAs for resume/verify prompts |
+| `task_cycle_commits` | Worker-indexed SHAs for resume/verify prompts; **status** (`eligible`, `observed`, `inherited`, `superseded`) per [commit-eligibility.md](./commit-eligibility.md) |
+
+Cross-cycle operator resume loads a **ContinuationBundle** from the parent attempt ([resume-continuation.md](./resume-continuation.md)): scope lock, status-grouped commits, verify-only routing when execute succeeded and eligible commits exist.
 
 | Branch | Harness behavior |
 | --- | --- |

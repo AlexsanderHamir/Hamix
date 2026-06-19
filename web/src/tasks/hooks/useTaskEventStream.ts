@@ -179,6 +179,9 @@ export function useTaskEventStream(): boolean {
           queryKey: taskQueryKeys.cycles(taskId),
         });
       }
+      void queryClient.invalidateQueries({
+        queryKey: taskQueryKeys.commits(taskId),
+      });
     }
     // Any task/cycle frame can flip a status (running → done), change
     // priority, or add/remove a task — all of which feed the home-page

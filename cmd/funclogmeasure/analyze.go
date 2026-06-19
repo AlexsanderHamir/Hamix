@@ -124,6 +124,7 @@ var skipSlogRequirement = map[string]struct{}{
 	// sink is configured would emit on stderr before the file exists
 	// (see the in-file comment).
 	"github.com/AlexsanderHamir/T2A/cmd/taskapi\tmain": {},
+	"github.com/AlexsanderHamir/T2A/cmd/resumequality\tmain": {},
 	// pkgs/tasks/handler/httplog_io.go: pure attribute-builder helpers
 	// for the http.io trace line. The actual slog.Log call lives on the
 	// calling function (logHTTPRequest / logHTTPResponse); these helpers
@@ -423,6 +424,27 @@ var skipSlogRequirement = map[string]struct{}{
 	"github.com/AlexsanderHamir/T2A/pkgs/tasks/store/internal/checklist\tValidateCriteriaMutable":      {},
 	"github.com/AlexsanderHamir/T2A/pkgs/tasks/store/internal/checklist\tvalidateCriteriaMutable":      {},
 	"github.com/AlexsanderHamir/T2A/pkgs/tasks/store/internal/checklist\tcriterionLockedByCompletion":  {},
+	"github.com/AlexsanderHamir/T2A/pkgs/tasks/domain\tValidCommitStatus":                              {},
+	"github.com/AlexsanderHamir/T2A/pkgs/tasks/domain\tCommitStatusRank":                               {},
+	"github.com/AlexsanderHamir/T2A/pkgs/tasks/store/internal/commits\tdedupeCommitsBySHA":             {},
+	"github.com/AlexsanderHamir/T2A/pkgs/agents/harness\tassignCommitAdmissionStatuses":                {},
+	"github.com/AlexsanderHamir/T2A/pkgs/agents/harness\treasonRemediation":                            {},
+	"github.com/AlexsanderHamir/T2A/pkgs/agents/harness\tclassifyParentFailure":                        {},
+	"github.com/AlexsanderHamir/T2A/pkgs/agents/harness\trouteResumeEntry":                             {},
+	"github.com/AlexsanderHamir/T2A/pkgs/agents/harness\tcontinuationSufficient":                       {},
+	"github.com/AlexsanderHamir/T2A/pkgs/agents/harness\tformatCommitsByStatusForResume":               {},
+	"github.com/AlexsanderHamir/T2A/pkgs/agents/harness\tcomposeContinuationPrompt":                    {},
+	"github.com/AlexsanderHamir/T2A/pkgs/agents/harness\tlastExecutePhase":                             {},
+	"github.com/AlexsanderHamir/T2A/pkgs/agents/harness\tphaseSummary":                                 {},
+	"github.com/AlexsanderHamir/T2A/pkgs/agents/harness\tisExecuteGateReason":                          {},
+	"github.com/AlexsanderHamir/T2A/pkgs/agents/harness\tbundleToCheckpoint":                           {},
+	"github.com/AlexsanderHamir/T2A/pkgs/agents/harness\tappendExecuteHarnessFeedback":                 {},
+	"github.com/AlexsanderHamir/T2A/pkgs/agents/harness\tparseCriteriaReportPartial":                   {},
+	"github.com/AlexsanderHamir/T2A/pkgs/agents/harness\tparentFailureReason":                          {},
+	"github.com/AlexsanderHamir/T2A/pkgs/agents/harness\trunnerFeedbackFromPhase":                      {},
+	"github.com/AlexsanderHamir/T2A/pkgs/agents/harness\tscopeFilesFromExecutePhase":                   {},
+	"github.com/AlexsanderHamir/T2A/pkgs/agents/harness\tgitStatusPorcelain":                           {},
+	"github.com/AlexsanderHamir/T2A/pkgs/agents/harness\trunnerDetailsExcerpt":                         {},
 	"github.com/AlexsanderHamir/T2A/pkgs/tasks/store/internal/tasks\tresolveRetryParentCycleInTx":      {},
 	"github.com/AlexsanderHamir/T2A/pkgs/tasks/store\tNormalizeVerifyCommands":                         {},
 	"github.com/AlexsanderHamir/T2A/pkgs/agents/harness\ttruncateBytes":                                {},

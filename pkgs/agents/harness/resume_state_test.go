@@ -132,6 +132,99 @@ func initGitRepoForDiffTest(t *testing.T, dir string) {
 	}
 }
 
+func TestLoadContinuationBundle_verifyOnlyWhenExecuteSucceeded(t *testing.T) {
+	t.Parallel()
+	ctx := context.Background()
+	st := store.NewStore(tasktestdb.OpenSQLite(t))
+	tsk, err := st.Create(ctx, store.CreateTaskInput{
+		Title: "verify-only parent", InitialPrompt: "work", Status: domain.StatusReady, Priority: domain.PriorityMedium,
+	}, domain.ActorUser)
+	if err != nil {
+		t.Fatalf("create: %v", err)
+	}
+	item, err := st.AddChecklistItem(ctx, tsk.ID, "criterion", nil, domain.ActorUser)
+	if err != nil {
+		t.Fatalf("add checklist: %v", err)
+	}
+	cycle, err := st.StartCycle(ctx, store.StartCycleInput{TaskID: tsk.ID, TriggeredBy: domain.ActorAgent})
+	if err != nil {
+		t.Fatalf("start cycle: %v", err)
+	}
+	exec, err := st.StartPhase(ctx, cycle.ID, domain.PhaseExecute, domain.ActorAgent)
+	if err != nil {
+		t.Fatalf("start execute: %v", err)
+	}
+	if _, err := st.CompletePhase(ctx, store.CompletePhaseInput{
+		CycleID: cycle.ID, PhaseSeq: exec.PhaseSeq,
+		Status: domain.PhaseStatusSucceeded, By: domain.ActorAgent,
+	}); err != nil {
+		t.Fatalf("complete execute: %v", err)
+	}
+	verify, err := st.StartPhase(ctx, cycle.ID, domain.PhaseVerify, domain.ActorAgent)
+	if err != nil {
+		t.Fatalf("start verify: %v", err)
+	}
+	summary := verificationFailedReason + ": criterion failed"
+	if _, err := st.CompletePhase(ctx, store.CompletePhaseInput{
+		CycleID: cycle.ID, PhaseSeq: verify.PhaseSeq,
+		Status: domain.PhaseStatusFailed, Summary: &summary, By: domain.ActorAgent,
+	}); err != nil {
+		t.Fatalf("complete verify: %v", err)
+	}
+	if _, err := st.TerminateCycle(ctx, cycle.ID, domain.CycleStatusFailed, verificationFailedReason, domain.ActorAgent); err != nil {
+		t.Fatalf("terminate: %v", err)
+	}
+	when := time.Date(2026, 6, 18, 12, 0, 0, 0, time.UTC)
+	if err := st.UpsertCycleCommits(ctx, tsk.ID, cycle.ID, []store.CycleCommitEntry{{
+		PhaseSeq: 1, Seq: 1, Repo: "/repo", Worktree: "/repo", Branch: "main",
+		SHA: "abc1234567890abcdef1234567890abcdef1234", CommittedAt: when, Message: "feat",
+		Status: domain.CommitEligible,
+	}}); err != nil {
+		t.Fatalf("upsert commits: %v", err)
+	}
+	if err := st.UpsertVerifyReports(ctx, cycle.ID, 1, []store.VerifyReportEntry{
+		{CriterionID: item.ID, Verified: false, VerifierKind: domain.VerifierVerifyAgent, Reasoning: "still failing"},
+	}); err != nil {
+		t.Fatalf("upsert verify: %v", err)
+	}
+
+	h := New(st, runnerfake.New(), Options{WorkingDir: t.TempDir()})
+	bundle, err := h.loadContinuationBundle(ctx, cycle.ID)
+	if err != nil {
+		t.Fatalf("load bundle: %v", err)
+	}
+	if bundle.Entry != resumeEntryVerifyOnly {
+		t.Fatalf("entry=%v want verify-only", bundle.Entry)
+	}
+	if !bundle.Sufficient {
+		t.Fatalf("expected sufficient continuation data")
+	}
+}
+
+func TestComposeContinuationPrompt_scopeLockAndAntiDiscovery(t *testing.T) {
+	t.Parallel()
+	started := time.Date(2026, 6, 1, 12, 0, 0, 0, time.UTC)
+	cycle := &domain.TaskCycle{ID: "child-1", AttemptSeq: 2, StartedAt: started}
+	bundle := &ContinuationBundle{
+		LineageAttempt: 1,
+		FailureClass:   failureClassVerify,
+		FailureReason:  verificationFailedReason,
+		FailurePhase:   domain.PhaseVerify,
+		ScopeFiles:     []string{"pkgs/foo/bar.go"},
+		Commits: []domain.TaskCycleCommit{
+			{SHA: "abc1234567890abcdef1234567890abcdef1234", Status: domain.CommitEligible, Message: "prior work"},
+		},
+	}
+	got := composeContinuationPrompt("base prompt", cycle, bundle)
+	for _, frag := range []string{
+		"Continuation", "Scope lock", "pkgs/foo/bar.go", "Eligible", "re-discover", "base prompt",
+	} {
+		if !containsSubstr(got, frag) {
+			t.Fatalf("missing %q in prompt:\n%s", frag, got)
+		}
+	}
+}
+
 func TestAppendResumeNotice_andCommitPolicy(t *testing.T) {
 	t.Parallel()
 	started := time.Date(2026, 6, 1, 12, 0, 0, 0, time.UTC)

@@ -232,6 +232,11 @@ export type CycleGitContext = {
 };
 
 /**
+ * Commit lifecycle status (ADR-0016).
+ */
+export type CommitStatus = "eligible" | "observed" | "inherited" | "superseded";
+
+/**
  * One row from `GET /tasks/{id}/cycles/{cycleId}/verdicts.commits`.
  */
 export type CycleCommit = {
@@ -243,6 +248,22 @@ export type CycleCommit = {
   /** ISO 8601 from API. */
   committed_at: string;
   message: string;
+  status: CommitStatus;
+  gate_reason?: string;
+  source_cycle_id?: string;
+};
+
+/**
+ * Task-scoped commit row from `GET /tasks/{id}/commits`.
+ */
+export type TaskCommit = CycleCommit & {
+  cycle_id: string;
+  attempt_seq: number;
+};
+
+export type TaskCommitsResponse = {
+  task_id: string;
+  commits: TaskCommit[];
 };
 
 /**

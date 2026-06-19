@@ -278,7 +278,7 @@ The two report files above are the agent ↔ worker wire format. They are GC'd a
 
 `task_cycle_commits`
 
-Worker-indexed git commits for one cycle ([ADR-0014](adr/ADR-0014-cycle-commit-tracking.md)). Upserted after a successful execute run (before `CompletePhase(execute)`) from ancestry `cycle_base_sha..HEAD`. Not dual-written to `task_events`.
+Worker-indexed git commits for one cycle ([ADR-0014](adr/ADR-0014-cycle-commit-tracking.md), statuses [ADR-0016](adr/ADR-0016-observe-vs-admit-commits.md)). Upserted after a successful execute run (observe-first: before `CompletePhase(execute)`) from ancestry `cycle_base_sha..HEAD`. Not dual-written to `task_events`.
 
 | Column | Type | Notes |
 |---|---|---|
@@ -293,6 +293,9 @@ Worker-indexed git commits for one cycle ([ADR-0014](adr/ADR-0014-cycle-commit-t
 | `sha` | string | full commit hash; unique with `cycle_id`. |
 | `committed_at` | timestamptz | from `git log -1`. |
 | `message` | text | subject line from `git log -1`. |
+| `status` | string | `eligible` \| `observed` \| `inherited` \| `superseded`; default `eligible`. |
+| `gate_reason` | string | harness reason when not eligible (e.g. `execute_uncommitted_work`). |
+| `source_cycle_id` | string | provenance when `inherited` from parent attempt. |
 | `recorded_at` | timestamptz | worker upsert time. |
 
 Unique index: `(cycle_id, sha)`. List order: `seq ASC`. Pre-ADR-0014 cycles return zero rows.

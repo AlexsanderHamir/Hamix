@@ -407,14 +407,16 @@ func buildInheritedCommitEntries(
 			worktree = g.Worktree
 		}
 		out = append(out, store.CycleCommitEntry{
-			Seq:         seq,
-			Repo:        repo,
-			Worktree:    worktree,
-			Branch:      branch,
-			SHA:         sha,
-			CommittedAt: at,
-			Message:     msg,
-			PhaseSeq:    execPhaseSeq,
+			Seq:           seq,
+			Repo:          repo,
+			Worktree:      worktree,
+			Branch:        branch,
+			SHA:           sha,
+			CommittedAt:   at,
+			Message:       msg,
+			PhaseSeq:      execPhaseSeq,
+			Status:        domain.CommitInherited,
+			SourceCycleID: strings.TrimSpace(c.CycleID),
 		})
 	}
 	return out, nil
@@ -425,8 +427,57 @@ type executeCommitIngestOutcome struct {
 	CommitCount int
 }
 
-// ingestExecuteCommits validates git state after a successful execute run
-// and upserts task_cycle_commits before CompletePhase(execute).
+func (h *Harness) evaluateExecuteCommitGates(
+	ctx context.Context,
+	snap gitPhaseSnapshot,
+	cycleID string,
+	entries []store.CycleCommitEntry,
+) (failReason string, err error) {
+	slog.Debug("trace", "cmd", harnessLogCmd, "operation", "agent.harness.evaluateExecuteCommitGates",
+		"cycle_id", cycleID, "entry_count", len(entries))
+	dirty, err := gitWorkingTreeDirty(ctx, snap.Worktree)
+	if err != nil {
+		return "", err
+	}
+	if dirty {
+		return executeUncommittedWorkReason, nil
+	}
+	stored, err := h.store.ListCommitsForCycle(ctx, cycleID)
+	if err != nil {
+		return "", err
+	}
+	current := make(map[string]struct{}, len(entries))
+	for _, e := range entries {
+		current[e.SHA] = struct{}{}
+	}
+	for _, row := range stored {
+		if _, ok := current[row.SHA]; !ok {
+			return executeRewrittenHistoryReason, nil
+		}
+	}
+	return "", nil
+}
+
+func assignCommitAdmissionStatuses(entries []store.CycleCommitEntry, failReason string) {
+	for i := range entries {
+		if failReason != "" {
+			entries[i].Status = domain.CommitObserved
+			entries[i].GateReason = failReason
+			continue
+		}
+		if entries[i].Status == domain.CommitInherited {
+			entries[i].Status = domain.CommitEligible
+			entries[i].GateReason = ""
+			continue
+		}
+		entries[i].Status = domain.CommitEligible
+		entries[i].GateReason = ""
+	}
+}
+
+// ingestExecuteCommits observes git ancestry after a successful execute run,
+// upserts task_cycle_commits (observe-first, ADR-0016), then evaluates admission
+// gates. Rows persist even when gates fail.
 func (h *Harness) ingestExecuteCommits(
 	ctx context.Context,
 	taskID string,
@@ -468,33 +519,29 @@ func (h *Harness) ingestExecuteCommits(
 	if len(entries) == 0 {
 		return executeCommitIngestOutcome{FailReason: executeNoCommitsReason}, nil
 	}
-	dirty, err := gitWorkingTreeDirty(ctx, snap.Worktree)
-	if err != nil {
-		return executeCommitIngestOutcome{}, err
-	}
-	if dirty {
-		return executeCommitIngestOutcome{FailReason: executeUncommittedWorkReason}, nil
-	}
-	stored, err := h.store.ListCommitsForCycle(ctx, cycle.ID)
-	if err != nil {
-		return executeCommitIngestOutcome{}, err
-	}
-	current := make(map[string]struct{}, len(entries))
-	for _, e := range entries {
-		current[e.SHA] = struct{}{}
-	}
-	for _, row := range stored {
-		if _, ok := current[row.SHA]; !ok {
-			return executeCommitIngestOutcome{FailReason: executeRewrittenHistoryReason}, nil
-		}
-	}
 	for i := range entries {
 		if entries[i].PhaseSeq == 0 {
 			entries[i].PhaseSeq = execPhaseSeq
 		}
 	}
+	failReason, err := h.evaluateExecuteCommitGates(ctx, snap, cycle.ID, entries)
+	if err != nil {
+		return executeCommitIngestOutcome{}, err
+	}
+	assignCommitAdmissionStatuses(entries, failReason)
 	if err := h.store.UpsertCycleCommits(ctx, taskID, cycle.ID, entries); err != nil {
 		return executeCommitIngestOutcome{}, err
+	}
+	keepSHAs := make(map[string]struct{}, len(entries))
+	for _, e := range entries {
+		keepSHAs[e.SHA] = struct{}{}
+	}
+	if err := h.store.MarkCycleCommitsSuperseded(ctx, cycle.ID, keepSHAs); err != nil {
+		return executeCommitIngestOutcome{}, err
+	}
+	h.publish(taskID, cycle.ID)
+	if failReason != "" {
+		return executeCommitIngestOutcome{FailReason: failReason, CommitCount: len(entries)}, nil
 	}
 	return executeCommitIngestOutcome{CommitCount: len(entries)}, nil
 }
@@ -539,7 +586,7 @@ func formatKnownCommitsForResume(commits []domain.TaskCycleCommit) string {
 		return ""
 	}
 	var b strings.Builder
-	b.WriteString("Known commits already indexed for this cycle:\n")
+	b.WriteString("Known commits already indexed for this task (all prior attempts):\n")
 	for _, c := range commits {
 		short := c.SHA
 		if len(short) > 12 {

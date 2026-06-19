@@ -8,7 +8,7 @@ Operator **Resume from failure** (`resume` retry) queues a **new execution cycle
 | --- | --- |
 | API | `POST /tasks/{id}/retry` with `{ "mode": "resume" }` |
 | Store | `tasks.pending_retry`, `RequestTaskRetry` |
-| Harness | `RunWithRetry` → `runResumeRetry`, `loadCheckpointFromParent` |
+| Harness | `RunWithRetry` → `runResumeRetry`, `loadContinuationBundle` |
 | SPA | Task detail **Resume from failure** button + confirm dialog; cycle lineage badge |
 
 ## In this article
@@ -25,7 +25,9 @@ Operator **Resume from failure** (`resume` retry) queues a **new execution cycle
 
 ## Overview
 
-Resume from failure is for operators who want another attempt without losing progress: verify passes, known commits, and retry feedback from the failed parent cycle are injected into the new cycle's execute phase. The parent cycle row and git history are **never mutated**.
+Resume from failure is for operators who want another attempt without losing progress: verify passes, known commits (including **observed** commits from failed execute gates), and retry feedback from the failed parent cycle are injected via the **ContinuationBundle**. The parent cycle row and git history are **never mutated**.
+
+Deep dive: [resume-continuation.md](./resume-continuation.md).
 
 Every operator retry after failure creates a new `task_cycles` row (`attempt_seq` monotonic) with `parent_cycle_id` and `meta.retry_mode = "resume"`.
 
@@ -46,7 +48,7 @@ Do not conflate these paths — trigger, cycle row, git, and checkpoint differ:
 | **Cross-cycle checkpoint** | Data loaded from a **terminal** parent via `loadCheckpointFromParent`, not from an open running cycle. |
 | **verifyAttempt = 0** | Each new attempt gets a fresh verify retry budget; parent `maxAttempt` is not carried forward. |
 | **previouslyPassed** | Criteria that already passed verify on the parent are locked for the new attempt. |
-| **knownCommits** | Parent `task_cycle_commits` rows feed the resume notice on execute. |
+| **knownCommits** | All distinct `task_cycle_commits` rows for the task (every prior attempt) feed the resume notice on execute. |
 | **Shared loader** | `loadVerifyCheckpointData` is shared with ADR-0006 same-cycle resume; eligibility rules differ. |
 
 ## Workflow
@@ -87,7 +89,7 @@ sequenceDiagram
 | --- | --- |
 | Parent cycle row | Must be terminal (`failed` or `aborted`) |
 | `task_cycle_verify_reports` | `previouslyPassed`, verify feedback |
-| `task_cycle_commits` | `knownCommits` for resume notice |
+| `task_cycle_commits` | Task-wide distinct SHAs via `ListCommitsForTask` for resume notice and zero-new-commit ingest inherit |
 
 Contrast with ADR-0006 [`reconstructCheckpoint`](../../pkgs/agents/harness/resume_state.go): same-cycle, open `running` cycle, interrupt phases only.
 

@@ -181,7 +181,7 @@ func TestRunWithRetry_resumeCarriesPassedCriteria(t *testing.T) {
 	deadline := time.Now().Add(2 * time.Second)
 	for time.Now().Before(deadline) {
 		for _, call := range r.Calls() {
-			if strings.Contains(call.Prompt, "Operator retry") {
+			if strings.Contains(call.Prompt, "Continuation") || strings.Contains(call.Prompt, "Operator retry") {
 				cancel()
 				cycles, err := st.ListCyclesForTask(context.Background(), tsk.ID, 10)
 				if err != nil {
@@ -201,6 +201,161 @@ func TestRunWithRetry_resumeCarriesPassedCriteria(t *testing.T) {
 	t.Fatal("resume prompt not observed")
 }
 
+func TestSeedCrossCycleExecuteFromParent_recordsSucceededExecute(t *testing.T) {
+	ctx := context.Background()
+	st := store.NewStore(tasktestdb.OpenSQLite(t))
+	tsk, err := st.Create(ctx, store.CreateTaskInput{
+		Title: "seed execute", InitialPrompt: "work", Priority: domain.PriorityMedium,
+	}, domain.ActorUser)
+	if err != nil {
+		t.Fatal(err)
+	}
+	parent, err := st.StartCycle(ctx, store.StartCycleInput{TaskID: tsk.ID, TriggeredBy: domain.ActorAgent})
+	if err != nil {
+		t.Fatal(err)
+	}
+	exec, err := st.StartPhase(ctx, parent.ID, domain.PhaseExecute, domain.ActorAgent)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if _, err := st.CompletePhase(ctx, store.CompletePhaseInput{
+		CycleID: parent.ID, PhaseSeq: exec.PhaseSeq,
+		Status: domain.PhaseStatusSucceeded, By: domain.ActorAgent,
+	}); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := st.TerminateCycle(ctx, parent.ID, domain.CycleStatusFailed, verificationFailedReason, domain.ActorAgent); err != nil {
+		t.Fatal(err)
+	}
+	child, err := st.StartCycle(ctx, store.StartCycleInput{TaskID: tsk.ID, TriggeredBy: domain.ActorAgent})
+	if err != nil {
+		t.Fatal(err)
+	}
+	h := New(st, runnerfake.New(), Options{})
+	if err := h.seedCrossCycleExecuteFromParent(ctx, child, parent.ID); err != nil {
+		t.Fatal(err)
+	}
+	phases, err := st.ListPhasesForCycle(ctx, child.ID)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(phases) != 1 || phases[0].Phase != domain.PhaseExecute || phases[0].Status != domain.PhaseStatusSucceeded {
+		t.Fatalf("phases=%+v", phases)
+	}
+}
+
+func TestVerifyOnlyCrossCycleResume_runCycleLoopSkipsRunnerExecute(t *testing.T) {
+	skipIfNoGit(t)
+	workDir := t.TempDir()
+	gitInit(t, workDir)
+	reportDir := t.TempDir()
+
+	ctx := context.Background()
+	st := store.NewStore(tasktestdb.OpenSQLite(t))
+	tsk, err := st.Create(ctx, store.CreateTaskInput{
+		Title: "verify-only resume", InitialPrompt: "work", Priority: domain.PriorityMedium,
+	}, domain.ActorUser)
+	if err != nil {
+		t.Fatal(err)
+	}
+	item, err := st.AddChecklistItem(ctx, tsk.ID, "criterion", nil, domain.ActorUser)
+	if err != nil {
+		t.Fatal(err)
+	}
+	running := domain.StatusRunning
+	if _, err := st.Update(ctx, tsk.ID, store.UpdateTaskInput{Status: &running}, domain.ActorAgent); err != nil {
+		t.Fatal(err)
+	}
+	parent, err := st.StartCycle(ctx, store.StartCycleInput{TaskID: tsk.ID, TriggeredBy: domain.ActorAgent})
+	if err != nil {
+		t.Fatal(err)
+	}
+	exec, err := st.StartPhase(ctx, parent.ID, domain.PhaseExecute, domain.ActorAgent)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if _, err := st.CompletePhase(ctx, store.CompletePhaseInput{
+		CycleID: parent.ID, PhaseSeq: exec.PhaseSeq,
+		Status: domain.PhaseStatusSucceeded, By: domain.ActorAgent,
+	}); err != nil {
+		t.Fatal(err)
+	}
+	verify, err := st.StartPhase(ctx, parent.ID, domain.PhaseVerify, domain.ActorAgent)
+	if err != nil {
+		t.Fatal(err)
+	}
+	summary := verificationFailedReason + ": failed"
+	if _, err := st.CompletePhase(ctx, store.CompletePhaseInput{
+		CycleID: parent.ID, PhaseSeq: verify.PhaseSeq,
+		Status: domain.PhaseStatusFailed, Summary: &summary, By: domain.ActorAgent,
+	}); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := st.TerminateCycle(ctx, parent.ID, domain.CycleStatusFailed, verificationFailedReason, domain.ActorAgent); err != nil {
+		t.Fatal(err)
+	}
+	when := time.Date(2026, 6, 18, 12, 0, 0, 0, time.UTC)
+	if err := st.UpsertCycleCommits(ctx, tsk.ID, parent.ID, []store.CycleCommitEntry{{
+		PhaseSeq: 1, Seq: 1, Repo: "/repo", Worktree: "/repo", Branch: "main",
+		SHA: "abc1234567890abcdef1234567890abcdef1234", CommittedAt: when, Message: "feat",
+		Status: domain.CommitEligible,
+	}}); err != nil {
+		t.Fatal(err)
+	}
+	if err := st.UpsertCriteriaReports(ctx, parent.ID, 1, []store.CriteriaReportEntry{
+		{CriterionID: item.ID, ClaimedDone: true, Evidence: "execute done"},
+	}); err != nil {
+		t.Fatal(err)
+	}
+
+	cp, err := New(st, runnerfake.New(), Options{WorkingDir: workDir}).loadCheckpointFromParent(ctx, parent.ID)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if cp.entry != resumeEntryVerifyOnly {
+		t.Fatalf("entry=%v want verify-only", cp.entry)
+	}
+
+	r := runnerfake.New()
+	r.Script(tsk.ID, domain.PhaseVerify, runner.NewResult(domain.PhaseStatusSucceeded, "ok", nil, ""))
+	h := New(st, r, Options{
+		WorkingDir: workDir,
+		ReportDir:  reportDir,
+		Clock:      func() time.Time { return time.Unix(0, 0).UTC() },
+	})
+	state := processState{
+		startedAt:        h.opts.Clock(),
+		previouslyPassed: cp.previouslyPassed,
+		verifyFeedback:   cp.verifyFeedback,
+	}
+	parentID := parent.ID
+	child, ok := h.startCycle(ctx, tsk, &state, startCycleOpts{parentCycleID: &parentID, retryMode: domain.RetryResume})
+	if !ok {
+		t.Fatal("start child cycle failed")
+	}
+	if err := h.seedCrossCycleExecuteFromParent(ctx, child, parent.ID); err != nil {
+		t.Fatal(err)
+	}
+	if err := h.mirrorParentCriteriaForVerifyOnly(ctx, child.ID, parent.ID); err != nil {
+		t.Fatal(err)
+	}
+	writeVerifyReportForTest(t, reportDir, child.ID, []string{item.ID})
+	state.verifySnap, _ = h.loadVerificationSnapshot(ctx, tsk.ID)
+	h.runCycleLoop(ctx, tsk, child, &state, cycleLoopOpts{
+		skipFirstExecute: true,
+		continuation:     cp.continuation,
+	})
+
+	for _, call := range r.Calls() {
+		if call.Phase == domain.PhaseExecute {
+			t.Fatalf("verify-only resume must skip execute runner; got %+v", call)
+		}
+	}
+	if len(r.Calls()) == 0 {
+		t.Fatal("expected verify runner call")
+	}
+}
+
 func TestLoadCheckpointFromParent_requiresTerminal(t *testing.T) {
 	ctx := context.Background()
 	st := store.NewStore(tasktestdb.OpenSQLite(t))
@@ -217,5 +372,32 @@ func TestLoadCheckpointFromParent_requiresTerminal(t *testing.T) {
 	h := New(st, runnerfake.New(), Options{})
 	if _, err := h.loadCheckpointFromParent(ctx, cycle.ID); err == nil {
 		t.Fatal("expected error for running parent cycle")
+	}
+}
+
+func writeVerifyReportForTest(t *testing.T, reportDir, cycleID string, ids []string) {
+	t.Helper()
+	cdir := filepath.Join(reportDir, cycleID)
+	if err := os.MkdirAll(cdir, 0o755); err != nil {
+		t.Fatalf("mkdir: %v", err)
+	}
+	type entry struct {
+		ID        string `json:"id"`
+		Verified  bool   `json:"verified"`
+		Reasoning string `json:"reasoning"`
+	}
+	rep := struct {
+		Criteria []entry `json:"criteria"`
+	}{}
+	for _, id := range ids {
+		rep.Criteria = append(rep.Criteria, entry{
+			ID:        id,
+			Verified:  true,
+			Reasoning: "verifier confirmed via diff inspection and file content review of the change set under test",
+		})
+	}
+	b, _ := json.Marshal(rep)
+	if err := os.WriteFile(filepath.Join(cdir, "verify-report.json"), b, 0o644); err != nil {
+		t.Fatalf("write verify: %v", err)
 	}
 }

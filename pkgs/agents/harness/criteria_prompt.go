@@ -75,3 +75,11 @@ func appendVerifyFeedback(prompt string, feedback string) string {
 	}
 	return prompt + "\n\n## Previous verification feedback\n\n" + feedback + "\n"
 }
+
+func appendExecuteHarnessFeedback(prompt string, feedback string) string {
+	feedback = strings.TrimSpace(feedback)
+	if feedback == "" {
+		return prompt
+	}
+	return prompt + "\n\n## Execute harness feedback\n\n" + feedback + "\n"
+}

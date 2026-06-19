@@ -432,7 +432,7 @@ func (h *Harness) runLLMVerifyAgent(
 ) error {
 	slog.Debug("trace", "cmd", harnessLogCmd, "operation", "agent.harness.Harness.runLLMVerifyAgent",
 		"task_id", task.ID, "cycle_id", cycle.ID, "locked_passes", len(previouslyPassed))
-	commits, _ := h.store.ListCommitsForCycle(ctx, cycle.ID)
+	commits, _ := h.store.ListEligibleCommitsForCycle(ctx, cycle.ID)
 	var b strings.Builder
 	b.WriteString("You are the verification agent. Do not modify source files.\n")
 	// Render the absolute, worker-managed verify-report path so the

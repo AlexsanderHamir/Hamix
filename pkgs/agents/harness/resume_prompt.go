@@ -27,7 +27,7 @@ func appendOperatorRetryResumeNotice(prompt string, cycle *domain.TaskCycle, par
 	if block := formatKnownCommitsForResume(parentCommits); block != "" {
 		b.WriteString("3. ")
 		b.WriteString(strings.TrimSpace(block))
-		b.WriteString("Those commits are already indexed — do **not** list them in `criteria-report.json` unless you create **new** commits in this attempt.\n")
+		b.WriteString("Those commits are already indexed for this task — do **not** list them in `criteria-report.json` unless you create **new** commits in this attempt.\n")
 		b.WriteString("4. A clean tree does **not** mean the task succeeded — complete remaining criteria and write the criteria report.\n")
 	} else {
 		b.WriteString("3. A clean tree does **not** mean the task succeeded — complete remaining criteria and write the criteria report.\n")

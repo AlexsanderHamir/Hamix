@@ -7,7 +7,7 @@ How the worker indexes git commits per execution cycle, gates execute on a clean
 | **Applies to** | Agent harness execute/verify phases, `task_cycle_commits`, verdicts API |
 | **Audience** | Contributors touching `pkgs/agents/harness`, cycle store, or cycle detail UI |
 | **Prerequisite** | [execute-agent.md](./execute-agent.md) — execute prompt and criteria self-report; [persistence.md](./persistence.md) — verdict mirror pattern |
-| **Decision record** | [ADR-0014](../adr/ADR-0014-cycle-commit-tracking.md) |
+| **Decision record** | [ADR-0014](../adr/ADR-0014-cycle-commit-tracking.md), [ADR-0016](../adr/ADR-0016-observe-vs-admit-commits.md) |
 
 ## In this article
 
@@ -24,7 +24,7 @@ How the worker indexes git commits per execution cycle, gates execute on a clean
 
 ## Overview
 
-When `app_settings.repo_root` points at a git worktree, every successful execute phase must end with **at least one new commit** in the cycle ancestry and a **clean working tree** before verify runs. The worker discovers commits via `git rev-list --reverse cycle_base_sha..HEAD`, validates the agent's self-reported SHAs, and upserts durable rows into `task_cycle_commits`.
+When `app_settings.repo_root` points at a git worktree, every successful execute phase must end with **at least one new commit** in the cycle ancestry and a **clean working tree** before verify runs. The worker discovers commits via `git rev-list --reverse cycle_base_sha..HEAD`, validates the agent's self-reported SHAs, and upserts durable rows into `task_cycle_commits`. **Observe-first (ADR-0016):** rows persist even when admission gates fail, with `status=observed` and `gate_reason`. Verify reads **eligible** commits only. See [commit-eligibility.md](./commit-eligibility.md).
 
 > **Note** — Non-git working directories skip snapshot, ingest, and commit gates entirely (`git.skipped` in phase details). Verify integrity checks are also bypassed for non-git repos.
 
@@ -172,7 +172,7 @@ Returns `git_context` (repo, worktree, branch from first/last commit) and `commi
 | Consumer | Source | Behavior |
 | --- | --- | --- |
 | **Verify LLM** | `ListCommitsForCycle` + `git diff HEAD` | Git context block in verify prompt; diff for tamper/evidence context |
-| **Resume execute** | `ListCommitsForCycle` via checkpoint loader | [`formatKnownCommitsForResume`](../../pkgs/agents/harness/git_commits.go) in resume notice — lists indexed SHAs and messages |
+| **Resume execute** | `ListCommitsForTask` via checkpoint loader | [`formatKnownCommitsForResume`](../../pkgs/agents/harness/git_commits.go) — distinct SHAs across all prior attempts |
 | **SPA cycle panel** | `GET .../verdicts` | Commit timeline under verdicts fetch |
 
 Resume model ([ADR-0006](../adr/ADR-0006-phase-boundary-resume.md)) is unchanged: phase ledger + reports + context snapshots. Commit durability no longer depends on grep for `t2a:cycle=`.

@@ -11,7 +11,10 @@ import (
 	"testing"
 	"time"
 
+	"github.com/AlexsanderHamir/T2A/internal/tasktestdb"
+	"github.com/AlexsanderHamir/T2A/pkgs/agents/runner/runnerfake"
 	"github.com/AlexsanderHamir/T2A/pkgs/tasks/domain"
+	"github.com/AlexsanderHamir/T2A/pkgs/tasks/store"
 )
 
 func TestFormatGitContextForPrompt_omitsWorktreeWhenSameAsRepo(t *testing.T) {
@@ -162,6 +165,92 @@ func TestResolvePhaseCommits_ignoresReportedOutsideAncestry(t *testing.T) {
 	}
 	if len(entries) != 0 {
 		t.Fatalf("entries: got %d want 0 (no new commits in range)", len(entries))
+	}
+}
+
+// Regression (ADR-0016): gate failure must not discard ancestry — observed rows persist.
+func TestIngestExecuteCommits_persistsObservedOnDirtyTree(t *testing.T) {
+	skipIfNoGit(t)
+	dir := t.TempDir()
+	gitInit(t, dir)
+
+	ctx := context.Background()
+	cycleBase, err := runGit(ctx, dir, "rev-parse", "HEAD")
+	if err != nil {
+		t.Fatalf("rev-parse cycle base: %v", err)
+	}
+
+	name := fmt.Sprintf("work-%d.txt", time.Now().UnixNano())
+	if err := os.WriteFile(filepath.Join(dir, name), []byte("work"), 0o644); err != nil {
+		t.Fatalf("write work file: %v", err)
+	}
+	for _, args := range [][]string{
+		{"add", name},
+		{"-c", "user.email=t@e.local", "-c", "user.name=t", "commit", "-m", "cycle work"},
+	} {
+		out, err := exec.Command("git", append([]string{"-C", dir}, args...)...).CombinedOutput()
+		if err != nil {
+			t.Fatalf("git %v: %v\n%s", args, err, out)
+		}
+	}
+	head, err := runGit(ctx, dir, "rev-parse", "HEAD")
+	if err != nil {
+		t.Fatalf("rev-parse head: %v", err)
+	}
+	if err := os.WriteFile(filepath.Join(dir, "dirty.txt"), []byte("uncommitted"), 0o644); err != nil {
+		t.Fatalf("write dirty file: %v", err)
+	}
+
+	st := store.NewStore(tasktestdb.OpenSQLite(t))
+	tsk, err := st.Create(ctx, store.CreateTaskInput{
+		Title: "observe-dirty", InitialPrompt: "work", Status: domain.StatusReady, Priority: domain.PriorityMedium,
+	}, domain.ActorUser)
+	if err != nil {
+		t.Fatalf("create task: %v", err)
+	}
+	cycle, err := st.StartCycle(ctx, store.StartCycleInput{TaskID: tsk.ID, TriggeredBy: domain.ActorAgent})
+	if err != nil {
+		t.Fatalf("start cycle: %v", err)
+	}
+	exec, err := st.StartPhase(ctx, cycle.ID, domain.PhaseExecute, domain.ActorAgent)
+	if err != nil {
+		t.Fatalf("start execute: %v", err)
+	}
+
+	h := New(st, runnerfake.New(), Options{WorkingDir: dir, ReportDir: t.TempDir()})
+	snap := gitPhaseSnapshot{
+		Repo: dir, Worktree: dir, BaseSHA: head, CycleBaseSHA: cycleBase, BaseBranch: "main",
+	}
+	out, err := h.ingestExecuteCommits(ctx, tsk.ID, cycle, exec.PhaseSeq, snap, nil, "")
+	if err != nil {
+		t.Fatalf("ingest: %v", err)
+	}
+	if out.FailReason != executeUncommittedWorkReason {
+		t.Fatalf("failReason=%q want %q", out.FailReason, executeUncommittedWorkReason)
+	}
+	if out.CommitCount != 1 {
+		t.Fatalf("commitCount=%d want 1", out.CommitCount)
+	}
+
+	rows, err := st.ListCommitsForCycle(ctx, cycle.ID)
+	if err != nil {
+		t.Fatalf("list cycle commits: %v", err)
+	}
+	if len(rows) != 1 {
+		t.Fatalf("len(rows)=%d want 1", len(rows))
+	}
+	if rows[0].Status != domain.CommitObserved {
+		t.Fatalf("status=%q want observed", rows[0].Status)
+	}
+	if rows[0].GateReason != executeUncommittedWorkReason {
+		t.Fatalf("gate_reason=%q", rows[0].GateReason)
+	}
+	eligible, err := st.ListEligibleCommitsForCycle(ctx, cycle.ID)
+	if err != nil {
+		t.Fatalf("list eligible: %v", err)
+	}
+	if len(eligible) != 0 {
+		t.Fatalf("eligible count=%d want 0", len(eligible))
 	}
 }
 

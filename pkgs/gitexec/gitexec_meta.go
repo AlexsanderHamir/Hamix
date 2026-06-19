@@ -2,6 +2,7 @@ package gitexec
 
 import (
 	"context"
+	"log/slog"
 	"regexp"
 	"strconv"
 	"strings"
@@ -25,6 +26,7 @@ var (
 
 // LoadCommitMeta loads author, parent, and --shortstat counters for a commit.
 func LoadCommitMeta(ctx context.Context, dir, sha string) (CommitMeta, error) {
+	slog.Debug("trace", "operation", "gitexec.LoadCommitMeta")
 	if _, err := Run(ctx, dir, "cat-file", "-e", sha+"^{commit}"); err != nil {
 		if isNotFoundErr(err) {
 			return CommitMeta{}, ErrNotFound
@@ -54,6 +56,7 @@ func LoadCommitMeta(ctx context.Context, dir, sha string) (CommitMeta, error) {
 }
 
 func parseCommitFormat(out string) CommitMeta {
+	slog.Debug("trace", "operation", "gitexec.parseCommitFormat")
 	lines := strings.Split(strings.TrimSpace(out), "\n")
 	var meta CommitMeta
 	if len(lines) > 0 {
@@ -72,6 +75,7 @@ func parseCommitFormat(out string) CommitMeta {
 }
 
 func parseShortstat(line string) (files, insertions, deletions int) {
+	slog.Debug("trace", "operation", "gitexec.parseShortstat")
 	if m := shortstatFilesRe.FindStringSubmatch(line); len(m) == 2 {
 		files, _ = strconv.Atoi(m[1])
 	}

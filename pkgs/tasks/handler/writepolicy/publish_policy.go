@@ -3,11 +3,16 @@
 // stays free of HTTP and database imports so CI can enforce purity.
 package writepolicy
 
-import "github.com/AlexsanderHamir/T2A/pkgs/tasks/realtime"
+import (
+	"log/slog"
+
+	"github.com/AlexsanderHamir/T2A/pkgs/tasks/realtime"
+)
 
 // EnrichedTaskChangeEvent reports whether a change type should carry the full
 // domain.Task in Event.Data after a successful store mutation.
 func EnrichedTaskChangeEvent(typ realtime.ChangeType) bool {
+	slog.Debug("trace", "operation", "writepolicy.EnrichedTaskChangeEvent")
 	switch typ {
 	case realtime.TaskCreated, realtime.TaskUpdated:
 		return true
@@ -31,6 +36,7 @@ var HintOnlyChangeTypes = []realtime.ChangeType{
 
 // IsHintOnly reports whether typ is classified as hint-only in the publish policy.
 func IsHintOnly(typ realtime.ChangeType) bool {
+	slog.Debug("trace", "operation", "writepolicy.IsHintOnly")
 	for _, hint := range HintOnlyChangeTypes {
 		if typ == hint {
 			return true

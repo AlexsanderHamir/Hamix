@@ -91,6 +91,7 @@ type listResponse struct {
 }
 
 func buildListResponse(tasks []domain.Task, limit, offset int, hasMore bool) listResponse {
+	slog.Debug("trace", "cmd", calltrace.LogCmd, "operation", "handler.buildListResponse")
 	return listResponse{
 		Tasks:   tasks,
 		Limit:   limit,

@@ -2,12 +2,9 @@ import { forwardRef, type KeyboardEvent as ReactKeyboardEvent } from "react";
 import type { CustomSelectOption } from "./customSelectModel";
 import { isCustomSelectHeader } from "./customSelectModel";
 import { CustomSelectRowBody } from "./CustomSelectRowBody";
+import type { CustomSelectDropdownPosition } from "./customSelectPosition";
 
-export type CustomSelectDropdownPosition = {
-  top: number;
-  left: number;
-  width: number;
-};
+export type { CustomSelectDropdownPosition } from "./customSelectPosition";
 
 type Props = {
   listboxId: string;
@@ -69,10 +66,13 @@ export const CustomSelectDropdown = forwardRef<HTMLUListElement, Props>(
           .join(" ")}
         style={{
           position: "fixed",
-          top: pos.top,
+          ...(pos.placement === "above"
+            ? { bottom: pos.bottom }
+            : { top: pos.top }),
           left: pos.left,
           width: Math.max(pos.width, minWidthPx),
-          /* Above modals — matches --z-portal-popover in app-design-tokens.css */
+          maxHeight: pos.maxHeight,
+          /* Above --z-modal (11000); see app-design-tokens-foundation.css */
           zIndex: "var(--z-portal-popover)",
         }}
         onKeyDown={onListKeyDown}

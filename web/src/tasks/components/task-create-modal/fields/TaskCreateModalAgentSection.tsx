@@ -8,10 +8,19 @@ import {
 } from "@/api/cursorModels";
 import { fetchAppSettings, listCursorModels } from "@/api/settings";
 import { settingsQueryKeys } from "@/tasks/task-query/queryKeys";
+import {
+  CustomSelect,
+  type CustomSelectOption,
+} from "../../custom-select";
 
 const RUNNERS = [{ id: "cursor", label: "Cursor CLI" }] as const;
 
 const AGENT_HEADING_ID = "task-create-agent-heading";
+
+const RUNNER_OPTIONS: CustomSelectOption[] = RUNNERS.map((r) => ({
+  value: r.id,
+  label: r.label,
+}));
 
 function runnerDisplayLabel(runnerId: string): string {
   const row = RUNNERS.find((r) => r.id === runnerId);
@@ -39,22 +48,9 @@ type Props = {
  * new task. Picks the runner (where the task executes) and the model
  * (which underlying LLM the runner drives).
  *
- * Laid out as an elevated config card (DS §7 / §10) rather than loose
- * selects on a flat row so the "agent runtime" reads as one
- * deliberate configuration unit. Each control gets a leading glyph
- * (terminal for runner, spark for model) for instant visual identity,
- * plus a short helper caption that tells the operator what the field
- * actually controls — the Stripe pattern for form density without
- * hand-holding.
- *
- * Runner copy: on **create**, explains the choice is stored with the task;
- * with **lockRunner** (edit / change-model dialog), explains it cannot change
- * on an existing task—separate from workspace CLI in Settings.
- *
- * The Model select retains an inline spinner during the `listCursorModels`
- * fetch so operators see the field is live (avoids the "stuck on Default"
- * confusion) and an inline polished error banner if discovery fails —
- * never a bare red `<p>`.
+ * Uses the shared CustomSelect portal dropdown so option lists match
+ * Priority and other polished controls (native &lt;select&gt; menus
+ * cannot be styled consistently across browsers).
  */
 export function TaskCreateModalAgentSection({
   disabled,
@@ -106,6 +102,23 @@ export function TaskCreateModalAgentSection({
   const modelsForSelect = filterCursorModelsForSelect(
     modelsQuery.data?.ok ? modelsQuery.data.models : undefined,
   );
+
+  const modelOptions = useMemo((): CustomSelectOption[] => {
+    const opts: CustomSelectOption[] = [{ value: "", label: "Auto" }];
+    for (const m of modelsForSelect) {
+      opts.push({ value: m.id, label: m.label });
+    }
+    if (
+      cursorModelSelectValue !== "" &&
+      !modelIdsFromList.has(cursorModelSelectValue)
+    ) {
+      opts.push({
+        value: cursorModelSelectValue,
+        label: `${cursorModelSelectValue} (saved — not in current list)`,
+      });
+    }
+    return opts;
+  }, [modelsForSelect, cursorModelSelectValue, modelIdsFromList]);
 
   const modelFetchError = modelsQuery.isError
     ? modelsQuery.error instanceof Error
@@ -159,29 +172,16 @@ export function TaskCreateModalAgentSection({
           </p>
         ) : null}
         <div className="task-create-agent-grid">
-          <div className="field task-create-agent-field">
-            <label htmlFor={runnerId}>Runner</label>
-            <div className="task-create-agent-control">
-              <span
-                className="task-create-agent-control-icon"
-                aria-hidden="true"
-              >
-                <RunnerGlyph />
-              </span>
-              <select
-                id={runnerId}
-                className="task-create-agent-select"
-                value={runner}
-                disabled={disabled || lockRunner}
-                onChange={(e) => onRunnerChange(e.target.value)}
-              >
-                {RUNNERS.map((r) => (
-                  <option key={r.id} value={r.id}>
-                    {r.label}
-                  </option>
-                ))}
-              </select>
-            </div>
+          <div className="task-create-agent-field">
+            <CustomSelect
+              id={runnerId}
+              label="Runner"
+              value={runner}
+              options={RUNNER_OPTIONS}
+              disabled={disabled || lockRunner}
+              onChange={onRunnerChange}
+              className="task-create-agent-custom-select"
+            />
             {showRunnerHelp ? (
               <p className="task-create-agent-help">
                 {lockRunner
@@ -192,47 +192,19 @@ export function TaskCreateModalAgentSection({
               </p>
             ) : null}
           </div>
-          <div className="field task-create-agent-field">
-            <label htmlFor={modelId}>Model</label>
+          <div className="task-create-agent-field">
             {runner === "cursor" ? (
               <>
-                <div
-                  className="task-create-agent-control"
-                  data-busy={modelSelectBusy ? "true" : "false"}
-                >
-                  <span
-                    className="task-create-agent-control-icon"
-                    aria-hidden="true"
-                  >
-                    <ModelGlyph />
-                  </span>
-                  <select
-                    id={modelId}
-                    className="task-create-agent-select task-create-agent-select--with-trail"
-                    data-testid="task-create-cursor-model-select"
-                    value={cursorModelSelectValue}
-                    disabled={modelSelectDisabled}
-                    aria-busy={modelSelectBusy}
-                    onChange={(e) => onCursorModelChange(e.target.value)}
-                  >
-                    <option value="">Auto</option>
-                    {modelsForSelect.map((m) => (
-                      <option key={m.id} value={m.id}>
-                        {m.label}
-                      </option>
-                    ))}
-                    {cursorModelSelectValue !== "" &&
-                    !modelIdsFromList.has(cursorModelSelectValue) ? (
-                      <option value={cursorModelSelectValue}>
-                        {cursorModelSelectValue} (saved — not in current list)
-                      </option>
-                    ) : null}
-                  </select>
-                  <span
-                    className="task-create-agent-control-spinner"
-                    aria-hidden="true"
-                  />
-                </div>
+                <CustomSelect
+                  id={modelId}
+                  label="Model"
+                  value={cursorModelSelectValue}
+                  options={modelOptions}
+                  disabled={modelSelectDisabled}
+                  onChange={onCursorModelChange}
+                  triggerTestId="task-create-cursor-model-select"
+                  className="task-create-agent-custom-select"
+                />
                 {showModelHelp ? (
                   <p className="task-create-agent-help">
                     {modelSelectBusy
@@ -270,13 +242,8 @@ export function TaskCreateModalAgentSection({
               </>
             ) : (
               <>
-                <div className="task-create-agent-control">
-                  <span
-                    className="task-create-agent-control-icon"
-                    aria-hidden="true"
-                  >
-                    <ModelGlyph />
-                  </span>
+                <div className="field task-create-agent-text-field">
+                  <label htmlFor={modelId}>Model</label>
                   <input
                     id={modelId}
                     className="task-create-agent-input"
@@ -297,49 +264,6 @@ export function TaskCreateModalAgentSection({
         </div>
       </div>
     </section>
-  );
-}
-
-function RunnerGlyph() {
-  // Terminal-prompt mark — matches the `$` section heading glyph
-  // elsewhere in the create modal and reinforces "this is where the
-  // task runs".
-  return (
-    <svg
-      width="14"
-      height="14"
-      viewBox="0 0 16 16"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth="1.6"
-      strokeLinecap="round"
-      strokeLinejoin="round"
-    >
-      <path d="M3.25 5l2.5 3-2.5 3" />
-      <path d="M8 11h5" />
-    </svg>
-  );
-}
-
-function ModelGlyph() {
-  // 4-point sparkle — the universal shorthand for "AI model" in
-  // modern product UIs (Apple Intelligence, Linear, Raycast). Kept
-  // stroke-only so it inherits `currentColor` and respects dark mode.
-  return (
-    <svg
-      width="14"
-      height="14"
-      viewBox="0 0 16 16"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth="1.4"
-      strokeLinecap="round"
-      strokeLinejoin="round"
-    >
-      <path d="M8 2.25L9.35 6.4 13.5 7.75 9.35 9.1 8 13.25 6.65 9.1 2.5 7.75 6.65 6.4z" />
-      <path d="M12.5 2.25v2" />
-      <path d="M11.5 3.25h2" />
-    </svg>
   );
 }
 

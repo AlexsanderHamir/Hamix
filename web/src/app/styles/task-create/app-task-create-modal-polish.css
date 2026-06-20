@@ -578,6 +578,10 @@
   margin-bottom: var(--space-3);
 }
 
+.task-create-modal-sheet .task-create-agent-grid {
+  gap: var(--space-4);
+}
+
 .task-create-modal-sheet .task-create-scheduling {
   gap: var(--space-4);
 }

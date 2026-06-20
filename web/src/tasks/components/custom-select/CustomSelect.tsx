@@ -23,6 +23,10 @@ import {
 } from "./customSelectModel";
 import { CustomSelectDropdown } from "./CustomSelectDropdown";
 import { CustomSelectRowBody } from "./CustomSelectRowBody";
+import {
+  computeCustomSelectDropdownPosition,
+  type CustomSelectDropdownPosition,
+} from "./customSelectPosition";
 
 export type { CustomSelectOption } from "./customSelectModel";
 export { isCustomSelectHeader } from "./customSelectModel";
@@ -45,6 +49,8 @@ type Props = {
   /** Shown next to the field label (default: no badge). */
   requirement?: FieldRequirement;
   disabled?: boolean;
+  /** Optional `data-testid` on the combobox trigger (for tests). */
+  triggerTestId?: string;
 };
 
 export function CustomSelect({
@@ -60,14 +66,11 @@ export function CustomSelect({
   dropdownVariant = "default",
   requirement = "none",
   disabled = false,
+  triggerTestId,
 }: Props) {
   const [open, setOpen] = useState(false);
   const [highlight, setHighlight] = useState(0);
-  const [pos, setPos] = useState<{
-    top: number;
-    left: number;
-    width: number;
-  } | null>(null);
+  const [pos, setPos] = useState<CustomSelectDropdownPosition | null>(null);
   const buttonRef = useRef<HTMLButtonElement>(null);
   const listRef = useRef<HTMLUListElement>(null);
   const listboxId = useId();
@@ -111,8 +114,7 @@ export function CustomSelect({
   const updatePosition = useCallback(() => {
     const el = buttonRef.current;
     if (!el) return;
-    const r = el.getBoundingClientRect();
-    setPos({ top: r.bottom + 6, left: r.left, width: r.width });
+    setPos(computeCustomSelectDropdownPosition(el.getBoundingClientRect()));
   }, []);
 
   useLayoutEffect(() => {
@@ -232,6 +234,14 @@ export function CustomSelect({
   const highlightedOption =
     highlighted && !isCustomSelectHeader(highlighted) ? highlighted : null;
 
+  useLayoutEffect(() => {
+    if (!open || !highlightedOption) return;
+    const el = document.getElementById(optionId(highlightedOption.value));
+    if (typeof el?.scrollIntoView === "function") {
+      el.scrollIntoView({ block: "nearest" });
+    }
+  }, [open, highlight, highlightedOption, optionId]);
+
   const dropdown =
     open && pos ? (
       <CustomSelectDropdown
@@ -277,6 +287,7 @@ export function CustomSelect({
         id={id}
         role="combobox"
         className="custom-select-trigger"
+        data-testid={triggerTestId}
         aria-haspopup="listbox"
         aria-expanded={open}
         aria-controls={listboxId}

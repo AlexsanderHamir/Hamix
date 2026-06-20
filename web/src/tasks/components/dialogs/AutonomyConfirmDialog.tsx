@@ -38,7 +38,7 @@ export function AutonomyConfirmDialog({
     ? "Resume autonomous execution?"
     : "Put this task on hold?";
   const body = enable
-    ? "The agent will pick this task up as soon as scheduling and dependencies allow."
+    ? "The agent will pick this task up when no other task is running."
     : "The agent will stop considering this task. You can resume it any time from this page.";
   const confirmLabel = enable ? "Resume" : "Put on hold";
 

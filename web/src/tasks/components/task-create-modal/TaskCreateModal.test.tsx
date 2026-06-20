@@ -229,15 +229,14 @@ describe("TaskCreateModal", () => {
     expect(screen.getByText(/saving draft/i)).toBeInTheDocument();
   });
 
-  it("shows Cursor model as a select with a Default option", async () => {
+  it("shows Cursor model as a custom select with an Auto option", async () => {
     const user = userEvent.setup();
     renderModal();
     await expandMoreOptions(user);
     const model = screen.getByTestId("task-create-cursor-model-select");
-    expect(model.tagName).toBe("SELECT");
-    expect(
-      screen.getByRole("option", { name: /^auto$/i }),
-    ).toBeInTheDocument();
+    expect(model).toHaveAttribute("role", "combobox");
+    await user.click(model);
+    expect(screen.getByRole("option", { name: /^auto$/i })).toBeInTheDocument();
   });
 
   it("renders the test-scenarios trigger only when onApplyTestScenario is wired", () => {
@@ -325,7 +324,7 @@ describe("TaskCreateModal", () => {
       expect(toggle).toBeChecked();
       expect(
         screen.getByText(
-          /agent picks this up when scheduling and dependencies allow/i,
+          /created as ready.*no other task is running/i,
         ),
       ).toBeInTheDocument();
     });

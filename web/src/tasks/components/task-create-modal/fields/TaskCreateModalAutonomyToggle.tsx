@@ -40,7 +40,7 @@ export function TaskCreateModalAutonomyToggle({
           </span>
           <span className="task-create-autonomy__hint">
             {enabled
-              ? "Agent picks this up when scheduling and dependencies allow."
+              ? "Created as ready. The agent picks it up when no other task is running."
               : "Created on hold until you resume from the task page."}
           </span>
         </span>

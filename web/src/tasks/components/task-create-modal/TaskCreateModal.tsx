@@ -241,7 +241,7 @@ export function TaskCreateModal({
               <TaskCreateModalSection
                 variant="execution"
                 title="Execution"
-                lede="Whether the agent may pick this up and how it runs."
+                lede="Choose whether the agent should start on its own and which runner to use."
               >
                 <TaskCreateModalAutonomyToggle
                   enabled={autonomyEnabled}

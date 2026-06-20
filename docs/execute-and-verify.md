@@ -36,9 +36,11 @@ You define the contract when you create the task: the task description and check
 
 ## One task at a time
 
-As of today, you can create as many tasks as you need. There is no small cap on how many you can add to the board.
+As of today, you can create as many tasks as you need. There is no cap on how many you can add to the board.
 
 The agent worker still runs **one task at a time**. If you create 100 tasks and they are all ready for the agent, only one is picked up and executed at once. The rest wait in line until the current run finishes (success or failure), then the next eligible task starts.
+
+**Start over** and **Resume from failure** follow the same rule. They only appear when a task has already **failed**, so that task is not running anymore. The action does not start work immediately: it queues the task as ready with your retry choice saved. If another task is executing when you click retry, your task waits in line like any other ready task. T2A does not block the button because another task is in flight; the single worker prevents two runs at once.
 
 Tasks that are blocked (for example, waiting on dependencies or a deferred pickup time) stay out of the queue until they become ready.
 

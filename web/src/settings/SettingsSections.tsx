@@ -631,7 +631,7 @@ export function PhasesSettingsSection({
 
             <div className="settings-field-block">
               <label className="settings-field">
-                <span className="settings-field-label">Stream idle stuck</span>
+                <span className="settings-field-label">Agent silence limit</span>
                 <span className="settings-field-input-suffix">
                   <input
                     type="number"
@@ -650,8 +650,9 @@ export function PhasesSettingsSection({
               </label>
               <div className="settings-field-help-block">
                 <p className="settings-field-help">
-                  Kills a hung run after stdout goes quiet and tries to recover
-                  from saved evidence (commits or verify report).
+                  Stops the run when the agent produces no new output for this
+                  long. T2A may use git commits or reports the agent already
+                  wrote and move on to verify.
                 </p>
                 <p className="settings-field-help settings-field-help-meta">
                   Default <code>60</code>s. Set <code>0</code> to disable.

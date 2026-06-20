@@ -214,19 +214,33 @@ export function TaskTemplatesPage() {
                 className="empty-state--task-list-fresh"
               />
             ) : (
-              <>
-                <div className="template-list-toolbar">
-                  <label className="template-select-all">
+              <div className="template-list">
+                <div className="template-list-head" role="row">
+                  <div className="task-list-select-col template-list-head__select">
                     <input
                       type="checkbox"
+                      className="task-list-select-checkbox"
                       checked={allSelected}
                       onChange={toggleSelectAll}
-                      aria-label="Select all templates"
+                      aria-label={
+                        allSelected
+                          ? "Deselect all templates"
+                          : "Select all templates"
+                      }
+                      data-testid="template-list-select-all"
                     />
-                    <span>Select all</span>
-                  </label>
+                  </div>
+                  <span className="template-list-head__label" role="columnheader">
+                    Title
+                  </span>
+                  <span
+                    className="template-list-head__label template-list-head__label--actions"
+                    role="columnheader"
+                  >
+                    Actions
+                  </span>
                 </div>
-                <ul className="draft-row-list" aria-label="Task templates">
+                <ul className="draft-row-list template-list-rows" aria-label="Task templates">
                   {templates.map((template) => {
                     const lastEdited = template.updated_at || template.created_at;
                     const relative = formatRelativeTime(lastEdited, renderNow);
@@ -263,9 +277,10 @@ export function TaskTemplatesPage() {
                         aria-label={`Template: ${template.name}`}
                         aria-selected={isSelected}
                       >
-                        <div className="template-row__select">
+                        <div className="task-list-select-col">
                           <input
                             type="checkbox"
+                            className="task-list-select-checkbox"
                             checked={isSelected}
                             aria-label={`Select ${template.name}`}
                             onChange={() => toggleSelected(template.id)}
@@ -323,7 +338,7 @@ export function TaskTemplatesPage() {
                     );
                   })}
                 </ul>
-              </>
+              </div>
             )}
           </div>
         ) : null}

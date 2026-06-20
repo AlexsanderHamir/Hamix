@@ -11,6 +11,7 @@ export function useTaskCreateDraftAutosave(input: {
   draftAutosaveBaseline: string;
   draftAutosaveBaselineID: string;
   editingTaskId: string | null;
+  composeTarget: "task" | "template";
   createModalOpen: boolean;
   autosaveTimerRef: MutableRefObject<ReturnType<typeof setTimeout> | null>;
   saveDraftMutation: ReturnType<typeof useTaskCreateMutations>["saveDraftMutation"];
@@ -27,8 +28,15 @@ export function useTaskCreateDraftAutosave(input: {
   );
 
   const saveDraftNow = useCallback(() => {
-    // I1 — no autosave while editing an existing task.
-    if (input.editingTaskId || !input.createModalOpen || !input.formFields.newDraftID) return;
+    // I1 — no autosave while editing an existing task or composing a template.
+    if (
+      input.editingTaskId ||
+      input.composeTarget !== "task" ||
+      !input.createModalOpen ||
+      !input.formFields.newDraftID
+    ) {
+      return;
+    }
     if (input.draftAutosaveBaselineID !== input.formFields.newDraftID) return;
     if (currentDraftAutosaveSignature === input.draftAutosaveBaseline) return;
     if (input.autosaveTimerRef.current) {
@@ -46,8 +54,15 @@ export function useTaskCreateDraftAutosave(input: {
   ]);
 
   useEffect(() => {
-    // I1 — no autosave while editing an existing task.
-    if (input.editingTaskId || !input.createModalOpen || !input.formFields.newDraftID) return;
+    // I1 — no autosave while editing an existing task or composing a template.
+    if (
+      input.editingTaskId ||
+      input.composeTarget !== "task" ||
+      !input.createModalOpen ||
+      !input.formFields.newDraftID
+    ) {
+      return;
+    }
     if (input.draftAutosaveBaselineID !== input.formFields.newDraftID) return;
     if (currentDraftAutosaveSignature === input.draftAutosaveBaseline) return;
     const signatureAtSchedule = currentDraftAutosaveSignature;
@@ -71,7 +86,9 @@ export function useTaskCreateDraftAutosave(input: {
   ]);
 
   const draftSaveLabel = useMemo(() => {
-    if (input.editingTaskId || !input.createModalOpen) return null;
+    if (input.editingTaskId || input.composeTarget !== "task" || !input.createModalOpen) {
+      return null;
+    }
     if (input.saveDraftMutation.isPending) return "Saving draft…";
     if (input.saveDraftMutation.isError) {
       return "Draft autosave failed. You can still create the task.";
@@ -80,6 +97,7 @@ export function useTaskCreateDraftAutosave(input: {
     return "Draft saved";
   }, [
     input.createModalOpen,
+    input.composeTarget,
     input.editingTaskId,
     input.lastDraftSavedAt,
     input.saveDraftMutation.isError,

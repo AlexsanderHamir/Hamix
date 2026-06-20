@@ -3,13 +3,19 @@ import { useEffect, type MutableRefObject } from "react";
 import {
   createTask as apiCreate,
   deleteTaskDraft as apiDeleteDraft,
+  deleteTaskTemplate as apiDeleteTemplate,
   getTaskDraft as apiGetDraft,
+  getTaskTemplate as apiGetTemplate,
+  instantiateTaskTemplates as apiInstantiateTemplates,
+  patchTaskTemplate as apiPatchTemplate,
   saveTaskDraft as apiSaveDraft,
+  saveTaskTemplate as apiSaveTemplate,
 } from "@/api";
 import type { PriorityChoice } from "@/types";
 import { normalizeChecklistItems } from "../../task-compose/checklistRequirement";
 import { taskQueryKeys } from "../../task-query";
-import type { CreateTaskMutationInput } from "../types";
+import { buildComposePayloadFromForm } from "../composePayload";
+import type { CreateTaskMutationInput, TaskCreateFormFields } from "../types";
 
 export function useTaskCreateMutations(input: {
   queryClient: ReturnType<typeof useQueryClient>;
@@ -21,6 +27,7 @@ export function useTaskCreateMutations(input: {
   setDraftAutosaveBaselineID: (id: string) => void;
   setLastDraftSavedAt: (timestamp: number | null) => void;
   createModalOpen: boolean;
+  editingTemplateId: string | null;
 }) {
   const createMutation = useMutation({
     mutationFn: async (mutationInput: CreateTaskMutationInput) => {
@@ -102,6 +109,58 @@ export function useTaskCreateMutations(input: {
     mutationFn: (id: string) => apiGetDraft(id),
   });
 
+  const saveTemplateMutation = useMutation({
+    mutationFn: (mutationInput: {
+      id?: string;
+      name: string;
+      fields: TaskCreateFormFields;
+    }) =>
+      apiSaveTemplate({
+        ...(mutationInput.id ? { id: mutationInput.id } : {}),
+        name: mutationInput.name,
+        payload: buildComposePayloadFromForm(mutationInput.fields),
+      }),
+    onSuccess: async () => {
+      input.closeCreateModal();
+      await input.queryClient.invalidateQueries({ queryKey: taskQueryKeys.templates() });
+    },
+  });
+
+  const patchTemplateMutation = useMutation({
+    mutationFn: (mutationInput: { id: string; fields: TaskCreateFormFields; name: string }) =>
+      apiPatchTemplate(mutationInput.id, {
+        name: mutationInput.name,
+        payload: buildComposePayloadFromForm(mutationInput.fields),
+      }),
+    onSuccess: async (_result, variables) => {
+      if (input.editingTemplateId === variables.id) {
+        input.closeCreateModal();
+      }
+      await input.queryClient.invalidateQueries({ queryKey: taskQueryKeys.templates() });
+    },
+  });
+
+  const loadTemplateMutation = useMutation({
+    mutationFn: (id: string) => apiGetTemplate(id),
+  });
+
+  const deleteTemplateMutation = useMutation({
+    mutationFn: (id: string) => apiDeleteTemplate(id),
+    onSuccess: async () => {
+      await input.queryClient.invalidateQueries({ queryKey: taskQueryKeys.templates() });
+    },
+  });
+
+  const instantiateTemplatesMutation = useMutation({
+    mutationFn: (templateIds: string[]) => apiInstantiateTemplates(templateIds),
+    onSuccess: async (result) => {
+      if (result.tasks.length > 0) {
+        await input.queryClient.invalidateQueries({ queryKey: taskQueryKeys.all });
+        await input.queryClient.invalidateQueries({ queryKey: taskQueryKeys.stats() });
+      }
+    },
+  });
+
   useEffect(() => {
     if (!input.createModalOpen && !saveDraftMutation.isIdle) {
       saveDraftMutation.reset();
@@ -114,10 +173,27 @@ export function useTaskCreateMutations(input: {
     }
   }, [input.createModalOpen, createMutation]);
 
+  useEffect(() => {
+    if (!input.createModalOpen && !saveTemplateMutation.isIdle) {
+      saveTemplateMutation.reset();
+    }
+  }, [input.createModalOpen, saveTemplateMutation]);
+
+  useEffect(() => {
+    if (!input.createModalOpen && !patchTemplateMutation.isIdle) {
+      patchTemplateMutation.reset();
+    }
+  }, [input.createModalOpen, patchTemplateMutation]);
+
   return {
     createMutation,
     saveDraftMutation,
     deleteDraftMutation,
     resumeDraftMutation,
+    saveTemplateMutation,
+    patchTemplateMutation,
+    loadTemplateMutation,
+    deleteTemplateMutation,
+    instantiateTemplatesMutation,
   };
 }

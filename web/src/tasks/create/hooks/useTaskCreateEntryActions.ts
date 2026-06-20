@@ -3,9 +3,10 @@ import { useCallback } from "react";
 import type { AppSettings } from "@/api/settings";
 import { errorMessage } from "@/lib/errorMessage";
 import { settingsQueryKeys } from "../../task-query";
+import { hydrateFormFromComposePayload } from "../composePayload";
 import { applyResumedDraftToForm } from "../draftPayload";
 import { decideCreateEntry } from "../decideCreateEntry";
-import type { TaskDraftsQuery } from "../types";
+import type { ComposeOperation, ComposeTarget, TaskDraftsQuery } from "../types";
 import type { useTaskCreateFormState } from "./useTaskCreateFormState";
 import type { useTaskCreateModalState } from "./useTaskCreateModalState";
 import type { useTaskCreateMutations } from "./useTaskCreateMutations";
@@ -17,16 +18,32 @@ export function useTaskCreateEntryActions(input: {
   draftsQuery: TaskDraftsQuery;
   queryClient: QueryClient;
 }) {
-  const openCreateModal = useCallback(
-    (prefill?: { projectID: string; lockProjectAssignment?: boolean }) => {
+  const openComposeModal = useCallback(
+    (opts?: {
+      projectID?: string;
+      lockProjectAssignment?: boolean;
+      target?: ComposeTarget;
+      operation?: ComposeOperation;
+      skipDraftPicker?: boolean;
+    }) => {
       input.modal.setCreateEntryDraftErrorHint(null);
-      const projectID = prefill?.projectID?.trim();
+      const projectID = opts?.projectID?.trim();
       input.modal.createModalPrefillRef.current = projectID
         ? {
             projectID,
-            lockProjectAssignment: prefill?.lockProjectAssignment === true,
+            lockProjectAssignment: opts?.lockProjectAssignment === true,
           }
         : null;
+      const target = opts?.target ?? "task";
+      const operation = opts?.operation ?? "create";
+      if (target === "template" || opts?.skipDraftPicker) {
+        input.modal.resetNewTaskForm();
+        input.modal.setComposeTarget(target);
+        input.modal.setComposeOperation(operation);
+        input.modal.applyCreateModalPrefill();
+        input.modal.setCreateModalOpen(true);
+        return;
+      }
       const decision = decideCreateEntry({
         isPending: input.draftsQuery.isPending,
         isError: input.draftsQuery.isError,
@@ -46,6 +63,22 @@ export function useTaskCreateEntryActions(input: {
     },
     [input],
   );
+
+  const openCreateModal = useCallback(
+    (prefill?: { projectID: string; lockProjectAssignment?: boolean }) => {
+      openComposeModal({
+        projectID: prefill?.projectID,
+        lockProjectAssignment: prefill?.lockProjectAssignment,
+        target: "task",
+        operation: "create",
+      });
+    },
+    [openComposeModal],
+  );
+
+  const openTemplateCreateModal = useCallback(() => {
+    openComposeModal({ target: "template", operation: "create", skipDraftPicker: true });
+  }, [openComposeModal]);
 
   const startFreshDraft = useCallback(async () => {
     input.modal.resetNewTaskForm();
@@ -112,11 +145,57 @@ export function useTaskCreateEntryActions(input: {
     }
   }, [input.draftsQuery, input.modal]);
 
+  const editTemplateByID = useCallback(
+    async (id: string) => {
+      input.modal.createModalPrefillRef.current = null;
+      input.modal.setCreateModalAssignmentLocked(false);
+      const template = await input.mutations.loadTemplateMutation.mutateAsync(id);
+      const settings = input.queryClient.getQueryData<AppSettings>(settingsQueryKeys.app());
+      const hydrated = hydrateFormFromComposePayload(template.payload, settings);
+      input.modal.resetNewTaskForm();
+      input.modal.setComposeTarget("template");
+      input.modal.setComposeOperation("edit");
+      input.modal.setEditingTemplateId(template.id);
+      input.form.setNewTitle(hydrated.title);
+      input.form.setNewPrompt(hydrated.prompt);
+      input.form.setNewPriority(hydrated.priority);
+      input.form.setNewTaskRunner(hydrated.runner);
+      input.form.setNewTaskCursorModel(hydrated.cursorModel);
+      input.form.setNewProjectID(hydrated.projectID);
+      input.form.setNewProjectContextItemIDs(hydrated.projectContextItemIDs);
+      input.form.setNewSchedule(hydrated.schedule);
+      input.form.setNewAutonomyEnabled(hydrated.autonomyEnabled);
+      input.form.setNewTagsCsv(hydrated.tagsCsv);
+      input.form.setNewMilestone(hydrated.milestone);
+      input.form.setNewDependsOn(hydrated.dependsOn);
+      input.form.setNewChecklistItems(hydrated.checklistItems);
+      input.modal.setCreateModalOpen(true);
+    },
+    [input],
+  );
+
+  const deleteTemplateByID = useCallback(
+    async (id: string) => {
+      await input.mutations.deleteTemplateMutation.mutateAsync(id);
+    },
+    [input.mutations.deleteTemplateMutation],
+  );
+
+  const instantiateTemplatesByIDs = useCallback(
+    async (ids: string[]) => input.mutations.instantiateTemplatesMutation.mutateAsync(ids),
+    [input.mutations.instantiateTemplatesMutation],
+  );
+
   return {
     openCreateModal,
+    openComposeModal,
+    openTemplateCreateModal,
     startFreshDraft,
     resumeDraftByID,
     deleteDraftByID,
+    editTemplateByID,
+    deleteTemplateByID,
+    instantiateTemplatesByIDs,
     retryDraftList,
     retryCreateEntryDraftLoad,
   };

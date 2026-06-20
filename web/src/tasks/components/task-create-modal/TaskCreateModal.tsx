@@ -25,6 +25,8 @@ const noopOnDependsOnChange = (): void => {};
 type Props = {
   /** When set, the modal edits an existing task using the same layout as create. */
   editingTaskId?: string | null;
+  composeTarget?: "task" | "template";
+  composeOperation?: "create" | "edit";
   editingTaskRunner?: string;
   composeStatus?: Status;
   onComposeStatusChange?: (status: Status) => void;
@@ -77,6 +79,8 @@ type Props = {
 
 export function TaskCreateModal({
   editingTaskId = null,
+  composeTarget = "task",
+  composeOperation = "create",
   editingTaskRunner = "",
   composeStatus,
   onComposeStatusChange,
@@ -124,16 +128,38 @@ export function TaskCreateModal({
   createFormError = null,
   onApplyTestScenario,
 }: Props) {
-  const isEdit = editingTaskId != null;
+  const isTaskEdit = editingTaskId != null;
+  const isTemplateMode = composeTarget === "template";
+  const isEdit = isTaskEdit || (isTemplateMode && composeOperation === "edit");
   const disabled = pending || saving;
   const tagsAndDependenciesUiEnabled = !isUiFeatureOmitted("tagsAndDependencies");
   const scheduleUiEnabled = !isUiFeatureOmitted("schedule");
-  const modalBusy = isEdit ? patchPending : pending;
-  const modalTitle = isEdit ? "Edit task" : "New task";
-  const modalTitleId = isEdit ? "task-edit-modal-title" : "task-create-modal-title";
-  const modalDescribedBy = isEdit ? "task-edit-modal-description" : undefined;
-  const idsPrefix = isEdit ? "task-edit" : "task-new";
+  const modalBusy = isTaskEdit ? patchPending : pending || (isTemplateMode && saving);
+  const modalTitle = isTaskEdit
+    ? "Edit task"
+    : isTemplateMode
+      ? composeOperation === "edit"
+        ? "Edit template"
+        : "New template"
+      : "New task";
+  const modalTitleId = isEdit
+    ? isTemplateMode
+      ? "task-template-edit-modal-title"
+      : "task-edit-modal-title"
+    : isTemplateMode
+      ? "task-template-create-modal-title"
+      : "task-create-modal-title";
+  const modalDescribedBy = isTaskEdit ? "task-edit-modal-description" : undefined;
+  const idsPrefix = isEdit
+    ? isTemplateMode
+      ? "task-template-edit"
+      : "task-edit"
+    : isTemplateMode
+      ? "task-template-new"
+      : "task-new";
   const status = composeStatus ?? "ready";
+  const showTestScenarios = !isEdit && onApplyTestScenario;
+  const showDraftStatus = !isEdit && !isTemplateMode && draftSaveLabel;
 
   const [scenariosOpen, setScenariosOpen] = useState(false);
   const scenariosTriggerRef = useRef<HTMLButtonElement>(null);
@@ -163,16 +189,16 @@ export function TaskCreateModal({
               <h2 id={modalTitleId} className="task-create-modal-title">
                 {modalTitle}
               </h2>
-              {!isEdit && onApplyTestScenario ? (
+              {!showTestScenarios ? null : (
                 <TestScenariosTrigger
                   ref={scenariosTriggerRef}
                   open={scenariosOpen}
                   disabled={disabled}
                   onToggle={() => setScenariosOpen((open) => !open)}
                 />
-              ) : null}
+              )}
             </div>
-            {isEdit && editingTaskId ? (
+            {isTaskEdit && editingTaskId ? (
               <p
                 className="muted stack-tight-zero task-create-modal-task-id"
                 id="task-edit-modal-description"
@@ -180,7 +206,7 @@ export function TaskCreateModal({
                 <code>{editingTaskId}</code>
               </p>
             ) : null}
-            {!isEdit && draftSaveLabel ? (
+            {showDraftStatus ? (
               <p
                 className={[
                   "task-create-draft-status",
@@ -208,7 +234,11 @@ export function TaskCreateModal({
                 <TaskCreateModalPrimaryFields
                   idsPrefix={idsPrefix}
                   editorKey={
-                    isEdit ? editingTaskId ?? "edit-prompt-modal" : "create-prompt-modal"
+                    isTaskEdit
+                      ? editingTaskId ?? "edit-prompt-modal"
+                      : isTemplateMode
+                        ? "template-prompt-modal"
+                        : "create-prompt-modal"
                   }
                   disabled={disabled}
                   title={title}
@@ -218,8 +248,8 @@ export function TaskCreateModal({
                   prompt={prompt}
                   checklistItems={checklistItems}
                   hideComposeChecklist={false}
-                  checklistRequirement={isEdit ? "optional" : "required"}
-                  checklistDisabled={isEdit}
+                  checklistRequirement={isTaskEdit ? "optional" : "required"}
+                  checklistDisabled={isTaskEdit}
                   onPromptChange={onPromptChange}
                   onAppendChecklistCriterion={onAppendChecklistCriterion}
                   onUpdateChecklistRow={onUpdateChecklistRow}
@@ -263,7 +293,7 @@ export function TaskCreateModal({
                     </span>
                     <span className="task-create-advanced__hint">
                       {advancedSummaryLine({
-                        runner: isEdit ? editingTaskRunner : taskRunner,
+                        runner: isTaskEdit ? editingTaskRunner : taskRunner,
                         cursorModel: taskCursorModel,
                         schedule,
                         tagsCsv,
@@ -275,7 +305,7 @@ export function TaskCreateModal({
                     </span>
                   </summary>
                   <div className="task-create-advanced__body">
-                    {isEdit && onComposeStatusChange ? (
+                    {isTaskEdit && onComposeStatusChange ? (
                       <TaskCreateModalStatusField
                         id={`${idsPrefix}-status`}
                         status={status}
@@ -287,15 +317,15 @@ export function TaskCreateModal({
                     <TaskCreateModalAgentSection
                       disabled={disabled}
                       variant="createModal"
-                      lockRunner={isEdit}
-                      runner={isEdit ? editingTaskRunner : taskRunner}
+                      lockRunner={isTaskEdit}
+                      runner={isTaskEdit ? editingTaskRunner : taskRunner}
                       cursorModel={taskCursorModel}
-                      onRunnerChange={isEdit ? () => {} : onTaskRunnerChange}
+                      onRunnerChange={isTaskEdit ? () => {} : onTaskRunnerChange}
                       onCursorModelChange={onTaskCursorModelChange}
                     />
 
                     {scheduleUiEnabled ? (
-                      isEdit ? (
+                      isTaskEdit ? (
                         <TaskCreateModalPickupScheduleField
                           status={status}
                           value={schedule}
@@ -323,11 +353,11 @@ export function TaskCreateModal({
                         projectId={projectId}
                         dependsOn={dependsOn}
                         showDependsOn
-                        dependsOnDisabled={isEdit}
+                        dependsOnDisabled={isTaskEdit}
                         onTagsCsvChange={onTagsCsvChange}
                         onMilestoneChange={onMilestoneChange}
                         onDependsOnChange={
-                          isEdit ? noopOnDependsOnChange : onDependsOnChange
+                          isTaskEdit ? noopOnDependsOnChange : onDependsOnChange
                         }
                       />
                     ) : null}
@@ -336,7 +366,7 @@ export function TaskCreateModal({
               </TaskCreateModalSection>
             </div>
 
-            {!isEdit ? (
+            {!isTaskEdit ? (
               <>
                 <MutationErrorBanner
                   error={createFormError}
@@ -362,7 +392,13 @@ export function TaskCreateModal({
               </>
             )}
 
-            {isEdit ? (
+            {isTaskEdit ? (
+              <TaskCreateModalEditFooterActions
+                disabled={disabled}
+                saveDisabled={!title.trim()}
+                onClose={onClose}
+              />
+            ) : isTemplateMode && composeOperation === "edit" ? (
               <TaskCreateModalEditFooterActions
                 disabled={disabled}
                 saveDisabled={!title.trim()}
@@ -370,20 +406,21 @@ export function TaskCreateModal({
               />
             ) : (
               <TaskCreateModalFooterActions
+                variant={isTemplateMode ? "template" : "task-create"}
                 disabled={disabled}
                 draftSaving={draftSaving}
                 title={title}
                 priority={priority}
                 checklistItems={checklistItems}
                 onClose={onClose}
-                onSaveDraft={onSaveDraft}
+                onSaveDraft={isTemplateMode ? undefined : onSaveDraft}
               />
             )}
           </form>
         </section>
       </Modal>
 
-      {scenariosOpen && onApplyTestScenario && !isEdit ? (
+      {scenariosOpen && showTestScenarios ? (
         <TestScenariosPopover
           anchor={scenariosTriggerRef.current}
           onPick={handleScenarioPicked}

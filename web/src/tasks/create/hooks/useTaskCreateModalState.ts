@@ -13,6 +13,9 @@ export function useTaskCreateModalState(
   const [draftPickerOpen, setDraftPickerOpen] = useState(false);
   const [createModalOpen, setCreateModalOpen] = useState(false);
   const [editingTaskId, setEditingTaskId] = useState<string | null>(null);
+  const [editingTemplateId, setEditingTemplateId] = useState<string | null>(null);
+  const [composeTarget, setComposeTarget] = useState<"task" | "template">("task");
+  const [composeOperation, setComposeOperation] = useState<"create" | "edit">("create");
   const [editingTaskRunner, setEditingTaskRunner] = useState("");
   const [composeStatus, setComposeStatus] = useState<Status>(DEFAULT_NEW_TASK_STATUS);
   const [createModalAssignmentLocked, setCreateModalAssignmentLocked] = useState(false);
@@ -24,6 +27,9 @@ export function useTaskCreateModalState(
     resetFormFields();
     setCreateModalAssignmentLocked(false);
     setEditingTaskId(null);
+    setEditingTemplateId(null);
+    setComposeTarget("task");
+    setComposeOperation("create");
     setEditingTaskRunner("");
     setComposeStatus(DEFAULT_NEW_TASK_STATUS);
   }, [resetFormFields]);
@@ -48,6 +54,9 @@ export function useTaskCreateModalState(
     async (t: Task) => {
       populateFromTask(t);
       setEditingTaskId(t.id);
+      setEditingTemplateId(null);
+      setComposeTarget("task");
+      setComposeOperation("edit");
       setEditingTaskRunner(t.runner);
       setComposeStatus(t.status);
       setNewChecklistItems([]);
@@ -76,6 +85,12 @@ export function useTaskCreateModalState(
     createModalOpen,
     setCreateModalOpen,
     editingTaskId,
+    editingTemplateId,
+    setEditingTemplateId,
+    composeTarget,
+    setComposeTarget,
+    composeOperation,
+    setComposeOperation,
     editingTaskRunner,
     composeStatus,
     setComposeStatus,

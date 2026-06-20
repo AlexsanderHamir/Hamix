@@ -29,6 +29,8 @@ export function TaskCreateModalsLayer() {
   const assignmentControlsDisabled =
     app.saving || app.createModalAssignmentLocked;
   const isEditing = app.editingTaskId != null;
+  const isTemplateMode = app.composeTarget === "template";
+  const isTemplateEdit = isTemplateMode && app.composeOperation === "edit";
 
   const handleResumeDraft = (id: string) => {
     void app.resumeDraftByID(id).catch(() => {
@@ -57,17 +59,19 @@ export function TaskCreateModalsLayer() {
       {app.createModalOpen ? (
         <TaskCreateModal
           editingTaskId={app.editingTaskId}
+          composeTarget={app.composeTarget}
+          composeOperation={app.composeOperation}
           editingTaskRunner={app.editingTaskRunner}
           composeStatus={app.composeStatus}
           onComposeStatusChange={app.setComposeStatus}
           patchPending={app.patchPending}
           patchError={app.patchError}
           formError={app.editFormError}
-          pending={app.createPending}
+          pending={isTemplateMode ? app.templateSavePending : app.createPending}
           saving={app.saving}
-          draftSaving={isEditing ? false : app.draftSavePending}
-          draftSaveLabel={isEditing ? null : app.draftSaveLabel}
-          draftSaveError={isEditing ? false : app.draftSaveError}
+          draftSaving={isEditing || isTemplateMode ? false : app.draftSavePending}
+          draftSaveLabel={isEditing || isTemplateMode ? null : app.draftSaveLabel}
+          draftSaveError={isEditing || isTemplateMode ? false : app.draftSaveError}
           onClose={app.closeEdit}
           title={app.newTitle}
           prompt={app.newPrompt}
@@ -132,9 +136,13 @@ export function TaskCreateModalsLayer() {
             if (!isEditing) void app.saveDraftNow();
           }}
           onSubmit={(e) => void app.submitComposeModal(e)}
-          createError={isEditing ? null : app.createError}
+          createError={
+            isEditing ? null : isTemplateMode ? app.templateSaveError : app.createError
+          }
           createFormError={isEditing ? null : app.createFormError}
-          onApplyTestScenario={isEditing ? undefined : app.applyTestScenario}
+          onApplyTestScenario={
+            isEditing || isTemplateEdit ? undefined : app.applyTestScenario
+          }
         />
       ) : null}
       {app.draftPickerOpen ? (

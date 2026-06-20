@@ -79,16 +79,26 @@ export function TaskHome() {
 
   const listActions = useMemo(
     () => (
-      <Button
-        variant="primary"
-        className="task-home-new-task-btn"
-        onClick={() => openCreateModal()}
-        disabled={createModalOpen}
-      >
-        New task
-      </Button>
+      <>
+        <Button
+          variant="secondary"
+          className="task-home-new-template-btn"
+          onClick={() => modals.openTemplateCreateModal()}
+          disabled={createModalOpen}
+        >
+          New template
+        </Button>
+        <Button
+          variant="primary"
+          className="task-home-new-task-btn"
+          onClick={() => openCreateModal()}
+          disabled={createModalOpen}
+        >
+          New task
+        </Button>
+      </>
     ),
-    [openCreateModal, createModalOpen],
+    [openCreateModal, modals.openTemplateCreateModal, createModalOpen],
   );
 
   return (

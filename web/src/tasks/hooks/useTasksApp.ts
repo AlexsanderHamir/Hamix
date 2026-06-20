@@ -165,6 +165,7 @@ export function useTasksApp({ sseLive, dataEnabled = true }: UseTasksAppOptions)
 
   const saving =
     createFlow.createPending ||
+    createFlow.templateSavePending ||
     patchPending ||
     deletePending;
 
@@ -263,6 +264,10 @@ export function useTasksApp({ sseLive, dataEnabled = true }: UseTasksAppOptions)
   function submitComposeModal(e: FormEvent) {
     if (editingTaskId) {
       submitEdit(e);
+      return;
+    }
+    if (createFlow.composeTarget === "template") {
+      void createFlow.submitTemplate(e);
       return;
     }
     void createFlow.submitCreate(e);

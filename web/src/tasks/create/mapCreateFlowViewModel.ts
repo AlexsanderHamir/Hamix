@@ -12,6 +12,12 @@ export function deriveCreateFlowError(
   if (mutations.createMutation.isError) {
     return errorMessage(mutations.createMutation.error);
   }
+  if (mutations.saveTemplateMutation.isError) {
+    return errorMessage(mutations.saveTemplateMutation.error);
+  }
+  if (mutations.patchTemplateMutation.isError) {
+    return errorMessage(mutations.patchTemplateMutation.error);
+  }
   return null;
 }
 
@@ -24,7 +30,7 @@ export function mapCreateFlowViewModel(input: {
   actions: ReturnType<typeof useTaskCreateEntryActions> &
     Pick<
       ReturnType<typeof import("./hooks/useTaskCreateSubmitActions").useTaskCreateSubmitActions>,
-      "submitCreate"
+      "submitCreate" | "submitTemplate"
     > &
     Pick<
       ReturnType<typeof import("./hooks/useTaskCreateChecklistActions").useTaskCreateChecklistActions>,
@@ -38,6 +44,13 @@ export function mapCreateFlowViewModel(input: {
     draftSaveLabel: input.autosave.draftSaveLabel,
     draftSaveError: input.autosave.draftSaveError,
     createPending: input.mutations.createMutation.isPending,
+    templateSavePending:
+      input.mutations.saveTemplateMutation.isPending ||
+      input.mutations.patchTemplateMutation.isPending,
+    templateSaveError:
+      input.mutations.saveTemplateMutation.error ??
+      input.mutations.patchTemplateMutation.error ??
+      null,
     createError: input.mutations.createMutation.error,
     createFormError: input.form.createFormError,
     draftPickerOpen: input.modal.draftPickerOpen,
@@ -51,6 +64,9 @@ export function mapCreateFlowViewModel(input: {
     retryDraftList: input.actions.retryDraftList,
     retryCreateEntryDraftLoad: input.actions.retryCreateEntryDraftLoad,
     deleteDraftPending: input.mutations.deleteDraftMutation.isPending,
+    deleteTemplatePending: input.mutations.deleteTemplateMutation.isPending,
+    instantiateTemplatesPending: input.mutations.instantiateTemplatesMutation.isPending,
+    loadTemplatePending: input.mutations.loadTemplateMutation.isPending,
     deleteDraftError: input.mutations.deleteDraftMutation.isError
       ? errorMessage(input.mutations.deleteDraftMutation.error)
       : null,
@@ -88,6 +104,7 @@ export function mapCreateFlowViewModel(input: {
     updateNewChecklistRow: input.actions.updateNewChecklistRow,
     removeNewChecklistRow: input.actions.removeNewChecklistRow,
     submitCreate: input.actions.submitCreate,
+    submitTemplate: input.actions.submitTemplate,
     startFreshDraft: input.actions.startFreshDraft,
     saveDraftNow: input.autosave.saveDraftNow,
     resumeDraftByID: input.actions.resumeDraftByID,
@@ -96,8 +113,15 @@ export function mapCreateFlowViewModel(input: {
     createModalOpen: input.modal.createModalOpen,
     createModalAssignmentLocked: input.modal.createModalAssignmentLocked,
     openCreateModal: input.actions.openCreateModal,
+    openTemplateCreateModal: input.actions.openTemplateCreateModal,
     closeCreateModal: input.modal.closeCreateModal,
     editingTaskId: input.modal.editingTaskId,
+    editingTemplateId: input.modal.editingTemplateId,
+    composeTarget: input.modal.composeTarget,
+    composeOperation: input.modal.composeOperation,
+    editTemplateByID: input.actions.editTemplateByID,
+    deleteTemplateByID: input.actions.deleteTemplateByID,
+    instantiateTemplatesByIDs: input.actions.instantiateTemplatesByIDs,
     editingTaskRunner: input.modal.editingTaskRunner,
     composeStatus: input.modal.composeStatus,
     setComposeStatus: input.modal.setComposeStatus,

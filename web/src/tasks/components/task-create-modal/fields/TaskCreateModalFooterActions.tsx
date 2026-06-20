@@ -2,16 +2,18 @@ import type { ChecklistItemDraft, PriorityChoice } from "@/types";
 import { nonEmptyChecklistCount } from "@/tasks/task-compose/checklistRequirement";
 
 type Props = {
+  variant: "task-create" | "template";
   disabled: boolean;
   draftSaving: boolean;
   title: string;
   priority: PriorityChoice;
   checklistItems: ChecklistItemDraft[];
   onClose: () => void;
-  onSaveDraft: () => void;
+  onSaveDraft?: () => void;
 };
 
 export function TaskCreateModalFooterActions({
+  variant,
   disabled,
   draftSaving,
   title,
@@ -26,6 +28,8 @@ export function TaskCreateModalFooterActions({
     nonEmptyChecklistCount(checklistItems) < 1 ||
     disabled;
 
+  const submitLabel = variant === "template" ? "Save template" : "Create task";
+
   return (
     <div className="task-create-modal-actions">
       <div className="task-create-modal-actions__start">
@@ -39,20 +43,22 @@ export function TaskCreateModalFooterActions({
         </button>
       </div>
       <div className="task-create-modal-actions__end">
-        <button
-          type="button"
-          className="secondary"
-          disabled={disabled || draftSaving}
-          onClick={onSaveDraft}
-        >
-          {draftSaving ? "Saving draft…" : "Save draft"}
-        </button>
+        {variant === "task-create" && onSaveDraft ? (
+          <button
+            type="button"
+            className="secondary"
+            disabled={disabled || draftSaving}
+            onClick={onSaveDraft}
+          >
+            {draftSaving ? "Saving draft…" : "Save draft"}
+          </button>
+        ) : null}
         <button
           type="submit"
           className="task-create-submit"
           disabled={submitDisabled}
         >
-          Create task
+          {submitLabel}
         </button>
       </div>
     </div>

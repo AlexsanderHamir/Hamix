@@ -1,5 +1,7 @@
 type Props = {
   saving: boolean;
+  /** When false, edit is disabled (e.g. task is running). Delete stays available. */
+  canEdit?: boolean;
   onEdit: () => void;
   onDelete: () => void;
   /** When set, shows retry actions for a failed task (POST /retry). */
@@ -32,6 +34,7 @@ type Props = {
 
 export function TaskDetailToolbarActions({
   saving,
+  canEdit = true,
   onEdit,
   onDelete,
   onRetryFresh,
@@ -87,7 +90,10 @@ export function TaskDetailToolbarActions({
         type="button"
         className="task-detail-btn-edit"
         onClick={onEdit}
-        disabled={saving}
+        disabled={saving || !canEdit}
+        title={
+          canEdit ? undefined : "Cannot edit while the task is in progress"
+        }
       >
         Edit task
       </button>

@@ -35,6 +35,28 @@ describe("TaskDetailToolbarActions", () => {
     expect(screen.getByRole("button", { name: /^delete$/i })).toBeDisabled();
   });
 
+  it("disables edit but keeps delete enabled when canEdit is false", async () => {
+    const user = userEvent.setup();
+    const onEdit = vi.fn();
+    const onDelete = vi.fn();
+    render(
+      <TaskDetailToolbarActions
+        saving={false}
+        canEdit={false}
+        onEdit={onEdit}
+        onDelete={onDelete}
+      />,
+    );
+
+    const editButton = screen.getByRole("button", { name: /edit task/i });
+    expect(editButton).toBeDisabled();
+    await user.click(editButton);
+    expect(onEdit).not.toHaveBeenCalled();
+
+    await user.click(screen.getByRole("button", { name: /^delete$/i }));
+    expect(onDelete).toHaveBeenCalledOnce();
+  });
+
   it("renders Start over and Resume from failure when retry handlers are provided", async () => {
     const user = userEvent.setup();
     const onRetryFresh = vi.fn();

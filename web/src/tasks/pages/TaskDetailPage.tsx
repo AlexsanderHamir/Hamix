@@ -34,6 +34,7 @@ import {
 import { AutonomyConfirmDialog, TaskRetryConfirmDialog } from "../components/dialogs";
 import type { TaskRetryMode } from "../components/dialogs/TaskRetryConfirmDialog";
 import { sanitizePromptHtml } from "../task-prompt";
+import { canEditTask } from "../task-display/canEditTask";
 import { canMutateTaskCriteria } from "../task-display/canMutateTaskCriteria";
 import { TaskDetailPageSkeleton } from "../components/skeletons";
 import { useTaskDetailChecklist } from "../hooks/useTaskDetailChecklist";
@@ -335,6 +336,7 @@ function renderTaskDetailLoadedView({
         <TaskDetailSchedule task={task} />
         <TaskDetailToolbarActions
           saving={saving}
+          canEdit={canEditTask(task.status)}
           onEdit={() => modals.openEdit(task)}
           onDelete={() => modals.requestDelete(task)}
           onRetryFresh={

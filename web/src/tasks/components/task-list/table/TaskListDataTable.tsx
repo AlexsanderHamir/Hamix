@@ -5,7 +5,7 @@ import { useTaskDetailPrefetcher } from "@/app/hooks/usePrefetchOnIntent";
 import type { Task } from "@/types";
 import type { TaskWithDepth } from "../../../task-tree";
 import type { DeleteTargetInput } from "../../../hooks/useTaskDeleteFlow";
-import { priorityDotClass, statusNeedsUserInput } from "../../../task-display";
+import { canEditTask, priorityDotClass, statusNeedsUserInput } from "../../../task-display";
 import { Badge } from "@/components/ui";
 import { TaskListDeleteGlyph, TaskListEditGlyph } from "./TaskListRowActionIcons";
 import { statusListLabel, taskListRowSubtitle } from "./taskListRowSubtitle";
@@ -627,9 +627,18 @@ function TaskListDataTableRow({
           <button
             type="button"
             className="task-list-icon-btn task-list-icon-btn--edit"
-            aria-label={`Edit task "${t.title}"`}
+            aria-label={
+              canEditTask(t.status)
+                ? `Edit task "${t.title}"`
+                : `Cannot edit task "${t.title}" while in progress`
+            }
+            title={
+              canEditTask(t.status)
+                ? undefined
+                : "Cannot edit while the task is in progress"
+            }
             onClick={() => onEdit(t)}
-            disabled={saving || isExiting}
+            disabled={saving || isExiting || !canEditTask(t.status)}
           >
             <TaskListEditGlyph />
           </button>

@@ -16,6 +16,7 @@ import { useTaskDeleteFlow } from "./useTaskDeleteFlow";
 import { useTaskPatchFlow } from "./useTaskPatchFlow";
 import { useTaskCreateFlow } from "./useTaskCreateFlow";
 import { canEditTaskPickupSchedule } from "../task-pickup/canEditTaskPickupSchedule";
+import { canEditTask } from "../task-display/canEditTask";
 import { QUERY_POLICY } from "../queryPolicy";
 
 /** Background refetches (SSE invalidate, focus) are short; avoid UI flicker. */
@@ -189,6 +190,9 @@ export function useTasksApp({ sseLive, dataEnabled = true }: UseTasksAppOptions)
   }, [newTitle, editTitleRequiredError]);
 
   function openEdit(t: Task) {
+    if (!canEditTask(t.status)) {
+      return;
+    }
     setChangeModelTask(null);
     setEditTitleRequiredError(null);
     void createFlow.beginEditSession(t);

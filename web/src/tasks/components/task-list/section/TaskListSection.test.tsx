@@ -207,6 +207,44 @@ describe("TaskListSection", () => {
     });
   });
 
+  it("disables edit but keeps delete enabled for running tasks", async () => {
+    const user = userEvent.setup();
+    const onEdit = vi.fn();
+    const onRequestDelete = vi.fn();
+    const task = {
+      id: "1",
+      title: "Running task",
+      initial_prompt: "",
+      status: "running" as const,
+      priority: "medium" as const,
+      ...TASK_TEST_DEFAULTS,
+      depth: 0,
+    };
+    renderWithRouter(
+      <TaskListSection
+        tasks={[task]}
+        loading={false}
+        refreshing={false}
+        saving={false}
+        {...listPagerDefaults}
+        rootTasksOnPage={1}
+        onEdit={onEdit}
+        onRequestDelete={onRequestDelete}
+      />,
+    );
+    const editButton = screen.getByRole("button", {
+      name: /cannot edit task "running task" while in progress/i,
+    });
+    expect(editButton).toBeDisabled();
+    await user.click(editButton);
+    expect(onEdit).not.toHaveBeenCalled();
+
+    await user.click(
+      screen.getByRole("button", { name: /^delete task "running task"$/i }),
+    );
+    expect(onRequestDelete).toHaveBeenCalledWith(task);
+  });
+
   it("filters rows by status and priority", async () => {
     const user = userEvent.setup();
     const tasks = [

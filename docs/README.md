@@ -1,6 +1,6 @@
-# Documentation
+# Documentation index
 
-Contributor reference for T2A. The root [README.md](../README.md) covers product framing and `npm` / `go run` commands.
+“Read when” table for every doc under `docs/`. Navigation and branches: [guide.md](./guide.md).
 
 **New to the project?** Read [guide.md](./guide.md) first — it maps layers and goal branches. Use the table below when you already know what you need.
 

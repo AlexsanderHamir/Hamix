@@ -1,4 +1,4 @@
-# Agent orientation (AI + contributors)
+# Agent orientation
 
 First pass before editing code. **Do not read everything** — pick a scoped path below, then open only the linked docs and map rows you need.
 

@@ -1,0 +1,27 @@
+## Continuation (T2A attempt 2)
+
+You are continuing the same Cursor session. Do not restart discovery or revert locked work.
+
+### What changed
+
+Operator chose Resume from failure on a new task attempt.
+
+Failure class: verify
+Failure reason: verification_failed
+
+Scope lock (do not modify outside this set):
+- src/foo.go
+
+### Do this next
+
+1. Fix the issue described above.
+2. Update `/tmp/report.json` for active criteria only.
+
+### Do not
+
+- Re-do locked criteria: criterion-b
+- Amend, rebase, or squash commits from this cycle
+
+### Artifacts
+
+- criteria-report.json: `/tmp/report.json` (schema v1, claimed_done + evidence per active id)

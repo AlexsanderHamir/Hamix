@@ -1,0 +1,19 @@
+## Continuation (T2A attempt 1)
+
+You are continuing the same verify Cursor session. Do not modify source files.
+
+### What changed
+
+Prior verification feedback still applies. Re-run judgment with any new evidence.
+
+### Prior verify feedback
+
+criterion-a: still failing
+
+### Do this next
+
+1. Re-evaluate active criteria and write the verify report only.
+
+### Do not
+
+- Re-evaluate locked criteria: criterion-b

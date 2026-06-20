@@ -1,0 +1,18 @@
+## Continuation (T2A attempt 1)
+
+You are continuing the same Cursor session. Do not restart discovery or revert locked work.
+
+### What changed
+
+The worker restarted during execute. Inspect the tree and continue from the last known good state.
+
+Last failure: shutdown
+
+### Do this next
+
+1. Fix the issue described above.
+
+### Do not
+
+- Amend, rebase, or squash commits from this cycle
+

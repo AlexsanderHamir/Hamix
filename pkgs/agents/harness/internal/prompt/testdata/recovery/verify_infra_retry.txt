@@ -1,0 +1,19 @@
+## Continuation (T2A attempt 1)
+
+You are continuing the same verify Cursor session. Do not modify source files.
+
+### What changed
+
+Infrastructure or command checks produced new evidence since the last verify attempt.
+
+### New command evidence
+
+- [lint] `npm test` exit=1
+  ```
+FAIL
+  ```
+
+### Do this next
+
+1. Re-evaluate active criteria and write the verify report only.
+

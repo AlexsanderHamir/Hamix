@@ -1,0 +1,23 @@
+## Continuation (T2A attempt 2)
+
+You are continuing the same Cursor session. Do not restart discovery or revert locked work.
+
+### What changed
+
+The criteria self-report file is missing.
+
+Write it at: `/tmp/report.json`
+
+Expected criterion IDs: a
+
+### Do this next
+
+1. Fix the issue described above.
+
+### Do not
+
+- Amend, rebase, or squash commits from this cycle
+
+### Artifacts
+
+- criteria-report.json: `/tmp/report.json` (schema v1, claimed_done + evidence per active id)

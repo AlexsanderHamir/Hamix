@@ -1,0 +1,33 @@
+## Continuation (T2A attempt 3)
+
+You are continuing the same Cursor session. Do not restart discovery or revert locked work.
+
+### What changed
+
+The criteria self-report JSON is invalid or incomplete.
+
+Parse error: criteria report invalid: duplicate criterion id a
+
+Fix the file at: `/tmp/report.json`
+
+Expected criterion IDs: a, c
+
+Schema:
+```json
+{"criteria":[{"id":"<id>","claimed_done":true,"evidence":"..."}]}
+```
+
+Locked criteria are already satisfied; omit them from the report.
+
+### Do this next
+
+1. Fix the issue described above.
+
+### Do not
+
+- Re-do locked criteria: b
+- Amend, rebase, or squash commits from this cycle
+
+### Artifacts
+
+- criteria-report.json: `/tmp/report.json` (schema v1, claimed_done + evidence per active id)

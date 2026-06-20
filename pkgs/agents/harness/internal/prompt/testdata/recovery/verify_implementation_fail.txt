@@ -1,0 +1,27 @@
+## Continuation (T2A attempt 2)
+
+You are continuing the same Cursor session. Do not restart discovery or revert locked work.
+
+### What changed
+
+Verification rejected the implementation. Address the failures below.
+
+### Verification failures
+
+- **[criterion-a]** (verify_agent)
+  Reasoning: missing handler
+  Required: address this before claiming done again.
+
+### Do this next
+
+1. Fix the issue described above.
+2. Update `/tmp/t2a/cycle-1/criteria-report.json` for active criteria only.
+
+### Do not
+
+- Re-do locked criteria: criterion-b
+- Amend, rebase, or squash commits from this cycle
+
+### Artifacts
+
+- criteria-report.json: `/tmp/t2a/cycle-1/criteria-report.json` (schema v1, claimed_done + evidence per active id)

@@ -111,6 +111,12 @@ func (a *Adapter) argvFor(req runner.Request) []string {
 		out = append(out, cursorFlagModel, m)
 	}
 	out = append(out, cursorFlagForce)
+	if id := strings.TrimSpace(req.ResumeSessionID); id != "" {
+		out = append(out, cursorFlagResume, id)
+	}
+	if wd := strings.TrimSpace(req.WorkingDir); wd != "" {
+		out = append(out, cursorFlagWorkspace, wd)
+	}
 	return out
 }
 
@@ -253,6 +259,14 @@ func (a *Adapter) Run(ctx context.Context, req runner.Request) (runner.Result, e
 		switch kind {
 		case FailureKindCursorUsageLimit:
 			summary = titleForFailureKind(kind)
+		case FailureKindResumeSession:
+			if stdMsg != "" {
+				summary = stdMsg
+			}
+			if req.ResumeSessionID != "" {
+				return runner.NewResult(domain.PhaseStatusFailed, summary, details, rawOutput),
+					fmt.Errorf("cursor: %w: exit %d", runner.ErrResumeSession, exitCode)
+			}
 		default:
 			if hint := stderrFirstLineHint(stderr, a.homePaths); hint != "" {
 				summary = summary + ": " + hint

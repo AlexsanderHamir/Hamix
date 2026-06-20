@@ -60,6 +60,8 @@ const (
 	cursorFlagOutputFormat = "--output-format"
 	cursorFlagModel        = "--model"
 	cursorFlagForce        = "--force"
+	cursorFlagResume       = "--resume"
+	cursorFlagWorkspace    = "--workspace"
 	cursorFlagVersion      = "--version"
 	cursorFlagListModels   = "--list-models"
 

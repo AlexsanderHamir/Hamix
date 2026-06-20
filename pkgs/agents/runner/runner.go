@@ -91,6 +91,9 @@ type Request struct {
 	// RunCorrelationID is the per-phase log correlation handle (ADR-0030).
 	// Minted by the store at StartPhase; propagated for grep isolation.
 	RunCorrelationID string `json:"run_correlation_id,omitempty"`
+	// ResumeSessionID selects a prior Cursor CLI session (--resume). Empty
+	// starts a fresh chat. Non-cursor adapters ignore this field.
+	ResumeSessionID string `json:"resume_session_id,omitempty"`
 	// OnProgress is an optional live-update callback. It is excluded from
 	// JSON so the persisted/tested request wire shape stays stable.
 	OnProgress func(ProgressEvent) `json:"-"`
@@ -157,6 +160,9 @@ var (
 	// silent for StreamIdleStuck after the first line. Callers may attempt
 	// evidence-based recovery rather than treating this as a hard failure.
 	ErrStale = errors.New("runner: stream idle")
+
+	// ErrResumeSession indicates --resume failed (missing or expired session).
+	ErrResumeSession = errors.New("runner: resume session failed")
 )
 
 // NewResult constructs a Result with byte/rune caps already applied. It is

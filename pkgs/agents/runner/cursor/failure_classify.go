@@ -9,6 +9,7 @@ import (
 // "failure_kind" for stable UI and filtering.
 const (
 	FailureKindCursorUsageLimit = "cursor_usage_limit"
+	FailureKindResumeSession    = "cursor_resume_session"
 )
 
 const cursorUsageLimitStdMsg = "Cursor account usage limit reached for the current model. " +
@@ -35,6 +36,8 @@ func titleForFailureKind(kind string) string {
 func classifyCursorFailure(combined string) (kind string, standardizedMsg string) {
 	lower := strings.ToLower(combined)
 	switch {
+	case strings.Contains(lower, "resume") && (strings.Contains(lower, "session") || strings.Contains(lower, "not found") || strings.Contains(lower, "invalid")):
+		return FailureKindResumeSession, "Cursor could not resume the prior session. A fresh chat will be started."
 	case strings.Contains(lower, "usage limit"):
 		return FailureKindCursorUsageLimit, cursorUsageLimitStdMsg
 	case strings.Contains(lower, "spend limit") && strings.Contains(lower, "continue with this model"):

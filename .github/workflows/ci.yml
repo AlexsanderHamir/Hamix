@@ -1,3 +1,4 @@
+# Verification steps: scripts/check-go.sh, scripts/check-web.sh
 name: CI
 
 on:
@@ -16,26 +17,8 @@ jobs:
         with:
           go-version-file: go.mod
 
-      - name: Check formatting (gofmt)
-        run: |
-          files="$(find . -name '*.go' -not -path './vendor/*')"
-          if [ -n "$files" ]; then
-            bad="$(gofmt -l $files)"
-            if [ -n "$bad" ]; then
-              echo "gofmt needed for:"
-              echo "$bad"
-              exit 1
-            fi
-          fi
-
-      - name: Vet Go code
-        run: go vet ./...
-
-      - name: Run backend tests
-        run: go test ./... -count=1
-
-      - name: Per-function slog audit (funclogmeasure)
-        run: go run ./cmd/funclogmeasure -enforce
+      - name: Check (Go)
+        run: ./scripts/check-go.sh --verbose
 
   web:
     runs-on: ubuntu-latest
@@ -48,23 +31,5 @@ jobs:
           cache: npm
           cache-dependency-path: web/package-lock.json
 
-      - name: Install web dependencies
-        run: npm ci
-        working-directory: web
-
-      - name: Run web tests
-        run: npm test -- --run
-        working-directory: web
-
-      - name: Lint web app
-        run: npm run lint
-        working-directory: web
-
-      # Lightweight guardrails from .cursor/rules/CODE_STANDARDS.mdc (fetch in api/, etc.)
-      - name: CODE_STANDARDS guardrails
-        run: npm run check:standards
-        working-directory: web
-
-      - name: Build web app
-        run: npm run build
-        working-directory: web
+      - name: Check (web)
+        run: ./scripts/check-web.sh --install --verbose

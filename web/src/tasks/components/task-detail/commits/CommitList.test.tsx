@@ -19,7 +19,6 @@ const sampleCommits: CycleCommit[] = [
     sha: "abc1234567890abcdef1234567890abcdef1234",
     committed_at: "2026-04-18T10:00:00.000Z",
     message: "refactor(web): split helpers",
-    status: "eligible",
   },
 ];
 

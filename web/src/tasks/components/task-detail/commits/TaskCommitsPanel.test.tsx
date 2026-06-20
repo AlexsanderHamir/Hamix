@@ -111,7 +111,6 @@ describe("TaskCommitsPanel", () => {
               branch: "main",
               sha: "abc123def4567890abcdef1234567890abcdef12",
               message: "Initial commit",
-              status: "eligible",
               committed_at: "2026-04-18T11:00:00.000Z",
             },
           ],

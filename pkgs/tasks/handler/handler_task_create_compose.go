@@ -50,11 +50,11 @@ func (h *Handler) createTaskFromComposeJSON(
 	by domain.Actor,
 ) (*domain.Task, error) {
 	slog.Debug("trace", "cmd", calltrace.LogCmd, "operation", "handler.Handler.createTaskFromComposeJSON")
-	if err := h.validateComposePayload(r, payload); err != nil {
-		return nil, err
-	}
 	settings, err := h.store.GetSettings(ctx)
 	if err != nil {
+		return nil, err
+	}
+	if err := h.validateComposePayload(r, payload, settings); err != nil {
 		return nil, err
 	}
 	runner, cursorModel, err := resolveRunnerModelFields(payload.Runner, payload.CursorModel, settings)
@@ -109,11 +109,7 @@ func (h *Handler) createTaskFromComposeJSON(
 
 func (h *Handler) finalizeCreatedTask(ctx context.Context, t *domain.Task) (*domain.Task, error) {
 	slog.Debug("trace", "cmd", calltrace.LogCmd, "operation", "handler.Handler.finalizeCreatedTask")
-	task, err := h.store.Get(ctx, t.ID)
-	if err != nil {
-		return nil, err
-	}
-	h.notifyTaskChanged(TaskCreated, t.ID, task)
+	h.notifyTaskChanged(TaskCreated, t.ID, t)
 	if t.Gate != nil {
 		h.notifyChange(TaskGateChanged, t.ID)
 	}
@@ -121,16 +117,12 @@ func (h *Handler) finalizeCreatedTask(ctx context.Context, t *domain.Task) (*dom
 		h.notifyChange(TaskDependencyChanged, t.ID)
 	}
 	taskapiDomainTasksCreatedTotal.Inc()
-	return task, nil
+	return t, nil
 }
 
 //funclogmeasure:skip category=hot-path reason="Pure helper without I/O; operation trace is emitted by the calling chokepoint."
-func (h *Handler) validateComposePayload(r *http.Request, payload taskComposePayloadJSON) error {
+func (h *Handler) validateComposePayload(r *http.Request, payload taskComposePayloadJSON, settings domain.AppSettings) error {
 	if err := h.validatePromptMentionsIfRepo(r, payload.InitialPrompt); err != nil {
-		return err
-	}
-	settings, err := h.store.GetSettings(r.Context())
-	if err != nil {
 		return err
 	}
 	if _, _, err := resolveRunnerModelFields(payload.Runner, payload.CursorModel, settings); err != nil {

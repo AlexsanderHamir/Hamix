@@ -55,7 +55,12 @@ func (h *Handler) saveTaskTemplate(w http.ResponseWriter, r *http.Request) {
 		writeStoreError(w, r, op, err)
 		return
 	}
-	if err := h.validateComposePayload(r, compose); err != nil {
+	settings, err := h.store.GetSettings(r.Context())
+	if err != nil {
+		writeStoreError(w, r, op, err)
+		return
+	}
+	if err := h.validateComposePayload(r, compose, settings); err != nil {
 		writeStoreError(w, r, op, err)
 		return
 	}
@@ -114,7 +119,12 @@ func (h *Handler) patchTaskTemplate(w http.ResponseWriter, r *http.Request) {
 			writeStoreError(w, r, op, derr)
 			return
 		}
-		if err := h.validateComposePayload(r, compose); err != nil {
+		settings, serr := h.store.GetSettings(r.Context())
+		if serr != nil {
+			writeStoreError(w, r, op, serr)
+			return
+		}
+		if err := h.validateComposePayload(r, compose, settings); err != nil {
 			writeStoreError(w, r, op, err)
 			return
 		}

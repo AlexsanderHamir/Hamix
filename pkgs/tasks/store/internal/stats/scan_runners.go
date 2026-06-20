@@ -153,6 +153,7 @@ func scanRunnerStats(ctx context.Context, db *gorm.DB) (RunnerStats, error) {
 	return acc.foldRunnerStats(), nil
 }
 
+//funclogmeasure:skip category=hot-path reason="Pure helper without I/O; operation trace is emitted by the calling chokepoint."
 func newEmptyRunnerStats() RunnerStats {
 	return RunnerStats{
 		ByRunner:              map[string]RunnerBucket{},
@@ -162,6 +163,7 @@ func newEmptyRunnerStats() RunnerStats {
 	}
 }
 
+//funclogmeasure:skip category=hot-path reason="DB read helper; operation trace is emitted by scanRunnerStats chokepoint."
 func queryRunnerStatsRows(ctx context.Context, db *gorm.DB) ([]runnerStatsRow, error) {
 	var rows []runnerStatsRow
 	if err := db.WithContext(ctx).Model(&domain.TaskCycle{}).
@@ -221,6 +223,7 @@ type runnerStatsAccumulators struct {
 	byResolved map[string]*bucketAcc
 }
 
+//funclogmeasure:skip category=hot-path reason="Pure helper without I/O; operation trace is emitted by the calling chokepoint."
 func newRunnerStatsAccumulators() *runnerStatsAccumulators {
 	return &runnerStatsAccumulators{
 		byRunner:   map[string]*bucketAcc{},
@@ -230,10 +233,12 @@ func newRunnerStatsAccumulators() *runnerStatsAccumulators {
 	}
 }
 
+//funclogmeasure:skip category=hot-path reason="Pure helper without I/O; operation trace is emitted by the calling chokepoint."
 func newBucketAcc() *bucketAcc {
 	return &bucketAcc{byStatus: map[domain.CycleStatus]int64{}}
 }
 
+//funclogmeasure:skip category=hot-path reason="Pure helper without I/O; operation trace is emitted by the calling chokepoint."
 func bucketAccForKey(m map[string]*bucketAcc, key string) *bucketAcc {
 	b := m[key]
 	if b == nil {
@@ -243,6 +248,7 @@ func bucketAccForKey(m map[string]*bucketAcc, key string) *bucketAcc {
 	return b
 }
 
+//funclogmeasure:skip category=hot-path reason="Pure helper without I/O; operation trace is emitted by the calling chokepoint."
 func (a *runnerStatsAccumulators) accumulateRunnerStatsRow(r runnerStatsRow) {
 	runner, model, resolved := decodeRunnerStatsAttribution(r)
 	pair := runner + "|" + model
@@ -281,6 +287,7 @@ func (a *runnerStatsAccumulators) accumulateRunnerStatsRow(r runnerStatsRow) {
 	}
 }
 
+//funclogmeasure:skip category=hot-path reason="Pure helper without I/O; operation trace is emitted by the calling chokepoint."
 func (a *runnerStatsAccumulators) foldRunnerStats() RunnerStats {
 	out := newEmptyRunnerStats()
 	for k, b := range a.byRunner {

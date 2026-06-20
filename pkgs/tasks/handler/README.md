@@ -1,6 +1,6 @@
 # `pkgs/tasks/handler`
 
-HTTP surface for `taskapi`: REST + optional `/repo` + `GET /events` (SSE). **Contracts:** [docs/api.md](../../docs/api.md). **How to extend:** [docs/contributing.md](../../docs/contributing.md).
+HTTP surface for `taskapi`: REST + optional `/repo` + `GET /events` (SSE). **Contracts:** [docs/api.md](../../docs/api.md). **How to extend:** [CONTRIBUTING.md](../../CONTRIBUTING.md), [AGENTS.md](../../AGENTS.md).
 
 The returned `http.Handler` from `NewHandler` is the **inner mux** (routes only). `cmd/taskapi` mounts it behind **`middleware.Stack(..., calltrace.Path)`** from **`internal/taskapi.NewHTTPHandler`**. Wiring order and devsim live in **`cmd/taskapi/run.go`**. Taskapi-only env parsing lives in **`internal/taskapiconfig`**.
 
@@ -79,4 +79,4 @@ When adding a **new** route or middleware file, extend this README in the same P
 
 ## Scaling this package
 
-`handler` stays a **single package** (one directory in Go). To avoid an unmaintainable mix of routes and tests over time, follow **[`docs/contributing.md`](../../docs/contributing.md#when-the-handler-package-grows)** — what already lives in `middleware`, `calltrace`, and `internal/middlewaretest`, conventions for **whitebox vs black-box** tests, and **ordered next extractions** (e.g. task JSON types).
+`handler` stays a **single package** (one directory in Go). To avoid an unmaintainable mix of routes and tests over time, follow the **When a file feels too large** section below — what already lives in `middleware`, `calltrace`, and `internal/middlewaretest`, conventions for **whitebox vs black-box** tests, and **ordered next extractions** (e.g. task JSON types).

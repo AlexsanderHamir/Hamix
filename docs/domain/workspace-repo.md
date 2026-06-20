@@ -403,7 +403,7 @@ Validation on settings update: `repo_root` must not contain a NUL byte. Existenc
 | [agent-queue.md](./agent-queue.md) | Queue and supervisor idle interaction |
 | [runner-adapters.md](./runner-adapters.md) | `runner.Request.working_dir`, env allowlist |
 | [architecture.md](../architecture.md) | Optional workspace subgraph in system overview |
-| [contributing.md](../contributing.md) | First-time workspace setup from SPA Settings |
+| [CONTRIBUTING.md](../../CONTRIBUTING.md) | First-time workspace setup from SPA Settings |
 
 ### Code map
 

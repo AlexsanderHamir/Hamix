@@ -80,5 +80,5 @@ The task detail page also loads **`GET /tasks/{id}/commits`** via `TaskCommitsPa
 - [guide.md](./guide.md) — documentation layers and learning paths
 - [README.md](./README.md) — doc index by topic
 - [agent-map.md](./agent-map.md) — web code paths
-- [contributing.md](./contributing.md) — vertical slice flow and local troubleshooting
+- [CONTRIBUTING.md](../CONTRIBUTING.md) — setup and PR checklist
 - [domain/sse-hub.md](./domain/sse-hub.md) — SSE event catalog and operator tuning

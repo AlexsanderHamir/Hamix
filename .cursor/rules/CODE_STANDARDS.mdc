@@ -79,7 +79,7 @@ Line count limits in this document are upper bounds for alarm, not targets. The 
 │   ├── api.md                  # REST + SSE endpoint surface
 │   ├── configuration.md        # Env vars + app_settings
 │   ├── web.md                  # SPA architecture
-│   ├── contributing.md         # Extensibility + handler-split + troubleshooting
+│   ├── (see CONTRIBUTING.md at repo root)  # Setup, PR checklist, doc routing
 │   └── adr/                    # Architecture Decision Records (ADR-NNNN.md)
 │
 ├── scripts/                    # Build, check, and dev scripts
@@ -313,7 +313,7 @@ docs/
 ├── api.md                      # REST + SSE endpoint surface (handler godoc is authoritative)
 ├── configuration.md            # Every T2A_* env var + app_settings DB row
 ├── web.md                      # SPA architecture
-├── contributing.md             # Vertical-slice flow + handler-split + troubleshooting
+├── (see CONTRIBUTING.md at repo root)  # Setup, PR checklist, doc routing
 └── adr/
     ├── ADR-0001-...md
     └── ADR-NNNN-<slug>.md      # One file per decision

@@ -1,6 +1,6 @@
 # `pkgs/tasks/store`
 
-GORM-backed persistence for tasks, audit events, checklists, drafts, cycles/phases, the ready-task queue, dev-mirror, and DB health probes. **Architecture and dual-write invariant:** [docs/architecture.md](../../docs/architecture.md), [docs/data-model.md](../../docs/data-model.md). **Behavioral deep-dives:** [docs/domain/persistence.md](../../docs/domain/persistence.md), [docs/domain/task-events.md](../../docs/domain/task-events.md). **How to extend:** [docs/contributing.md](../../docs/contributing.md). API contracts: [docs/api.md](../../docs/api.md).
+GORM-backed persistence for tasks, audit events, checklists, drafts, cycles/phases, the ready-task queue, dev-mirror, and DB health probes. **Architecture and dual-write invariant:** [docs/architecture.md](../../docs/architecture.md), [docs/data-model.md](../../docs/data-model.md). **Behavioral deep-dives:** [docs/domain/persistence.md](../../docs/domain/persistence.md), [docs/domain/task-events.md](../../docs/domain/task-events.md). **How to extend:** [CONTRIBUTING.md](../../CONTRIBUTING.md), [docs/domain/persistence.md](../../docs/domain/persistence.md). API contracts: [docs/api.md](../../docs/api.md).
 
 Package overview and conventions: `go doc -all .` (starts in [doc.go](./doc.go)).
 

@@ -49,7 +49,7 @@ Package overview: [`doc.go`](../../pkgs/tasks/store/doc.go). File map: [`README.
 
 ### Out of scope
 
-- HTTP status mapping — handlers; see [contributing.md](../contributing.md)
+- HTTP status mapping — handlers; see [CONTRIBUTING.md](../CONTRIBUTING.md)
 - Harness orchestration after store returns — [harness.md](./harness.md)
 - Agent queue consumption — [agent-queue.md](./agent-queue.md)
 - Postgres migration mechanics — `pkgs/tasks/postgres/migrate.go`, [architecture.md](../architecture.md)
@@ -144,7 +144,7 @@ flowchart TB
   FT --> FN
 ```
 
-Mutating request path (handler → store → SSE) aligns with [contributing.md](../contributing.md):
+Mutating request path (handler → store → SSE) aligns with [CONTRIBUTING.md](../CONTRIBUTING.md):
 
 ```mermaid
 sequenceDiagram
@@ -353,7 +353,7 @@ Cycles dual-write already runs entirely inside one transaction per method; harne
 
 ## Workflow: adding a store method
 
-Follow the vertical slice in [contributing.md](../contributing.md) and update the facade README table in the same PR.
+Follow the vertical slice in [CONTRIBUTING.md](../CONTRIBUTING.md) and update the facade README table in the same PR.
 
 1. **Domain first** — Types, enums, validation in `pkgs/tasks/domain`. No GORM imports.
 2. **Pick or create internal package** — Match an existing `internal/<domain>/` boundary. New bounded concern → new subpackage + `facade_<domain>.go`.
@@ -405,7 +405,7 @@ flowchart TD
 | Internal white-box | `internal/<domain>/*_test.go` | Payload shape, edge validators |
 | Agent integration | `pkgs/tasks/agentreconcile/` | Store + queue + worker (not imported by production) |
 
-Default CI: `go test ./...` with in-memory SQLite — no Postgres required ([contributing.md](../contributing.md)).
+Default CI: `go test ./...` with in-memory SQLite — no Postgres required ([CONTRIBUTING.md](../CONTRIBUTING.md)).
 
 Inject mirror failure: dual-write rollback test uses a test hook / constraint to prove the cycle row does not survive a failed append (`TestStore_DualWrite_StartCycle_rolls_back_when_mirror_insert_fails`).
 
@@ -439,7 +439,7 @@ Inject mirror failure: dual-write rollback test uses a test hook / constraint to
 | --- | --- |
 | [task-events.md](./task-events.md) | Audit log HTTP surface, mirror row contract |
 | [data-model.md](../data-model.md) | Schema, dual-write table, verdict columns, edit locks |
-| [contributing.md](../contributing.md) | Vertical slice, handler/store split, test defaults |
+| [CONTRIBUTING.md](../CONTRIBUTING.md) | Vertical slice, handler/store split, test defaults |
 | [architecture.md](../architecture.md) | System map, cycles vs audit limitation #9 |
 | [harness.md](./harness.md) | Store call sequence inside cycle loop |
 | [verify-agent.md](./verify-agent.md) | Report file contracts, verdict mirror flow |

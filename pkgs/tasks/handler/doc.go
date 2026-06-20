@@ -15,7 +15,7 @@
 //
 // Mutating routes should follow: decode and validate the request, call the store, map errors
 // to HTTP status, then call notifyChange after a successful write. Keep domain rules in
-// store/domain, not in HTTP adapters (see docs/contributing.md).
+// store/domain, not in HTTP adapters (see CONTRIBUTING.md and pkgs/tasks/handler/README.md).
 //
 // # Routes (Go 1.22 patterns on the returned mux)
 //

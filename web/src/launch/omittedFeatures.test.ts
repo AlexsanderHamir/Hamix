@@ -6,4 +6,9 @@ describe("omittedFeatures", () => {
     expect(OMITTED_UI_FEATURES.projects).toBe(true);
     expect(isUiFeatureOmitted("projects")).toBe(true);
   });
+
+  it("documents tags and dependencies as omitted for the current launch", () => {
+    expect(OMITTED_UI_FEATURES.tagsAndDependencies).toBe(true);
+    expect(isUiFeatureOmitted("tagsAndDependencies")).toBe(true);
+  });
 });

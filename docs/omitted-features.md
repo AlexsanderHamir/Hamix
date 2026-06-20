@@ -65,6 +65,41 @@ Features that **exist in the codebase** but are **hidden or fixed for a specific
 
 ---
 
+### Tags & dependencies (create/edit modal)
+
+| Field | Value |
+| --- | --- |
+| **Status** | Omitted (initial launch) |
+| **Since** | 2026-06-20 |
+| **Target restore** | TBD — when tag/milestone/dependency editing is launch-ready |
+
+**Operator-visible behavior**
+
+- Create / edit task modal **More options**: no **Tags & dependencies** fieldset (tags, milestone, depends-on picker).
+- Collapsed **More options** summary no longer mentions tags or dependencies (shows agent + schedule only when empty).
+- New tasks still submit with empty tags, no milestone, and no `depends_on` edges unless set via API.
+
+**Still implemented (intentionally not deleted)**
+
+- Task fields `tags`, `milestone`, and dependency edges in the data model — [data-model.md](./data-model.md).
+- REST dependency routes and task PATCH fields — [api.md](./api.md).
+- Task detail scheduling UI (if present) and store logic unchanged.
+
+**UI gates**
+
+| Surface | File |
+| --- | --- |
+| Modal fieldset + summary hint | `web/src/tasks/components/task-create-modal/TaskCreateModal.tsx` |
+| Summary line copy | `web/src/tasks/components/task-create-modal/advancedSummaryLine.ts` |
+
+**Restore checklist**
+
+- [ ] Set `tagsAndDependencies: false` in `web/src/launch/omittedFeatures.ts`.
+- [ ] Smoke-test create and edit modals: tags, milestone, depends-on picker.
+- [ ] Move this section to **Restored** below with the release name/date.
+
+---
+
 ## Restored (history)
 
 _None yet._

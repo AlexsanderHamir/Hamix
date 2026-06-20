@@ -15,8 +15,11 @@ export function advancedSummaryLine(input: {
   tagsCsv: string;
   milestone: string;
   dependsOn: string[];
+  /** When false, tags/milestone/deps are omitted from the collapsed summary (launch gate). */
+  includeTagsAndDependencies?: boolean;
 }): string {
   const parts: string[] = [];
+  const includeTagsAndDependencies = input.includeTagsAndDependencies ?? true;
 
   const runnerLabel = runnerDisplayLabel(input.runner);
   const modelLabel = input.cursorModel.trim();
@@ -28,22 +31,26 @@ export function advancedSummaryLine(input: {
     parts.push("Scheduled");
   }
 
-  const tagCount = countCsv(input.tagsCsv);
-  if (tagCount > 0) {
-    parts.push(`${tagCount} ${tagCount === 1 ? "tag" : "tags"}`);
-  }
+  if (includeTagsAndDependencies) {
+    const tagCount = countCsv(input.tagsCsv);
+    if (tagCount > 0) {
+      parts.push(`${tagCount} ${tagCount === 1 ? "tag" : "tags"}`);
+    }
 
-  if (input.milestone.trim()) {
-    parts.push("Milestone");
-  }
+    if (input.milestone.trim()) {
+      parts.push("Milestone");
+    }
 
-  const depCount = input.dependsOn.length;
-  if (depCount > 0) {
-    parts.push(`${depCount} ${depCount === 1 ? "dep" : "deps"}`);
+    const depCount = input.dependsOn.length;
+    if (depCount > 0) {
+      parts.push(`${depCount} ${depCount === 1 ? "dep" : "deps"}`);
+    }
   }
 
   if (parts.length === 0) {
-    return "Agent, schedule, tags, dependencies";
+    return includeTagsAndDependencies
+      ? "Agent, schedule, tags, dependencies"
+      : "Agent, schedule";
   }
 
   return parts.join(" · ");

@@ -14,6 +14,7 @@ import { TaskCreateModalSchedulingFields } from "./fields/TaskCreateModalSchedul
 import { TaskCreateModalSection } from "./fields/TaskCreateModalSection";
 import { TaskCreateModalStatusField } from "./fields/TaskCreateModalStatusField";
 import { TaskCreateModalPickupScheduleField } from "./fields/TaskCreateModalPickupScheduleField";
+import { isUiFeatureOmitted } from "@/launch/omittedFeatures";
 import { SchedulePicker } from "@/shared/time/SchedulePicker";
 import { TestScenariosTrigger } from "./TestScenariosTrigger";
 import { TestScenariosPopover } from "./TestScenariosPopover";
@@ -125,6 +126,7 @@ export function TaskCreateModal({
 }: Props) {
   const isEdit = editingTaskId != null;
   const disabled = pending || saving;
+  const tagsAndDependenciesUiEnabled = !isUiFeatureOmitted("tagsAndDependencies");
   const modalBusy = isEdit ? patchPending : pending;
   const modalTitle = isEdit ? "Edit task" : "New task";
   const modalTitleId = isEdit ? "task-edit-modal-title" : "task-create-modal-title";
@@ -266,6 +268,7 @@ export function TaskCreateModal({
                         tagsCsv,
                         milestone,
                         dependsOn,
+                        includeTagsAndDependencies: tagsAndDependenciesUiEnabled,
                       })}
                     </span>
                   </summary>
@@ -308,20 +311,22 @@ export function TaskCreateModal({
                       />
                     )}
 
-                    <TaskCreateModalSchedulingFields
-                      disabled={disabled}
-                      tagsCsv={tagsCsv}
-                      milestone={milestone}
-                      projectId={projectId}
-                      dependsOn={dependsOn}
-                      showDependsOn
-                      dependsOnDisabled={isEdit}
-                      onTagsCsvChange={onTagsCsvChange}
-                      onMilestoneChange={onMilestoneChange}
-                      onDependsOnChange={
-                        isEdit ? noopOnDependsOnChange : onDependsOnChange
-                      }
-                    />
+                    {tagsAndDependenciesUiEnabled ? (
+                      <TaskCreateModalSchedulingFields
+                        disabled={disabled}
+                        tagsCsv={tagsCsv}
+                        milestone={milestone}
+                        projectId={projectId}
+                        dependsOn={dependsOn}
+                        showDependsOn
+                        dependsOnDisabled={isEdit}
+                        onTagsCsvChange={onTagsCsvChange}
+                        onMilestoneChange={onMilestoneChange}
+                        onDependsOnChange={
+                          isEdit ? noopOnDependsOnChange : onDependsOnChange
+                        }
+                      />
+                    ) : null}
                   </div>
                 </details>
               </TaskCreateModalSection>

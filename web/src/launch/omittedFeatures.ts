@@ -5,6 +5,8 @@
 export const OMITTED_UI_FEATURES = {
   /** Project nav, pages, list column/filter, and create/edit project picker. */
   projects: true,
+  /** Tags, milestone, and depends-on fields in the create/edit task modal. */
+  tagsAndDependencies: true,
 } as const;
 
 export type OmittedUiFeature = keyof typeof OMITTED_UI_FEATURES;

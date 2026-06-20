@@ -67,7 +67,7 @@ describe("TaskTemplatesPage", () => {
       isError: false,
       error: null,
       refetch: vi.fn(),
-    } as ReturnType<typeof useQuery>);
+    } as unknown as ReturnType<typeof useQuery>);
   });
 
   it("lists templates from the query result", () => {

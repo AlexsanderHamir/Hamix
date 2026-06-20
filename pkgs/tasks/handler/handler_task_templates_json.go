@@ -45,7 +45,7 @@ type taskTemplateInstantiateErrorJSON struct {
 }
 
 type taskTemplateInstantiateResponseJSON struct {
-	Tasks  []domain.Task                    `json:"tasks"`
+	Tasks  []domain.Task                      `json:"tasks"`
 	Errors []taskTemplateInstantiateErrorJSON `json:"errors"`
 }
 

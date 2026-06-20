@@ -172,6 +172,7 @@ func (h *Harness) runCycleLoopExecute(
 		h.persistProgress(parentCtx, task.ID, cycle.ID, execPhase.PhaseSeq, recovered)
 		h.publishProgress(task.ID, cycle.ID, execPhase.PhaseSeq, state.runCorrelationID, recovered)
 	}
+	h.probeCriteriaReport(state, cycle.ID)
 	cont := h.applyExecuteEffects(parentCtx, task, cycle, state, execPhase, result, effects, commitCount, snap, operatorCancelled, staleRecovery)
 	if cont {
 		h.anchorPostExecuteState(parentCtx, state, execPhase.PhaseSeq, snap, ingestAttempted, ingestOutcome, ingestErr)
@@ -265,6 +266,9 @@ func (h *Harness) runCycleLoop(parentCtx context.Context, task *domain.Task, cyc
 	state.continuation = opts.continuation
 	state.resumeNotice = opts.resumeNotice
 	state.interruptedPhase = opts.interruptedPhase
+	if bundle := opts.continuation; bundle != nil {
+		state.reportParseErr = strings.TrimSpace(bundle.CriteriaReportProbeErr)
+	}
 	skipExecute := opts.skipFirstExecute
 	for {
 		if !skipExecute {

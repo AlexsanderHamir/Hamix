@@ -257,7 +257,7 @@ func TestReasonRemediation_executeGates(t *testing.T) {
 	}{
 		{git.ExecuteUncommittedWorkReason, "uncommitted"},
 		{git.ExecuteNoCommitsReason, "at least one"},
-		{git.ExecuteInvalidCommitReason, "criteria-report"},
+		{git.ExecuteInvalidCommitReason, "repository"},
 		{git.ExecuteRewrittenHistoryReason, "amend"},
 	}
 	for _, tc := range tests {

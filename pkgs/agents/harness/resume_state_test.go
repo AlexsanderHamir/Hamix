@@ -48,20 +48,23 @@ func TestAppendResumeNotice_andCommitPolicy(t *testing.T) {
 		}
 	}
 	withCommit := prompt.AppendGitCommitPolicy("", false)
-	if !containsSubstr(withCommit, "Git commits (required)") || !containsSubstr(withCommit, "criteria-report.json") {
+	if !containsSubstr(withCommit, "Git commits (required)") || !containsSubstr(withCommit, "git rev-list") {
 		t.Fatalf("commit policy missing required block: %q", withCommit)
+	}
+	if containsSubstr(withCommit, "criteria-report.json") && containsSubstr(withCommit, "list every commit SHA") {
+		t.Fatalf("commit policy must not require SHA listing in criteria-report: %q", withCommit)
 	}
 	if containsSubstr(withCommit, "t2a:cycle") {
 		t.Fatalf("commit policy must not mention t2a markers: %q", withCommit)
 	}
 	resumePolicy := prompt.AppendGitCommitPolicy("", true)
-	for _, frag := range []string{"cycle_base_sha..HEAD", "prior attempts", "empty array"} {
+	for _, frag := range []string{"new commits only", "already indexed"} {
 		if !containsSubstr(resumePolicy, frag) {
 			t.Fatalf("resume commit policy missing %q in %q", frag, resumePolicy)
 		}
 	}
 	opRetry := prompt.AppendOperatorRetryResumeNotice("base", cycle, known)
-	for _, frag := range []string{"Operator retry", "cycle-1", "abc123def456", "do **not** list them", "base"} {
+	for _, frag := range []string{"Operator retry", "cycle-1", "abc123def456", "worker discovers", "base"} {
 		if !containsSubstr(opRetry, frag) {
 			t.Fatalf("operator retry notice missing %q in %q", frag, opRetry)
 		}

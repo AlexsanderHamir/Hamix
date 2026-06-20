@@ -7,7 +7,6 @@ import (
 
 	"github.com/AlexsanderHamir/T2A/pkgs/agents/harness/internal/git"
 	"github.com/AlexsanderHamir/T2A/pkgs/agents/harness/internal/orchestration"
-	"github.com/AlexsanderHamir/T2A/pkgs/agents/harness/internal/reports"
 	"github.com/AlexsanderHamir/T2A/pkgs/tasks/domain"
 )
 
@@ -94,20 +93,10 @@ func (h *Harness) gatherRetryClassifyInput(
 	verdicts []criterionVerdict,
 	verifyErr error,
 ) orchestration.ClassifyInput {
-	expected := make(map[string]struct{})
-	for _, it := range state.verifySnap.Criteria {
-		if _, locked := state.previouslyPassed[it.ID]; locked {
-			continue
-		}
-		expected[it.ID] = struct{}{}
-	}
 	reportValid := true
-	state.reportParseErr = ""
-	if len(expected) > 0 {
-		if _, err := reports.ParseCriteriaReport(h.opts.ReportDir, cycle.ID, expected); err != nil {
-			reportValid = false
-			state.reportParseErr = err.Error()
-		}
+	h.probeCriteriaReport(state, cycle.ID)
+	if state.reportParseErr != "" {
+		reportValid = false
 	}
 	headMatches := true
 	if state.postExecuteHeadSHA != "" {

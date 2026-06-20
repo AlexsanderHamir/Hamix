@@ -76,7 +76,7 @@ func ReasonRemediation(reason string) string {
 	case ExecuteNoCommitsReason:
 		return "Create at least one new commit in cycle_base_sha..HEAD before finishing execute."
 	case ExecuteInvalidCommitReason:
-		return "Fix criteria-report.json: list only SHAs from cycle_base_sha..HEAD using full or unambiguous abbreviated hashes."
+		return "A commit from this cycle could not be resolved in the repository. Create a new follow-up commit instead of rewriting history."
 	case ExecuteRewrittenHistoryReason:
 		return "Do not amend, rebase, or squash commits from this cycle. Create new follow-up commits instead."
 	default:

@@ -2,7 +2,6 @@ package git
 
 import (
 	"context"
-	"errors"
 	"fmt"
 	"log/slog"
 	"strings"
@@ -17,7 +16,7 @@ const (
 	ExecuteNoCommitsReason = "execute_no_commits"
 	// ExecuteUncommittedWorkReason is recorded when the worktree is dirty after execute.
 	ExecuteUncommittedWorkReason = "execute_uncommitted_work"
-	// ExecuteInvalidCommitReason is recorded when criteria-report SHAs are invalid.
+	// ExecuteInvalidCommitReason is recorded when inherited or resolved commits are invalid.
 	ExecuteInvalidCommitReason = "execute_invalid_commit"
 	// ExecuteRewrittenHistoryReason is recorded when stored SHAs disappear from ancestry.
 	ExecuteRewrittenHistoryReason = "execute_rewritten_history"
@@ -43,43 +42,6 @@ type phaseContext struct {
 	BaseSHA      string
 	CycleBaseSHA string
 	BaseBranch   string
-}
-
-type commitReport struct {
-	SHA    string `json:"sha"`
-	Branch string `json:"branch"`
-}
-
-// MatchReportedSHAInAncestry maps an agent-reported SHA to canonical cycle ancestry.
-//
-//funclogmeasure:skip category=hot-path reason="Pure helper without I/O; operation trace is emitted by the calling chokepoint."
-func MatchReportedSHAInAncestry(reported string, ancestry []string) (string, error) {
-	reported = strings.ToLower(strings.TrimSpace(reported))
-	if reported == "" {
-		return "", fmt.Errorf("%w: empty reported sha", domain.ErrInvalidInput)
-	}
-	var prefixMatches []string
-	for _, full := range ancestry {
-		full = strings.TrimSpace(full)
-		if full == "" {
-			continue
-		}
-		lower := strings.ToLower(full)
-		if lower == reported {
-			return full, nil
-		}
-		if strings.HasPrefix(lower, reported) {
-			prefixMatches = append(prefixMatches, full)
-		}
-	}
-	switch len(prefixMatches) {
-	case 1:
-		return prefixMatches[0], nil
-	case 0:
-		return "", fmt.Errorf("%w: reported sha not in cycle ancestry", domain.ErrInvalidInput)
-	default:
-		return "", fmt.Errorf("%w: ambiguous abbreviated sha %q within cycle ancestry", domain.ErrInvalidInput, reported)
-	}
 }
 
 //funclogmeasure:skip category=hot-path reason="Pure helper without I/O; operation trace is emitted by the calling chokepoint."
@@ -139,35 +101,8 @@ func (s *Service) branchContaining(ctx context.Context, worktree, sha string) (s
 	return "", nil
 }
 
-func buildReportedBranchMap(reported []commitReport, shas []string, cycleID string) (map[string]string, error) {
-	reportedMap := make(map[string]string, len(reported))
-	for _, r := range reported {
-		raw := strings.TrimSpace(r.SHA)
-		if raw == "" {
-			continue
-		}
-		full, err := MatchReportedSHAInAncestry(raw, shas)
-		if err != nil {
-			if errors.Is(err, domain.ErrInvalidInput) && strings.Contains(err.Error(), "not in cycle ancestry") {
-				slog.Warn("ignoring criteria-report commit outside cycle ancestry",
-					"cmd", logCmd, "operation", "agent.harness.git.buildReportedBranchMap",
-					"cycle_id", cycleID, "reported_sha", raw)
-				continue
-			}
-			return nil, err
-		}
-		reportedMap[full] = strings.TrimSpace(r.Branch)
-	}
-	return reportedMap, nil
-}
-
-//funclogmeasure:skip category=hot-path reason="Pure helper without I/O; operation trace is emitted by the calling chokepoint."
-func (s *Service) resolvePhaseCommits(ctx context.Context, g phaseContext, reported []commitReport, cycleID string) ([]store.CycleCommitEntry, error) {
+func (s *Service) resolvePhaseCommits(ctx context.Context, g phaseContext) ([]store.CycleCommitEntry, error) {
 	shas, err := s.revListRange(ctx, g.Worktree, g.CycleBaseSHA)
-	if err != nil {
-		return nil, err
-	}
-	reportedMap, err := buildReportedBranchMap(reported, shas, cycleID)
 	if err != nil {
 		return nil, err
 	}
@@ -181,10 +116,7 @@ func (s *Service) resolvePhaseCommits(ctx context.Context, g phaseContext, repor
 		if err != nil {
 			return nil, err
 		}
-		branch := reportedMap[sha]
-		if branch == "" {
-			branch, _ = s.branchContaining(ctx, g.Worktree, sha)
-		}
+		branch, _ := s.branchContaining(ctx, g.Worktree, sha)
 		if branch == "" {
 			branch = g.BaseBranch
 		}
@@ -288,7 +220,12 @@ func (s *Service) evaluateExecuteCommitGates(
 		return "", err
 	}
 	if dirty {
-		return ExecuteUncommittedWorkReason, nil
+		if len(entries) == 0 {
+			return ExecuteUncommittedWorkReason, nil
+		}
+		slog.Warn("working tree dirty after execute but cycle has commits; admitting commits",
+			"cmd", logCmd, "operation", "agent.harness.git.evaluateExecuteCommitGates.dirty_with_commits",
+			"cycle_id", cycleID, "commit_count", len(entries))
 	}
 	stored, err := s.store.ListCommitsForCycle(ctx, cycleID)
 	if err != nil {
@@ -331,30 +268,6 @@ func assignCommitAdmissionStatuses(entries []store.CycleCommitEntry, failReason 
 	}
 }
 
-// ResolvePhaseCommitsFromReports resolves commits using criteria-report SHA hints.
-//
-//funclogmeasure:skip category=hot-path reason="Pure helper without I/O; operation trace is emitted by the calling chokepoint."
-func ResolvePhaseCommitsFromReports(ctx context.Context, s *Service, snap PhaseSnapshot, reported []CommitReport, cycleID string) ([]store.CycleCommitEntry, error) {
-	reports := make([]commitReport, len(reported))
-	for i, r := range reported {
-		reports[i] = commitReport(r)
-	}
-	g := phaseContext{
-		Repo:         snap.Repo,
-		Worktree:     snap.Worktree,
-		BaseSHA:      snap.BaseSHA,
-		CycleBaseSHA: snap.CycleBaseSHA,
-		BaseBranch:   snap.BaseBranch,
-	}
-	return s.resolvePhaseCommits(ctx, g, reports, cycleID)
-}
-
-// CommitReport is a criteria-report commit entry.
-type CommitReport struct {
-	SHA    string `json:"sha"`
-	Branch string `json:"branch"`
-}
-
 // PhaseContext carries git anchors for commit resolution.
 type PhaseContext struct {
 	Repo         string
@@ -389,12 +302,8 @@ func (s *Service) IngestExecuteCommits(
 	if snap.Skipped {
 		return ExecuteCommitIngestOutcome{}, nil
 	}
-	reported, err := s.parseCommitReports(s.reportDir, cycle.ID)
-	if err != nil {
-		return ExecuteCommitIngestOutcome{FailReason: ExecuteInvalidCommitReason}, err
-	}
 	g := phaseContextFromSnapshot(snap)
-	entries, err := s.resolvePhaseCommits(ctx, g, reported, cycle.ID)
+	entries, err := s.resolvePhaseCommits(ctx, g)
 	if err != nil {
 		return ExecuteCommitIngestOutcome{FailReason: ExecuteInvalidCommitReason}, err
 	}

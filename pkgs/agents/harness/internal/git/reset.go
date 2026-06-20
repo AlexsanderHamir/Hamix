@@ -2,60 +2,13 @@ package git
 
 import (
 	"context"
-	"encoding/json"
 	"errors"
 	"fmt"
-	"io"
 	"log/slog"
-	"os"
 	"strings"
 
-	"github.com/AlexsanderHamir/T2A/pkgs/agents/harness/internal/reports"
 	"github.com/AlexsanderHamir/T2A/pkgs/tasks/domain"
 )
-
-const maxCriteriaReportFileBytes = 256 * 1024
-
-//funclogmeasure:skip category=hot-path reason="Pure helper without I/O; operation trace is emitted by the calling chokepoint."
-func (s *Service) parseCommitReports(reportDir, cycleID string) ([]commitReport, error) {
-	path := reports.CriteriaReportPath(reportDir, cycleID)
-	var rep struct {
-		Criteria []reports.CriteriaEntry `json:"criteria"`
-		Commits  []commitReport          `json:"commits"`
-	}
-	if err := readCriteriaReportJSON(path, &rep); err != nil {
-		if errors.Is(err, reports.ErrCriteriaReportMissing) {
-			return nil, nil
-		}
-		return nil, err
-	}
-	return rep.Commits, nil
-}
-
-//funclogmeasure:skip category=hot-path reason="Pure helper without I/O; operation trace is emitted by the calling chokepoint."
-func readCriteriaReportJSON(path string, dest any) error {
-	info, err := os.Lstat(path)
-	if err != nil {
-		if os.IsNotExist(err) {
-			return reports.ErrCriteriaReportMissing
-		}
-		return err
-	}
-	if info.Mode()&os.ModeSymlink != 0 {
-		return fmt.Errorf("%w: symlink not permitted", reports.ErrCriteriaReportInvalid)
-	}
-	f, err := os.Open(path)
-	if err != nil {
-		return err
-	}
-	defer f.Close()
-	dec := json.NewDecoder(io.LimitReader(f, maxCriteriaReportFileBytes))
-	dec.DisallowUnknownFields()
-	if err := dec.Decode(dest); err != nil {
-		return fmt.Errorf("%w: %v", reports.ErrCriteriaReportInvalid, err)
-	}
-	return nil
-}
 
 // ResetForFreshRetry resets the working tree to the parent cycle anchor before fresh retry.
 func (s *Service) ResetForFreshRetry(ctx context.Context, workingDir, parentCycleID string) (FreshRetryResetOutcome, error) {

@@ -46,6 +46,7 @@ func (s *Service) LoadContinuationBundle(ctx context.Context, parentCycleID stri
 		if lastExecute != nil {
 			bundle.ScopeFiles = git.ScopeFilesFromPhaseDetails(ctx, s.gitRepo(), s.opts.WorkingDir, lastExecute.DetailsJSON)
 			bundle.RunnerFeedback = runnerFeedbackFromPhase(lastExecute)
+			bundle.CriteriaReportProbeErr = git.CriteriaReportProbeErrFromPhaseDetails(lastExecute.DetailsJSON)
 			if lastExecute.Status == domain.PhaseStatusFailed {
 				summary := phaseSummary(*lastExecute)
 				if git.IsExecuteGateReason(summary) {

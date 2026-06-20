@@ -21,6 +21,9 @@ func TestInjectCriteria_NoAlreadyVerified_RendersAllItems(t *testing.T) {
 	if !strings.Contains(out, reportPath) {
 		t.Fatalf("absolute report path missing from prompt; want=%q got=%s", reportPath, out)
 	}
+	if !strings.Contains(out, "schema_version") {
+		t.Fatalf("schema_version missing from prompt:\n%s", out)
+	}
 	if strings.Contains(out, ".t2a/") {
 		t.Fatalf(".t2a/ relative path leaked into prompt:\n%s", out)
 	}

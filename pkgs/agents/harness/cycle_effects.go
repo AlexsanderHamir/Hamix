@@ -40,6 +40,7 @@ func (h *Harness) applyExecuteEffects(
 
 	phaseStatus := executePhaseStatusFromEffects(effects)
 	phaseDetails := mergeRunnerDetailsWithGit(detailsBytes(result), snap, commitCount)
+	phaseDetails = git.MergeCriteriaReportProbeErr(phaseDetails, state.reportParseErr)
 	if streamIdleRecovery && effects.ContinueToVerify {
 		phaseDetails = mergeStreamIdleRecoveryDetails(phaseDetails, h.opts.StreamIdleStuck)
 	}

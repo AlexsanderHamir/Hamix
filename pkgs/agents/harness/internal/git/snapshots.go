@@ -115,6 +115,48 @@ func snapshotToMap(s PhaseSnapshot, commitCount int) map[string]any {
 	return m
 }
 
+// CriteriaReportProbeErrFromPhaseDetails reads criteria_report_probe_err from execute phase details.
+//
+//funclogmeasure:skip category=hot-path reason="Pure helper without I/O; operation trace is emitted by the calling chokepoint."
+func CriteriaReportProbeErrFromPhaseDetails(details []byte) string {
+	if len(details) == 0 {
+		return ""
+	}
+	var root map[string]json.RawMessage
+	if err := json.Unmarshal(details, &root); err != nil {
+		return ""
+	}
+	raw, ok := root["criteria_report_probe_err"]
+	if !ok {
+		return ""
+	}
+	var s string
+	if err := json.Unmarshal(raw, &s); err != nil {
+		return ""
+	}
+	return strings.TrimSpace(s)
+}
+
+// MergeCriteriaReportProbeErr attaches a criteria-report parse error for cross-cycle resume.
+//
+//funclogmeasure:skip category=hot-path reason="Pure helper without I/O; operation trace is emitted by the calling chokepoint."
+func MergeCriteriaReportProbeErr(baseDetails []byte, probeErr string) []byte {
+	probeErr = strings.TrimSpace(probeErr)
+	if probeErr == "" {
+		return baseDetails
+	}
+	root := map[string]any{}
+	if len(baseDetails) > 0 {
+		_ = json.Unmarshal(baseDetails, &root)
+	}
+	root["criteria_report_probe_err"] = probeErr
+	out, err := json.Marshal(root)
+	if err != nil {
+		return baseDetails
+	}
+	return out
+}
+
 // MergeRunnerDetailsWithGit attaches git snapshot metadata to execute phase details.
 //
 //funclogmeasure:skip category=hot-path reason="Pure helper without I/O; operation trace is emitted by the calling chokepoint."

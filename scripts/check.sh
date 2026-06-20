@@ -1,47 +1,68 @@
 #!/usr/bin/env bash
-# Full local verification: gofmt (check), go vet, go test, funclogmeasure -enforce,
-# web npm test + lint + check:standards (CODE_STANDARDS guardrails) + build.
-# Usage from repo root: ./scripts/check.sh
-# Skip web: CHECK_SKIP_WEB=1 ./scripts/check.sh
-# Skip per-function slog audit: CHECK_SKIP_FUNCLOG=1 ./scripts/check.sh
+# T2A full verification — runs check-go.sh then check-web.sh.
+#
+# Usage (repo root): ./scripts/check.sh [flags]
+#
+# Flags:
+#   --verbose, -v     Stream full tool output
+#   --go-only         Run check-go.sh only
+#   --web-only        Run check-web.sh only
+#   --install         Pass --install to check-web.sh (npm ci)
+#   --skip-funclog    Pass --skip-funclog to check-go.sh
+#   --help, -h        Show options
+#
+# Default (quiet): one line per step on success; full output only on failure.
+# CI runs check-go.sh and check-web.sh directly — see .github/workflows/ci.yml
+
 set -euo pipefail
-repo="$(cd "$(dirname "$0")/.." && pwd)"
+
+script_dir="$(cd "$(dirname "$0")" && pwd)"
+repo="$(cd "$script_dir/.." && pwd)"
 cd "$repo"
 
-echo "gofmt (check)..."
-unformatted="$(gofmt -l .)"
-if [[ -n "$unformatted" ]]; then
-  echo "These files need gofmt:" >&2
-  echo "$unformatted" >&2
-  exit 1
+VERBOSE=0
+GO_ONLY=0
+WEB_ONLY=0
+INSTALL=0
+SKIP_FUNCLOG=0
+
+show_help() {
+  sed -n '2,16p' "$0" | sed 's/^# \{0,1\}//'
+}
+
+while [[ $# -gt 0 ]]; do
+  case "$1" in
+    --verbose|-v) VERBOSE=1; shift ;;
+    --go-only) GO_ONLY=1; shift ;;
+    --web-only) WEB_ONLY=1; shift ;;
+    --install) INSTALL=1; shift ;;
+    --skip-funclog) SKIP_FUNCLOG=1; shift ;;
+    --help|-h) show_help; exit 0 ;;
+    *)
+      echo "unknown flag: $1 (try --help)" >&2
+      exit 2
+      ;;
+  esac
+done
+
+if [[ "$GO_ONLY" -eq 1 && "$WEB_ONLY" -eq 1 ]]; then
+  echo "cannot use --go-only and --web-only together" >&2
+  exit 2
 fi
 
-echo "go vet..."
-go vet ./...
+go_args=()
+web_args=()
+[[ "$VERBOSE" -eq 1 ]] && go_args+=(--verbose) && web_args+=(--verbose)
+[[ "$SKIP_FUNCLOG" -eq 1 ]] && go_args+=(--skip-funclog)
+[[ "$INSTALL" -eq 1 ]] && web_args+=(--install)
 
-echo "scheduling import boundary..."
-if rg -q 'gorm|store/|handler/|agents/' pkgs/tasks/scheduling/ -g '*.go' -g '!*_test.go'; then
-  echo "scheduling must not import persistence or transport:" >&2
-  rg -n 'gorm|store/|handler/|agents/' pkgs/tasks/scheduling/ -g '*.go' -g '!*_test.go' >&2
-  exit 1
+if [[ "$WEB_ONLY" -eq 1 ]]; then
+  exec "$script_dir/check-web.sh" "${web_args[@]}"
 fi
 
-echo "go test..."
-go test ./... -count=1
-
-if [[ "${CHECK_SKIP_FUNCLOG:-}" != "1" ]]; then
-  echo "funclogmeasure (-enforce)..."
-  go run ./cmd/funclogmeasure -enforce
+if [[ "$GO_ONLY" -eq 1 ]]; then
+  exec "$script_dir/check-go.sh" "${go_args[@]}"
 fi
 
-if [[ "${CHECK_SKIP_WEB:-}" == "1" ]]; then
-  echo "check OK (web skipped)"
-  exit 0
-fi
-
-if [[ -f web/package.json ]]; then
-  echo "web: npm test..."
-  (cd web && npm test -- --run && npm run lint && npm run check:standards && npm run build)
-fi
-
-echo "check OK"
+"$script_dir/check-go.sh" "${go_args[@]}"
+"$script_dir/check-web.sh" "${web_args[@]}"

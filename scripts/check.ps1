@@ -1,69 +1,56 @@
-# Full local verification: gofmt (check), go vet, go test, funclogmeasure -enforce,
-# web npm test + lint + check:standards (CODE_STANDARDS guardrails) + build.
-# Usage from repo root: .\scripts\check.ps1
-# Skip web steps: $env:CHECK_SKIP_WEB = "1"
-# Skip per-function slog audit: $env:CHECK_SKIP_FUNCLOG = "1"
-$ErrorActionPreference = "Stop"
-$repo = (Resolve-Path (Join-Path $PSScriptRoot "..")).Path
-Set-Location $repo
+# T2A full verification — runs check-go.ps1 then check-web.ps1.
+#
+# Usage (repo root): .\scripts\check.ps1 [flags]
+#
+# Flags:
+#   -Verbose          Stream full tool output
+#   -GoOnly           Run check-go.ps1 only
+#   -WebOnly          Run check-web.ps1 only
+#   -Install          Pass -Install to check-web.ps1 (npm ci)
+#   -SkipFunclog      Pass -SkipFunclog to check-go.ps1
+#   -Help             Show options
+#
+# Default (quiet): one line per step on success; full output only on failure.
+# CI runs check-go.sh and check-web.sh directly — see .github/workflows/ci.yml
 
-Write-Host "gofmt (check)..." -ForegroundColor Cyan
-$gofmtOut = & gofmt -l .
-if ($gofmtOut) {
-    Write-Host "These files need gofmt:" -ForegroundColor Red
-    $gofmtOut
-    exit 1
-}
+param(
+    [switch]$Help,
+    [switch]$Verbose,
+    [switch]$GoOnly,
+    [switch]$WebOnly,
+    [switch]$Install,
+    [switch]$SkipFunclog
+)
 
-Write-Host "go vet..." -ForegroundColor Cyan
-& go vet ./...
-if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
-
-Write-Host "scheduling import boundary..." -ForegroundColor Cyan
-$boundaryHits = & rg -n "gorm|store/|handler/|agents/" pkgs/tasks/scheduling/ -g "*.go" -g "!*_test.go" 2>$null
-if ($boundaryHits) {
-    Write-Host "scheduling must not import persistence or transport:" -ForegroundColor Red
-    $boundaryHits
-    exit 1
-}
-
-Write-Host "go test..." -ForegroundColor Cyan
-& go test ./... -count=1
-if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
-
-if ($env:CHECK_SKIP_FUNCLOG -ne "1") {
-    Write-Host "funclogmeasure (-enforce)..." -ForegroundColor Cyan
-    & go run ./cmd/funclogmeasure -enforce
-    if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
-}
-
-if ($env:CHECK_SKIP_WEB -eq "1") {
-    Write-Host "check OK (web skipped)" -ForegroundColor Green
+if ($Help -or $args -contains '--help' -or $args -contains '-h') {
+    Get-Content $PSCommandPath | Select-Object -Skip 1 -First 15 | ForEach-Object { $_ -replace '^# ?', '' }
     exit 0
 }
 
-$webDir = Join-Path $repo "web"
-if (-not (Test-Path (Join-Path $webDir "package.json"))) {
-    Write-Host "check OK" -ForegroundColor Green
-    exit 0
+if ($GoOnly -and $WebOnly) {
+    Write-Error "cannot use -GoOnly and -WebOnly together"
+    exit 2
 }
 
-Write-Host "web: npm test..." -ForegroundColor Cyan
-Push-Location $webDir
-try {
-    & npm test -- --run
-    if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
-    Write-Host "web: npm run lint..." -ForegroundColor Cyan
-    & npm run lint
-    if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
-    Write-Host "web: CODE_STANDARDS (check:standards)..." -ForegroundColor Cyan
-    & npm run check:standards
-    if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
-    Write-Host "web: npm run build..." -ForegroundColor Cyan
-    & npm run build
-    if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
-} finally {
-    Pop-Location
+$scriptDir = $PSScriptRoot
+$goArgs = @()
+$webArgs = @()
+if ($Verbose) { $goArgs += '-Verbose'; $webArgs += '-Verbose' }
+if ($SkipFunclog) { $goArgs += '-SkipFunclog' }
+if ($Install) { $webArgs += '-Install' }
+
+if ($WebOnly) {
+    & (Join-Path $scriptDir "check-web.ps1") @webArgs
+    exit $LASTEXITCODE
 }
 
-Write-Host "check OK" -ForegroundColor Green
+if ($GoOnly) {
+    & (Join-Path $scriptDir "check-go.ps1") @goArgs
+    exit $LASTEXITCODE
+}
+
+& (Join-Path $scriptDir "check-go.ps1") @goArgs
+if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+
+& (Join-Path $scriptDir "check-web.ps1") @webArgs
+exit $LASTEXITCODE

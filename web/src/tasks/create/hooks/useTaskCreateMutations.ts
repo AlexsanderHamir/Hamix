@@ -153,10 +153,10 @@ export function useTaskCreateMutations(input: {
 
   const instantiateTemplatesMutation = useMutation({
     mutationFn: (templateIds: string[]) => apiInstantiateTemplates(templateIds),
-    onSuccess: async (result) => {
+    onSuccess: (result) => {
       if (result.tasks.length > 0) {
-        await input.queryClient.invalidateQueries({ queryKey: taskQueryKeys.all });
-        await input.queryClient.invalidateQueries({ queryKey: taskQueryKeys.stats() });
+        void input.queryClient.invalidateQueries({ queryKey: taskQueryKeys.all });
+        void input.queryClient.invalidateQueries({ queryKey: taskQueryKeys.stats() });
       }
     },
   });

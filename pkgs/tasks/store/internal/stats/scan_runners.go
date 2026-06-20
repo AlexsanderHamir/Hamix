@@ -142,12 +142,27 @@ type runnerStatsExecDetailsProjection struct {
 // simply don't populate ByRunnerModelResolved.
 func scanRunnerStats(ctx context.Context, db *gorm.DB) (RunnerStats, error) {
 	slog.Debug("trace", "cmd", logCmd, "operation", "tasks.store.stats.scanRunnerStats")
-	out := RunnerStats{
+	rows, err := queryRunnerStatsRows(ctx, db)
+	if err != nil {
+		return RunnerStats{}, err
+	}
+	acc := newRunnerStatsAccumulators()
+	for _, r := range rows {
+		acc.accumulateRunnerStatsRow(r)
+	}
+	return acc.foldRunnerStats(), nil
+}
+
+func newEmptyRunnerStats() RunnerStats {
+	return RunnerStats{
 		ByRunner:              map[string]RunnerBucket{},
 		ByModel:               map[string]RunnerBucket{},
 		ByRunnerModel:         map[string]RunnerBucket{},
 		ByRunnerModelResolved: map[string]RunnerBucket{},
 	}
+}
+
+func queryRunnerStatsRows(ctx context.Context, db *gorm.DB) ([]runnerStatsRow, error) {
 	var rows []runnerStatsRow
 	if err := db.WithContext(ctx).Model(&domain.TaskCycle{}).
 		Select(
@@ -160,113 +175,127 @@ func scanRunnerStats(ctx context.Context, db *gorm.DB) (RunnerStats, error) {
 			domain.PhaseExecute).
 		Where("task_cycles.ended_at IS NOT NULL").
 		Scan(&rows).Error; err != nil {
-		return RunnerStats{}, fmt.Errorf("runner stats: %w", err)
+		return nil, fmt.Errorf("runner stats: %w", err)
 	}
+	return rows, nil
+}
 
-	// Per-bucket counters and duration samples. Populated in one
-	// pass over rows, then folded into out.* after percentiles
-	// are computed. bucketAcc is declared at package scope so
-	// bucketFromAcc can reference it.
-	newBucket := func() *bucketAcc {
-		return &bucketAcc{byStatus: map[domain.CycleStatus]int64{}}
-	}
-	runnerAcc := map[string]*bucketAcc{}
-	modelAcc := map[string]*bucketAcc{}
-	pairAcc := map[string]*bucketAcc{}
-	resolvedAcc := map[string]*bucketAcc{}
-
-	for _, r := range rows {
-		runner := RunnerUnknownKey
-		model := ""
-		if len(r.Meta) > 0 {
-			var p runnerStatsMetaProjection
-			if err := json.Unmarshal(r.Meta, &p); err != nil {
-				slog.Debug("runner stats meta decode skipped",
-					"cmd", logCmd,
-					"operation", "tasks.store.stats.scanRunnerStats.decode_skip",
-					"err", err)
-			} else {
-				if p.Runner != "" {
-					runner = p.Runner
-				}
-				model = p.CursorModelEffective
+func decodeRunnerStatsAttribution(r runnerStatsRow) (runner, model, resolved string) {
+	runner = RunnerUnknownKey
+	model = ""
+	if len(r.Meta) > 0 {
+		var p runnerStatsMetaProjection
+		if err := json.Unmarshal(r.Meta, &p); err != nil {
+			slog.Debug("runner stats meta decode skipped",
+				"cmd", logCmd,
+				"operation", "tasks.store.stats.scanRunnerStats.decode_skip",
+				"err", err)
+		} else {
+			if p.Runner != "" {
+				runner = p.Runner
 			}
-		}
-		resolved := ""
-		if len(r.ExecDetails) > 0 {
-			var d runnerStatsExecDetailsProjection
-			if err := json.Unmarshal(r.ExecDetails, &d); err != nil {
-				slog.Debug("runner stats exec details decode skipped",
-					"cmd", logCmd,
-					"operation", "tasks.store.stats.scanRunnerStats.exec_details_decode_skip",
-					"err", err)
-			} else {
-				resolved = d.ResolvedModel
-			}
-		}
-		pair := runner + "|" + model
-
-		ra := runnerAcc[runner]
-		if ra == nil {
-			ra = newBucket()
-			runnerAcc[runner] = ra
-		}
-		ma := modelAcc[model]
-		if ma == nil {
-			ma = newBucket()
-			modelAcc[model] = ma
-		}
-		pa := pairAcc[pair]
-		if pa == nil {
-			pa = newBucket()
-			pairAcc[pair] = pa
-		}
-		ra.byStatus[r.Status]++
-		ma.byStatus[r.Status]++
-		pa.byStatus[r.Status]++
-		// Only record in the resolved-model breakdown when the
-		// adapter actually observed one. Avoids polluting the
-		// panel with "<unknown>" sub-rows for pre-feature cycles.
-		var resolvedBucket *bucketAcc
-		if resolved != "" {
-			triple := runner + "|" + model + "|" + resolved
-			resolvedBucket = resolvedAcc[triple]
-			if resolvedBucket == nil {
-				resolvedBucket = newBucket()
-				resolvedAcc[triple] = resolvedBucket
-			}
-			resolvedBucket.byStatus[r.Status]++
-		}
-		if r.Status == domain.CycleStatusSucceeded && r.EndedAt != nil {
-			d := r.EndedAt.Sub(r.StartedAt).Seconds()
-			if d < 0 {
-				// clock skew — treat as zero rather than
-				// dropping the row (the count still
-				// matters for the by-status cell).
-				d = 0
-			}
-			ra.succeededDur = append(ra.succeededDur, d)
-			ma.succeededDur = append(ma.succeededDur, d)
-			pa.succeededDur = append(pa.succeededDur, d)
-			if resolvedBucket != nil {
-				resolvedBucket.succeededDur = append(resolvedBucket.succeededDur, d)
-			}
+			model = p.CursorModelEffective
 		}
 	}
+	resolved = ""
+	if len(r.ExecDetails) > 0 {
+		var d runnerStatsExecDetailsProjection
+		if err := json.Unmarshal(r.ExecDetails, &d); err != nil {
+			slog.Debug("runner stats exec details decode skipped",
+				"cmd", logCmd,
+				"operation", "tasks.store.stats.scanRunnerStats.exec_details_decode_skip",
+				"err", err)
+		} else {
+			resolved = d.ResolvedModel
+		}
+	}
+	return runner, model, resolved
+}
 
-	for k, b := range runnerAcc {
+// runnerStatsAccumulators holds per-bucket counters and duration
+// samples while scanRunnerStats walks terminal cycle rows.
+type runnerStatsAccumulators struct {
+	byRunner   map[string]*bucketAcc
+	byModel    map[string]*bucketAcc
+	byPair     map[string]*bucketAcc
+	byResolved map[string]*bucketAcc
+}
+
+func newRunnerStatsAccumulators() *runnerStatsAccumulators {
+	return &runnerStatsAccumulators{
+		byRunner:   map[string]*bucketAcc{},
+		byModel:    map[string]*bucketAcc{},
+		byPair:     map[string]*bucketAcc{},
+		byResolved: map[string]*bucketAcc{},
+	}
+}
+
+func newBucketAcc() *bucketAcc {
+	return &bucketAcc{byStatus: map[domain.CycleStatus]int64{}}
+}
+
+func bucketAccForKey(m map[string]*bucketAcc, key string) *bucketAcc {
+	b := m[key]
+	if b == nil {
+		b = newBucketAcc()
+		m[key] = b
+	}
+	return b
+}
+
+func (a *runnerStatsAccumulators) accumulateRunnerStatsRow(r runnerStatsRow) {
+	runner, model, resolved := decodeRunnerStatsAttribution(r)
+	pair := runner + "|" + model
+
+	ra := bucketAccForKey(a.byRunner, runner)
+	ma := bucketAccForKey(a.byModel, model)
+	pa := bucketAccForKey(a.byPair, pair)
+
+	ra.byStatus[r.Status]++
+	ma.byStatus[r.Status]++
+	pa.byStatus[r.Status]++
+
+	// Only record in the resolved-model breakdown when the adapter
+	// actually observed one. Avoids polluting the panel with
+	// "<unknown>" sub-rows for pre-feature cycles.
+	var resolvedBucket *bucketAcc
+	if resolved != "" {
+		triple := runner + "|" + model + "|" + resolved
+		resolvedBucket = bucketAccForKey(a.byResolved, triple)
+		resolvedBucket.byStatus[r.Status]++
+	}
+
+	if r.Status == domain.CycleStatusSucceeded && r.EndedAt != nil {
+		d := r.EndedAt.Sub(r.StartedAt).Seconds()
+		if d < 0 {
+			// clock skew — treat as zero rather than dropping the
+			// row (the count still matters for the by-status cell).
+			d = 0
+		}
+		ra.succeededDur = append(ra.succeededDur, d)
+		ma.succeededDur = append(ma.succeededDur, d)
+		pa.succeededDur = append(pa.succeededDur, d)
+		if resolvedBucket != nil {
+			resolvedBucket.succeededDur = append(resolvedBucket.succeededDur, d)
+		}
+	}
+}
+
+func (a *runnerStatsAccumulators) foldRunnerStats() RunnerStats {
+	out := newEmptyRunnerStats()
+	for k, b := range a.byRunner {
 		out.ByRunner[k] = bucketFromAcc(b)
 	}
-	for k, b := range modelAcc {
+	for k, b := range a.byModel {
 		out.ByModel[k] = bucketFromAcc(b)
 	}
-	for k, b := range pairAcc {
+	for k, b := range a.byPair {
 		out.ByRunnerModel[k] = bucketFromAcc(b)
 	}
-	for k, b := range resolvedAcc {
+	for k, b := range a.byResolved {
 		out.ByRunnerModelResolved[k] = bucketFromAcc(b)
 	}
-	return out, nil
+	return out
 }
 
 // bucketAcc is the per-bucket accumulator threaded through

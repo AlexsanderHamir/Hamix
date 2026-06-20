@@ -5,6 +5,7 @@ import {
   DeleteConfirmDialog,
   TaskChangeModelModal,
   TaskDraftsPage,
+  TaskTemplatesPage,
   TaskCreateModalsLayer,
   TaskHome,
 } from "@/tasks";
@@ -74,6 +75,7 @@ function AppShell() {
   const location = useLocation();
   const homeIsCurrent = location.pathname === "/";
   const draftsIsCurrent = location.pathname.startsWith("/drafts");
+  const templatesIsCurrent = location.pathname.startsWith("/templates");
   const projectsUiEnabled = !isUiFeatureOmitted("projects");
   const projectsIsCurrent = projectsUiEnabled && location.pathname.startsWith("/projects");
   const headerElevated = useStickyShellElevation();
@@ -114,6 +116,15 @@ function AppShell() {
                   : {})}
               >
                 Tasks
+              </Link>
+              <Link
+                to="/templates"
+                className="app-nav__link"
+                {...(templatesIsCurrent
+                  ? { "aria-current": "page" as const }
+                  : {})}
+              >
+                Templates
               </Link>
               <Link
                 to="/drafts"
@@ -219,6 +230,7 @@ function AppShell() {
 function routeNeedsHomeListData(pathname: string): boolean {
   if (pathname === "/" || pathname === "") return true;
   if (pathname.startsWith("/drafts")) return true;
+  if (pathname.startsWith("/templates")) return true;
   // The task detail / cycle / event / graph routes embed the same
   // shell modals (edit/delete/change-model) that read from the home
   // list cache on close. Keeping data enabled here avoids a flash of
@@ -242,6 +254,7 @@ export default function App() {
           <Route path="/" element={<AppShell />}>
             <Route index element={<TaskHome />} />
             <Route path="drafts" element={<TaskDraftsPage />} />
+            <Route path="templates" element={<TaskTemplatesPage />} />
           {projectsUiEnabled ? (
             <>
               <Route path="projects" element={<ProjectListPage />} />

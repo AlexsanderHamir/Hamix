@@ -11,4 +11,5 @@ Contributor reference for T2A. The root [README.md](../README.md) covers product
 | [configuration.md](./configuration.md) | You are changing env vars, app settings, or anything in `pkgs/agents`. |
 | [web.md](./web.md) | You are working on the `web/` SPA. |
 | [contributing.md](./contributing.md) | You are adding a feature, splitting a handler, or debugging a local failure. |
+| [omitted-features.md](./omitted-features.md) | A feature exists in code but is hidden for a specific launch (UI gates + restore checklist). |
 | [adr/](./adr/) | Historical architectural decisions. |

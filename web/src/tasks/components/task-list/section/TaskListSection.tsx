@@ -52,6 +52,8 @@ type Props = {
   listPage: number;
   listPageSize: number;
   projectFilterOptions?: Array<{ id: string; name: string }>;
+  /** When false, hides the project filter and table column (launch omission). */
+  showProjectColumn?: boolean;
   onListPageChange: (page: number) => void;
   /** Reset to first server page when filters change. */
   onListFiltersChange: () => void;
@@ -96,6 +98,7 @@ export const TaskListSection = memo(function TaskListSection({
   listPage,
   listPageSize,
   projectFilterOptions = [],
+  showProjectColumn = true,
   onListPageChange,
   onListFiltersChange,
   hasNextPage,
@@ -316,8 +319,8 @@ export const TaskListSection = memo(function TaskListSection({
               setPriorityFilter(v as TaskListClientPriorityFilter)
             }
             projectFilter={projectFilter}
-            projectOptions={projectFilterOptions}
-            onProjectFilterChange={setProjectFilter}
+            projectOptions={showProjectColumn ? projectFilterOptions : []}
+            onProjectFilterChange={showProjectColumn ? setProjectFilter : undefined}
             titleSearch={titleSearch}
             onTitleSearchChange={setTitleSearch}
           />
@@ -343,6 +346,7 @@ export const TaskListSection = memo(function TaskListSection({
             onEdit={onEdit}
             onRequestDelete={onRequestDelete}
             projectNameById={projectNameById}
+            showProjectColumn={showProjectColumn}
             selection={{
               isSelected: selection.isSelected,
               onRowToggle: selection.toggle,

@@ -4,6 +4,7 @@ import { useDocumentTitle } from "@/shared/useDocumentTitle";
 import { Button } from "@/components/ui";
 import { TaskListSection } from "../components/task-list";
 import { useTasksAppList, useTasksAppModals } from "../app/TasksAppProvider";
+import { isUiFeatureOmitted } from "@/launch/omittedFeatures";
 import { useProjects } from "@/projects";
 
 export function TaskHome() {
@@ -11,11 +12,18 @@ export function TaskHome() {
   const list = useTasksAppList();
   const modals = useTasksAppModals();
   const [searchParams, setSearchParams] = useSearchParams();
-  const projects = useProjects({ includeArchived: false, limit: 100 });
+  const projectsUiEnabled = !isUiFeatureOmitted("projects");
+  const projects = useProjects({
+    includeArchived: false,
+    limit: 100,
+    enabled: projectsUiEnabled,
+  });
   const { openCreateModal, createModalOpen } = modals;
 
   const createIntent = searchParams.get("create");
-  const projectIntent = searchParams.get("project")?.trim() ?? "";
+  const projectIntent = projectsUiEnabled
+    ? (searchParams.get("project")?.trim() ?? "")
+    : "";
 
   useEffect(() => {
     if (createIntent !== "1" || !projectIntent) return;
@@ -36,7 +44,10 @@ export function TaskHome() {
       hideBackgroundRefreshHint: list.sseLive,
       listPage: list.taskListPage,
       listPageSize: list.taskListPageSize,
-      projectFilterOptions: projects.data?.projects ?? [],
+      projectFilterOptions: projectsUiEnabled
+        ? (projects.data?.projects ?? [])
+        : [],
+      showProjectColumn: projectsUiEnabled,
       onListPageChange: list.setTaskListPage,
       onListFiltersChange: list.resetTaskListPage,
       hasNextPage: list.hasNextTaskPage,
@@ -54,6 +65,7 @@ export function TaskHome() {
       list.sseLive,
       list.taskListPage,
       list.taskListPageSize,
+      projectsUiEnabled,
       projects.data?.projects,
       list.setTaskListPage,
       list.resetTaskListPage,

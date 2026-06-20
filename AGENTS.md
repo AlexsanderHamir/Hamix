@@ -15,6 +15,7 @@ Use this file as the first pass before editing code. Contributor reference lives
 | 6 | [docs/configuration.md](docs/configuration.md) | Env vars + `app_settings` row. |
 | 7 | [docs/web.md](docs/web.md) | `web/src` layout, React Query + SSE, `parseTaskApi`, Vitest. |
 | 8 | [docs/contributing.md](docs/contributing.md) | Vertical-slice flow, handler split rules, local troubleshooting. |
+| — | [docs/omitted-features.md](docs/omitted-features.md) | Launch-time UI omissions (feature in code, hidden in SPA). |
 | — | [docs/adr/](docs/adr/) | Historical architecture decisions. |
 
 Cursor rules are grouped by purpose under `.cursor/rules/`: shared structure and comments (`CODE_STANDARDS.mdc`, `codebase_comments.mdc`), backend automation (`BACKEND_AUTOMATION/`), UI automation (`UI_AUTOMATION/`), bug hunting (`BUG_HUNTING/`), and feature/product guidance (`FEATURE_IMPLEMENTATION/`). API contracts remain authoritative in `docs/api.md`; web structure and testing expectations live in `docs/web.md` plus `UI_AUTOMATION/testing-recipes.mdc`. Test failure triage: `docs/contributing.md` (**Local checks fail — quick playbook**). GitHub Actions (`.github/workflows/ci.yml`) runs a **backend** job (`gofmt`, `go vet`, `go test`, `funclogmeasure -enforce`) and a separate **web** job (`npm ci`, `npm test`, `npm run lint`, `npm run check:standards`, `npm run build`); `./scripts/check.sh` / `.\scripts\check.ps1` combine both locally.

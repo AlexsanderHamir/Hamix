@@ -4,6 +4,7 @@ import {
   useProjectContextPromptBinding,
   useProjects,
 } from "@/projects";
+import { isUiFeatureOmitted } from "@/launch/omittedFeatures";
 import { useAppTimezone } from "@/shared/time/appTimezone";
 import { DraftResumeModal } from "../components/draft-resume";
 import { TaskCreateModal } from "../components/task-create-modal";
@@ -12,13 +13,15 @@ import { useTasksAppContext } from "../app/TasksAppProvider";
 export function TaskCreateModalsLayer() {
   const app = useTasksAppContext();
   const appTimezone = useAppTimezone();
+  const projectsUiEnabled = !isUiFeatureOmitted("projects");
   const projects = useProjects({
     includeArchived: false,
     limit: 100,
-    enabled: app.createModalOpen,
+    enabled: projectsUiEnabled && app.createModalOpen,
   });
   const promptProjectContext = useProjectContextPromptBinding({
-    projectId: app.createModalOpen ? app.newProjectID : "",
+    projectId:
+      projectsUiEnabled && app.createModalOpen ? app.newProjectID : "",
     selectedIds: app.newProjectContextItemIDs,
     onSelectedIdsChange: app.setNewProjectContextItemIDs,
   });
@@ -81,31 +84,35 @@ export function TaskCreateModalsLayer() {
           onTaskRunnerChange={app.setNewTaskRunner}
           onTaskCursorModelChange={app.setNewTaskCursorModel}
           projectAssignment={
-            <section
-              className="task-create-project"
-              aria-label="Project assignment"
-            >
-              <ProjectSelect
-                id={isEditing ? "task-edit-project" : "task-create-project"}
-                value={app.newProjectID}
-                projects={projects.data?.projects ?? []}
-                loading={projects.isLoading}
-                disabled={assignmentControlsDisabled}
-                onChange={(projectId) => {
-                  app.setNewProjectID(projectId);
-                  app.setNewProjectContextItemIDs([]);
-                }}
-              />
-              <ProjectContextPicker
-                projectId={app.newProjectID}
-                selectedIds={app.newProjectContextItemIDs}
-                disabled={app.saving}
-                compact={!isEditing}
-                onChange={app.setNewProjectContextItemIDs}
-              />
-            </section>
+            projectsUiEnabled ? (
+              <section
+                className="task-create-project"
+                aria-label="Project assignment"
+              >
+                <ProjectSelect
+                  id={isEditing ? "task-edit-project" : "task-create-project"}
+                  value={app.newProjectID}
+                  projects={projects.data?.projects ?? []}
+                  loading={projects.isLoading}
+                  disabled={assignmentControlsDisabled}
+                  onChange={(projectId) => {
+                    app.setNewProjectID(projectId);
+                    app.setNewProjectContextItemIDs([]);
+                  }}
+                />
+                <ProjectContextPicker
+                  projectId={app.newProjectID}
+                  selectedIds={app.newProjectContextItemIDs}
+                  disabled={app.saving}
+                  compact={!isEditing}
+                  onChange={app.setNewProjectContextItemIDs}
+                />
+              </section>
+            ) : undefined
           }
-          promptProjectContext={promptProjectContext ?? undefined}
+          promptProjectContext={
+            projectsUiEnabled ? (promptProjectContext ?? undefined) : undefined
+          }
           schedule={app.newSchedule}
           onScheduleChange={app.setNewSchedule}
           autonomyEnabled={

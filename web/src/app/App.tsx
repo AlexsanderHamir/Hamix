@@ -1,5 +1,6 @@
 import { Suspense, lazy } from "react";
-import { Link, Route, Routes, useLocation } from "react-router-dom";
+import { Link, Navigate, Route, Routes, useLocation } from "react-router-dom";
+import { isUiFeatureOmitted } from "@/launch/omittedFeatures";
 import {
   DeleteConfirmDialog,
   TaskChangeModelModal,
@@ -73,7 +74,8 @@ function AppShell() {
   const location = useLocation();
   const homeIsCurrent = location.pathname === "/";
   const draftsIsCurrent = location.pathname.startsWith("/drafts");
-  const projectsIsCurrent = location.pathname.startsWith("/projects");
+  const projectsUiEnabled = !isUiFeatureOmitted("projects");
+  const projectsIsCurrent = projectsUiEnabled && location.pathname.startsWith("/projects");
   const headerElevated = useStickyShellElevation();
   // Settings chunk is small but the icon is the most prominent
   // header affordance; prefetching on hover is a free win.
@@ -122,15 +124,17 @@ function AppShell() {
               >
                 Drafts
               </Link>
-              <Link
-                to="/projects"
-                className="app-nav__link"
-                {...(projectsIsCurrent
-                  ? { "aria-current": "page" as const }
-                  : {})}
-              >
-                Projects
-              </Link>
+              {projectsUiEnabled ? (
+                <Link
+                  to="/projects"
+                  className="app-nav__link"
+                  {...(projectsIsCurrent
+                    ? { "aria-current": "page" as const }
+                    : {})}
+                >
+                  Projects
+                </Link>
+              ) : null}
             </nav>
             <div className="app-header-actions">
               <Link
@@ -229,6 +233,7 @@ export default function App() {
   const location = useLocation();
   const dataEnabled = routeNeedsHomeListData(location.pathname);
   const app = useTasksApp({ sseLive, dataEnabled });
+  const projectsUiEnabled = !isUiFeatureOmitted("projects");
 
   return (
     <TasksAppProvider value={app}>
@@ -237,9 +242,18 @@ export default function App() {
           <Route path="/" element={<AppShell />}>
             <Route index element={<TaskHome />} />
             <Route path="drafts" element={<TaskDraftsPage />} />
-          <Route path="projects" element={<ProjectListPage />} />
-          <Route path="projects/:projectId/context" element={<ProjectContextPage />} />
-          <Route path="projects/:projectId" element={<ProjectDetailPage />} />
+          {projectsUiEnabled ? (
+            <>
+              <Route path="projects" element={<ProjectListPage />} />
+              <Route
+                path="projects/:projectId/context"
+                element={<ProjectContextPage />}
+              />
+              <Route path="projects/:projectId" element={<ProjectDetailPage />} />
+            </>
+          ) : (
+            <Route path="projects/*" element={<Navigate to="/" replace />} />
+          )}
           <Route path="settings" element={<SettingsPage />} />
           <Route
             path="tasks/:taskId/events/:eventSeq"

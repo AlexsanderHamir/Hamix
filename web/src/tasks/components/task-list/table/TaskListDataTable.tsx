@@ -67,6 +67,7 @@ type Props = {
   selection?: BulkSelectionProps;
   /** Maps `task.project_id` to a label for the Project column (e.g. from `GET /projects`). */
   projectNameById?: Record<string, string>;
+  showProjectColumn?: boolean;
 };
 
 type ExitingRow = { task: TaskWithDepth; timeoutId: number };
@@ -359,6 +360,7 @@ function useTaskListRowAnimations(filteredTasks: TaskWithDepth[], tasks: TaskWit
 type TaskListDataTableRowProps = {
   row: TaskListRowRenderState;
   showSelectionCol: boolean;
+  showProjectColumn: boolean;
   selection: BulkSelectionProps | undefined;
   projectNameById: Record<string, string>;
   saving: boolean;
@@ -370,11 +372,13 @@ type TaskListDataTableRowProps = {
 
 function TaskListTableHeader({
   showSelectionCol,
+  showProjectColumn,
   selection,
   headerCheckboxRef,
   filteredTasksLength,
 }: {
   showSelectionCol: boolean;
+  showProjectColumn: boolean;
   selection: BulkSelectionProps | undefined;
   headerCheckboxRef: RefObject<HTMLInputElement | null>;
   filteredTasksLength: number;
@@ -403,7 +407,7 @@ function TaskListTableHeader({
         <th scope="col">Title</th>
         <th scope="col">Status</th>
         <th scope="col">Priority</th>
-        <th scope="col">Project</th>
+        {showProjectColumn ? <th scope="col">Project</th> : null}
         <th scope="col">Actions</th>
       </tr>
     </thead>
@@ -416,6 +420,7 @@ function TaskListTableBody({
   colSpan,
   emptyListAction,
   showSelectionCol,
+  showProjectColumn,
   selection,
   projectNameById,
   saving,
@@ -429,6 +434,7 @@ function TaskListTableBody({
   colSpan: number;
   emptyListAction?: EmptyStateAction;
   showSelectionCol: boolean;
+  showProjectColumn: boolean;
   selection: BulkSelectionProps | undefined;
   projectNameById: Record<string, string>;
   saving: boolean;
@@ -469,6 +475,7 @@ function TaskListTableBody({
             key={row.task.id}
             row={row}
             showSelectionCol={showSelectionCol}
+            showProjectColumn={showProjectColumn}
             selection={selection}
             projectNameById={projectNameById}
             saving={saving}
@@ -486,6 +493,7 @@ function TaskListTableBody({
 function TaskListDataTableRow({
   row: { task: t, isEntering, isExiting, isFilterExit },
   showSelectionCol,
+  showProjectColumn,
   selection,
   projectNameById,
   saving,
@@ -496,11 +504,14 @@ function TaskListDataTableRow({
 }: TaskListDataTableRowProps) {
   const promptPreview = previewTextFromPrompt(t.initial_prompt);
   const projectLabel =
-    t.project_id != null && t.project_id !== ""
+    showProjectColumn &&
+    t.project_id != null &&
+    t.project_id !== ""
       ? projectNameById[t.project_id]
       : undefined;
   const hasProject = Boolean(
-    t.project_id != null &&
+    showProjectColumn &&
+      t.project_id != null &&
       t.project_id !== "" &&
       projectLabel != null &&
       projectLabel !== "",
@@ -597,18 +608,20 @@ function TaskListDataTableRow({
           aria-label={`Priority: ${t.priority}`}
         />
       </td>
-      <td className="cell-project">
-        {projectLabel ? (
-          <span
-            className="task-list-project-badge"
-            data-tone={String(projectBadgeToneFromId(t.project_id ?? ""))}
-          >
-            {projectLabel}
-          </span>
-        ) : (
-          <span className="task-list-project-empty">—</span>
-        )}
-      </td>
+      {showProjectColumn ? (
+        <td className="cell-project">
+          {projectLabel ? (
+            <span
+              className="task-list-project-badge"
+              data-tone={String(projectBadgeToneFromId(t.project_id ?? ""))}
+            >
+              {projectLabel}
+            </span>
+          ) : (
+            <span className="task-list-project-empty">—</span>
+          )}
+        </td>
+      ) : null}
       <td className="cell-actions">
         <div className="task-list-row-actions">
           <button
@@ -646,6 +659,7 @@ export function TaskListDataTable({
   onRequestDelete,
   selection,
   projectNameById = {},
+  showProjectColumn = true,
 }: Props) {
   const navigate = useNavigate();
   const prefetchTaskDetail = useTaskDetailPrefetcher();
@@ -656,8 +670,9 @@ export function TaskListDataTable({
     syncHeaderCheckboxIndeterminate(selection, headerCheckboxRef);
   }, [selection]);
 
-  const colSpan = selection ? 6 : 5;
   const showSelectionCol = Boolean(selection);
+  const colSpan =
+    (showSelectionCol ? 1 : 0) + 4 + (showProjectColumn ? 1 : 0);
   return (
     <div className="table-wrap task-list-table-wrap">
       <table className="task-list-table" aria-busy={refreshing}>
@@ -667,11 +682,12 @@ export function TaskListDataTable({
           <col className="task-list-col-title" />
           <col className="task-list-col-status" />
           <col className="task-list-col-priority" />
-          <col className="task-list-col-project" />
+          {showProjectColumn ? <col className="task-list-col-project" /> : null}
           <col className="task-list-col-actions" />
         </colgroup>
         <TaskListTableHeader
           showSelectionCol={showSelectionCol}
+          showProjectColumn={showProjectColumn}
           selection={selection}
           headerCheckboxRef={headerCheckboxRef}
           filteredTasksLength={filteredTasks.length}
@@ -682,6 +698,7 @@ export function TaskListDataTable({
           colSpan={colSpan}
           emptyListAction={emptyListAction}
           showSelectionCol={showSelectionCol}
+          showProjectColumn={showProjectColumn}
           selection={selection}
           projectNameById={projectNameById}
           saving={saving}

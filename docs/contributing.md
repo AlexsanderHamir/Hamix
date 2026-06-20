@@ -2,6 +2,20 @@
 
 Day-to-day reference for adding features, splitting handler code, and debugging local failures. PR checklist and security policy live in the root [CONTRIBUTING.md](../CONTRIBUTING.md).
 
+| | |
+| --- | --- |
+| **Applies to** | Adding features, splitting handlers, tests, and local debugging |
+| **Audience** | Contributors and agents implementing backend or full-stack changes |
+| **Prerequisite** | [guide.md](./guide.md) for doc navigation; [AGENTS.md](../AGENTS.md) for scoped paths |
+
+## In this article
+
+- [Adding a feature (vertical slice)](#adding-a-feature-vertical-slice)
+- [Splitting `pkgs/tasks/handler`](#splitting-pkgstaskshandler)
+- [Tests](#tests)
+- [Troubleshooting](#troubleshooting)
+- [See also](#see-also)
+
 ## Adding a feature (vertical slice)
 
 Prefer one slice from `domain` to the UI:
@@ -135,3 +149,11 @@ count({__name__="t2a_agent_runs_by_model_total"})
 ```
 
 If it spikes, check for typos in `tasks.cursor_model` / `app_settings.cursor_model`, and cap label values at the scraper with `metric_relabel_configs`. The older `t2a_agent_runs_total{runner,terminal_status}` series is byte-identical to the pre-feature shape and always safe for alerting.
+
+## See also
+
+- [guide.md](./guide.md) — documentation layers and learning paths
+- [README.md](./README.md) — doc index by topic
+- [agent-map.md](./agent-map.md) — backend and web code paths
+- [api.md](./api.md) — REST + SSE endpoint surface
+- [web.md](./web.md) — SPA architecture and task sync

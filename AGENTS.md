@@ -48,6 +48,8 @@ Human learning path: [docs/guide.md](docs/guide.md). Doc index: [docs/README.md]
 | UI tokens or spacing | `web/src/app/styles/tokens/`, `frontend_bar.mdc` |
 | Hidden launch features | [docs/omitted-features.md](docs/omitted-features.md) |
 | Local dev / install | [README.md](README.md) |
+| Understand doc structure | [docs/guide.md](docs/guide.md) |
+| Pick a doc by topic | [docs/README.md](docs/README.md) |
 | PR checklist | [CONTRIBUTING.md](CONTRIBUTING.md) |
 | Test failure triage | [docs/contributing.md](docs/contributing.md) §Troubleshooting |
 

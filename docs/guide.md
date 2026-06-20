@@ -91,3 +91,5 @@ Open [adr/](./adr/) when you need the historical **why** behind a design, not fo
 - [domain/README.md](./domain/README.md) — domain article index and writing template
 - [AGENTS.md](../AGENTS.md) — agent and contributor orientation for code changes
 - [CONTRIBUTING.md](../CONTRIBUTING.md) — PR checklist, security, and troubleshooting
+
+New articles under `docs/` should follow the template in [domain/README.md](./domain/README.md) § Article template (metadata table, **In this article**, **See also**).

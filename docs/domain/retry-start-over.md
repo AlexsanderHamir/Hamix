@@ -2,14 +2,11 @@
 
 Operator **Start over** (`fresh` retry) discards a failed attempt's git/worktree delta and queues a **new execution cycle** with no checkpoint carry-forward.
 
-## Applies to
-
-| Area | Packages / surfaces |
+| | |
 | --- | --- |
-| API | `POST /tasks/{id}/retry` with `{ "mode": "fresh" }` |
-| Store | `tasks.pending_retry`, `RequestTaskRetry` |
-| Harness | `RunWithRetry` → `runFreshRetry`, `git_reset.go` |
-| SPA | Task detail **Start over** button + confirm dialog |
+| **Applies to** | `POST /tasks/{id}/retry` with `{ "mode": "fresh" }`; `RunWithRetry` → `runFreshRetry`; SPA Start over |
+| **Audience** | Contributors touching retry API, harness git reset, or task detail retry UI |
+| **Prerequisite** | [retry-resume.md](./retry-resume.md) — contrast with Resume from failure |
 
 ## In this article
 

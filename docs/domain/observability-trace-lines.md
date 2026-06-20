@@ -1,6 +1,23 @@
 # Observability trace lines
 
-**Applies to:** Go production packages scanned by `cmd/funclogmeasure`; handlers, store, harness, and worker code paths that emit structured logs.
+Structured log trace-line contract enforced by `cmd/funclogmeasure` on production Go code.
+
+| | |
+| --- | --- |
+| **Applies to** | Go production packages scanned by `cmd/funclogmeasure`; handlers, store, harness, worker |
+| **Audience** | Contributors adding or refactoring logged operation boundaries |
+| **Prerequisite** | [calltrace README](../../pkgs/tasks/calltrace/README.md) — `RunObserved`, `call_path` |
+
+## In this article
+
+- [Overview](#overview)
+- [Key concepts](#key-concepts)
+- [Satisfaction layers](#satisfaction-layers)
+- [Skip categories](#skip-categories)
+- [Directive syntax](#directive-syntax)
+- [JSON report](#json-report)
+- [Limitations](#limitations)
+- [See also](#see-also)
 
 ## Overview
 

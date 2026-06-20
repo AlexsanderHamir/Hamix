@@ -1,20 +1,56 @@
 # Documentation index
 
-“Read when” table for every doc under `docs/`. Navigation and branches: [guide.md](./guide.md).
+“Read when” lookup for every doc under `docs/`.
 
-**New to the project?** Read [guide.md](./guide.md) first — it maps layers and goal branches. Use the table below when you already know what you need.
+| | |
+| --- | --- |
+| **Applies to** | Finding the right doc when you know your topic |
+| **Audience** | Contributors and agents after [guide.md](./guide.md) |
+| **Prerequisite** | [guide.md](./guide.md) for learning paths; [AGENTS.md](../AGENTS.md) for code edits |
 
-**Agents:** start at [../AGENTS.md](../AGENTS.md) for scoped paths and lookups; use this table for doc deep-dives. Code paths: [agent-map.md](./agent-map.md).
+## In this article
+
+- [Overview](#overview)
+- [Navigation](#navigation)
+- [Reference and overview](#reference-and-overview)
+- [Implementation and deep dive](#implementation-and-deep-dive)
+- [See also](#see-also)
+
+## Overview
+
+Use [guide.md](./guide.md) to pick a learning path by goal. Use the tables below when you already know what you need.
+
+> **Tip** — Agents: scoped paths and code locations live in [AGENTS.md](../AGENTS.md) and [agent-map.md](./agent-map.md).
+
+## Navigation
 
 | Doc | Read when |
 | --- | --- |
-| **[execute-and-verify.md](./execute-and-verify.md)** | **You create tasks or write done criteria (checklist items).** Execute vs verify agents and operator guidance. |
-| [architecture.md](./architecture.md) | You need to understand how `taskapi`, the store, the agent worker, and SSE fit together. |
-| [data-model.md](./data-model.md) | You are touching tasks, projects, execution cycles/phases, dependencies, gates, or checklists. |
-| [domain/](./domain/) | Behavioral deep-dives (scheduling, persistence, SSE, queue, supervisor, harness, …). Start with [harness.md](./domain/harness.md) for cycles, [task-scheduling.md](./domain/task-scheduling.md) for “stuck ready”, or [persistence.md](./domain/persistence.md) for store writes. Schema and routes stay in data-model and api. |
-| [api.md](./api.md) | You need the REST + SSE endpoint surface. Handler code is the authoritative reference for status codes and error strings. |
-| [configuration.md](./configuration.md) | You are changing env vars, app settings, or anything in `pkgs/agents`. |
-| [web.md](./web.md) | You are working on the `web/` SPA. |
-| [contributing.md](./contributing.md) | You are adding a feature, splitting a handler, or debugging a local failure. |
-| [omitted-features.md](./omitted-features.md) | A feature exists in code but is hidden for a specific launch (UI gates + restore checklist). |
-| [adr/](./adr/) | Historical architectural decisions. |
+| [guide.md](./guide.md) | You are new or need to pick a learning path by goal |
+| [agent-map.md](./agent-map.md) | You need a repository path for a subsystem you are editing |
+
+## Reference and overview
+
+| Doc | Read when |
+| --- | --- |
+| **[execute-and-verify.md](./execute-and-verify.md)** | **You create tasks or write done criteria (checklist items).** |
+| [architecture.md](./architecture.md) | You need how `taskapi`, the store, the agent worker, and SSE fit together |
+| [data-model.md](./data-model.md) | You touch tasks, projects, cycles/phases, dependencies, gates, or checklists |
+| [api.md](./api.md) | You need the REST + SSE endpoint surface (handler code is authoritative for status codes) |
+| [configuration.md](./configuration.md) | You change env vars, app settings, or agent worker configuration |
+
+## Implementation and deep dive
+
+| Doc | Read when |
+| --- | --- |
+| [web.md](./web.md) | You work on the `web/` SPA |
+| [contributing.md](./contributing.md) | You add a feature, split a handler, or debug a local failure |
+| [domain/](./domain/) | You need why a subsystem behaves as it does — index: [domain/README.md](./domain/README.md) |
+| [omitted-features.md](./omitted-features.md) | A feature exists in code but is hidden for launch |
+| [adr/](./adr/) | You need the historical reason behind a design decision |
+
+## See also
+
+- [guide.md](./guide.md) — documentation layers and learning paths
+- [AGENTS.md](../AGENTS.md) — scoped paths and code lookups
+- [CONTRIBUTING.md](../CONTRIBUTING.md) — PR checklist and security

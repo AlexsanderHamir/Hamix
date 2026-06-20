@@ -2,6 +2,20 @@
 
 Cross-cycle **Resume from failure** loads one `ContinuationBundle` from the parent cycle instead of ad-hoc checkpoint fields.
 
+| | |
+| --- | --- |
+| **Applies to** | `loadContinuationBundle`, resume retry prompt assembly |
+| **Audience** | Contributors touching `pkgs/agents/harness` resume paths |
+| **Prerequisite** | [retry-resume.md](./retry-resume.md) — operator Resume from failure |
+| **Decision record** | [ADR-0032](../adr/ADR-0032-agent-claimed-commit-index.md) |
+
+## In this article
+
+- [Loader](#loader)
+- [Routing](#routing)
+- [Prompt order](#prompt-order)
+- [See also](#see-also)
+
 ## Loader
 
 `loadContinuationBundle(parentCycleID)` classifies the parent outcome, checks sufficiency, routes resume entry, and assembles prompt blocks.
@@ -27,4 +41,9 @@ Lineage → failure explanation → scope lock → known commits → execute/run
 
 Insufficient data → `retry_checkpoint_failed` (no hollow resume).
 
-See [retry-resume.md](retry-resume.md), [cycle-commits.md](cycle-commits.md), and [ADR-0032](../adr/ADR-0032-agent-claimed-commit-index.md).
+## See also
+
+- [retry-resume.md](./retry-resume.md) — operator Resume from failure
+- [cycle-commits.md](./cycle-commits.md) — task-wide commit ledger
+- [harness.md](./harness.md) — cycle loop and worker boundary
+- [ADR-0032](../adr/ADR-0032-agent-claimed-commit-index.md)

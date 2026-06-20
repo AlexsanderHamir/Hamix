@@ -2,6 +2,22 @@
 
 Vite + React client under `web/`. All `fetch` calls live in `web/src/api/`; responses are parsed through typed parsers before use.
 
+| | |
+| --- | --- |
+| **Applies to** | `web/` SPA routes, data layer, and task UI |
+| **Audience** | Frontend contributors and agents on web-only or full-stack slices |
+| **Prerequisite** | [architecture.md](./architecture.md) for API/SSE context; [api.md](./api.md) for contracts |
+
+## In this article
+
+- [Routes](#routes)
+- [Cold start](#cold-start)
+- [Task sync (SSE cache coherence)](#task-sync-sse-cache-coherence)
+- [Task create flow](#task-create-flow)
+- [Query policy](#query-policy)
+- [Task detail — execution cycles](#task-detail--execution-cycles)
+- [See also](#see-also)
+
 ## Routes
 
 | Path | Module | Notes |
@@ -58,3 +74,11 @@ TanStack Query staleTime tiers live in [`web/src/tasks/queryPolicy.ts`](../web/s
 Expanded cycle rows in `TaskCyclesPanel` load `GET /tasks/{id}/cycles/{cycleId}/verdicts`. When the worker indexed git commits for the cycle, the panel shows a repo → branch breadcrumb and commit rows (`git_context`, `commits[]`) with **status badges** (`eligible`, `observed`, …) above the per-criterion verdict list.
 
 The task detail page also loads **`GET /tasks/{id}/commits`** via `TaskCommitsPanel` / `useTaskCommits` — task-wide commit history deduped by SHA, refetched on `task_cycle_changed` SSE. Clicking a commit row navigates to **`/tasks/{id}/commits/{sha}`** (`TaskCommitDiffPage`), which loads **`GET /repo/diff?sha=`** with GitHub-style summary stats, syntax-highlighted hunks (refractor + `react-diff-view`), unified/split toggle, file navigator, and collapsible large files. Parsers: `web/src/api/parseTaskApiCycles.ts`; types: `web/src/types/cycle.ts`. See [domain/cycle-commits.md](./domain/cycle-commits.md).
+
+## See also
+
+- [guide.md](./guide.md) — documentation layers and learning paths
+- [README.md](./README.md) — doc index by topic
+- [agent-map.md](./agent-map.md) — web code paths
+- [contributing.md](./contributing.md) — vertical slice flow and local troubleshooting
+- [domain/sse-hub.md](./domain/sse-hub.md) — SSE event catalog and operator tuning

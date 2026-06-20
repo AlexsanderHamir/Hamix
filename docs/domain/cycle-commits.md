@@ -9,6 +9,12 @@ How the worker indexes git commits per task from agent claims, and feeds verify,
 | **Prerequisite** | [execute-agent.md](./execute-agent.md) — execute prompt and criteria self-report |
 | **Decision record** | [ADR-0014](../adr/ADR-0014-cycle-commit-tracking.md), [ADR-0032](../adr/ADR-0032-agent-claimed-commit-index.md) (supersedes [ADR-0016](../adr/ADR-0016-observe-vs-admit-commits.md)) |
 
+## In this article
+
+- [Overview](#overview)
+- [Wire contract](#wire-contract)
+- [See also](#see-also)
+
 ## Overview
 
 When `app_settings.repo_root` points at a git worktree, the execute agent declares commits in `criteria-report.json` under `commits[]`. After a successful runner exit, the worker validates each SHA (`git cat-file`, `git log -1`) and upserts rows into `task_cycle_commits`. **Execute never fails on commit hygiene** — only runner errors, cancel, or git/store I/O errors block the cycle.

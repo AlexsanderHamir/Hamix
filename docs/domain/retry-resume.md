@@ -2,14 +2,11 @@
 
 Operator **Resume from failure** (`resume` retry) queues a **new execution cycle** that restores checkpoint state from a **terminal parent cycle** while keeping git history intact.
 
-## Applies to
-
-| Area | Packages / surfaces |
+| | |
 | --- | --- |
-| API | `POST /tasks/{id}/retry` with `{ "mode": "resume" }` |
-| Store | `tasks.pending_retry`, `RequestTaskRetry` |
-| Harness | `RunWithRetry` → `runResumeRetry`, `loadContinuationBundle` |
-| SPA | Task detail **Resume from failure** button + confirm dialog; cycle lineage badge |
+| **Applies to** | `POST /tasks/{id}/retry` with `{ "mode": "resume" }`; `RunWithRetry` → `runResumeRetry`; SPA Resume from failure |
+| **Audience** | Contributors touching retry API, continuation bundle, or task detail retry UI |
+| **Prerequisite** | [resume-continuation.md](./resume-continuation.md) — `ContinuationBundle` assembly |
 
 ## In this article
 

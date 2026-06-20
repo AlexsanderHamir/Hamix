@@ -2,6 +2,23 @@
 
 ADR-0031 adds **CLI session continuity** on top of the existing harness phase ledger. A new phase row is still created for every `runner.Run`; continuing a Cursor chat does not reuse a phase row.
 
+| | |
+| --- | --- |
+| **Applies to** | Cursor CLI `--resume`, harness phase ledger, `cursor_session_resume_enabled` |
+| **Audience** | Contributors touching `pkgs/agents/harness/cursor_resume.go` or cursor adapter |
+| **Prerequisite** | [harness.md](./harness.md) — cycle loop and phase model |
+| **Decision record** | [ADR-0031](../adr/ADR-0031-cursor-session-resume-default.md) |
+
+## In this article
+
+- [Two resume layers](#two-resume-layers)
+- [Session chains](#session-chains)
+- [Policy chokepoint](#policy-chokepoint)
+- [Storage](#storage)
+- [Operator grep examples](#operator-grep-examples)
+- [Configuration](#configuration)
+- [See also](#see-also)
+
 ## Two resume layers
 
 | Layer | Mechanism | Authority |

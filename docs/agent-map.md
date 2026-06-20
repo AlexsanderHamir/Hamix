@@ -1,8 +1,24 @@
 # Code path index
 
-Read only the rows relevant to your task. Router and lookups: [../AGENTS.md](../AGENTS.md).
+Repository paths grouped by subsystem. Read only the rows relevant to your task.
 
-API contracts: [api.md](./api.md). System overview: [architecture.md](./architecture.md).
+| | |
+| --- | --- |
+| **Applies to** | Locating code when editing the repo |
+| **Audience** | Contributors and agents (after [AGENTS.md](../AGENTS.md) scoped path) |
+| **Prerequisite** | Pick a scoped path in [AGENTS.md](../AGENTS.md) first |
+
+## In this article
+
+- [Overview](#overview)
+- [Backend](#backend)
+- [Web](#web)
+- [Infra and test helpers](#infra-and-test-helpers)
+- [See also](#see-also)
+
+## Overview
+
+> **Tip** — Open one to three rows below. API contracts: [api.md](./api.md). System overview: [architecture.md](./architecture.md).
 
 ## Backend
 
@@ -57,3 +73,9 @@ API contracts: [api.md](./api.md). System overview: [architecture.md](./architec
 | Handler tests | `internal/handlertest/` | Black-box HTTP tests for exported handler API | — |
 | Security header tests | `internal/httpsecurityexpect/` | Shared baseline header assertions | — |
 | Agent reconcile tests | `pkgs/tasks/agentreconcile/` | SQLite integration tests; not production code | — |
+
+## See also
+
+- [guide.md](./guide.md) — documentation layers and learning paths
+- [README.md](./README.md) — doc index by topic
+- [AGENTS.md](../AGENTS.md) — scoped paths when editing

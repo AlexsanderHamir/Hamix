@@ -125,15 +125,16 @@ Intent-based lookup. For subsystem inventory, use [docs/agent-map.md](docs/agent
 ## Tooling and rules
 
 - **Cursor rules:** `CODE_STANDARDS.mdc`, `codebase_comments.mdc`, `backend-engineering-bar.mdc`, `frontend_bar.mdc`
-- **CI:** backend job (`gofmt`, `go vet`, `go test`, `funclogmeasure -enforce`); web job (`npm test`, `lint`, `check:standards`, `build`) — see `.github/workflows/ci.yml`
-- **Local bar:** `./scripts/check.sh` or `.\scripts\check.ps1`; Go-only: `CHECK_SKIP_WEB=1`
+- **CI:** backend job runs `./scripts/check-go.sh --verbose`; web job runs `./scripts/check-web.sh --install --verbose` — see `.github/workflows/ci.yml`
+- **Local bar:** see [CONTRIBUTING.md § Before you open a PR](CONTRIBUTING.md#before-you-open-a-pr)
 - **TDD default:** failing test first, then implement until green
 
 ## Commands to run before you finish
 
+See [CONTRIBUTING.md § Before you open a PR](CONTRIBUTING.md#before-you-open-a-pr) for the verification command table (full bar, CI parity, Go-only, `--install`).
+
 | Change | Command |
 | --- | --- |
-| Full bar (recommended) | `.\scripts\check.ps1` (Windows) or `./scripts/check.sh` (Unix). Go-only: `CHECK_SKIP_WEB=1`. Skip funclogmeasure locally: `CHECK_SKIP_FUNCLOG=1`. |
 | Go production code or tests | `go vet ./...`, then `go test ./... -count=1`; format touched `*.go` with `gofmt`. |
 | Meaningful `web/` change | `cd web && npm test -- --run && npm run lint && npm run check:standards && npm run build` |
 

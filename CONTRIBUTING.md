@@ -21,8 +21,8 @@ Set up the repo, verify your change, and find the right documentation for learni
 ## Requirements
 
 - **Go** 1.25+
-- **Node** 20+ (for `web/`; see `web/package.json` `engines.node`)
-- **Postgres** — connection string in repo-root `.env` (copy from [.env.example](.env.example))
+- **Node** 20+ (npm/npx included; for the web UI)
+- **Database** — `DATABASE_URL` in repo-root `.env`
 - **Never commit** `.env` or secrets
 
 > **Warning** — Workspace repo path, agent worker settings, cursor binary, and run timeout are configured in the SPA **Settings** page (`/settings`), not in `.env`. See [docs/configuration.md](docs/configuration.md).
@@ -40,36 +40,20 @@ Set up the repo, verify your change, and find the right documentation for learni
 
 API: `http://127.0.0.1:8080` · Web: `http://localhost:5173`
 
-Run pieces individually: see [README.md](README.md) Get started.
-
 ## Before you open a PR
 
-Run tests before you open a PR. Pick the path that matches what you changed:
+Verification steps live in `scripts/check-go.sh` / `scripts/check-web.sh` (and PowerShell twins). CI runs those leaf scripts directly — not duplicated commands in `.github/workflows/ci.yml`.
 
-**Changed both, or not sure** — full check (same as CI):
+| I want to… | Command |
+|------------|---------|
+| Run everything locally | `./scripts/check.sh` or `.\scripts\check.ps1` |
+| First run / lockfile changed | `./scripts/check.sh --install` or `.\scripts\check.ps1 -Install` |
+| Same as CI backend | `./scripts/check-go.sh --verbose` or `.\scripts\check-go.ps1 -Verbose` |
+| Same as CI web | `./scripts/check-web.sh --install --verbose` or `.\scripts\check-web.ps1 -Install -Verbose` |
+| Go only (fast) | `./scripts/check.sh --go-only` or `.\scripts\check.ps1 -GoOnly` |
+| Full logs | add `--verbose` / `-Verbose` |
 
-```bash
-(cd web && npm ci)      # first time, or after web dependencies changed
-.\scripts\check.ps1     # Windows — use ./scripts/check.sh on Mac/Linux
-```
-
-**Web only** — from the `web/` folder:
-
-```bash
-cd web
-npm ci                  # first time, or after dependencies changed
-npm test -- --run
-npm run lint
-npm run check:standards
-npm run build
-```
-
-**Go only** — skip the web steps:
-
-```bash
-$env:CHECK_SKIP_WEB='1'; .\scripts\check.ps1    # Windows
-CHECK_SKIP_WEB=1 ./scripts/check.sh             # Mac/Linux
-```
+Quiet by default: one line per step on success; full tool output only on failure. Each script accepts `--help` / `-Help` for its step list and flags.
 
 Also:
 

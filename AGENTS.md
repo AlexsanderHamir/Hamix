@@ -1,91 +1,88 @@
 # Agent orientation (AI + contributors)
 
-Use this file as the first pass before editing code. Contributor reference lives in `docs/`; this file is a map and checklist.
+First pass before editing code. **Do not read everything** — pick a scoped path below, then open only the linked docs and map rows you need.
 
-## Read order
+Doc deep-dives: [docs/README.md](docs/README.md). Code paths: [docs/agent-map.md](docs/agent-map.md).
 
-| Order | Doc | Why |
-|------|-----|-----|
-| 1 | [README.md](README.md) | Install, run `taskapi` / `dbcheck`, `web/` npm commands, dev scripts. |
-| 2 | [CONTRIBUTING.md](CONTRIBUTING.md) | PR checklist, `.env.example`, API/doc sync pointers. |
-| 2b | [docs/execute-and-verify.md](docs/execute-and-verify.md) | **Operators:** execute vs verify agents, criteria reports, writing checklist items. |
-| 3 | [docs/architecture.md](docs/architecture.md) | System overview, store, agent worker, SSE hub, limitations. |
-| 4 | [docs/data-model.md](docs/data-model.md) | Tasks, projects, execution cycles/phases, checklist, dependencies, gates. |
-| 4b | [docs/domain/](docs/domain/) | Behavioral deep-dives (scheduling, persistence, SSE, queue, supervisor, harness, …). Index: [docs/domain/README.md](docs/domain/README.md). |
-| 5 | [docs/api.md](docs/api.md) | REST + SSE endpoint list. Handler code is authoritative for status codes and error strings. |
-| 6 | [docs/configuration.md](docs/configuration.md) | Env vars + `app_settings` row. |
-| 7 | [docs/web.md](docs/web.md) | `web/src` layout, React Query + SSE, `parseTaskApi`, Vitest. |
-| 8 | [docs/contributing.md](docs/contributing.md) | Vertical-slice flow, handler split rules, local troubleshooting. |
-| — | [docs/omitted-features.md](docs/omitted-features.md) | Launch-time UI omissions (feature in code, hidden in SPA). |
-| — | [docs/adr/](docs/adr/) | Historical architecture decisions. |
+## How to use this file
 
-Cursor rules live in `.cursor/rules/`: structure and boundaries (`CODE_STANDARDS.mdc`), comments (`codebase_comments.mdc`), Go quality (`backend-engineering-bar.mdc`), and UI quality (`frontend_bar.mdc`). API contracts remain authoritative in `docs/api.md`; web structure and testing expectations live in `docs/web.md` and [docs/contributing.md](docs/contributing.md) (**Tests**). Test failure triage: `docs/contributing.md` (**Local checks fail — quick playbook**). GitHub Actions (`.github/workflows/ci.yml`) runs a **backend** job (`gofmt`, `go vet`, `go test`, `funclogmeasure -enforce`) and a separate **web** job (`npm ci`, `npm test`, `npm run lint`, `npm run check:standards`, `npm run build`); `./scripts/check.sh` / `.\scripts\check.ps1` combine both locally.
+1. Match your task to **Scoped paths** (read only that row's docs).
+2. For a one-off question, use **Where to find X**.
+3. Open [docs/agent-map.md](docs/agent-map.md) for the 1–3 rows that match your edit.
+4. Run **Commands to run before you finish** when done.
 
-## Repository map
+## Scoped paths
 
-| Area | Path | Notes |
-|------|------|--------|
-| HTTP API + SSE | `pkgs/tasks/handler/` | REST `/tasks`, `GET /events`, `/repo/*` when `app_settings.repo_root` is set; `/health*`, `/settings*`, `/metrics`. SSE deep dive: [docs/domain/sse-hub.md](docs/domain/sse-hub.md). File map: `pkgs/tasks/handler/README.md`. Split conventions: [docs/contributing.md](docs/contributing.md). |
-| Request call stack / helper.io | `pkgs/tasks/calltrace/` | `Push`, `Path`, `WithRequestRoot`, `RunObserved` for `call_path` in logs. README: `pkgs/tasks/calltrace/README.md`. |
-| Request log correlation | `pkgs/tasks/logctx/` | `request_id` on context, per-request `log_seq`, `slog.Handler` wrappers; stdlib-only, no cycle with `handler`. Trace-line enforcement: [observability-trace-lines.md](docs/domain/observability-trace-lines.md), `cmd/funclogmeasure/`. |
-| JSON API response helpers | `pkgs/tasks/apijson/` | Shared security headers + `WriteJSONError`; depends on `logctx` only. |
-| Persistence | `pkgs/tasks/store/`, `pkgs/tasks/postgres/` | Thin facade over `internal/<domain>/`; dual-write to `task_events`. Deep dive: [docs/domain/persistence.md](docs/domain/persistence.md). File map: `pkgs/tasks/store/README.md`. |
-| Domain types | `pkgs/tasks/domain/` | Status, priority, task model, audit events; `TaskCycle` / `TaskCyclePhase` + `Phase` / `CycleStatus` / `PhaseStatus` enums + `ValidPhaseTransition`. |
-| Task scheduling (Decide) | `pkgs/tasks/scheduling/` | Worker readiness predicates, pickup enqueue gate, post-commit notify decisions; ADR-0023. SQL mirror in `store/internal/ready/predicates.go`. |
-| Execution cycles HTTP | `pkgs/tasks/handler/handler_cycles.go` (+ `handler_cycles_json.go`) | `POST/GET /tasks/{id}/cycles`, `GET/PATCH /tasks/{id}/cycles/{cycleId}`, `POST /tasks/{id}/cycles/{cycleId}/phases`, `PATCH /tasks/{id}/cycles/{cycleId}/phases/{phaseSeq}`. Publishes `task_cycle_changed`; contract in [docs/api.md](docs/api.md) and [docs/data-model.md](docs/data-model.md). |
-| Operator retry after failure | `pkgs/tasks/handler/handler_tasks_retry.go`, `pkgs/tasks/domain/retry.go`, `pkgs/agents/harness/retry_run.go` (+ `git_reset.go`) | `POST /tasks/{id}/retry` sets `tasks.pending_retry`; worker consumes on pickup → `Harness.RunWithRetry`. SPA: Start over / Resume from failure. Deep dives: [retry-start-over.md](docs/domain/retry-start-over.md), [retry-resume.md](docs/domain/retry-resume.md), [ADR-0015](docs/adr/ADR-0015-dual-retry-modes.md). |
-| Workspace search | `pkgs/repo/` | Optional; `@`-mentions and `/repo/*` when `app_settings.repo_root` is set. Deep dive: [docs/domain/workspace-repo.md](docs/domain/workspace-repo.md). |
-| Agent hooks | `pkgs/agents/` | In-process ready-task queue (`store.SetReadyTaskNotifier`); default **256** cap (`T2A_USER_TASK_AGENT_QUEUE_CAP`); fixed **2m** reconcile tick (`ReconcileTickInterval`, not env). Deep dive: [docs/domain/agent-queue.md](docs/domain/agent-queue.md). |
-| Agent runner abstraction | `pkgs/agents/runner/` | `Runner` interface + typed sentinel errors (`ErrTimeout`, `ErrNonZeroExit`, `ErrInvalidOutput`); pin point for additional CLI adapters (Claude Code, Codex). |
-| Runner adapter kit | `pkgs/agents/runner/adapterkit/` | Shared CLI adapter mechanics: exec/stream execution, env policy, redaction, diagnostics, probes. |
-| Cursor CLI runner adapter | `pkgs/agents/runner/cursor/` | V1 `runner.Runner` implementation: `cursor --print --output-format stream-json`, env allowlist, secret redaction, live progress normalization, `Probe(cursor --version)`. |
-| Programmable test runner | `pkgs/agents/runner/runnerfake/` | In-memory `runner.Runner` for tests; not imported by production code. |
-| Agent harness | `pkgs/agents/harness/` | Cycle choreography around `runner.Run`: execute/verify phase loop, criteria injection, verification pipeline, git integrity, crash/shutdown recovery, `RunWithRetry` for operator fresh/resume. **Cursor session resume:** `cursor_resume.go` + `internal/prompt/recovery.go` (ADR-0031, [cursor-session-resume.md](docs/domain/cursor-session-resume.md)). Called by the worker after admission. See [docs/domain/harness.md](docs/domain/harness.md) and [ADR-0005](docs/adr/ADR-0005-extract-agent-harness.md). **Debug attempt activity:** UI filter `/tasks/{id}/cycles/{cycleId}?phase=N`; logs `grep run_correlation_id=<uuid>` (ADR-0030). |
-| Cycle commit tracking | `pkgs/agents/harness/internal/git/commits.go`, `pkgs/tasks/store/internal/commits/` | Agent-claimed ingest (ADR-0032), task-wide ledger, verify reads `ListCommitsForTask`, `GET /tasks/{id}/commits`. Deep dives: [cycle-commits.md](docs/domain/cycle-commits.md), [resume-continuation.md](docs/domain/resume-continuation.md), [ADR-0014](docs/adr/ADR-0014-cycle-commit-tracking.md), [ADR-0032](docs/adr/ADR-0032-agent-claimed-commit-index.md). |
-| Agent worker (V1) | `pkgs/agents/worker/` | Single-goroutine consumer of `MemoryQueue` (admission + ack ordering); delegates cycle body to `harness`; `SweepOrphanRunningCycles` runs once at startup. Configured live from the SPA Settings page — see [docs/configuration.md](docs/configuration.md). |
-| Agent worker supervisor | [`internal/taskapi/agentworker/`](internal/taskapi/agentworker/) | Boot/reload worker from `app_settings`; probe, hot-swap, cancel. Queue/reconcile wiring: `cmd/taskapi/run_agentworker.go`. Deep dive: [docs/domain/agent-supervisor.md](docs/domain/agent-supervisor.md). ADR: [ADR-0019](docs/adr/ADR-0019-agentworker-internal-layout.md). |
-| Runner registry | `pkgs/agents/runner/registry/` | Pluggable runner registration + lookup + probe; production `cursor`, scaffold `claude-code`. See [docs/domain/runner-adapters.md](docs/domain/runner-adapters.md). |
-| App settings store | `pkgs/tasks/store/internal/settings/` | Singleton `app_settings` row (id=1) seeded with `domain.DefaultAppSettings`; `GetSettings` / `UpdateSettings` via the store facade. |
-| Agent reconcile tests | `pkgs/tasks/agentreconcile/` | Integration tests (SQLite store + agents); not imported by production code. |
-| Env loading | `internal/envload/` | Resolves `.env` from repo root. |
-| taskapi startup env | `internal/taskapiconfig/` | Listen host, log level / minimized logging, agent queue cap, dev SSE ticker interval. |
-| taskapi HTTP stack | `pkgs/tasks/middleware/` + `pkgs/tasks/handler/middleware_shim.go` + `internal/taskapi/` | `middleware.Stack(inner, calltrace.Path)` composes `With*` layers; `internal/taskapi.NewHTTPHandler` wires store/hub/repo into `handler.NewHandler` and applies the stack. File map: `pkgs/tasks/middleware/README.md`. |
-| Middleware black-box tests | `internal/middlewaretest/` | Exported-API-only tests for `pkgs/tasks/middleware`. |
-| Handler black-box HTTP tests | `internal/handlertest/` | Health, metrics, and similar tests using only exported `handler` + `httptest`. |
-| HTTP baseline header assertions | `internal/httpsecurityexpect/` | Shared test helper for security headers. |
-| SQLite test DB | `internal/tasktestdb/` | In-memory GORM + migrate for default tests (`tasktestdb.OpenSQLite`). |
-| Dev UI simulation | `pkgs/tasks/devsim/` | Optional `T2A_SSE_TEST` ticker: synthetic audit, row mirror, user-response sim, lifecycle tasks. |
-| Binaries | `cmd/taskapi/`, `cmd/dbcheck/` | Entry points only. `taskapi` file map: [`cmd/taskapi/README.md`](cmd/taskapi/README.md). |
-| Web SPA | `web/` | Vite + React; `fetch` only under `web/src/api/`; import `@/types`, `@/api`. Task UI under `web/src/tasks/components/` groups families with per-folder `index.ts` barrels — see [docs/web.md](docs/web.md). Global styles: `web/src/app/App.css` `@import`s partials under `web/src/app/styles/`. |
-| Task create flow (Decide) | `web/src/tasks/create/` | Create modal policy, draft autosave, mutations; ADR-0024. UI in `task-create-modal/`; public hook via `hooks/useTaskCreateFlow.ts` shim. |
-| Frontend data coherence | `web/src/tasks/queryPolicy.ts`, `tasks/mutations/`, `tasks/checklist/`, `tasks/app/` | Query staleTime tiers, guarded mutations, checklist slice, TasksAppProvider; ADR-0025. |
-| Backend data coherence | `pkgs/tasks/handler/readpolicy/`, `writepolicy/`, `handler_writepolicy.go` | Bootstrap read limits, commit-then-notify enriched SSE; ADR-0026. |
+| If you are… | Read (in order) | Skip |
+| --- | --- | --- |
+| Changing Go REST / handlers | [docs/api.md](docs/api.md), [docs/contributing.md](docs/contributing.md) §Splitting handler | harness docs, [docs/web.md](docs/web.md) |
+| Changing Go domain / store | [docs/data-model.md](docs/data-model.md), [pkgs/tasks/store/README.md](pkgs/tasks/store/README.md) | web, harness |
+| Changing agent worker / harness | [docs/domain/harness.md](docs/domain/harness.md), [docs/configuration.md](docs/configuration.md) | [docs/web.md](docs/web.md) |
+| Changing web UI only | [docs/web.md](docs/web.md), `.cursor/rules/frontend_bar.mdc` | architecture, harness |
+| Changing web data (API / sync / mutations) | [docs/web.md](docs/web.md) §Task sync / Query policy, `web/src/api/` | handler split guide |
+| Adding a full-stack feature | [docs/contributing.md](docs/contributing.md) §Adding a feature, [docs/api.md](docs/api.md) | — |
+| Writing operator / checklist copy | [docs/execute-and-verify.md](docs/execute-and-verify.md) | code map |
+| Docs or config only | Target doc from [docs/README.md](docs/README.md) | code map |
 
-API contracts (paths, query params, JSON shapes) are authoritative in [docs/api.md](docs/api.md) (and `pkgs/tasks/handler/` godoc for exhaustive behavior). [docs/architecture.md](docs/architecture.md) is the system overview.
+## Where to find X
+
+| I need to… | Go to |
+| --- | --- |
+| Add or change a REST route | `pkgs/tasks/handler/handler_*.go`, [docs/api.md](docs/api.md) |
+| Add DB persistence | `pkgs/tasks/store/`, [docs/domain/persistence.md](docs/domain/persistence.md) |
+| Change task JSON shape | `pkgs/tasks/domain/`, `handler_*_json.go`, `web/src/api/parseTaskApi*.ts` |
+| Wire SSE after a write | handler `notifyChange`, [docs/domain/sse-hub.md](docs/domain/sse-hub.md) |
+| Fix live UI not updating | `web/src/tasks/sync/`, [docs/web.md](docs/web.md) §Task sync |
+| Add a fetch call | `web/src/api/` only — never components |
+| Add a page or route | `web/src/app/Router.tsx`, `web/src/tasks/pages/` |
+| Task templates UI or API | `web/src/api/taskTemplates.ts`, `TaskTemplatesPage.tsx`, `handler_task_templates*.go` |
+| Create or edit task modal | `web/src/tasks/create/`, `task-create-modal/` |
+| Execution cycles UI | `web/src/tasks/components/task-detail/` (cycles panel) |
+| Agent run / verify loop | `pkgs/agents/harness/`, [docs/domain/harness.md](docs/domain/harness.md) |
+| Worker queue / pickup | `pkgs/agents/worker/`, [docs/domain/agent-queue.md](docs/domain/agent-queue.md) |
+| Env or app settings | [docs/configuration.md](docs/configuration.md), Settings SPA |
+| Default Go tests | `internal/tasktestdb/`, [docs/contributing.md](docs/contributing.md) §Tests |
+| Middleware change | `pkgs/tasks/middleware/`, `internal/middlewaretest/` |
+| Where a new file goes | `.cursor/rules/CODE_STANDARDS.mdc` Part 12 |
+| Handler file too large | [docs/contributing.md](docs/contributing.md) §Splitting handler |
+| UI tokens or spacing | `web/src/app/styles/tokens/`, `frontend_bar.mdc` |
+| Hidden launch features | [docs/omitted-features.md](docs/omitted-features.md) |
+| Local dev / install | [README.md](README.md) |
+| PR checklist | [CONTRIBUTING.md](CONTRIBUTING.md) |
+| Test failure triage | [docs/contributing.md](docs/contributing.md) §Troubleshooting |
+
+## Tooling and rules
+
+- **Cursor rules:** `CODE_STANDARDS.mdc`, `codebase_comments.mdc`, `backend-engineering-bar.mdc`, `frontend_bar.mdc`
+- **CI:** backend job (`gofmt`, `go vet`, `go test`, `funclogmeasure -enforce`); web job (`npm test`, `lint`, `check:standards`, `build`) — see `.github/workflows/ci.yml`
+- **Local bar:** `./scripts/check.sh` or `.\scripts\check.ps1`; Go-only: `CHECK_SKIP_WEB=1`
+- **TDD default:** failing test first, then implement until green
 
 ## Commands to run before you finish
 
 | Change | Command |
-|--------|---------|
-| Full bar (recommended) | From repo root: `.\scripts\check.ps1` (Windows) or `./scripts/check.sh` (Unix). Go-only fast path: `CHECK_SKIP_WEB=1` (bash) or `$env:CHECK_SKIP_WEB='1'` (PowerShell). After `go test`, the check scripts run `go run ./cmd/funclogmeasure -enforce`; set `CHECK_SKIP_FUNCLOG=1` to skip locally. |
-| Go production code or tests | `go vet ./...`, then `go test ./... -count=1`; format touched `*.go` with `gofmt` or `go fmt`. |
+| --- | --- |
+| Full bar (recommended) | `.\scripts\check.ps1` (Windows) or `./scripts/check.sh` (Unix). Go-only: `CHECK_SKIP_WEB=1`. Skip funclogmeasure locally: `CHECK_SKIP_FUNCLOG=1`. |
+| Go production code or tests | `go vet ./...`, then `go test ./... -count=1`; format touched `*.go` with `gofmt`. |
 | Meaningful `web/` change | `cd web && npm test -- --run && npm run lint && npm run check:standards && npm run build` |
 
-Default tests must not require real Postgres, real outbound network, or a running `taskapi` (see [docs/contributing.md](docs/contributing.md) **Tests** and `.cursor/rules/backend-engineering-bar.mdc` §11).
-
-**TDD default for agents:** for bugs and features, add or adjust a **failing** test first, then implement until green.
+Default tests must not require real Postgres, real outbound network, or a running `taskapi` (see [docs/contributing.md](docs/contributing.md) §Tests and `backend-engineering-bar.mdc` §11).
 
 ## Conventions worth remembering
 
-- New tasks API features: follow [docs/contributing.md](docs/contributing.md) (domain → store → handler → optional `web/`) and `.cursor/rules/backend-engineering-bar.mdc`.
-- JSON at the boundary: Web treats responses as `unknown` until `parseTaskApi` validates; keep that pipeline when adding fields.
-- Same-origin in prod: `taskapi` does not add CORS; dev uses Vite proxy (`web/vite.config.ts`).
-- Commits: when the user asks for a commit, keep it to one logical concern with a conventional message and push only when requested.
-- Docs: update the focused contributor doc when behavior changes — [docs/README.md](docs/README.md) is the index.
+- New tasks API: domain → store → handler → optional `web/` ([docs/contributing.md](docs/contributing.md)).
+- JSON at the boundary: web treats responses as `unknown` until `parseTaskApi` validates.
+- Same-origin in prod: no CORS on `taskapi`; dev uses Vite proxy (`web/vite.config.ts`).
+- Docs: update the focused doc when behavior changes — [docs/README.md](docs/README.md) is the index.
 
 ## Quick pitfalls
 
-- Do not add `fetch` to `web/src` components for app APIs — use `web/src/api/`.
-- Do not rely on `taskapi` serving `web/dist`; production is static files + reverse proxy or same-origin gateway.
+- Do not add `fetch` to `web/src` components — use `web/src/api/`.
+- Do not rely on `taskapi` serving `web/dist`; production is static files + reverse proxy.
 - `GET /events` is SSE; `/health` is plain JSON — different clients.
-- Default per-IP HTTP rate limit is 120/min (`T2A_RATE_LIMIT_PER_MIN`); set **`0`** to disable for heavy local testing.
+- Default per-IP rate limit is 120/min (`T2A_RATE_LIMIT_PER_MIN`); set **`0`** to disable locally.
+
+## Full indexes
+
+- **Docs (read when):** [docs/README.md](docs/README.md)
+- **Code paths:** [docs/agent-map.md](docs/agent-map.md)

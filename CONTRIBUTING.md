@@ -57,6 +57,8 @@ Rules under `.cursor/rules/` cover structure (`CODE_STANDARDS.mdc`), comments (`
 
 **Default agent behavior:** If scope is unspecified, assume **full repo**; narrow only when the touched files and user request clearly fit a smaller scope.
 
+**Commits:** When the user asks for a commit, keep it to one logical concern with a conventional message; push only when requested.
+
 ## Stuck?
 
 See [docs/contributing.md](docs/contributing.md#troubleshooting) for common dev issues (Vite proxy, SSE dev mode, refreshes).

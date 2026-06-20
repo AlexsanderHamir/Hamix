@@ -2,6 +2,8 @@
 
 Contributor reference for T2A. The root [README.md](../README.md) covers product framing and `npm` / `go run` commands.
 
+**Agents:** start at [../AGENTS.md](../AGENTS.md) for scoped paths and lookups; use this table for doc deep-dives. Code paths: [agent-map.md](./agent-map.md).
+
 | Doc | Read when |
 | --- | --- |
 | **[execute-and-verify.md](./execute-and-verify.md)** | **You create tasks or write done criteria (checklist items).** Execute vs verify agents and operator guidance. |

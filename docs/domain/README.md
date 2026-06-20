@@ -74,6 +74,7 @@ Use Microsoft-style callouts where they add clarity:
 | [runner-adapters.md](./runner-adapters.md) | Runner plug-in model: registry, capabilities, adding CLI adapters |
 | [project-context.md](./project-context.md) | Project context: snapshots, harness injection, resume reuse |
 | [harness.md](./harness.md) | Agent harness: cycle loop, worker boundary, resume, recovery, observability |
+| [cursor-session-resume.md](./cursor-session-resume.md) | Cursor CLI `--resume` policy, recovery deltas, dual session chains (ADR-0031) |
 | [done-criteria.md](./done-criteria.md) | Done criteria lifecycle: definition, execute/verify loop, completion ledger |
 | [execute-agent.md](./execute-agent.md) | Execute phase: prompt composition, runner invocation, criteria self-report, resume |
 | [verify-agent.md](./verify-agent.md) | Verify phase: LLM judge, criterion commands, integrity checks, retries |

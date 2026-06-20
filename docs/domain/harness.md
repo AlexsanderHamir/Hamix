@@ -108,6 +108,16 @@ From [`admission.go`](../../pkgs/agents/worker/admission.go):
 2. `status=ready` + pickup eligible → `transitionTaskToRunning` → `Harness.Run`
 3. Otherwise → defer or drop (stale / not ready)
 
+### Cursor session resume (ADR-0031)
+
+By default, execute and verify `runner.Run` calls continue the prior Cursor CLI chat via `--resume <session_id>` when a usable id exists for **that phase type** (separate execute and verify chains). Policy lives in [`cursor_resume.go`](../../pkgs/agents/harness/cursor_resume.go); recovery deltas in [`internal/prompt/recovery.go`](../../pkgs/agents/harness/internal/prompt/recovery.go).
+
+- **Fresh chat** on deny-list paths (Start over, first in chain, HEAD drift, tamper, missing id, `--resume` failure).
+- **Scrub** `criteria-report.json` only on fresh execute — resume keeps partial/invalid reports for inspection.
+- **Opt out:** `app_settings.cursor_session_resume_enabled=false` restores full-prompt-every-run behavior.
+
+Deep dive: [cursor-session-resume.md](./cursor-session-resume.md).
+
 Domain article stack:
 
 ```mermaid

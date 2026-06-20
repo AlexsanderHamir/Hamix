@@ -279,7 +279,7 @@ These are **intentionally not near-term** per [HARNESS_LANDSCAPE.md](HARNESS_LAN
 | - [ ] Own inner tool loop / ACI (replace Cursor) | Deferred (V1) | XL effort; contradicts V1 delegation; Cursor owns E+T inner loop |
 | - [ ] Multi-agent coordinator + parallel implementors | Deferred (V1) | V1 single worker; queue and admission redesign required |
 | - [ ] PEVR DAG replan | Deferred (V1) | XL orchestration; T2A task model is flat prompt + criteria, not sub-task graphs |
-| - [ ] Mid-CLI session resume | Deferred (V1) | Blocked on runner statefulness ([ADR-0006](docs/adr/ADR-0006-phase-boundary-resume.md)) |
+| - [x] Mid-CLI session resume | **Done (ADR-0031)** | [`docs/adr/ADR-0031-cursor-session-resume-default.md`](docs/adr/ADR-0031-cursor-session-resume-default.md), [`docs/domain/cursor-session-resume.md`](docs/domain/cursor-session-resume.md) |
 | - [ ] Multi-replica workers | Deferred (V1) | Documented not supported; races on cycles and queue |
 | - [ ] Per-task Firecracker / container sandbox | Deferred (V1) | XL ops; worktree (item 8) is lighter ROI first |
 | - [ ] Harness-level approval gates on tool calls | Deferred (V1) | Delegated to Cursor + OS; UI scope explosion |

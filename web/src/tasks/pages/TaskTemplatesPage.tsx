@@ -143,35 +143,41 @@ export function TaskTemplatesPage() {
 
   return (
     <section className="panel task-list-section-panel task-detail-content--enter">
-      <header className="task-list-section-head">
-        <div className="task-list-section-head__text">
-          <h2 id="task-templates-heading" className="task-list-section-title">
-            Task templates
-          </h2>
-        </div>
-        <div className="task-list-section-actions">
-          <button
-            type="button"
-            className="secondary"
-            onClick={() => app.openTemplateCreateModal()}
-          >
-            New template
-          </button>
-        </div>
-      </header>
+      <div className="task-list-toolbar">
+        <header className="task-list-section-head">
+          <div className="task-list-section-head__text">
+            <h2 id="task-templates-heading" className="task-list-section-title">
+              Task templates
+            </h2>
+          </div>
+          <div className="task-list-section-actions">
+            <button
+              type="button"
+              className="secondary"
+              onClick={() => app.openTemplateCreateModal()}
+            >
+              New template
+            </button>
+          </div>
+        </header>
 
-      <div className="task-templates-search field grow task-list-search-field">
-        <label htmlFor="task-templates-search" className="visually-hidden">
-          Search templates
-        </label>
-        <input
-          id="task-templates-search"
-          type="search"
-          placeholder="Search by title…"
-          autoComplete="off"
-          value={searchInput}
-          onChange={(e) => setSearchInput(e.target.value)}
-        />
+        <div
+          className="task-templates-search field grow task-list-search-field"
+          role="search"
+          aria-label="Search templates"
+        >
+          <label htmlFor="task-templates-search" className="visually-hidden">
+            Search templates
+          </label>
+          <input
+            id="task-templates-search"
+            type="search"
+            placeholder="Search by title…"
+            autoComplete="off"
+            value={searchInput}
+            onChange={(e) => setSearchInput(e.target.value)}
+          />
+        </div>
       </div>
 
       {batchError ? (
@@ -203,19 +209,9 @@ export function TaskTemplatesPage() {
               <EmptyState
                 title={debouncedQ ? "No matching templates" : "No templates yet"}
                 description={
-                  debouncedQ
-                    ? "Try a different search term."
-                    : "Save a reusable task blueprint from the compose form."
+                  debouncedQ ? "Try a different search term." : undefined
                 }
                 className="empty-state--task-list-fresh"
-                action={
-                  debouncedQ
-                    ? undefined
-                    : {
-                        label: "New template",
-                        onClick: () => app.openTemplateCreateModal(),
-                      }
-                }
               />
             ) : (
               <>

@@ -1,8 +1,11 @@
 .task-templates-search {
+  /* Match task-list-filters vertical rhythm below the section-head divider. */
   margin: 0 0 var(--space-4);
+  padding-top: var(--space-3);
   margin-left: 0;
-  flex: none;
-  max-width: 22rem;
+  flex: 1 1 auto;
+  width: 100%;
+  max-width: none;
 }
 
 .template-list-toolbar {

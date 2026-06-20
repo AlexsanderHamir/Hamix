@@ -19,7 +19,7 @@ export type EmptyStateAction = {
 type Props = {
   id?: string;
   title: string;
-  description: ReactNode;
+  description?: ReactNode;
   /** Decorative; excluded from accessibility tree */
   icon?: ReactNode;
   action?: EmptyStateAction;
@@ -60,7 +60,9 @@ export function EmptyState({
       <h2 className="empty-state__title" id={titleId}>
         {title}
       </h2>
-      <div className="empty-state__description">{description}</div>
+      {description != null && description !== "" ? (
+        <div className="empty-state__description">{description}</div>
+      ) : null}
       {action ? (
         <div className="empty-state__actions">
           <button

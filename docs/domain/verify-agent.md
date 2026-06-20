@@ -227,6 +227,8 @@ Report dir root: `T2A_WORKER_REPORT_DIR` (default `<os.TempDir()>/t2a-worker`). 
 
 Before `StartPhase(verify)`, the worker captures `git status --porcelain` and `git rev-parse HEAD`. After verify completes, it captures again. Any working-tree change, HEAD movement, or snapshot error → terminal `verify_tampered` (no retries, no completion rows). Report files live outside the repo, so the whitelist is empty — any porcelain diff during verify is tampering.
 
+> **Warning** — Operators editing the workspace during verify (save, commit, checkout) trip the same check as a misbehaving verify runner. Do not modify `repo_root` while verify is in flight. Operator-facing summary: [execute-and-verify.md](../execute-and-verify.md#do-not-edit-the-workspace-during-verify).
+
 When the working dir is not a git repo, the check is bypassed (logged once at startup). Non-git fixtures therefore have no tamper enforcement. See [`verify_integrity.go`](../../pkgs/agents/harness/verify_integrity.go) and [ADR-0003](../adr/ADR-0003-verify-component-upgrade.md).
 
 > **Note** — The verify agent runs in the **same working dir as execute** (where uncommitted changes live) so it can inspect actual file contents via diff and runner tools. A fresh git worktree at HEAD would be empty and unusable for verifying execute's edits — see ADR-0003 alternatives.

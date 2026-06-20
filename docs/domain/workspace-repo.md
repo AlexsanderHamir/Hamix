@@ -21,6 +21,7 @@ How `app_settings.repo_root` gates the agent worker and `/repo/*`, how `pkgs/rep
 - [Task create and patch validation](#task-create-and-patch-validation)
 - [SPA @-mention workflow](#spa--mention-workflow)
 - [Shared working directory for agent runs](#shared-working-directory-for-agent-runs)
+- [Dedicated T2A worktree](#dedicated-t2a-worktree)
 - [Wire contracts](#wire-contracts)
 - [Security boundaries](#security-boundaries)
 - [Configuration](#configuration)
@@ -260,11 +261,24 @@ Every agent CLI invocation shares one directory: **`app_settings.repo_root`**.
 Properties:
 
 - **Sequential** — single worker goroutine; one cycle at a time per process. No per-task working directory isolation in V1.
+- **Dedicated worktree recommended** — point `repo_root` at a separate git worktree so operators can edit another checkout while agents run; see [Dedicated T2A worktree](#dedicated-t2a-worktree).
 - **Hot reload** — changing `repo_root` in Settings triggers supervisor reload and a new worker instance with the updated `WorkingDir` ([configuration.md](../configuration.md) lifecycle diagram).
 - **Not the report scratch dir** — `T2A_WORKER_REPORT_DIR` holds JSON side-channel files agents write by absolute path in the prompt, keeping `repo_root` clean for git integrity checks.
 - **Commit hierarchy** — when `repo_root` is a git worktree, execute ingest records repo → worktree → branch → SHA rows in `task_cycle_commits` ([cycle-commits.md](./cycle-commits.md)).
 
 Tasks cannot run until `repo_root` is configured and valid — see [task-scheduling.md](./task-scheduling.md) for how ready tasks wait behind the supervisor gate and [agent-queue.md](./agent-queue.md) for queue behavior once the worker is running.
+
+## Dedicated T2A worktree
+
+For day-to-day use, point `repo_root` at a **git worktree reserved for the agent**, not your primary checkout. The worker still runs execute and verify in that one directory; a separate worktree lets you keep editing elsewhere without tripping verify integrity checks or mixing agent commits with uncommitted local work.
+
+```bash
+git worktree add ../myproject-t2a -b t2a-agent main
+```
+
+Set Settings → **Workspace repository** to the worktree path. Operator workflow: [execute-and-verify.md](../execute-and-verify.md#dedicated-worktree-recommended).
+
+> **Note** — This is operator-chosen isolation (one stable worktree per deployment). Automatic per-cycle worktrees are a separate, future harness feature ([HARNESS_IMPROVEMENTS.md](../../HARNESS_IMPROVEMENTS.md)).
 
 ## Wire contracts
 
@@ -368,7 +382,8 @@ Validation on settings update: `repo_root` must not contain a NUL byte. Existenc
 
 ## Best practices
 
-- Set **Workspace repository** to the git root of the project agents should edit — same path you would `cd` into locally.
+- Set **Workspace repository** to a **dedicated git worktree** for agent runs when you also edit the project locally — see [Dedicated T2A worktree](#dedicated-t2a-worktree) and [execute-and-verify.md](../execute-and-verify.md#dedicated-worktree-recommended).
+- If you must use your only checkout as `repo_root`, do not save or commit there during the verify phase.
 - Prefer **`GET /health/ready`** over `/repo/search?q=` for SPA mount probes — cheaper and matches orchestrator readiness.
 - Use **`@path(start-end)`** for large files so execute prompts stay focused; validate ranges in the editor before save.
 - After moving or cloning a repo, update Settings — stale `repo_root` surfaces as `workspace_repo: fail` and idle worker.

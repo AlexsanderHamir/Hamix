@@ -16,6 +16,8 @@ How T2A runs a task with two agents. Execute implements work; verify judges your
 - [Report files (behind the scenes)](#report-files-behind-the-scenes)
 - [Creating tasks and criteria](#creating-tasks-and-criteria)
 - [What happens when a task runs](#what-happens-when-a-task-runs)
+- [Dedicated worktree (recommended)](#dedicated-worktree-recommended)
+- [Do not edit the workspace during verify](#do-not-edit-the-workspace-during-verify)
 - [Writing good criteria](#writing-good-criteria)
 - [Retries and locked passes](#retries-and-locked-passes)
 - [What you see in the UI](#what-you-see-in-the-ui)
@@ -100,6 +102,49 @@ When you create a task, you supply:
 ```
 
 Criteria that already passed on an earlier attempt in the same cycle can be **locked**. Execute is told not to redo them, and verify short circuits them on retry.
+
+## Dedicated worktree (recommended)
+
+T2A runs execute and verify in one shared directory: **`app_settings.repo_root`** (Settings → Workspace repository). That path is also where `@`-mentions and verify shell commands resolve.
+
+**Recommended:** create a **separate git worktree** for T2A and set `repo_root` to that directory. Keep your usual checkout for day-to-day edits; let the agent work in the worktree. When a cycle finishes, merge or cherry-pick from the worktree branch as you would for any other feature branch.
+
+From your main repository (replace branch and path as needed):
+
+```bash
+# New branch + worktree (example: sibling directory myproject-t2a)
+git worktree add ../myproject-t2a -b t2a-agent main
+
+# Or attach a worktree to an existing branch
+git worktree add ../myproject-t2a my-feature-branch
+```
+
+Then in T2A Settings, set **Workspace repository** to the absolute path of that worktree (e.g. `/home/you/src/myproject-t2a` or `C:\src\myproject-t2a`).
+
+| Approach | Benefit |
+| --- | --- |
+| Dedicated worktree as `repo_root` | You can edit your main checkout while T2A runs; agent commits stay on the worktree branch |
+| Main checkout as `repo_root` | Simplest setup, but your saves/commits during verify can fail the cycle (see below) |
+
+T2A treats a worktree like any other git root — execute commit ingest and verify integrity checks work the same. Per-cycle automatic worktrees are not built in yet; one operator-chosen worktree is the V1 pattern.
+
+Remove a worktree when done: `git worktree remove ../myproject-t2a` (from the main repo).
+
+## Do not edit the workspace during verify
+
+Execute and verify both run in the same directory: **`app_settings.repo_root`** (Settings → Workspace repository). There is no per-task sandbox in V1.
+
+While the **verify** phase is running, the worker snapshots git state before and after judgment. If you save files, commit, checkout, or otherwise change the working tree or `HEAD` during that window, the cycle terminates as **`verify_tampered`** — a hard failure with **no retry**, not a normal verify miss.
+
+| When you edit | Typical outcome |
+| --- | --- |
+| During **verify** (commits, new edits, checkout) | `verify_tampered` — cycle fails terminally |
+| Before verify starts (execute finished, verify not yet running) | Verify may still run, but judges the combined repo state (your edits + the agent's work) |
+| During **execute** | No integrity check; verify later sees whatever the tree contains |
+
+**Practical rule:** treat the workspace as read-only from the moment verify starts until the cycle succeeds or fails. If you use a dedicated T2A worktree (above), edit your **other** checkout freely — only avoid changes inside `repo_root` during verify.
+
+Mechanism and rationale: [domain/verify-agent.md](./domain/verify-agent.md#integrity-enforcement), [ADR-0003](./adr/ADR-0003-verify-component-upgrade.md).
 
 ## Writing good criteria
 

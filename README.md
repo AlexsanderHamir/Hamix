@@ -36,6 +36,8 @@ Setting up to contribute? See [CONTRIBUTING.md](CONTRIBUTING.md).
 
 Every task runs an **execute** agent and a **verify** agent. Read [docs/execute-and-verify.md](docs/execute-and-verify.md) before defining tasks and done criteria. The worker runs **one task at a time**; you can queue many tasks, but they execute sequentially.
 
+Do not edit, commit, or checkout files in the workspace repo while a task is in the **verify** phase — the worker treats any git change during verify as tampering and terminates the cycle as `verify_tampered` (no retry). Point **Workspace repository** at a **dedicated git worktree** so you can keep working in your main checkout; see [docs/execute-and-verify.md](docs/execute-and-verify.md#dedicated-worktree-recommended).
+
 ## Docs
 
 - [docs/guide.md](docs/guide.md): how documentation fits together — start here to learn the project

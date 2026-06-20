@@ -175,6 +175,7 @@ func Delete(ctx context.Context, db *gorm.DB, id string) error {
 	return nil
 }
 
+//funclogmeasure:skip category=hot-path reason="Pure helper without I/O; operation trace is emitted by the calling chokepoint."
 func escapeLike(s string) string {
 	s = strings.ReplaceAll(s, `\`, `\\`)
 	s = strings.ReplaceAll(s, `%`, `\%`)
@@ -182,6 +183,7 @@ func escapeLike(s string) string {
 	return s
 }
 
+//funclogmeasure:skip category=hot-path reason="Pure helper without I/O; operation trace is emitted by the calling chokepoint."
 func mapNotFound(err error) error {
 	if err == nil {
 		return nil

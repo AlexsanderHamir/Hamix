@@ -49,6 +49,7 @@ type taskTemplateInstantiateResponseJSON struct {
 	Errors []taskTemplateInstantiateErrorJSON `json:"errors"`
 }
 
+//funclogmeasure:skip category=hot-path reason="Pure helper without I/O; operation trace is emitted by the calling chokepoint."
 func decodeComposePayload(raw json.RawMessage) (taskComposePayloadJSON, error) {
 	var payload taskComposePayloadJSON
 	if len(raw) == 0 {
@@ -60,6 +61,7 @@ func decodeComposePayload(raw json.RawMessage) (taskComposePayloadJSON, error) {
 	return payload, nil
 }
 
+//funclogmeasure:skip category=hot-path reason="Pure helper without I/O; operation trace is emitted by the calling chokepoint."
 func composePayloadToRaw(payload taskComposePayloadJSON) (json.RawMessage, error) {
 	return json.Marshal(payload)
 }

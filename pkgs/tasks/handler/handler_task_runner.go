@@ -16,6 +16,7 @@ func resolveTaskRunnerModel(body *taskCreateJSON, settings domain.AppSettings) (
 	return resolveRunnerModelFields(body.Runner, body.CursorModel, settings)
 }
 
+//funclogmeasure:skip category=hot-path reason="Pure helper without I/O; operation trace is emitted by the calling chokepoint."
 func resolveRunnerModelFields(runnerPtr, cursorModelPtr *string, settings domain.AppSettings) (runner, cursorModel string, err error) {
 	if runnerPtr != nil && strings.TrimSpace(*runnerPtr) != "" {
 		runner = strings.TrimSpace(*runnerPtr)

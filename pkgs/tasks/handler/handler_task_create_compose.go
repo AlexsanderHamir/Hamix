@@ -22,6 +22,7 @@ type createTaskComposeOpts struct {
 	InstantiateFromTemplate bool
 }
 
+//funclogmeasure:skip category=hot-path reason="Pure helper without I/O; operation trace is emitted by the calling chokepoint."
 func taskCreateJSONToCompose(body taskCreateJSON) taskComposePayloadJSON {
 	return taskComposePayloadJSON{
 		Title:                 body.Title,
@@ -123,6 +124,7 @@ func (h *Handler) finalizeCreatedTask(ctx context.Context, t *domain.Task) (*dom
 	return task, nil
 }
 
+//funclogmeasure:skip category=hot-path reason="Pure helper without I/O; operation trace is emitted by the calling chokepoint."
 func (h *Handler) validateComposePayload(r *http.Request, payload taskComposePayloadJSON) error {
 	if err := h.validatePromptMentionsIfRepo(r, payload.InitialPrompt); err != nil {
 		return err
@@ -149,6 +151,7 @@ func (h *Handler) validateComposePayload(r *http.Request, payload taskComposePay
 	return nil
 }
 
+//funclogmeasure:skip category=hot-path reason="Pure helper without I/O; operation trace is emitted by the calling chokepoint."
 func omitPastPickupNotBefore(t *time.Time) *time.Time {
 	if t == nil {
 		return nil

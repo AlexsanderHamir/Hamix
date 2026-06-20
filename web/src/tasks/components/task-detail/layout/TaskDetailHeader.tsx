@@ -3,7 +3,8 @@ import { cycleRunnerChipClass, runnerLabel } from "@/observability";
 import { Badge } from "@/components/ui";
 import type { Task } from "@/types";
 import {
-  priorityDotClass,
+  priorityListLabel,
+  priorityPillClass,
   statusListLabel,
   statusNeedsUserInput,
 } from "../../../task-display";
@@ -58,11 +59,9 @@ export function TaskDetailHeader({ task }: Props) {
           >
             {statusListLabel(task.status)}
           </Badge>
-          <span
-            className={priorityDotClass(task.priority)}
-            title={task.priority}
-            aria-label={`Priority: ${task.priority}`}
-          />
+          <span className={priorityPillClass(task.priority)}>
+            {priorityListLabel(task.priority)}
+          </span>
           <span
             className={`cell-pill ${cycleRunnerChipClass()} task-detail-runtime-chip`}
             data-testid="task-detail-runtime"

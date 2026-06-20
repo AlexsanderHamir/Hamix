@@ -5,7 +5,12 @@ import { useTaskDetailPrefetcher } from "@/app/hooks/usePrefetchOnIntent";
 import type { Task } from "@/types";
 import type { TaskWithDepth } from "../../../task-tree";
 import type { DeleteTargetInput } from "../../../hooks/useTaskDeleteFlow";
-import { canEditTask, priorityDotClass, statusNeedsUserInput } from "../../../task-display";
+import {
+  canEditTask,
+  priorityListLabel,
+  priorityPillClass,
+  statusNeedsUserInput,
+} from "../../../task-display";
 import { Badge } from "@/components/ui";
 import { TaskListDeleteGlyph, TaskListEditGlyph } from "./TaskListRowActionIcons";
 import { statusListLabel, taskListRowSubtitle } from "./taskListRowSubtitle";
@@ -602,11 +607,9 @@ function TaskListDataTableRow({
         </Badge>
       </td>
       <td className="cell-priority">
-        <span
-          className={priorityDotClass(t.priority)}
-          title={t.priority}
-          aria-label={`Priority: ${t.priority}`}
-        />
+        <span className={priorityPillClass(t.priority)}>
+          {priorityListLabel(t.priority)}
+        </span>
       </td>
       {showProjectColumn ? (
         <td className="cell-project">

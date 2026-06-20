@@ -4,4 +4,5 @@ export * from "./taskAttention";
 export * from "./taskDescendantCount";
 export * from "./taskGateDisplay";
 export * from "./statusListLabel";
+export * from "./priorityListLabel";
 export * from "./canEditTask";

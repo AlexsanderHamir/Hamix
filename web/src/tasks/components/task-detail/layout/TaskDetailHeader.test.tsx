@@ -22,7 +22,7 @@ describe("TaskDetailHeader", () => {
 
     expect(screen.getByRole("heading", { name: /^my task$/i })).toBeInTheDocument();
     expect(screen.getByText("Ready")).toBeInTheDocument();
-    expect(screen.getByLabelText("Priority: high")).toBeInTheDocument();
+    expect(screen.getByText("High")).toBeInTheDocument();
     expect(screen.getByRole("link", { name: /^all tasks$/i })).toHaveAttribute(
       "href",
       "/",

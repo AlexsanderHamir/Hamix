@@ -1,10 +1,13 @@
 # T2A
 
-**The control plane for AI software engineering.**
+Control plane for agentic systems.
+
+Built on top of Cursor CLI, Claude Code, Codex, and other agentic systems.
 
 ![T2A task board — structured tasks with status, priority, and acceptance criteria](assets/product_example.png)
 
 ---
+
 ## Why T2A Exists
 
 **Problem:** Chat-based interfaces introduce too much variability into software engineering. Chat is an excellent interface for exploration, but a poor interface for executing large amounts of work while maintaining consistent quality.

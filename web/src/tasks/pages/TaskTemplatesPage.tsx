@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
-import { listTaskTemplates } from "@/api";
+import { listTaskTemplates, maxTemplateInstantiateCountPerItem } from "@/api";
 import { TASK_TIMINGS } from "@/constants/tasks";
 import { useDelayedTrue } from "@/lib/useDelayedTrue";
 import { EmptyState } from "@/shared/EmptyState";
@@ -34,6 +34,25 @@ function useDebouncedTrimmedValue(value: string, delayMs: number): string {
   return debounced;
 }
 
+function clampInstanceCount(value: number): number {
+  if (!Number.isFinite(value)) return 1;
+  return Math.min(
+    maxTemplateInstantiateCountPerItem,
+    Math.max(1, Math.floor(value)),
+  );
+}
+
+function sumSelectedInstanceCounts(
+  selectedIds: string[],
+  instanceCounts: Record<string, number>,
+  batchDefaultCount: number,
+): number {
+  return selectedIds.reduce(
+    (sum, id) => sum + (instanceCounts[id] ?? batchDefaultCount),
+    0,
+  );
+}
+
 function formatInstantiateTemplatesBatchError(result: InstantiateTemplatesBatchResult): string | null {
   if (result.errors.length > 0 && result.tasks.length === 0) {
     return result.errors.map((entry) => `${entry.template_id}: ${entry.error}`).join(" ");
@@ -48,23 +67,61 @@ function formatInstantiateTemplatesBatchError(result: InstantiateTemplatesBatchR
 
 type TemplateBatchBarProps = {
   selectedCount: number;
+  totalTaskCount: number;
+  batchDefaultCount: number;
   instantiatePending: boolean;
+  onBatchDefaultCountChange: (count: number) => void;
+  onApplyToAll: () => void;
   onCreate: () => void;
 };
 
-function TemplateBatchBar({ selectedCount, instantiatePending, onCreate }: TemplateBatchBarProps) {
+function TemplateBatchBar({
+  selectedCount,
+  totalTaskCount,
+  batchDefaultCount,
+  instantiatePending,
+  onBatchDefaultCountChange,
+  onApplyToAll,
+  onCreate,
+}: TemplateBatchBarProps) {
   if (selectedCount === 0) return null;
 
   return (
     <div className="template-batch-bar" role="region" aria-label="Batch actions">
       <span className="template-batch-bar__count">{selectedCount} selected</span>
+      <div className="template-batch-bar__instances">
+        <label htmlFor="template-batch-default-count" className="template-batch-bar__instances-label">
+          Instances per template
+        </label>
+        <input
+          id="template-batch-default-count"
+          type="number"
+          className="template-batch-bar__instances-input"
+          min={1}
+          max={maxTemplateInstantiateCountPerItem}
+          inputMode="numeric"
+          value={batchDefaultCount}
+          onChange={(e) => {
+            const parsed = Number.parseInt(e.target.value, 10);
+            onBatchDefaultCountChange(clampInstanceCount(Number.isNaN(parsed) ? 1 : parsed));
+          }}
+        />
+        <button
+          type="button"
+          className="secondary template-batch-bar__apply"
+          disabled={instantiatePending}
+          onClick={onApplyToAll}
+        >
+          Apply to all selected
+        </button>
+      </div>
       <button
         type="button"
         className="task-create-submit"
         disabled={instantiatePending}
         onClick={onCreate}
       >
-        {instantiatePending ? "Creating tasks…" : `Create tasks (${selectedCount})`}
+        {instantiatePending ? "Creating tasks…" : `Create tasks (${totalTaskCount})`}
       </button>
     </div>
   );
@@ -170,11 +227,13 @@ function TemplateRowActions({
 type TemplateRowProps = {
   template: TaskTemplateSummary;
   isSelected: boolean;
+  instanceCount: number;
   isDeleting: boolean;
   isExiting: boolean;
   rowDisabled: boolean;
   renderNow: Date;
   onToggleSelected: (id: string) => void;
+  onInstanceCountChange: (id: string, count: number) => void;
   onEdit: (id: string) => void;
   onDelete: (id: string) => void;
 };
@@ -182,11 +241,13 @@ type TemplateRowProps = {
 function TemplateRow({
   template,
   isSelected,
+  instanceCount,
   isDeleting,
   isExiting,
   rowDisabled,
   renderNow,
   onToggleSelected,
+  onInstanceCountChange,
   onEdit,
   onDelete,
 }: TemplateRowProps) {
@@ -239,6 +300,34 @@ function TemplateRow({
           </time>
         ) : null}
       </div>
+      {isSelected ? (
+        <div className="template-row__qty">
+          <label htmlFor={`template-qty-${template.id}`} className="visually-hidden">
+            Instances for {template.name}
+          </label>
+          <input
+            id={`template-qty-${template.id}`}
+            type="number"
+            className="template-row__qty-input"
+            min={1}
+            max={maxTemplateInstantiateCountPerItem}
+            inputMode="numeric"
+            aria-label={`Instances for ${template.name}`}
+            value={instanceCount}
+            disabled={rowDisabled}
+            onClick={(e) => e.stopPropagation()}
+            onChange={(e) => {
+              const parsed = Number.parseInt(e.target.value, 10);
+              onInstanceCountChange(
+                template.id,
+                clampInstanceCount(Number.isNaN(parsed) ? 1 : parsed),
+              );
+            }}
+          />
+        </div>
+      ) : (
+        <div className="template-row__qty template-row__qty--placeholder" aria-hidden="true" />
+      )}
       <TemplateRowActions
         templateName={template.name}
         isDeleting={isDeleting}
@@ -254,6 +343,8 @@ type TemplateListBodyProps = {
   templates: TaskTemplateSummary[];
   debouncedQ: string;
   selectedIds: string[];
+  instanceCounts: Record<string, number>;
+  batchDefaultCount: number;
   allSelected: boolean;
   deletingTemplateId: string | null;
   exitingTemplateIds: string[];
@@ -262,6 +353,7 @@ type TemplateListBodyProps = {
   renderNow: Date;
   onToggleSelectAll: () => void;
   onToggleSelected: (id: string) => void;
+  onInstanceCountChange: (id: string, count: number) => void;
   onEdit: (id: string) => void;
   onDelete: (id: string) => void;
 };
@@ -270,6 +362,8 @@ function TemplateListBody({
   templates,
   debouncedQ,
   selectedIds,
+  instanceCounts,
+  batchDefaultCount,
   allSelected,
   deletingTemplateId,
   exitingTemplateIds,
@@ -278,6 +372,7 @@ function TemplateListBody({
   renderNow,
   onToggleSelectAll,
   onToggleSelected,
+  onInstanceCountChange,
   onEdit,
   onDelete,
 }: TemplateListBodyProps) {
@@ -306,6 +401,12 @@ function TemplateListBody({
         </div>
         <span className="template-list-head__label" role="columnheader">Title</span>
         <span
+          className="template-list-head__label template-list-head__label--qty"
+          role="columnheader"
+        >
+          Qty
+        </span>
+        <span
           className="template-list-head__label template-list-head__label--actions"
           role="columnheader"
         >
@@ -327,11 +428,13 @@ function TemplateListBody({
               key={template.id}
               template={template}
               isSelected={isSelected}
+              instanceCount={instanceCounts[template.id] ?? batchDefaultCount}
               isDeleting={isDeleting}
               isExiting={isExiting}
               rowDisabled={rowDisabled}
               renderNow={renderNow}
               onToggleSelected={onToggleSelected}
+              onInstanceCountChange={onInstanceCountChange}
               onEdit={onEdit}
               onDelete={onDelete}
             />
@@ -348,6 +451,8 @@ function useTaskTemplatesPageModel(app: TaskTemplatesApp, navigate: ReturnType<t
   const [searchInput, setSearchInput] = useState("");
   const debouncedQ = useDebouncedTrimmedValue(searchInput, 300);
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
+  const [batchDefaultCount, setBatchDefaultCount] = useState(1);
+  const [instanceCounts, setInstanceCounts] = useState<Record<string, number>>({});
   const [deletingTemplateId, setDeletingTemplateId] = useState<string | null>(null);
   const [exitingTemplateIds, setExitingTemplateIds] = useState<string[]>([]);
   const [batchError, setBatchError] = useState<string | null>(null);
@@ -372,6 +477,13 @@ function useTaskTemplatesPageModel(app: TaskTemplatesApp, navigate: ReturnType<t
     const ids = new Set(templates.map((t) => t.id));
     setSelectedIds((current) => current.filter((id) => ids.has(id)));
     setExitingTemplateIds((current) => current.filter((id) => ids.has(id)));
+    setInstanceCounts((current) => {
+      const next: Record<string, number> = {};
+      for (const [id, count] of Object.entries(current)) {
+        if (ids.has(id)) next[id] = count;
+      }
+      return next;
+    });
   }, [templates]);
 
   useEffect(() => {
@@ -384,15 +496,54 @@ function useTaskTemplatesPageModel(app: TaskTemplatesApp, navigate: ReturnType<t
 
   const allSelected = templates.length > 0 && selectedIds.length === templates.length;
   const selectedCount = selectedIds.length;
+  const totalTaskCount = sumSelectedInstanceCounts(selectedIds, instanceCounts, batchDefaultCount);
 
   const toggleSelected = (id: string) => {
-    setSelectedIds((current) =>
-      current.includes(id) ? current.filter((value) => value !== id) : [...current, id],
-    );
+    setSelectedIds((current) => {
+      if (current.includes(id)) {
+        setInstanceCounts((counts) => {
+          const next = { ...counts };
+          delete next[id];
+          return next;
+        });
+        return current.filter((value) => value !== id);
+      }
+      setInstanceCounts((counts) => ({
+        ...counts,
+        [id]: batchDefaultCount,
+      }));
+      return [...current, id];
+    });
   };
 
   const toggleSelectAll = () => {
-    setSelectedIds(allSelected ? [] : templates.map((t) => t.id));
+    if (allSelected) {
+      setSelectedIds([]);
+      setInstanceCounts({});
+      return;
+    }
+    const ids = templates.map((t) => t.id);
+    setSelectedIds(ids);
+    setInstanceCounts(
+      Object.fromEntries(ids.map((id) => [id, batchDefaultCount])),
+    );
+  };
+
+  const setInstanceCountForTemplate = (id: string, count: number) => {
+    setInstanceCounts((current) => ({
+      ...current,
+      [id]: clampInstanceCount(count),
+    }));
+  };
+
+  const applyBatchDefaultToSelected = () => {
+    setInstanceCounts((current) => {
+      const next = { ...current };
+      for (const id of selectedIds) {
+        next[id] = batchDefaultCount;
+      }
+      return next;
+    });
   };
 
   const deleteTemplate = async (templateId: string) => {
@@ -420,16 +571,21 @@ function useTaskTemplatesPageModel(app: TaskTemplatesApp, navigate: ReturnType<t
     if (selectedIds.length === 0) return;
     setBatchError(null);
     try {
-      const result = await app.instantiateTemplatesByIDs(selectedIds);
+      const items = selectedIds.map((id) => ({
+        template_id: id,
+        count: instanceCounts[id] ?? batchDefaultCount,
+      }));
+      const result = await app.instantiateTemplates(items);
       const batchMessage = formatInstantiateTemplatesBatchError(result);
       if (batchMessage !== null) {
         setBatchError(batchMessage);
         if (result.errors.length > 0 && result.tasks.length > 0) {
-          setSelectedIds(result.errors.map((entry) => entry.template_id));
+          setSelectedIds([...new Set(result.errors.map((entry) => entry.template_id))]);
         }
         return;
       }
       setSelectedIds([]);
+      setInstanceCounts({});
       navigate("/");
     } catch (err) {
       setBatchError(err instanceof Error ? err.message : "Could not create tasks from templates.");
@@ -441,6 +597,9 @@ function useTaskTemplatesPageModel(app: TaskTemplatesApp, navigate: ReturnType<t
     setSearchInput,
     debouncedQ,
     selectedIds,
+    batchDefaultCount,
+    setBatchDefaultCount,
+    instanceCounts,
     deletingTemplateId,
     exitingTemplateIds,
     batchError,
@@ -452,8 +611,11 @@ function useTaskTemplatesPageModel(app: TaskTemplatesApp, navigate: ReturnType<t
     renderNow,
     allSelected,
     selectedCount,
+    totalTaskCount,
     toggleSelected,
     toggleSelectAll,
+    setInstanceCountForTemplate,
+    applyBatchDefaultToSelected,
     deleteTemplate,
     runBatchCreate,
   };
@@ -467,6 +629,8 @@ type TemplatePageContentProps = {
   templates: TaskTemplateSummary[];
   debouncedQ: string;
   selectedIds: string[];
+  instanceCounts: Record<string, number>;
+  batchDefaultCount: number;
   allSelected: boolean;
   deletingTemplateId: string | null;
   exitingTemplateIds: string[];
@@ -475,6 +639,7 @@ type TemplatePageContentProps = {
   renderNow: Date;
   onToggleSelectAll: () => void;
   onToggleSelected: (id: string) => void;
+  onInstanceCountChange: (id: string, count: number) => void;
   onEdit: (id: string) => void;
   onDelete: (id: string) => void;
 };
@@ -487,6 +652,8 @@ function TemplatePageContent({
   templates,
   debouncedQ,
   selectedIds,
+  instanceCounts,
+  batchDefaultCount,
   allSelected,
   deletingTemplateId,
   exitingTemplateIds,
@@ -495,6 +662,7 @@ function TemplatePageContent({
   renderNow,
   onToggleSelectAll,
   onToggleSelected,
+  onInstanceCountChange,
   onEdit,
   onDelete,
 }: TemplatePageContentProps) {
@@ -517,6 +685,8 @@ function TemplatePageContent({
               templates={templates}
               debouncedQ={debouncedQ}
               selectedIds={selectedIds}
+              instanceCounts={instanceCounts}
+              batchDefaultCount={batchDefaultCount}
               allSelected={allSelected}
               deletingTemplateId={deletingTemplateId}
               exitingTemplateIds={exitingTemplateIds}
@@ -525,6 +695,7 @@ function TemplatePageContent({
               renderNow={renderNow}
               onToggleSelectAll={onToggleSelectAll}
               onToggleSelected={onToggleSelected}
+              onInstanceCountChange={onInstanceCountChange}
               onEdit={onEdit}
               onDelete={onDelete}
             />
@@ -563,6 +734,8 @@ export function TaskTemplatesPage() {
         templates={model.templates}
         debouncedQ={model.debouncedQ}
         selectedIds={model.selectedIds}
+        instanceCounts={model.instanceCounts}
+        batchDefaultCount={model.batchDefaultCount}
         allSelected={model.allSelected}
         deletingTemplateId={model.deletingTemplateId}
         exitingTemplateIds={model.exitingTemplateIds}
@@ -571,12 +744,19 @@ export function TaskTemplatesPage() {
         renderNow={model.renderNow}
         onToggleSelectAll={model.toggleSelectAll}
         onToggleSelected={model.toggleSelected}
+        onInstanceCountChange={model.setInstanceCountForTemplate}
         onEdit={(id) => void app.editTemplateByID(id)}
         onDelete={(id) => void model.deleteTemplate(id)}
       />
       <TemplateBatchBar
         selectedCount={model.selectedCount}
+        totalTaskCount={model.totalTaskCount}
+        batchDefaultCount={model.batchDefaultCount}
         instantiatePending={app.instantiateTemplatesPending}
+        onBatchDefaultCountChange={(count) =>
+          model.setBatchDefaultCount(clampInstanceCount(count))
+        }
+        onApplyToAll={model.applyBatchDefaultToSelected}
         onCreate={() => void model.runBatchCreate()}
       />
     </section>

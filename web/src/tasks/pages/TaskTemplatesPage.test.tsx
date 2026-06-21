@@ -1,5 +1,5 @@
 import { useQuery } from "@tanstack/react-query";
-import { render, screen, waitFor } from "@testing-library/react";
+import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { MemoryRouter } from "react-router-dom";
 import { describe, expect, it, vi, beforeEach } from "vitest";
@@ -25,7 +25,7 @@ function makeApp(overrides: Partial<App> = {}): App {
     openTemplateCreateModal: vi.fn(),
     editTemplateByID: vi.fn(),
     deleteTemplateByID: vi.fn().mockResolvedValue(undefined),
-    instantiateTemplatesByIDs: vi.fn(),
+    instantiateTemplates: vi.fn(),
     instantiateTemplatesPending: false,
     loadTemplatePending: false,
     deleteTemplatePending: false,
@@ -84,17 +84,77 @@ describe("TaskTemplatesPage", () => {
     expect(screen.getByRole("button", { name: /create tasks \(1\)/i })).toBeInTheDocument();
   });
 
-  it("calls instantiate with selected template ids in order", async () => {
+  it("calls instantiate with selected template items in order", async () => {
     const user = userEvent.setup();
-    const instantiateTemplatesByIDs = vi.fn().mockResolvedValue({ tasks: [{}], errors: [] });
-    renderPage(makeApp({ instantiateTemplatesByIDs }));
+    const instantiateTemplates = vi.fn().mockResolvedValue({ tasks: [{}], errors: [] });
+    renderPage(makeApp({ instantiateTemplates }));
 
     await user.click(screen.getByLabelText(/select alpha template/i));
     await user.click(screen.getByLabelText(/select beta template/i));
     await user.click(screen.getByRole("button", { name: /create tasks \(2\)/i }));
 
     await waitFor(() => {
-      expect(instantiateTemplatesByIDs).toHaveBeenCalledWith(["tmpl-1", "tmpl-2"]);
+      expect(instantiateTemplates).toHaveBeenCalledWith([
+        { template_id: "tmpl-1", count: 1 },
+        { template_id: "tmpl-2", count: 1 },
+      ]);
+    });
+  });
+
+  it("uses batch default count and apply-to-all for selected templates", async () => {
+    const user = userEvent.setup();
+    const instantiateTemplates = vi.fn().mockResolvedValue({ tasks: [{}], errors: [] });
+    renderPage(makeApp({ instantiateTemplates }));
+
+    await user.click(screen.getByLabelText(/select alpha template/i));
+    await user.click(screen.getByLabelText(/select beta template/i));
+
+    const batchDefault = screen.getByLabelText(/instances per template/i);
+    fireEvent.change(batchDefault, { target: { value: "5" } });
+    await waitFor(() => {
+      expect(batchDefault).toHaveValue(5);
+    });
+    await user.click(screen.getByRole("button", { name: /apply to all selected/i }));
+
+    await waitFor(() => {
+      expect(screen.getByRole("button", { name: /create tasks \(10\)/i })).toBeInTheDocument();
+    });
+
+    await user.click(screen.getByRole("button", { name: /create tasks \(10\)/i }));
+
+    await waitFor(() => {
+      expect(instantiateTemplates).toHaveBeenCalledWith([
+        { template_id: "tmpl-1", count: 5 },
+        { template_id: "tmpl-2", count: 5 },
+      ]);
+    });
+  });
+
+  it("allows per-row instance override", async () => {
+    const user = userEvent.setup();
+    const instantiateTemplates = vi.fn().mockResolvedValue({ tasks: [{}], errors: [] });
+    renderPage(makeApp({ instantiateTemplates }));
+
+    await user.click(screen.getByLabelText(/select alpha template/i));
+    await user.click(screen.getByLabelText(/select beta template/i));
+
+    const alphaQty = screen.getByLabelText(/instances for alpha template/i);
+    fireEvent.change(alphaQty, { target: { value: "3" } });
+    await waitFor(() => {
+      expect(alphaQty).toHaveValue(3);
+    });
+
+    await waitFor(() => {
+      expect(screen.getByRole("button", { name: /create tasks \(4\)/i })).toBeInTheDocument();
+    });
+
+    await user.click(screen.getByRole("button", { name: /create tasks \(4\)/i }));
+
+    await waitFor(() => {
+      expect(instantiateTemplates).toHaveBeenCalledWith([
+        { template_id: "tmpl-1", count: 3 },
+        { template_id: "tmpl-2", count: 1 },
+      ]);
     });
   });
 });

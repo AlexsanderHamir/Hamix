@@ -30,7 +30,7 @@
 
 .template-list-head {
   display: grid;
-  grid-template-columns: calc(0.75rem + 2.5rem) minmax(0, 1fr) auto;
+  grid-template-columns: calc(0.75rem + 2.5rem) minmax(0, 1fr) 4.5rem auto;
   column-gap: var(--space-3);
   align-items: center;
   padding-inline: 0 var(--space-3);
@@ -56,17 +56,48 @@
   text-align: end;
 }
 
+.template-list-head__label--qty {
+  text-align: center;
+}
+
 .template-list-rows {
   margin-bottom: 0;
 }
 
 .template-row.draft-row {
   display: grid;
-  grid-template-columns: calc(0.75rem + 2.5rem) minmax(0, 1fr) auto;
+  grid-template-columns: calc(0.75rem + 2.5rem) minmax(0, 1fr) 4.5rem auto;
   align-items: center;
   column-gap: var(--space-3);
   padding-inline: 0 var(--space-3);
   padding-block: var(--space-3);
+}
+
+.template-row__qty {
+  display: flex;
+  justify-content: center;
+}
+
+.template-row__qty--placeholder {
+  visibility: hidden;
+  pointer-events: none;
+}
+
+.template-row__qty-input {
+  width: 3.25rem;
+  padding: var(--space-1) var(--space-2);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-sm);
+  font-size: var(--text-sm);
+  text-align: center;
+  background: var(--bg-surface);
+  color: var(--text-primary);
+}
+
+.template-row__qty-input:focus {
+  outline: none;
+  border-color: var(--brand-fill);
+  box-shadow: var(--shadow-focus);
 }
 
 .template-row--selected {
@@ -91,6 +122,43 @@
 .template-batch-bar__count {
   font-size: var(--text-sm);
   color: var(--text-secondary);
+  flex-shrink: 0;
+}
+
+.template-batch-bar__instances {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  flex: 1 1 auto;
+  min-width: 0;
+}
+
+.template-batch-bar__instances-label {
+  font-size: var(--text-sm);
+  font-weight: 500;
+  color: var(--text-secondary);
+  white-space: nowrap;
+}
+
+.template-batch-bar__instances-input {
+  width: 3.25rem;
+  padding: var(--space-1) var(--space-2);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-sm);
+  font-size: var(--text-sm);
+  text-align: center;
+  background: var(--bg-surface);
+  color: var(--text-primary);
+}
+
+.template-batch-bar__instances-input:focus {
+  outline: none;
+  border-color: var(--brand-fill);
+  box-shadow: var(--shadow-focus);
+}
+
+.template-batch-bar__apply {
+  white-space: nowrap;
 }
 
 .task-home-new-template-btn {

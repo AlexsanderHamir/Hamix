@@ -1,5 +1,5 @@
 <p align="center">
-  <img src="assets/T2A_wordmark.png" alt="T2A" />
+  <img src="assets/Hamix_wordmark.png" alt="Hamix" />
 </p>
 
 Control plane for coding agents. Coordinates Cursor CLI, Claude Code, Codex, and other agentic systems.

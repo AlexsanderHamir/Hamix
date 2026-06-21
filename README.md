@@ -13,6 +13,12 @@
     <td align="center"><sub>Acceptance criteria & verification</sub></td>
     <td align="center"><sub>Recorded attempts & commits</sub></td>
   </tr>
+  <tr>
+    <td colspan="2"><img src="assets/attempt_view.png" alt="Attempt detail with execute and verify phases plus activity log" width="100%"/></td>
+  </tr>
+  <tr>
+    <td colspan="2" align="center"><sub>Attempt view — phased execution with tool calls and audit events</sub></td>
+  </tr>
 </table>
 
 ---

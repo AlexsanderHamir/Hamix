@@ -25,7 +25,7 @@ Instead of relying on conversations, T2A structures work as tasks with explicit 
 
 **Task Templates** —> Reuse task definitions from the UI or API.
 
-**Runner Adapters** —> Run T2A with different AI coding agents and models.
+**Runner Adapters** —> Run T2A with different agentic systems.
 
 
 ---

@@ -49,7 +49,7 @@ Production wiring: [`cmd/taskapi/run_helpers.go`](../../cmd/taskapi/run_helpers.
 - HTTP handler and worker publish paths
 - Prometheus + RUM metrics
 - SPA: `useTaskEventStream`, `parseTaskChangeFrame`
-- Dev synthetic SSE (`T2A_SSE_TEST` / `pkgs/tasks/devsim`)
+- Dev synthetic SSE (`HAMIX_SSE_TEST` / `pkgs/tasks/devsim`)
 
 ### Out of scope
 
@@ -265,9 +265,9 @@ Dev synthetic stream ([`pkgs/tasks/devsim/`](../../pkgs/tasks/devsim/)):
 
 | Env | Role |
 | --- | --- |
-| `T2A_SSE_TEST=1` | Enable background ticker |
-| `T2A_SSE_TEST_INTERVAL` | Tick interval (default 3s; `0` disables) |
-| `T2A_SSE_TEST_*` | Events per tick, row mirror, lifecycle sim, etc. |
+| `HAMIX_SSE_TEST=1` | Enable background ticker |
+| `HAMIX_SSE_TEST_INTERVAL` | Tick interval (default 3s; `0` disables) |
+| `HAMIX_SSE_TEST_*` | Events per tick, row mirror, lifecycle sim, etc. |
 
 Never enable devsim SSE in production without intent ([api.md](../api.md)).
 

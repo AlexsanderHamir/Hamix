@@ -1,5 +1,7 @@
 # ADR-0004: Verdicts on the database
 
+> **Note** - Product renamed T2A to Hamix; identifiers below reflect the name at decision time unless updated inline.
+
 **Date:** 2026-06-05
 **Status:** Accepted
 **Deciders:** Backend / agents-worker maintainers
@@ -40,7 +42,7 @@ future. Two PRs, each independently valuable.
 ### PR-1 — Files leave `RepoRoot`
 
 Report files now live in a worker-managed scratch directory
-(`T2A_WORKER_REPORT_DIR`, default `<os.TempDir()>/t2a-worker`). The
+(`HAMIX_WORKER_REPORT_DIR`, default `<os.TempDir()>/hamix-worker`). The
 agent prompt receives the absolute path; the worker reads/parses then
 GC's the cycle subdirectory at terminate. The pre/post integrity-check
 allowlist is now empty — *any* change inside `RepoRoot` during the

@@ -1,5 +1,7 @@
 # ADR-0014: Cycle commit tracking
 
+> **Note** - Product renamed T2A to Hamix; identifiers below reflect the name at decision time unless updated inline.
+
 **Date:** 2026-06-18
 **Status:** Accepted
 **Deciders:** Engineering

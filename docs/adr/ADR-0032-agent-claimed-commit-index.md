@@ -1,5 +1,7 @@
 # ADR-0032: Agent-claimed commit index
 
+> **Note** - Product renamed T2A to Hamix; identifiers below reflect the name at decision time unless updated inline.
+
 **Date:** 2026-06-19
 **Status:** Accepted
 **Deciders:** Operator + harness contributors

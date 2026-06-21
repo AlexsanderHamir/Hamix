@@ -1,5 +1,7 @@
 # ADR-0023: Task Scheduling Domain (Decide vs Apply)
 
+> **Note** - Product renamed T2A to Hamix; identifiers below reflect the name at decision time unless updated inline.
+
 **Date:** 2026-06-19
 **Status:** Accepted
 **Deciders:** Engineering

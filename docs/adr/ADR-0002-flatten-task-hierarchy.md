@@ -1,5 +1,7 @@
 # ADR-0002: Flatten Task Hierarchy
 
+> **Note** - Product renamed T2A to Hamix; identifiers below reflect the name at decision time unless updated inline.
+
 **Date:** 2026-05-26
 **Status:** Superseded by [ADR-0010](ADR-0010-remove-subtasks.md) (subtask-related rows)
 **Deciders:** T2A maintainers

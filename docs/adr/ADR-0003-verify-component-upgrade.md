@@ -1,5 +1,7 @@
 # ADR-0003: Verify component upgrade
 
+> **Note** - Product renamed T2A to Hamix; identifiers below reflect the name at decision time unless updated inline.
+
 **Date:** 2026-06-05
 **Status:** Accepted
 **Deciders:** Backend / agents-worker maintainers

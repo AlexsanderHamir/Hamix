@@ -155,7 +155,7 @@ h.CancelCurrentRun()       // operator cancel → cancels in-flight runner conte
 | `RunTimeout` | Per-run wall clock on `runner.Request` (`0` = no cap) |
 | `ShutdownAbortTimeout` | Bounded background ctx for panic/shutdown cleanup (default 5s) |
 | `WorkingDir` | `app_settings.repo_root` |
-| `ReportDir` | `T2A_WORKER_REPORT_DIR` (default `<os.TempDir()>/t2a-worker`) |
+| `ReportDir` | `HAMIX_WORKER_REPORT_DIR` (default `<os.TempDir()>/hamix-worker`) |
 | `VerifyRunner` | Optional adversarial verify runner from supervisor |
 | `Notifier` | `CycleChangeNotifier` — must not block |
 | `ProgressNotifier` | Live progress SSE — must not block |
@@ -369,7 +369,7 @@ Supervisor wiring → `Options` (full reference: [configuration.md](../configura
 | `repo_root` | `Options.WorkingDir` |
 | `max_run_duration_seconds` | `Options.RunTimeout` |
 | `stream_idle_stuck_seconds` | `Options.StreamIdleStuck` — stdout silence watchdog; see [ADR-0027](../adr/ADR-0027-stream-idle-evidence-recovery.md) |
-| `T2A_WORKER_REPORT_DIR` | `Options.ReportDir` |
+| `HAMIX_WORKER_REPORT_DIR` | `Options.ReportDir` |
 | Built verify runner | `Options.VerifyRunner` |
 | SSE hub adapter | `Options.Notifier`, `Options.ProgressNotifier` |
 | Prometheus adapter | `Options.Metrics` |

@@ -10,10 +10,10 @@ Data model semantics: [data-model.md](./data-model.md). Configuration: [configur
 - All routes return `application/json`. Error bodies are `{"error":"<message>"}`; some responses include `request_id` for correlation with `X-Request-ID` / `http.access` logs.
 - Cacheable read routes (`GET /tasks`, `GET /tasks/{id}`, `GET /tasks/stats`, `GET /tasks/{id}/checklist`, `GET /tasks/{id}/dependencies`, `GET /tasks/{id}/cycles`, `GET /tasks/{id}/cycles/{cycleId}`, `GET /projects`, `GET /projects/{id}`, `GET /projects/{id}/context`, `GET /settings`) emit a strong `ETag` header and `Cache-Control: private, no-cache, must-revalidate`; the server returns `304 Not Modified` with no body when `If-None-Match` matches the current ETag. All other endpoints (mutations, SSE, `/metrics`, `/health*`, `/system/health`, `/repo/*`, `/tasks/cycle-failures`, drafts, runners) return `Cache-Control: no-store` and do not participate in revalidation.
 - `X-Actor` header: `user` (default) or `agent`. The handler ignores any body `triggered_by` and uses this header.
-- `Idempotency-Key` (≤ 128 bytes) caches successful (2xx) `POST`/`PATCH`/`DELETE` responses for `T2A_IDEMPOTENCY_TTL` (default 24h, in-process only). Replays are byte-identical.
-- Rate limit: `T2A_RATE_LIMIT_PER_MIN` per `RemoteAddr` (default 120; `0` disables). `429` returns `Retry-After: 60`.
-- Request body cap: `T2A_MAX_REQUEST_BODY_BYTES` (default 1 MiB; `0` disables).
-- `T2A_API_TOKEN`, when set, requires `Authorization: Bearer <token>` on all routes except `/health*` and `/metrics`.
+- `Idempotency-Key` (≤ 128 bytes) caches successful (2xx) `POST`/`PATCH`/`DELETE` responses for `HAMIX_IDEMPOTENCY_TTL` (default 24h, in-process only). Replays are byte-identical.
+- Rate limit: `HAMIX_RATE_LIMIT_PER_MIN` per `RemoteAddr` (default 120; `0` disables). `429` returns `Retry-After: 60`.
+- Request body cap: `HAMIX_MAX_REQUEST_BODY_BYTES` (default 1 MiB; `0` disables).
+- `HAMIX_API_TOKEN`, when set, requires `Authorization: Bearer <token>` on all routes except `/health*` and `/metrics`.
 
 ## Health and metrics
 
@@ -22,7 +22,7 @@ Data model semantics: [data-model.md](./data-model.md). Configuration: [configur
 | GET | `/health` | Liveness; returns `version` from `runtime/debug.ReadBuildInfo`. No DB probe. |
 | GET | `/health/live` | Same shape as `/health`. |
 | GET | `/health/ready` | Readiness; DB ping + `SELECT 1` + workspace directory stat when `app_settings.repo_root` is set. `503` on failure. |
-| GET | `/metrics` | Prometheus text. Standard Go / process collectors + `taskapi_build_info` + `taskapi_db_pool_*` + `taskapi_http_*` + `t2a_agent_runs_*` + `taskapi_sse_*` + `taskapi_agent_queue_*`. |
+| GET | `/metrics` | Prometheus text. Standard Go / process collectors + `taskapi_build_info` + `taskapi_db_pool_*` + `taskapi_http_*` + `hamix_agent_runs_*` + `taskapi_sse_*` + `taskapi_agent_queue_*`. |
 | GET | `/system/health` | Aggregated JSON for the SPA observability page: build, DB pool gauges, HTTP totals, SSE totals, agent queue + runs + paused. |
 | POST | `/v1/rum` | Browser RUM ingest; one batched line per call, capped fields. |
 | GET | `/v1/bootstrap` | Cold-start aggregate. Returns `{ settings, tasks: {tasks, limit, offset, has_more}, stats, projects: {projects, limit}, drafts: {drafts} }` in a single round trip; each field mirrors the corresponding per-endpoint wire shape. Default limits match [`readpolicy`](../../pkgs/tasks/handler/readpolicy/readpolicy.go) (`BootstrapListLimit` 20, `BootstrapProjectsLimit` 100, `BootstrapDraftsLimit` 50). Honors `ETag` / `If-None-Match` (`304` on match). 5xx on any sub-call failure; clients must tolerate absence and fall back to per-endpoint fan-out. |
@@ -183,6 +183,6 @@ Lossless reconnects via `Last-Event-ID`: a ring buffer (default 1024 entries) re
 
 Read-only GETs never publish. Failed writes never publish. Drafts (`/task-drafts/*`), task templates CRUD (`/task-templates` except instantiate), and `POST /settings/probe-cursor` are not part of the SSE surface.
 
-### Dev synthetic SSE (`T2A_SSE_TEST=1`)
+### Dev synthetic SSE (`HAMIX_SSE_TEST=1`)
 
-For local UI work, `taskapi` can start a background ticker (no extra routes). Set `T2A_SSE_TEST=1`; interval via `T2A_SSE_TEST_INTERVAL` (default `3s`; `0` disables). Tunables: `T2A_SSE_TEST_EVENTS_PER_TICK`, `T2A_SSE_TEST_SYNC_ROW`, `T2A_SSE_TEST_USER_RESPONSE`, `T2A_SSE_TEST_LIFECYCLE`, `T2A_SSE_TEST_LIFECYCLE_EVERY`. Never enable in production without intent. Source: `pkgs/tasks/devsim/`.
+For local UI work, `taskapi` can start a background ticker (no extra routes). Set `HAMIX_SSE_TEST=1`; interval via `HAMIX_SSE_TEST_INTERVAL` (default `3s`; `0` disables). Tunables: `HAMIX_SSE_TEST_EVENTS_PER_TICK`, `HAMIX_SSE_TEST_SYNC_ROW`, `HAMIX_SSE_TEST_USER_RESPONSE`, `HAMIX_SSE_TEST_LIFECYCLE`, `HAMIX_SSE_TEST_LIFECYCLE_EVERY`. Never enable in production without intent. Source: `pkgs/tasks/devsim/`.

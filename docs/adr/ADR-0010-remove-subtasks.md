@@ -1,5 +1,7 @@
 # ADR-0010: Remove Subtasks
 
+> **Note** - Product renamed T2A to Hamix; identifiers below reflect the name at decision time unless updated inline.
+
 **Date:** 2026-06-13
 **Status:** Accepted
 **Supersedes:** [ADR-0002](ADR-0002-flatten-task-hierarchy.md) (subtask-related rows), [ADR-0008](ADR-0008-dependency-satisfies-epic-scheduling.md), [ADR-0009](ADR-0009-awaiting-subtasks-status.md)

@@ -1,5 +1,6 @@
 # ADR-0024: Task Create Flow Vertical Slice (Frontend Decide vs Apply)
 
+> **Note** â€” Product renamed T2A â†’ Hamix; identifiers below reflect the name at decision time unless updated inline.
 > **Superseded in part (2026-06-20):** Draft task evaluation (create-modal Evaluate button, `POST /tasks/evaluate`, invariant I5) was removed. Historical invariant and race-test references below remain for context.
 
 **Date:** 2026-06-19

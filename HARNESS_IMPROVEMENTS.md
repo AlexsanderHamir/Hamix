@@ -2,7 +2,7 @@
 
 **Snapshot:** June 2026
 
-Ranked investment backlog for T2A’s **outer harness** (`pkgs/agents/harness`). Read [HARNESS_LANDSCAPE.md](HARNESS_LANDSCAPE.md) first for industry context; read [docs/domain/harness.md](docs/domain/harness.md) for operational behavior. Implement via ADR + vertical slice per [CONTRIBUTING.md](CONTRIBUTING.md) and [AGENTS.md](AGENTS.md).
+Ranked investment backlog for Hamix’s **outer harness** (`pkgs/agents/harness`). Read [HARNESS_LANDSCAPE.md](HARNESS_LANDSCAPE.md) first for industry context; read [docs/domain/harness.md](docs/domain/harness.md) for operational behavior. Implement via ADR + vertical slice per [CONTRIBUTING.md](CONTRIBUTING.md) and [AGENTS.md](AGENTS.md).
 
 > **How to use this doc** — Pick from the top when planning harness work. Re-score when product priorities shift. Each item includes effort, evidence, and a measurable success signal.
 >
@@ -177,7 +177,7 @@ Passes run against [HARNESS_LANDSCAPE.md](HARNESS_LANDSCAPE.md), [docs/domain/ha
 | --- | --- |
 | **Status** | Not started |
 | **ROI_score** | ~3.0 |
-| **Problem** | No explicit checklist of which ETCSLV components T2A implements vs delegates ([NanoHarness](https://github.com/HabitGraylight/NanoHarness) pattern). |
+| **Problem** | No explicit checklist of which ETCSLV components Hamix implements vs delegates ([NanoHarness](https://github.com/HabitGraylight/NanoHarness) pattern). |
 | **Proposed change** | Script or doc table auto-filled from config (runners, verify enabled, repo_root, metrics endpoint) — extends this backlog on each release. |
 | **Effort** | S |
 | **ETCSLV** | — (meta) |
@@ -278,7 +278,7 @@ These are **intentionally not near-term** per [HARNESS_LANDSCAPE.md](HARNESS_LAN
 | --- | --- | --- |
 | - [ ] Own inner tool loop / ACI (replace Cursor) | Deferred (V1) | XL effort; contradicts V1 delegation; Cursor owns E+T inner loop |
 | - [ ] Multi-agent coordinator + parallel implementors | Deferred (V1) | V1 single worker; queue and admission redesign required |
-| - [ ] PEVR DAG replan | Deferred (V1) | XL orchestration; T2A task model is flat prompt + criteria, not sub-task graphs |
+| - [ ] PEVR DAG replan | Deferred (V1) | XL orchestration; Hamix task model is flat prompt + criteria, not sub-task graphs |
 | - [x] Mid-CLI session resume | **Done (ADR-0031)** | [`docs/adr/ADR-0031-cursor-session-resume-default.md`](docs/adr/ADR-0031-cursor-session-resume-default.md), [`docs/domain/cursor-session-resume.md`](docs/domain/cursor-session-resume.md) |
 | - [ ] Multi-replica workers | Deferred (V1) | Documented not supported; races on cycles and queue |
 | - [ ] Per-task Firecracker / container sandbox | Deferred (V1) | XL ops; worktree (item 8) is lighter ROI first |
@@ -309,7 +309,7 @@ These are **intentionally not near-term** per [HARNESS_LANDSCAPE.md](HARNESS_LAN
 
 | Doc | Content |
 | --- | --- |
-| [HARNESS_LANDSCAPE.md](HARNESS_LANDSCAPE.md) | Industry patterns vs T2A |
+| [HARNESS_LANDSCAPE.md](HARNESS_LANDSCAPE.md) | Industry patterns vs Hamix |
 | [docs/domain/harness.md](docs/domain/harness.md) | Operational harness behavior |
 | [docs/domain/verify-agent.md](docs/domain/verify-agent.md) | Verify pipeline |
 | [docs/domain/runner-adapters.md](docs/domain/runner-adapters.md) | Inner loop delegation |

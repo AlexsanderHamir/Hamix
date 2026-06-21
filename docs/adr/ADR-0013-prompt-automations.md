@@ -1,5 +1,7 @@
 # ADR-0013: Prompt automations library and harness injection
 
+> **Note** - Product renamed T2A to Hamix; identifiers below reflect the name at decision time unless updated inline.
+
 **Date:** 2026-06-15  
 **Status:** Superseded (2026-06-20) — prompt automations removed; see commit removing `/automations`, `automation_selections`, and harness injection.  
 **Deciders:** T2A maintainers

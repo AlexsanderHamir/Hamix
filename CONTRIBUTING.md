@@ -1,4 +1,4 @@
-# Contributing to T2A
+# Contributing to Hamix
 
 Set up the repo, verify your change, and find the right documentation for learning or editing.
 
@@ -70,7 +70,7 @@ Pick **one** row. Do not read the whole tree.
 | I want to… | Start here |
 | --- | --- |
 | **Learn the project** — how docs fit together | [docs/guide.md](docs/guide.md) |
-| **Use T2A** — create tasks, write checklist criteria | [docs/execute-and-verify.md](docs/execute-and-verify.md) |
+| **Use Hamix** — create tasks, write checklist criteria | [docs/execute-and-verify.md](docs/execute-and-verify.md) |
 | **Edit code** — find a file or doc for a specific task | [AGENTS.md](AGENTS.md) § [Where to find X](AGENTS.md#where-to-find-x) |
 | **Edit code** — pick reading order for my kind of change | [AGENTS.md](AGENTS.md) § [Scoped paths](AGENTS.md#scoped-paths) |
 | **Look up routes, schema, or env vars** | [docs/api.md](docs/api.md), [docs/data-model.md](docs/data-model.md), [docs/configuration.md](docs/configuration.md) |
@@ -84,7 +84,7 @@ Vertical slice (domain → store → handler → optional web): follow [AGENTS.m
 | Symptom | Fix |
 | --- | --- |
 | Full reload on `/tasks/<id>` shows raw JSON | Restart Vite; see `web/vite.config.ts` HTML bypass for `/tasks` proxy |
-| SSE connected but Updates timeline empty | `T2A_SSE_TEST=1` in `.env`, restart `taskapi` — [docs/configuration.md](docs/configuration.md) |
+| SSE connected but Updates timeline empty | `HAMIX_SSE_TEST=1` in `.env`, restart `taskapi` — [docs/configuration.md](docs/configuration.md) |
 | Fetch / EventSource errors | Confirm `taskapi` on `:8080` and dev script running |
 | No repository for file search | Set **Workspace repository** in SPA Settings — [docs/domain/workspace-repo.md](docs/domain/workspace-repo.md) |
 | Tests fail with database errors | Use `internal/tasktestdb/` (SQLite); gate real Postgres with `//go:build integration` |

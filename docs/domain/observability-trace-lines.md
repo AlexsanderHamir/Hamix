@@ -21,7 +21,7 @@ Structured log trace-line contract enforced by `cmd/funclogmeasure` on productio
 
 ## Overview
 
-T2A enforces a **trace-line contract** on named functions in production Go code: every function must either emit structured logs, delegate to trace infrastructure, match a structural boilerplate exemption, or carry an explicit co-located opt-out. CI runs `go run ./cmd/funclogmeasure -enforce` after tests (see `scripts/check-go.sh` / `.github/workflows/ci.yml`).
+Hamix enforces a **trace-line contract** on named functions in production Go code: every function must either emit structured logs, delegate to trace infrastructure, match a structural boilerplate exemption, or carry an explicit co-located opt-out. CI runs `go run ./cmd/funclogmeasure -enforce` after tests (see `scripts/check-go.sh` / `.github/workflows/ci.yml`).
 
 The contract keeps operation boundaries visible in logs (`call_path`, `helper.io`, stable operation keys) without requiring `slog` in every pure helper or hot-path accessor.
 

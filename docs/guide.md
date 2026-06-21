@@ -1,6 +1,6 @@
 # Documentation guide
 
-How T2A documentation is organized and which articles to read for your goal.
+How Hamix documentation is organized and which articles to read for your goal.
 
 | | |
 | --- | --- |
@@ -19,7 +19,7 @@ How T2A documentation is organized and which articles to read for your goal.
 
 ## Overview
 
-T2A docs are grouped by **purpose**, not by a single reading order. Reference articles answer “what is exposed or stored.” Overview and domain articles answer “how it behaves.” Implementation articles answer “how to change it.”
+Hamix docs are grouped by **purpose**, not by a single reading order. Reference articles answer “what is exposed or stored.” Overview and domain articles answer “how it behaves.” Implementation articles answer “how to change it.”
 
 > **Note** — Read one [learning path](#choose-a-learning-path) below. Open additional articles only when your task requires them.
 
@@ -60,7 +60,7 @@ Pick **one** row. Follow links left to right. Stop when you have enough context 
 
 | Goal | Read in order |
 | --- | --- |
-| **Use T2A** — create tasks and write criteria | 1. [execute-and-verify.md](./execute-and-verify.md) → 2. [done-criteria.md](./domain/done-criteria.md) (optional) |
+| **Use Hamix** — create tasks and write criteria | 1. [execute-and-verify.md](./execute-and-verify.md) → 2. [done-criteria.md](./domain/done-criteria.md) (optional) |
 | **Understand the system** | 1. [architecture.md](./architecture.md) → 2. [data-model.md](./data-model.md) → 3. [api.md](./api.md) (skim routes) |
 | **Work on the API or store** | 1. Understand the system (above) → 2. [AGENTS.md](../AGENTS.md) scoped paths → 3. [persistence.md](./domain/persistence.md) as needed |
 | **Work on the web UI** | 1. [web.md](./web.md) → 2. [architecture.md](./architecture.md) — SSE / live updates only |

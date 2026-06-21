@@ -311,7 +311,7 @@ docs/
 ├── architecture.md             # System overview: components, persistence, worker, SSE
 ├── data-model.md               # Tasks, projects, cycles/phases, checklist, dependencies
 ├── api.md                      # REST + SSE endpoint surface (handler godoc is authoritative)
-├── configuration.md            # Every T2A_* env var + app_settings DB row
+├── configuration.md            # Every HAMIX_* env var + app_settings DB row
 ├── web.md                      # SPA architecture
 ├── (see CONTRIBUTING.md at repo root)  # Setup, PR checklist, doc routing
 └── adr/
@@ -348,7 +348,7 @@ What was decided? State it precisely.
 ### Documentation Rules
 
 - Every public HTTP route must appear in `docs/api.md` before the handler is merged.
-- Every `T2A_*` env variable used in code must appear in `docs/configuration.md`.
+- Every `HAMIX_*` env variable used in code must appear in `docs/configuration.md`.
 - Any change that alters observable behavior (status codes, JSON fields, SSE event names) requires a doc update in the same commit.
 - Write an ADR when: a structural decision affects more than one package, a technology is added or removed, or a team disagreed during review.
 
@@ -578,7 +578,7 @@ When a file hits Red during review, complete this before splitting:
 
 **Documentation violations:**
 - Do not merge a new public route without updating `docs/api.md`.
-- Do not add a `T2A_*` env variable without updating `docs/configuration.md`.
+- Do not add a `HAMIX_*` env variable without updating `docs/configuration.md`.
 - Do not make a structural change affecting multiple packages without an ADR.
 
 ---

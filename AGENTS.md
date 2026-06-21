@@ -110,7 +110,7 @@ Intent-based lookup. For subsystem inventory, use [docs/agent-map.md](docs/agent
 | Structured logs / `request_id` | `pkgs/tasks/logctx/`, `pkgs/tasks/calltrace/` |
 | Fix `funclogmeasure -enforce` failure | [docs/domain/observability-trace-lines.md](docs/domain/observability-trace-lines.md) |
 | Match a failing request in logs | [CONTRIBUTING.md](CONTRIBUTING.md#stuck) |
-| Dev SSE ticker for local UI | `pkgs/tasks/devsim/`, `T2A_SSE_TEST` in [docs/configuration.md](docs/configuration.md) |
+| Dev SSE ticker for local UI | `pkgs/tasks/devsim/`, `HAMIX_SSE_TEST` in [docs/configuration.md](docs/configuration.md) |
 | Why a design was chosen | [docs/adr/](docs/adr/) (not for day-to-day routes) |
 
 ### Engineering meta
@@ -152,7 +152,7 @@ Default tests must not require real Postgres, real outbound network, or a runnin
 - Do not add `fetch` to `web/src` components — use `web/src/api/`.
 - Do not rely on `taskapi` serving `web/dist`; production is static files + reverse proxy.
 - `GET /events` is SSE; `/health` is plain JSON — different clients.
-- Default per-IP rate limit is 120/min (`T2A_RATE_LIMIT_PER_MIN`); set **`0`** to disable locally.
+- Default per-IP rate limit is 120/min (`HAMIX_RATE_LIMIT_PER_MIN`); set **`0`** to disable locally.
 
 ## Full indexes
 

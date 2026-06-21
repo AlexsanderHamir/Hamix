@@ -27,7 +27,7 @@ How projects store durable shared memory, how tasks select a context bundle, and
 
 ## Overview
 
-**Project context** is T2A's first-class shared memory for long-running work. Operators curate facts, decisions, constraints, and handoff notes on a **project**; individual **tasks** opt into a subset via `project_context_item_ids`. When the worker runs execute, the harness renders that subset, wraps the composed task prompt, and **persists an immutable snapshot** (`task_context_snapshots`) before the runner starts.
+**Project context** is Hamix's first-class shared memory for long-running work. Operators curate facts, decisions, constraints, and handoff notes on a **project**; individual **tasks** opt into a subset via `project_context_item_ids`. When the worker runs execute, the harness renders that subset, wraps the composed task prompt, and **persists an immutable snapshot** (`task_context_snapshots`) before the runner starts.
 
 Mental model ([data-model.md](../data-model.md)):
 
@@ -310,7 +310,7 @@ No public GET route exposes this row today; tests and operators use store method
 
 ## Configuration
 
-Project context has no dedicated `T2A_*` env vars. Behavior is driven by task/project data and harness wiring:
+Project context has no dedicated `HAMIX_*` env vars. Behavior is driven by task/project data and harness wiring:
 
 | Knob | Source | Effect |
 | --- | --- | --- |

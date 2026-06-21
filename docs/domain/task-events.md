@@ -252,7 +252,7 @@ Authoritative enum: `pkgs/tasks/domain/enums.go`. Parser allowlist: `parseEventT
 
 | `EventType` | Notes |
 | --- | --- |
-| `sync_ping` | `T2A_SSE_TEST` dev ticker only; not production harness output |
+| `sync_ping` | `HAMIX_SSE_TEST` dev ticker only; not production harness output |
 
 ## Cycle and phase mirror rows
 

@@ -1,5 +1,7 @@
 # ADR-0006: Phase-Boundary Cycle Resume
 
+> **Note** - Product renamed T2A to Hamix; identifiers below reflect the name at decision time unless updated inline.
+
 **Date:** 2026-06-11
 **Status:** Accepted (execute commit **marker** policy superseded by [ADR-0014](ADR-0014-cycle-commit-tracking.md); phase-boundary resume model unchanged)
 **Deciders:** Engineering

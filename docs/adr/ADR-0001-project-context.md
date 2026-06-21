@@ -1,5 +1,7 @@
 # ADR-0001: Project Context In Taskapi
 
+> **Note** - Product renamed T2A to Hamix; identifiers below reflect the name at decision time unless updated inline.
+
 **Date:** 2026-04-26
 **Status:** Accepted
 **Deciders:** T2A maintainers

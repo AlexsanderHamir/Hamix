@@ -103,7 +103,7 @@ Three persistence layers cooperate:
 | Layer | Storage | Lifetime | Purpose |
 | --- | --- | --- | --- |
 | **Definitions** | `task_checklist_items`, `task_checklist_item_commands` | Until operator deletes | What "done" means |
-| **Ephemeral reports** | `<T2A_WORKER_REPORT_DIR>/<cycle_id>/` | GC at cycle terminate | Agent ↔ worker wire format |
+| **Ephemeral reports** | `<HAMIX_WORKER_REPORT_DIR>/<cycle_id>/` | GC at cycle terminate | Agent ↔ worker wire format |
 | **Durable ledger** | `task_checklist_completions`, `task_cycle_*_reports`, `task_cycle_command_runs` | Until task/cycle deleted | UI, audit, support |
 
 The worker runs verify inside [`runCycleLoop`](../../pkgs/agents/harness/cycle_loop.go) after a successful execute phase, **only when the task has ≥1 criterion** (`verificationSnapshot.enabled`). Harness orchestration (retry loop, `previouslyPassed`, termination): [harness.md](./harness.md). Zero-criteria legacy tasks skip verify; a successful execute alone completes the task via [`completeChecklistLegacy`](../../pkgs/agents/harness/verification.go).
@@ -248,7 +248,7 @@ Exposed on `GET /tasks/{id}/cycles/{cycleId}/verdicts`. Pre-verdict cycles retur
 | `verify_runner_name` | `app_settings` | `""` | Empty = verify uses execute runner. Non-empty = separate runner (probe failure demotes to execute runner with warn) |
 | `verify_runner_model` | `app_settings` | `""` | Optional model override for verify runner |
 | `verify_command_timeout_seconds` | `app_settings` | `120` | Wall-clock cap per shell verify command |
-| `T2A_WORKER_REPORT_DIR` | env | `<tmp>/t2a-worker` | Scratch root for report files (outside `repo_root`) |
+| `HAMIX_WORKER_REPORT_DIR` | env | `<tmp>/hamix-worker` | Scratch root for report files (outside `repo_root`) |
 | `repo_root` | `app_settings` | — | Working dir for execute + shell checks + verify integrity snapshot |
 
 See [configuration.md](../configuration.md) for validation rules and supervisor hot-reload behavior.

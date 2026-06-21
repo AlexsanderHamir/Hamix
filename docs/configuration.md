@@ -5,7 +5,7 @@ Two surfaces:
 - **Environment variables** — process-level knobs (logging, listen host, HTTP limits, agent queue capacity, idempotency cache). Authoritative source: `internal/taskapiconfig` and `pkgs/tasks/middleware`.
 - **`app_settings` DB row** — UI-driven runtime config (workspace repo, agent worker, runner, verify loop). Singleton row (`id=1`) authored from the SPA Settings page or `PATCH /settings`. Authoritative source: `pkgs/tasks/domain/app_settings.go`.
 
-The two surfaces do not overlap. Anything in `app_settings` is **not** driven by env vars (and historical env vars like `T2A_AGENT_WORKER_*` and `REPO_ROOT` are silently ignored).
+The two surfaces do not overlap. Anything in `app_settings` is **not** driven by env vars (and historical env vars like `HAMIX_AGENT_WORKER_*` and `REPO_ROOT` are silently ignored).
 
 ## Environment variables
 
@@ -14,29 +14,29 @@ The two surfaces do not overlap. Anything in `app_settings` is **not** driven by
 | Variable | Required | Default | Purpose |
 |---|---|---|---|
 | `DATABASE_URL` | Yes (after env load) | — | Postgres connection string for GORM. |
-| `T2A_LISTEN_HOST` | No | `127.0.0.1` | HTTP bind host. `0.0.0.0` for all interfaces. `taskapi -host` flag overrides. |
-| `T2A_API_TOKEN` | No | — | When set, `Authorization: Bearer <token>` required on every route except `/health*` and `/metrics`. |
-| `T2A_HTTP_REQUEST_TIMEOUT` | No | `30s` | Go duration. Request execution timeout for non-SSE routes via context deadline. `0` disables. `GET /events` is exempt. |
-| `T2A_LOG_DIR` | No | `./logs` | Directory for JSON log files. `taskapi -logdir` flag overrides. |
-| `T2A_LOG_LEVEL` | No | `info` | Minimum `slog` level (`debug` / `info` / `warn` / `error`). `taskapi -loglevel` flag overrides. |
-| `T2A_DISABLE_LOGGING` | No | — | `1`/`true`/`yes`/`on`: no JSONL file; only `slog.Error` to stderr. Same as `taskapi -disable-logging`. |
-| `T2A_GORM_SLOW_QUERY_MS` | No | `200` | Statements slower than this log at `Warn`. `0` disables slow-SQL branch. |
-| `T2A_RATE_LIMIT_PER_MIN` | No | `120` | Per-IP token bucket. `0` disables. Key is `RemoteAddr` host (no trusted `X-Forwarded-For`). Exempt: `/health*`, `/metrics`. Over limit: `429 rate limit exceeded` with `Retry-After: 60`. |
-| `T2A_IDEMPOTENCY_TTL` | No | `24h` | Idempotency cache TTL for `Idempotency-Key`. `0` disables. In-process only — not shared across replicas. |
-| `T2A_IDEMPOTENCY_MAX_ENTRIES` | No | `2048` | Max idempotency cache entries. `0` disables entry-count bounding. |
-| `T2A_IDEMPOTENCY_MAX_BYTES` | No | `8388608` (8 MiB) | Max idempotency cache memory. `0` disables byte bounding. |
-| `T2A_MAX_REQUEST_BODY_BYTES` | No | `1048576` (1 MiB) | Reject larger bodies with `413 request body too large`. `0` disables. |
-| `T2A_USER_TASK_AGENT_QUEUE_CAP` | No | `256` | Bounded depth of `pkgs/agents.MemoryQueue`. Not durable, not shared. See [domain/agent-queue.md](domain/agent-queue.md). |
-| `T2A_WORKER_REPORT_DIR` | No | `<os.TempDir()>/t2a-worker` | Worker-managed scratch root for the agent ↔ worker side-channel report files (`criteria-report.json`, `verify-report.json`). Lives outside `app_settings.repo_root` so customer working trees stay clean. The supervisor probes writability at startup; failure logs a `report_dir_not_writable` warn and the worker still starts (verify will fail loudly on the first run instead of silently). The per-cycle `<dir>/<cycle_id>/` subdirectory is GC'd at cycle terminate so disk use stays bounded. |
-| `T2A_SSE_TEST` | No | — | Dev: enable synthetic SSE ticker. See [api.md](./api.md). |
-| `T2A_SSE_TEST_*` | No | — | Dev tuning (interval, events per tick, lifecycle simulation). See [api.md](./api.md) and `.env.example`. |
+| `HAMIX_LISTEN_HOST` | No | `127.0.0.1` | HTTP bind host. `0.0.0.0` for all interfaces. `taskapi -host` flag overrides. |
+| `HAMIX_API_TOKEN` | No | — | When set, `Authorization: Bearer <token>` required on every route except `/health*` and `/metrics`. |
+| `HAMIX_HTTP_REQUEST_TIMEOUT` | No | `30s` | Go duration. Request execution timeout for non-SSE routes via context deadline. `0` disables. `GET /events` is exempt. |
+| `HAMIX_LOG_DIR` | No | `./logs` | Directory for JSON log files. `taskapi -logdir` flag overrides. |
+| `HAMIX_LOG_LEVEL` | No | `info` | Minimum `slog` level (`debug` / `info` / `warn` / `error`). `taskapi -loglevel` flag overrides. |
+| `HAMIX_DISABLE_LOGGING` | No | — | `1`/`true`/`yes`/`on`: no JSONL file; only `slog.Error` to stderr. Same as `taskapi -disable-logging`. |
+| `HAMIX_GORM_SLOW_QUERY_MS` | No | `200` | Statements slower than this log at `Warn`. `0` disables slow-SQL branch. |
+| `HAMIX_RATE_LIMIT_PER_MIN` | No | `120` | Per-IP token bucket. `0` disables. Key is `RemoteAddr` host (no trusted `X-Forwarded-For`). Exempt: `/health*`, `/metrics`. Over limit: `429 rate limit exceeded` with `Retry-After: 60`. |
+| `HAMIX_IDEMPOTENCY_TTL` | No | `24h` | Idempotency cache TTL for `Idempotency-Key`. `0` disables. In-process only — not shared across replicas. |
+| `HAMIX_IDEMPOTENCY_MAX_ENTRIES` | No | `2048` | Max idempotency cache entries. `0` disables entry-count bounding. |
+| `HAMIX_IDEMPOTENCY_MAX_BYTES` | No | `8388608` (8 MiB) | Max idempotency cache memory. `0` disables byte bounding. |
+| `HAMIX_MAX_REQUEST_BODY_BYTES` | No | `1048576` (1 MiB) | Reject larger bodies with `413 request body too large`. `0` disables. |
+| `HAMIX_USER_TASK_AGENT_QUEUE_CAP` | No | `256` | Bounded depth of `pkgs/agents.MemoryQueue`. Not durable, not shared. See [domain/agent-queue.md](domain/agent-queue.md). |
+| `HAMIX_WORKER_REPORT_DIR` | No | `<os.TempDir()>/hamix-worker` | Worker-managed scratch root for the agent ↔ worker side-channel report files (`criteria-report.json`, `verify-report.json`). Lives outside `app_settings.repo_root` so customer working trees stay clean. The supervisor probes writability at startup; failure logs a `report_dir_not_writable` warn and the worker still starts (verify will fail loudly on the first run instead of silently). The per-cycle `<dir>/<cycle_id>/` subdirectory is GC'd at cycle terminate so disk use stays bounded. |
+| `HAMIX_SSE_TEST` | No | — | Dev: enable synthetic SSE ticker. See [api.md](./api.md). |
+| `HAMIX_SSE_TEST_*` | No | — | Dev tuning (interval, events per tick, lifecycle simulation). See [api.md](./api.md) and `.env.example`. |
 
 Reconcile tick interval is fixed in code (`pkgs/agents.ReconcileTickInterval`, 2 minutes), not an env var.
 
 ### Startup sequence (`taskapi`)
 
-1. Resolve `.env` (repo-root or `-env`), overlay logging env vars first so `T2A_LOG_*` apply before the log file is opened, then `envload.Load` (requires `DATABASE_URL`).
-2. Open the log file (`taskapi-YYYY-MM-DD-HHMMSS-<nanos>.jsonl` under `T2A_LOG_DIR`). When `T2A_DISABLE_LOGGING` is set, only `slog.Error` goes to stderr (text handler).
+1. Resolve `.env` (repo-root or `-env`), overlay logging env vars first so `HAMIX_LOG_*` apply before the log file is opened, then `envload.Load` (requires `DATABASE_URL`).
+2. Open the log file (`taskapi-YYYY-MM-DD-HHMMSS-<nanos>.jsonl` under `HAMIX_LOG_DIR`). When `HAMIX_DISABLE_LOGGING` is set, only `slog.Error` goes to stderr (text handler).
 3. `postgres.Open` — GORM connection. Configures `database/sql` pool (max open/idle, lifetime). No startup `Ping`.
 4. `postgres.Migrate` — `AutoMigrate` for every domain model under `postgres.DefaultMigrateTimeout` (120s).
 5. `store.NewStore`, `(*store.Store).SetReadyTaskNotifier` (in-process queue), `(*store.Store).SetPickupWake` (deferred ready), `handler.NewSSEHub`.
@@ -84,7 +84,7 @@ Singleton row in Postgres (CHECK enforces `id=1`). AutoMigrate creates the table
 | `cursor_session_resume_enabled` | bool | `true` | When `false`, every `runner.Run` uses a fresh Cursor chat and full prompt compose (pre-ADR-0031 behavior). See [cursor-session-resume.md](domain/cursor-session-resume.md). |
 | `updated_at` | RFC3339 (response only) | server clock | Last successful upsert. SPA shows "last changed N ago". |
 
-> **Note** — Execute-phase git commits are **always required** when `repo_root` is a git worktree (clean tree + indexed ancestry before verify). The former `agent_commit_execute_work` toggle and `t2a:cycle=` message markers were removed in [ADR-0014](adr/ADR-0014-cycle-commit-tracking.md). See [domain/cycle-commits.md](domain/cycle-commits.md).
+> **Note** — Execute-phase git commits are **always required** when `repo_root` is a git worktree (clean tree + indexed ancestry before verify). The former `agent_commit_execute_work` toggle and legacy cycle markers message markers were removed in [ADR-0014](adr/ADR-0014-cycle-commit-tracking.md). See [domain/cycle-commits.md](domain/cycle-commits.md).
 
 ### Validation
 
@@ -132,26 +132,26 @@ The variables below are silently ignored if still present in `.env`. Move the va
 
 | Old env var | Replacement |
 |---|---|
-| `T2A_AGENT_WORKER_ENABLED` | Deprecated. The agent worker always starts; use the header pause toggle (`agent_paused`) for a runtime stop. |
-| `T2A_AGENT_WORKER_CURSOR_BIN` | `app_settings.cursor_bin`. |
-| `T2A_AGENT_WORKER_RUN_TIMEOUT` | `app_settings.max_run_duration_seconds` (default `0` = no limit, not 5m). |
-| `T2A_AGENT_WORKER_WORKING_DIR` | `app_settings.repo_root`. |
+| `HAMIX_AGENT_WORKER_ENABLED` | Deprecated. The agent worker always starts; use the header pause toggle (`agent_paused`) for a runtime stop. |
+| `HAMIX_AGENT_WORKER_CURSOR_BIN` | `app_settings.cursor_bin`. |
+| `HAMIX_AGENT_WORKER_RUN_TIMEOUT` | `app_settings.max_run_duration_seconds` (default `0` = no limit, not 5m). |
+| `HAMIX_AGENT_WORKER_WORKING_DIR` | `app_settings.repo_root`. |
 | `REPO_ROOT` | `app_settings.repo_root`. |
 
 ### Test-only override
 
-Real-cursor smoke tests honour `T2A_TEST_CURSOR_BIN` to point at a specific binary path. This is unrelated to production `app_settings.cursor_bin`; it only wires test runs.
+Real-cursor smoke tests honour `HAMIX_TEST_CURSOR_BIN` to point at a specific binary path. This is unrelated to production `app_settings.cursor_bin`; it only wires test runs.
 
 ## Metrics (`GET /metrics`)
 
 Prometheus scrape endpoint. Most series are stable; one label set needs operator awareness:
 
-### `t2a_agent_runs_by_model_total` cardinality
+### `hamix_agent_runs_by_model_total` cardinality
 
 The `model` label is not capped at the wire. Watch with:
 
 ```promql
-count({__name__="t2a_agent_runs_by_model_total"})
+count({__name__="hamix_agent_runs_by_model_total"})
 ```
 
-If it spikes, check for typos in `tasks.cursor_model` / `app_settings.cursor_model`, and cap label values at the scraper with `metric_relabel_configs`. The older `t2a_agent_runs_total{runner,terminal_status}` series is byte-identical to the pre-feature shape and always safe for alerting.
+If it spikes, check for typos in `tasks.cursor_model` / `app_settings.cursor_model`, and cap label values at the scraper with `metric_relabel_configs`. The older `hamix_agent_runs_total{runner,terminal_status}` series is byte-identical to the pre-feature shape and always safe for alerting.

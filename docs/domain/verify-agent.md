@@ -91,7 +91,7 @@ flowchart TD
   Decision -->|tampered| Terminal[verify_tampered terminal]
 ```
 
-Report files live under `T2A_WORKER_REPORT_DIR` (outside `repo_root`). The verify runner receives `WorkingDir` set to `repo_root` so it can inspect uncommitted changes via diff and file tools.
+Report files live under `HAMIX_WORKER_REPORT_DIR` (outside `repo_root`). The verify runner receives `WorkingDir` set to `repo_root` so it can inspect uncommitted changes via diff and file tools.
 
 ## Verification workflow
 
@@ -112,7 +112,7 @@ Report files live under `T2A_WORKER_REPORT_DIR` (outside `repo_root`). The verif
 The prompt is assembled in `runLLMVerifyAgent` ([`verification.go`](../../pkgs/agents/harness/verification.go)). Section order:
 
 1. Role line: verification agent; do not modify source files.
-2. Output path: write only the absolute path to `verify-report.json` (under `T2A_WORKER_REPORT_DIR`, not under `repo_root`).
+2. Output path: write only the absolute path to `verify-report.json` (under `HAMIX_WORKER_REPORT_DIR`, not under `repo_root`).
 3. JSON schema: `{"criteria":[{"id":"...","verified":true|false,"reasoning":"..."}]}`.
 4. **Locked passes** (retry only) — ids already verified; do not include in the report.
 5. **Active criteria** — For each non-locked criterion with `claimed_done: true`: `[id] text`, execute evidence string.
@@ -126,7 +126,7 @@ The prompt is assembled in `runLLMVerifyAgent` ([`verification.go`](../../pkgs/a
 
 ```text
 You are the verification agent. Do not modify source files.
-Write `/tmp/t2a-worker/cycle-abc123/verify-report.json` only.
+Write `/tmp/hamix-worker/cycle-abc123/verify-report.json` only.
 
 Schema: {"criteria":[{"id":"...","verified":true|false,"reasoning":"..."}]}
 
@@ -144,9 +144,9 @@ Schema: {"criteria":[{"id":"...","verified":true|false,"reasoning":"..."}]}
 Command: go test ./... -count=1
 Expected outcome: all tests pass with exit code 0
 exit_code=0 duration_ms=8421 truncated=false
-stdout: `/tmp/t2a-worker/cycle-abc123/checks/crit-002/0.stdout`
-stderr: `/tmp/t2a-worker/cycle-abc123/checks/crit-002/0.stderr`
-meta: `/tmp/t2a-worker/cycle-abc123/checks/crit-002/0.meta.json`
+stdout: `/tmp/hamix-worker/cycle-abc123/checks/crit-002/0.stdout`
+stderr: `/tmp/hamix-worker/cycle-abc123/checks/crit-002/0.stderr`
+meta: `/tmp/hamix-worker/cycle-abc123/checks/crit-002/0.meta.json`
 stdout preview:
 ```
 ok  	github.com/example/pkg/foo	0.012s
@@ -221,7 +221,7 @@ Durable index: `task_cycle_command_runs` (see [data-model.md](../data-model.md))
 | `task_cycle_command_runs` | Worker (mirror) | Durable |
 | `task_checklist_completions` | Worker | Written only on terminal cycle success |
 
-Report dir root: `T2A_WORKER_REPORT_DIR` (default `<os.TempDir()>/t2a-worker`). Per-cycle subdirs are created before verify and removed at terminate. See [ADR-0004](../adr/ADR-0004-verdicts-on-the-db.md).
+Report dir root: `HAMIX_WORKER_REPORT_DIR` (default `<os.TempDir()>/hamix-worker`). Per-cycle subdirs are created before verify and removed at terminate. See [ADR-0004](../adr/ADR-0004-verdicts-on-the-db.md).
 
 ## Integrity enforcement
 
@@ -242,7 +242,7 @@ When the working dir is not a git repo, the check is bypassed (logged once at st
 | `verify_max_retries` | Max execute↔verify loops per cycle (default 2) |
 | `verify_command_timeout_seconds` | Per-command wall clock (default 120s) |
 | `max_run_duration_seconds` | LLM verify call wall clock (`0` = no limit) |
-| `T2A_WORKER_REPORT_DIR` | Scratch root for report files and command evidence |
+| `HAMIX_WORKER_REPORT_DIR` | Scratch root for report files and command evidence |
 
 Verify prompts include a worker-indexed git context block from **`ListCommitsForTask(task_id)`** plus live `git diff HEAD`. See [cycle-commits.md](./cycle-commits.md).
 
@@ -255,7 +255,7 @@ Full reference: [configuration.md](../configuration.md).
 - **Independent command evidence** — Worker runs shell checks without relying on execute honesty.
 - **Git tamper detection** — Fail-safe: snapshot errors and any working-tree mutation during verify terminate the cycle.
 - **Retry efficiency** — Locked passes skip re-verification of settled criteria while preserving atomic completion.
-- **Observable** — Metrics (`t2a_verify_verdict_total`, phase duration, retries per cycle); DB verdict mirror; `verification_failed:<ids>` terminate reason.
+- **Observable** — Metrics (`hamix_verify_verdict_total`, phase duration, retries per cycle); DB verdict mirror; `verification_failed:<ids>` terminate reason.
 - **Inspects real changes** — Same repo root as execute; diff reflects uncommitted work execute produced.
 
 ## Limitations

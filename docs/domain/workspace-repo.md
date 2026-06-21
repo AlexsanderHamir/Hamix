@@ -21,7 +21,7 @@ How `app_settings.repo_root` gates the agent worker and `/repo/*`, how `pkgs/rep
 - [Task create and patch validation](#task-create-and-patch-validation)
 - [SPA @-mention workflow](#spa--mention-workflow)
 - [Shared working directory for agent runs](#shared-working-directory-for-agent-runs)
-- [Dedicated T2A worktree](#dedicated-t2a-worktree)
+- [Dedicated Hamix worktree](#dedicated-hamix-worktree)
 - [Wire contracts](#wire-contracts)
 - [Security boundaries](#security-boundaries)
 - [Configuration](#configuration)
@@ -31,7 +31,7 @@ How `app_settings.repo_root` gates the agent worker and `/repo/*`, how `pkgs/rep
 
 ## Overview
 
-T2A treats one filesystem directory as the **workspace repo**: the tree the operator edits in the SPA, the tree `@`-mentions in task prompts refer to, and the **working directory** for every execute and verify runner invocation. That path lives in `app_settings.repo_root` (configured from the SPA Settings page or `PATCH /settings`).
+Hamix treats one filesystem directory as the **workspace repo**: the tree the operator edits in the SPA, the tree `@`-mentions in task prompts refer to, and the **working directory** for every execute and verify runner invocation. That path lives in `app_settings.repo_root` (configured from the SPA Settings page or `PATCH /settings`).
 
 When `repo_root` is **empty**, the product deliberately degrades:
 
@@ -41,9 +41,9 @@ When `repo_root` is **empty**, the product deliberately degrades:
 
 When `repo_root` is **set**, `pkgs/repo.OpenRoot` validates the path, handlers and the worker share the same resolved root, and prompt mentions are checked against real files before tasks are saved.
 
-> **Important** — The workspace repo is **read-only over HTTP**. Mutations happen only when the execute agent (or the operator outside T2A) changes files on disk. T2A never exposes a write API for the workspace tree.
+> **Important** — The workspace repo is **read-only over HTTP**. Mutations happen only when the execute agent (or the operator outside Hamix) changes files on disk. Hamix never exposes a write API for the workspace tree.
 
-> **Note** — Per-cycle report files (`criteria-report.json`, `verify-report.json`, shell-check artifacts) live under `T2A_WORKER_REPORT_DIR`, **outside** `repo_root`, so customer working trees stay clean. See [execute-agent.md](./execute-agent.md) and [ADR-0004](../adr/ADR-0004-verdicts-on-the-db.md).
+> **Note** — Per-cycle report files (`criteria-report.json`, `verify-report.json`, shell-check artifacts) live under `HAMIX_WORKER_REPORT_DIR`, **outside** `repo_root`, so customer working trees stay clean. See [execute-agent.md](./execute-agent.md) and [ADR-0004](../adr/ADR-0004-verdicts-on-the-db.md).
 
 Schema for `initial_prompt`: [data-model.md](../data-model.md). HTTP routes and status codes: [api.md](../api.md) (Workspace repo section). Full `repo_root` field reference: [configuration.md](../configuration.md).
 
@@ -78,7 +78,7 @@ Schema for `initial_prompt`: [data-model.md](../data-model.md). HTTP routes and 
 
 | Actor | Role | Trust |
 | --- | --- | --- |
-| **Operator** | Sets `repo_root`, authors `initial_prompt` with `@`-mentions | Trusted to pick a path T2A may read and agents may modify |
+| **Operator** | Sets `repo_root`, authors `initial_prompt` with `@`-mentions | Trusted to pick a path Hamix may read and agents may modify |
 | **SPA** | Settings picker, mention autocomplete, inline range validation | Trusted client; must not bypass server validation |
 | **`pkgs/repo`** | Path containment, mention parse/validate, read-only preview | Trusted security boundary for filesystem access |
 | **HTTP handlers** | `/repo/*` read APIs; validate mentions on task writes | Trusted to map repo errors → HTTP status |
@@ -261,19 +261,19 @@ Every agent CLI invocation shares one directory: **`app_settings.repo_root`**.
 Properties:
 
 - **Sequential** — single worker goroutine; one cycle at a time per process. No per-task working directory isolation in V1.
-- **Dedicated worktree recommended** — point `repo_root` at a separate git worktree so operators can edit another checkout while agents run; see [Dedicated T2A worktree](#dedicated-t2a-worktree).
+- **Dedicated worktree recommended** — point `repo_root` at a separate git worktree so operators can edit another checkout while agents run; see [Dedicated Hamix worktree](#dedicated-hamix-worktree).
 - **Hot reload** — changing `repo_root` in Settings triggers supervisor reload and a new worker instance with the updated `WorkingDir` ([configuration.md](../configuration.md) lifecycle diagram).
-- **Not the report scratch dir** — `T2A_WORKER_REPORT_DIR` holds JSON side-channel files agents write by absolute path in the prompt, keeping `repo_root` clean for git integrity checks.
+- **Not the report scratch dir** — `HAMIX_WORKER_REPORT_DIR` holds JSON side-channel files agents write by absolute path in the prompt, keeping `repo_root` clean for git integrity checks.
 - **Commit hierarchy** — when `repo_root` is a git worktree, execute ingest records repo → worktree → branch → SHA rows in `task_cycle_commits` ([cycle-commits.md](./cycle-commits.md)).
 
 Tasks cannot run until `repo_root` is configured and valid — see [task-scheduling.md](./task-scheduling.md) for how ready tasks wait behind the supervisor gate and [agent-queue.md](./agent-queue.md) for queue behavior once the worker is running.
 
-## Dedicated T2A worktree
+## Dedicated Hamix worktree
 
 For day-to-day use, point `repo_root` at a **git worktree reserved for the agent**, not your primary checkout. The worker still runs execute and verify in that one directory; a separate worktree lets you keep editing elsewhere without tripping verify integrity checks or mixing agent commits with uncommitted local work.
 
 ```bash
-git worktree add ../myproject-t2a -b t2a-agent main
+git worktree add ../myproject-hamix -b hamix-agent main
 ```
 
 Set Settings → **Workspace repository** to the worktree path. Operator workflow: [execute-and-verify.md](../execute-and-verify.md#dedicated-worktree-recommended).
@@ -345,7 +345,7 @@ mention @pkg.go(1-999): line range 1-999 is past end of file (42 lines)
 
 ## Security boundaries
 
-T2A exposes operator-chosen host paths to the API process and agent CLIs. Boundaries are **containment and read-only HTTP**, not sandboxing.
+Hamix exposes operator-chosen host paths to the API process and agent CLIs. Boundaries are **containment and read-only HTTP**, not sandboxing.
 
 | Control | Implementation |
 | --- | --- |
@@ -356,7 +356,7 @@ T2A exposes operator-chosen host paths to the API process and agent CLIs. Bounda
 | **Search abuse limits** | Query/path/line param byte caps; search result count caps |
 | **Walk exclusions** | Skips `.git` and heavy vendor/cache trees to reduce accidental exposure surface and CPU |
 | **Legitimate `..` in filenames** | Component-based `..` rejection — names like `foo..bar.go` are allowed; traversal like `../etc/passwd` is not |
-| **Agent trust** | Execute/verify agents run with operator credentials on the host; T2A does not confine CLI file access beyond `WorkingDir` + runner env allowlist ([runner-adapters.md](./runner-adapters.md)) |
+| **Agent trust** | Execute/verify agents run with operator credentials on the host; Hamix does not confine CLI file access beyond `WorkingDir` + runner env allowlist ([runner-adapters.md](./runner-adapters.md)) |
 
 > **Important** — Setting `repo_root` to a sensitive directory (home folder, secrets vault) means agents and shell verify commands can read and modify anything the OS user can reach under that tree. Scope the workspace to the project checkout.
 
@@ -368,26 +368,26 @@ T2A exposes operator-chosen host paths to the API process and agent CLIs. Bounda
 | --- | --- | --- |
 | `repo_root` | `app_settings` | Workspace path; gates worker, `/repo/*`, mention validation |
 | `agent_paused` | `app_settings` | Worker idle when true — independent of repo, but no runs without dequeue |
-| `T2A_WORKER_REPORT_DIR` | env | Scratch for report JSON — **outside** `repo_root` |
-| `T2A_USER_TASK_AGENT_QUEUE_CAP` | env | Queue depth once worker is running — [agent-queue.md](./agent-queue.md) |
+| `HAMIX_WORKER_REPORT_DIR` | env | Scratch for report JSON — **outside** `repo_root` |
+| `HAMIX_USER_TASK_AGENT_QUEUE_CAP` | env | Queue depth once worker is running — [agent-queue.md](./agent-queue.md) |
 
 Deprecated env replacements ([configuration.md](../configuration.md)):
 
 | Old env | Replacement |
 | --- | --- |
-| `T2A_AGENT_WORKER_WORKING_DIR` | `app_settings.repo_root` |
+| `HAMIX_AGENT_WORKER_WORKING_DIR` | `app_settings.repo_root` |
 | `REPO_ROOT` | `app_settings.repo_root` |
 
 Validation on settings update: `repo_root` must not contain a NUL byte. Existence is checked at runtime, not on PATCH.
 
 ## Best practices
 
-- Set **Workspace repository** to a **dedicated git worktree** for agent runs when you also edit the project locally — see [Dedicated T2A worktree](#dedicated-t2a-worktree) and [execute-and-verify.md](../execute-and-verify.md#dedicated-worktree-recommended).
+- Set **Workspace repository** to a **dedicated git worktree** for agent runs when you also edit the project locally — see [Dedicated Hamix worktree](#dedicated-hamix-worktree) and [execute-and-verify.md](../execute-and-verify.md#dedicated-worktree-recommended).
 - If you must use your only checkout as `repo_root`, do not save or commit there during the verify phase.
 - Prefer **`GET /health/ready`** over `/repo/search?q=` for SPA mount probes — cheaper and matches orchestrator readiness.
 - Use **`@path(start-end)`** for large files so execute prompts stay focused; validate ranges in the editor before save.
 - After moving or cloning a repo, update Settings — stale `repo_root` surfaces as `workspace_repo: fail` and idle worker.
-- Keep report artifacts out of git: rely on `T2A_WORKER_REPORT_DIR` defaults rather than writing reports under `repo_root`.
+- Keep report artifacts out of git: rely on `HAMIX_WORKER_REPORT_DIR` defaults rather than writing reports under `repo_root`.
 - For local dev without agents, leave `repo_root` empty; task CRUD works without mention enforcement.
 
 ## Limitations

@@ -4,14 +4,14 @@
 
 Control plane for coding agents. Coordinates Cursor CLI, Claude Code, Codex, and other agentic systems.
 
-![T2A task board — structured tasks with status, priority, and acceptance criteria](assets/product_example.png)
+![Hamix task board — structured tasks with status, priority, and acceptance criteria](assets/product_example.png)
 
-## Why T2A Exists
+## Why Hamix exists
 
 To address the following problems and more:
 
 1. Chat-based interfaces introduce too much variability into software engineering.
-2. Developers already coordinate multiple AI agents manually. T2A makes that workflow explicit and repeatable.
+2. Developers already coordinate multiple AI agents manually. Hamix makes that workflow explicit and repeatable.
 3. Existing project management tools were designed for human teams, not AI-driven software engineering.
 
 ## Initial Features
@@ -24,7 +24,7 @@ To address the following problems and more:
 
 **Acceptance Criteria** —> Define what "done" means with checklists and optional verification commands.
 
-**Runner Adapters** —> Run T2A with different agentic systems.
+**Runner Adapters** —> Run Hamix with different agentic systems.
 
 ## Get started
 
@@ -53,7 +53,7 @@ Ctrl+C stops both.
 
 # Result
 
-T2A check (Go)
+Hamix check (Go)
 
 [1/5] gofmt                  ok 6s
 [2/5] go vet                 ok 8s
@@ -62,7 +62,7 @@ T2A check (Go)
 [5/5] funclogmeasure         ok 2s
 check OK  5/5 passed  35s
 
-T2A check (web)
+Hamix check (web)
 
 [1/4] web test               ok 22s
 [2/4] web lint               ok 5s  (4 warnings)

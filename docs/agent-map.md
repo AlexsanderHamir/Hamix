@@ -42,7 +42,7 @@ Repository paths grouped by subsystem. Read only the rows relevant to your task.
 | Request logging | `pkgs/tasks/logctx/`, `pkgs/tasks/calltrace/` | `request_id`, `log_seq`, `call_path` in logs | [observability-trace-lines.md](./domain/observability-trace-lines.md) |
 | JSON response helpers | `pkgs/tasks/apijson/` | Security headers, `WriteJSONError` | — |
 | HTTP middleware | `pkgs/tasks/middleware/`, `internal/taskapi/` | Middleware stack, server assembly | [middleware/README.md](../pkgs/tasks/middleware/README.md) |
-| Dev SSE simulation | `pkgs/tasks/devsim/` | `T2A_SSE_TEST` synthetic events for local UI | [api.md](./api.md), [configuration.md](./configuration.md) |
+| Dev SSE simulation | `pkgs/tasks/devsim/` | `HAMIX_SSE_TEST` synthetic events for local UI | [api.md](./api.md), [configuration.md](./configuration.md) |
 
 ## Web
 

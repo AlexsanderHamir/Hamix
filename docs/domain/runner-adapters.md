@@ -1,6 +1,6 @@
 # Runner adapters and registry
 
-How CLI runners plug into T2A: the `runner.Runner` contract, compile-time registration, optional capabilities, supervisor wiring, and HTTP discovery for the Settings UI.
+How CLI runners plug into Hamix: the `runner.Runner` contract, compile-time registration, optional capabilities, supervisor wiring, and HTTP discovery for the Settings UI.
 
 | | |
 | --- | --- |
@@ -224,8 +224,8 @@ Blank-import the new package in [`registry/all/all.go`](../../pkgs/agents/runner
 
 ```go
 import (
-    _ "github.com/AlexsanderHamir/T2A/pkgs/agents/runner/cursor"
-    _ "github.com/AlexsanderHamir/T2A/pkgs/agents/runner/myadapter"
+    _ "github.com/AlexsanderHamir/Hamix/pkgs/agents/runner/cursor"
+    _ "github.com/AlexsanderHamir/Hamix/pkgs/agents/runner/myadapter"
 )
 ```
 
@@ -318,7 +318,7 @@ Pinned JSON shape ([`runner.go`](../../pkgs/agents/runner/runner.go), [`runner_t
 | `prompt` | Harness-composed string | Never stored in DB — only `prompt_hash` of initial prompt |
 | `working_dir` | `app_settings.repo_root` | Shared across sequential runs |
 | `timeout_ns` | `max_run_duration_seconds` | `0` = no limit |
-| `env` | Adapter-specific allowlist | Caller must not pass secrets; adapters strip `DATABASE_URL` and `T2A_*` |
+| `env` | Adapter-specific allowlist | Caller must not pass secrets; adapters strip `DATABASE_URL` and `HAMIX_*` |
 | `cursor_model` | Settings / verify model | Legacy field name; forwarded to adapters that support model flags |
 | `OnProgress` | Worker-injected callback | Not serialized; live SSE only |
 
@@ -398,8 +398,8 @@ Supervisor reload triggers on successful `PATCH /settings`; changing runner-rela
 ## Best practices
 
 - **One `Run` = one phase attempt.** Do not hold CLI session state across harness retries; resume is prompt composition, not mid-CLI replay ([ADR-0006](../adr/ADR-0006-phase-boundary-resume.md)).
-- **Redact before return.** Authorization headers, cookies, `T2A_*` env assignments, and home paths belong out of persisted output.
-- **Strip secrets from child env unconditionally.** Even if the caller passes `DATABASE_URL` or `T2A_*` in `Request.Env`, adapters must drop them (Cursor documents the Windows passthrough incident in [`cursor/doc.go`](../../pkgs/agents/runner/cursor/doc.go)).
+- **Redact before return.** Authorization headers, cookies, `HAMIX_*` env assignments, and home paths belong out of persisted output.
+- **Strip secrets from child env unconditionally.** Even if the caller passes `DATABASE_URL` or `HAMIX_*` in `Request.Env`, adapters must drop them (Cursor documents the Windows passthrough incident in [`cursor/doc.go`](../../pkgs/agents/runner/cursor/doc.go)).
 - **Implement capabilities honestly.** Missing `Prober` means probe endpoints return 501 — acceptable for non-CLI runners, not for CLIs operators must validate.
 - **Keep hot-path methods pure.** `EffectiveModel`, `MetricsLabels`, and `CycleMeta` run on every cycle; no I/O.
 - **Document argv and output format in package `doc.go`.** Domain articles link there; do not duplicate CLI wire formats in this file.

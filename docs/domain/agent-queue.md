@@ -32,7 +32,7 @@ When a task row is committed in **`status=ready`**, the store may push a **full 
 
 The queue is:
 
-- **Bounded** — default capacity 256 (`T2A_USER_TASK_AGENT_QUEUE_CAP`)
+- **Bounded** — default capacity 256 (`HAMIX_USER_TASK_AGENT_QUEUE_CAP`)
 - **Non-blocking for producers** — full buffer returns `ErrQueueFull`; the DB commit still succeeds
 - **Volatile** — lost on process crash; **reconcile** refills from Postgres on startup and every 2 minutes
 - **Deduped by task id** — at most one pending entry per id via the `pending` set
@@ -225,7 +225,7 @@ Full scheduling fields: [data-model.md](../data-model.md) (`pickup_not_before`).
 
 | Knob | Default | Reference |
 | --- | --- | --- |
-| `T2A_USER_TASK_AGENT_QUEUE_CAP` | 256 | [configuration.md](../configuration.md) |
+| `HAMIX_USER_TASK_AGENT_QUEUE_CAP` | 256 | [configuration.md](../configuration.md) |
 | `agent_pickup_delay_seconds` | app_settings | Default deferral on create when client omits pickup |
 | `pickup_not_before` | per task | Operator or worker-set deferral |
 | Reconcile tick | 2m | `ReconcileTickInterval` in code |

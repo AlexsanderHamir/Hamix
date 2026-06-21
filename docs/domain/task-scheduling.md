@@ -32,7 +32,7 @@ The four predicates that decide when a `ready` task may run, how the store unblo
 
 ## Overview
 
-T2A separates **when a task is allowed to run** (scheduling predicates on the task row) from **how work reaches the worker** (in-memory queue, pickup wake, reconcile). A task must pass four checks before the agent harness starts a cycle. Different code paths apply different subsets of those checks at different layers.
+Hamix separates **when a task is allowed to run** (scheduling predicates on the task row) from **how work reaches the worker** (in-memory queue, pickup wake, reconcile). A task must pass four checks before the agent harness starts a cycle. Different code paths apply different subsets of those checks at different layers.
 
 Scheduling answers: *"Is this `ready` row eligible for agent pickup right now?"* Delivery answers: *"Has a snapshot of this task been offered to the single worker goroutine?"* Those are related but not identical — a task can be enqueued and still be rejected at admission; conversely, a fully eligible task may wait until reconcile or pickup wake enqueues it.
 
@@ -348,7 +348,7 @@ Reconcile enqueues candidates that are not already pending in `MemoryQueue`. Thi
 | --- | --- | --- |
 | `agent_pickup_delay_seconds` | `5` | [configuration.md](../configuration.md) — default `pickup_not_before` on create when client omits pickup |
 | `pickup_not_before` | per task | Operator or worker `deferTaskPickup` (~60s on failed admission) |
-| `T2A_USER_TASK_AGENT_QUEUE_CAP` | `256` | Queue capacity — [agent-queue.md](./agent-queue.md), [configuration.md](../configuration.md) |
+| `HAMIX_USER_TASK_AGENT_QUEUE_CAP` | `256` | Queue capacity — [agent-queue.md](./agent-queue.md), [configuration.md](../configuration.md) |
 | Reconcile tick | `2m` | Fixed `ReconcileTickInterval` — backstop for gate release and missed notify |
 
 Worker process enabled when `app_settings.repo_root` is set and agent not paused — supervisor in [runner-adapters.md](./runner-adapters.md).

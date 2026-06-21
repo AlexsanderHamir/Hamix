@@ -55,7 +55,7 @@ Schema and table definitions: [data-model.md](../data-model.md) (Checklist). HTT
 | --- | --- |
 | **InitialPrompt** | Operator-authored rich text on the task row (`initial_prompt`); base input to composition. |
 | **Composed prompt** | String built by `composeExecutePrompt` before project-context wrapping. |
-| **Report dir** | `T2A_WORKER_REPORT_DIR/<cycle_id>/` — outside the git repo; holds `criteria-report.json`. |
+| **Report dir** | `HAMIX_WORKER_REPORT_DIR/<cycle_id>/` — outside the git repo; holds `criteria-report.json`. |
 | **Self-claim** | `claimed_done` + `evidence` in the criteria report; assertion only, not final acceptance. |
 | **Locked criterion** | Passed on a prior verify attempt in the same cycle; listed as "Already verified (do not re-do)". |
 | **prompt_hash** | SHA-256 of **InitialPrompt only** (not the composed prompt), stored in `task_cycles.meta_json`. |
@@ -157,7 +157,7 @@ Always required in git worktrees ([ADR-0014](../adr/ADR-0014-cycle-commit-tracki
 
 - Prompt includes `## Git commits (required)` when the execute worktree is a git repo.
 - The agent must commit all work that satisfies claimed criteria before finishing execute.
-- List every commit SHA and branch in `criteria-report.json` under `commits` — **no** `t2a:` markers in commit messages.
+- List every commit SHA and branch in `criteria-report.json` under `commits` — **no** ID markers in commit messages.
 - Create **new commits only**; never amend, rebase, or rewrite SHAs from this cycle.
 - **Agent-claimed ingest (ADR-0032):** after runner exit the harness ingests SHAs from `criteria-report.json` `commits[]` via `cat-file` + `git log`. Hygiene (empty claims, dirty tree, rewritten history) does **not** fail execute — additive-only policy is enforced in prompts and verify.
 - Do not push.
@@ -184,13 +184,13 @@ On retry, only **active** (non-locked) criterion ids must appear in the report.
 
 Before you finish this execute phase, commit all work that satisfies criteria you are claiming.
 List every commit SHA and branch in `criteria-report.json` under `commits`.
-Use normal descriptive commit messages only — do not embed task IDs or `t2a:` markers.
+Use normal descriptive commit messages only — do not embed task IDs or ID markers.
 Create new commits only; do not push.
 
 ## Done criteria (required)
 
 You must satisfy every criterion below. When finished, write a JSON report at:
-`/tmp/t2a-worker/cycle-abc123/criteria-report.json`
+`/tmp/hamix-worker/cycle-abc123/criteria-report.json`
 
 Schema: {"criteria":[{"id":"<id>","claimed_done":true,"evidence":"..."}],"commits":[{"sha":"...","branch":"main"}]}
 
@@ -216,7 +216,7 @@ On verify retry, a `## Previous verification feedback` block is appended at the 
 | `criteria[].claimed_done` | Execute agent | Self-assertion; verify gates on this |
 | `criteria[].evidence` | Execute agent | ≤ 16 KB per field |
 
-Path: `<T2A_WORKER_REPORT_DIR>/<cycle_id>/criteria-report.json`. The prompt renders this as an **absolute** path outside `repo_root` so the agent CLI does not dirty the operator's working tree.
+Path: `<HAMIX_WORKER_REPORT_DIR>/<cycle_id>/criteria-report.json`. The prompt renders this as an **absolute** path outside `repo_root` so the agent CLI does not dirty the operator's working tree.
 
 Parser rules ([`criteria_parse.go`](../../pkgs/agents/harness/criteria_parse.go)):
 
@@ -275,7 +275,7 @@ Execute-specific resume prompts tell the agent to inspect the working tree (and 
 | `cursor_model` | `app_settings` | Default model when task has no override |
 | Task `cursor_model` | task row | Per-run model override forwarded to runner |
 | `max_run_duration_seconds` | `app_settings` | Wall-clock cap on execute (and verify LLM) runs; `0` = no limit |
-| `T2A_WORKER_REPORT_DIR` | env | Scratch root for `criteria-report.json` |
+| `HAMIX_WORKER_REPORT_DIR` | env | Scratch root for `criteria-report.json` |
 | `project_id` + `project_context_item_ids` | task row | Project context snapshot for the cycle |
 
 See [configuration.md](../configuration.md) for validation rules and supervisor hot-reload behavior.

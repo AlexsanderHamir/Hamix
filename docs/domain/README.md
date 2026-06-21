@@ -1,6 +1,6 @@
 # Domain documentation
 
-Behavioral deep-dives for T2A subsystems: actors, workflows, wire contracts, design rationale, and known limits. Use these articles when you need to understand *why* production code behaves a certain way—not when you need table schemas or HTTP routes.
+Behavioral deep-dives for Hamix subsystems: actors, workflows, wire contracts, design rationale, and known limits. Use these articles when you need to understand *why* production code behaves a certain way—not when you need table schemas or HTTP routes.
 
 ## About this series
 

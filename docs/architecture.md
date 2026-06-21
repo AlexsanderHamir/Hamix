@@ -153,7 +153,7 @@ In-memory ring buffer keyed by monotonic event id. Deep dive: [domain/sse-hub.md
 
 Bounded in-memory FIFO for the agent worker. Deep dives: [domain/agent-queue.md](domain/agent-queue.md) (queue mechanics), [domain/task-scheduling.md](domain/task-scheduling.md) (readiness predicates, enqueue vs admission).
 
-`pkgs/agents` ships `domain.Task` snapshots into a bounded in-memory FIFO (`MemoryQueue`, default depth **256**, configurable via `T2A_USER_TASK_AGENT_QUEUE_CAP`).
+`pkgs/agents` ships `domain.Task` snapshots into a bounded in-memory FIFO (`MemoryQueue`, default depth **256**, configurable via `HAMIX_USER_TASK_AGENT_QUEUE_CAP`).
 
 - After a successful commit that leaves a task `ready`, `Store.notifyReadyTask` enqueues a snapshot. If the queue is full, the mutation still succeeds (the notify failure is `Warn`-logged).
 - `PickupWakeScheduler` defers enqueue when `pickup_not_before` is in the future. Startup `Hydrate` reloads deferred rows.
@@ -231,8 +231,8 @@ Errors must wrap one of `runner.ErrTimeout`, `runner.ErrNonZeroExit`, `runner.Er
 ### Cursor adapter
 
 - Invocation: `cursor --print --output-format stream-json`. Prompt fed on stdin. Working directory is `app_settings.repo_root`. Timeout is `app_settings.max_run_duration_seconds` (`0` = no limit).
-- Env allowlist (`cursor.defaultPassthroughEnvKeys`): curated `PATH` / home keys plus required non-secret Windows process keys. `DATABASE_URL` and any `T2A_*` key are scrubbed unconditionally.
-- Redaction (`cursor.Redact`): `Authorization: …` and cookies, `T2A_…=value` assignments, absolute home paths rewritten to `~`.
+- Env allowlist (`cursor.defaultPassthroughEnvKeys`): curated `PATH` / home keys plus required non-secret Windows process keys. `DATABASE_URL` and any `HAMIX_*` key are scrubbed unconditionally.
+- Redaction (`cursor.Redact`): `Authorization: …` and cookies, `HAMIX_…=value` assignments, absolute home paths rewritten to `~`.
 - Live progress: `stream-json` lines are read line-by-line and normalized into `runner.ProgressEvent`, published as ephemeral `agent_run_progress` SSE frames (not persisted in `task_events`).
 - Startup probe: `cursor --version` runs once per supervisor reload. Probe failure logs an error and exits the worker (fail-loud per the engineering bar). The worker is not started without a successful probe.
 
@@ -253,9 +253,9 @@ Idempotent: no-op on a clean DB. Skipped when the worker is disabled.
 
 1. The SSE hub is in RAM, single-process. Load balancers can split `/events` from the instance that handles writes; multiple replicas do not share subscribers.
 2. SSE delivery is best-effort: the per-subscriber buffer is bounded and slow clients are evicted with a `resync` frame.
-3. No authentication or authorization beyond optional bearer token (`T2A_API_TOKEN`); `X-Actor` is labeling, not identity proof.
-4. Per-IP HTTP rate limiting is in-memory per process (`T2A_RATE_LIMIT_PER_MIN`); replicas do not share state. `RemoteAddr` is the only client key (no trusted `X-Forwarded-For`).
-5. Request bodies cap at 1 MiB by default (`T2A_MAX_REQUEST_BODY_BYTES`).
+3. No authentication or authorization beyond optional bearer token (`HAMIX_API_TOKEN`); `X-Actor` is labeling, not identity proof.
+4. Per-IP HTTP rate limiting is in-memory per process (`HAMIX_RATE_LIMIT_PER_MIN`); replicas do not share state. `RemoteAddr` is the only client key (no trusted `X-Forwarded-For`).
+5. Request bodies cap at 1 MiB by default (`HAMIX_MAX_REQUEST_BODY_BYTES`).
 6. `Idempotency-Key` is honored only inside a single `taskapi` process.
 7. Schema evolution is `AutoMigrate` only — no versioned migration files.
 8. List ordering is fixed (`id ASC`); no sort or filter query parameters beyond `after_id` keyset paging.

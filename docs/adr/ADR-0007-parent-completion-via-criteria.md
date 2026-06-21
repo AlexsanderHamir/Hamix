@@ -1,5 +1,7 @@
 # ADR-0007: Parent Completion via Done Criteria (Not Subtask Rollup)
 
+> **Note** - Product renamed T2A to Hamix; identifiers below reflect the name at decision time unless updated inline.
+
 **Date:** 2026-06-12
 **Status:** Superseded by [ADR-0008](ADR-0008-dependency-satisfies-epic-scheduling.md)
 **Deciders:** T2A maintainers

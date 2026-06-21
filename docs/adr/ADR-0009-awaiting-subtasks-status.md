@@ -1,5 +1,7 @@
 # ADR-0009: `awaiting_subtasks` Status for Parent Epic Lifecycle
 
+> **Note** - Product renamed T2A to Hamix; identifiers below reflect the name at decision time unless updated inline.
+
 **Date:** 2026-06-12
 **Status:** Superseded by [ADR-0010](ADR-0010-remove-subtasks.md)
 **Supersedes:** [ADR-0008](ADR-0008-dependency-satisfies-epic-scheduling.md) item #6 (harness transition)

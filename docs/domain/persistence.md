@@ -68,7 +68,7 @@ Package overview: [`doc.go`](../../pkgs/tasks/store/doc.go). File map: [`README.
 | **Audit mirror** | Append-only `task_events` rows for the seven cycle/phase event types; non-interactive (no user PATCH) |
 | **`event_seq` backlink** | `task_cycle_phases.event_seq` → latest mirror `task_events.seq` for that phase transition |
 | **Verdict tables** | `task_cycle_criteria_reports`, `task_cycle_verify_reports` — durable per-criterion evidence |
-| **Report files** | Ephemeral `criteria-report.json` / `verify-report.json` under `T2A_WORKER_REPORT_DIR` |
+| **Report files** | Ephemeral `criteria-report.json` / `verify-report.json` under `HAMIX_WORKER_REPORT_DIR` |
 | **`…InTx` helper** | Exported function accepting `*gorm.DB` tx so sibling subpackages compose multi-table writes atomically |
 
 ### Authority split (reads)

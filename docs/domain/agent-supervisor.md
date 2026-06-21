@@ -35,7 +35,7 @@ In-process lifecycle owner for the single worker goroutine: settings-driven boot
 
 The **agent worker supervisor** (`agentworker.Supervisor` in [`internal/taskapi/agentworker`](../../internal/taskapi/agentworker/)) sits between HTTP Settings handlers and the in-process [`worker.Worker`](../../pkgs/agents/worker/worker.go). It reads the singleton `app_settings` row, decides whether a worker should run, builds runners through [`registry`](../../pkgs/agents/runner/registry/), spawns one consumer goroutine, and swaps that incarnation on material config changes without restarting `taskapi`.
 
-Configuration is **DB-driven**, not env-driven for worker behavior. Legacy `T2A_AGENT_WORKER_*` variables are ignored; operators use the SPA Settings page or `PATCH /settings` ([configuration.md](../configuration.md)).
+Configuration is **DB-driven**, not env-driven for worker behavior. Legacy `HAMIX_AGENT_WORKER_*` variables are ignored; operators use the SPA Settings page or `PATCH /settings` ([configuration.md](../configuration.md)).
 
 > **Important** — The reconcile loop and ready-task queue always start with `taskapi`. The supervisor only gates the **worker goroutine** that drains the queue. A paused or mis-probed worker does not stop reconciliation or enqueue from the store.
 
@@ -125,7 +125,7 @@ The supervisor never enqueues tasks. After boot, [`agents.RunReconcileLoop`](../
 
 [`startReadyTaskAgents`](../../cmd/taskapi/run_agentworker.go) runs during `buildTaskAPIApp` ([`run_helpers.go`](../../cmd/taskapi/run_helpers.go)) **before** the HTTP server accepts traffic:
 
-1. **Queue** — `agents.NewMemoryQueue(cap)` where `cap` = `taskapiconfig.UserTaskAgentQueueCap()` (default 256, env `T2A_USER_TASK_AGENT_QUEUE_CAP`).
+1. **Queue** — `agents.NewMemoryQueue(cap)` where `cap` = `taskapiconfig.UserTaskAgentQueueCap()` (default 256, env `HAMIX_USER_TASK_AGENT_QUEUE_CAP`).
 2. **Notifier wiring** — `taskStore.SetReadyTaskNotifier(agentQueue)`.
 3. **Pickup wake** — `agents.NewPickupWakeScheduler` + `SetPickupWake` + `Hydrate(ctx)` for deferred `pickup_not_before`.
 4. **Reconcile loop** — background goroutine with `agents.ReconcileTickInterval` (fixed **2 minutes**, not env-configurable).
@@ -287,8 +287,8 @@ Resolved by [`taskapiconfig.WorkerReportDir()`](../../internal/taskapiconfig/env
 
 | Source | Path |
 | --- | --- |
-| `T2A_WORKER_REPORT_DIR` (trimmed) | Operator override |
-| Default | `<os.TempDir()>/t2a-worker` |
+| `HAMIX_WORKER_REPORT_DIR` (trimmed) | Operator override |
+| Default | `<os.TempDir()>/hamix-worker` |
 
 Before spawn, `ensureWorkerReportDirWritable`:
 
@@ -402,8 +402,8 @@ Env vars the supervisor path reads directly:
 
 | Variable | Role |
 | --- | --- |
-| `T2A_USER_TASK_AGENT_QUEUE_CAP` | Queue depth at boot ([agent-queue.md](./agent-queue.md)) |
-| `T2A_WORKER_REPORT_DIR` | Report scratch root |
+| `HAMIX_USER_TASK_AGENT_QUEUE_CAP` | Queue depth at boot ([agent-queue.md](./agent-queue.md)) |
+| `HAMIX_WORKER_REPORT_DIR` | Report scratch root |
 
 Reconcile tick interval and queue cap defaults are **not** supervisor-owned; see [agent-queue.md](./agent-queue.md#configuration).
 

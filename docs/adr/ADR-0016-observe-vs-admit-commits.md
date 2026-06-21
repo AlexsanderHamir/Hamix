@@ -1,5 +1,7 @@
 # ADR-0016: Observe-vs-admit commit statuses
 
+> **Note** - Product renamed T2A to Hamix; identifiers below reflect the name at decision time unless updated inline.
+
 **Date:** 2026-06-18
 **Status:** Superseded by [ADR-0032](./ADR-0032-agent-claimed-commit-index.md)
 **Deciders:** Engineering

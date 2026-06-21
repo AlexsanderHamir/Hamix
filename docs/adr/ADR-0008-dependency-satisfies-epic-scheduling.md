@@ -1,5 +1,7 @@
 # ADR-0008: Dependency Edge Satisfies + Epic Completion Rollup
 
+> **Note** - Product renamed T2A to Hamix; identifiers below reflect the name at decision time unless updated inline.
+
 **Date:** 2026-06-12
 **Status:** Superseded by [ADR-0010](ADR-0010-remove-subtasks.md)
 **Supersedes:** [ADR-0007](ADR-0007-parent-completion-via-criteria.md)

@@ -41,6 +41,9 @@ type Task struct {
 	// PendingRetry holds operator retry intent between POST /retry and worker
 	// pickup. Not exposed on the public task API (json:"-").
 	PendingRetry *PendingRetry `json:"-" gorm:"column:pending_retry;serializer:json;type:jsonb"`
+	// CreatedAt is hydrated from the seq=1 task_created audit row on read;
+	// not a tasks-table column.
+	CreatedAt *time.Time `json:"created_at,omitempty" gorm:"-"`
 
 	Project *Project `json:"-" gorm:"foreignKey:ProjectID;references:ID;constraint:OnDelete:SET NULL"`
 }

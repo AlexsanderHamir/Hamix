@@ -87,6 +87,10 @@
   width: 6.25rem;
 }
 
+.task-list-col-created {
+  width: 7rem;
+}
+
 .task-list-col-project {
   width: 9.5rem;
 }
@@ -448,10 +452,25 @@
 }
 
 .cell-priority,
+.cell-created,
 .cell-project,
 .cell-status,
 .cell-actions {
   vertical-align: middle;
+}
+
+.cell-created {
+  font-size: var(--text-sm);
+  color: var(--text-secondary);
+  white-space: nowrap;
+}
+
+.cell-created time {
+  cursor: default;
+}
+
+.task-list-created-empty {
+  color: var(--text-tertiary);
 }
 
 .cell-pill--priority-table {

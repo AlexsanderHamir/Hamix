@@ -33,6 +33,7 @@ function task(
     checklist_inherit: true,
     tags: [],
     depends_on: [],
+    created_at: ISO,
     ...opt,
   };
 }

@@ -16,6 +16,9 @@ import { TaskListDeleteGlyph, TaskListEditGlyph } from "./TaskListRowActionIcons
 import { statusListLabel, taskListRowSubtitle } from "./taskListRowSubtitle";
 import { previewTextFromPrompt } from "../../../task-prompt";
 import { projectBadgeToneFromId } from "../../../projectBadgeTone";
+import { formatInAppTimezone, useAppTimezone } from "@/shared/time/appTimezone";
+import { formatRelativeTime } from "@/shared/time/relativeTime";
+import { useNow } from "@/shared/useNow";
 import {
   EmptyState,
   EmptyStateFilterGlyph,
@@ -412,6 +415,7 @@ function TaskListTableHeader({
         <th scope="col">Title</th>
         <th scope="col">Status</th>
         <th scope="col">Priority</th>
+        <th scope="col">Created</th>
         {showProjectColumn ? <th scope="col">Project</th> : null}
         <th scope="col">Actions</th>
       </tr>
@@ -538,6 +542,14 @@ function TaskListDataTableRow({
     .join(" ");
   const taskHref = `/tasks/${t.id}`;
   const onIntent = isExiting ? undefined : () => prefetchTaskDetail(t.id);
+  const appTimezone = useAppTimezone();
+  const now = useNow({ intervalMs: 60_000 });
+  const createdLabel = t.created_at
+    ? formatRelativeTime(t.created_at, new Date(now))
+    : "";
+  const createdTitle = t.created_at
+    ? formatInAppTimezone(t.created_at, appTimezone)
+    : undefined;
 
   return (
     <tr
@@ -610,6 +622,15 @@ function TaskListDataTableRow({
         <span className={priorityPillClass(t.priority)}>
           {priorityListLabel(t.priority)}
         </span>
+      </td>
+      <td className="cell-created">
+        {createdLabel ? (
+          <time dateTime={t.created_at} title={createdTitle}>
+            {createdLabel}
+          </time>
+        ) : (
+          <span className="task-list-created-empty">—</span>
+        )}
       </td>
       {showProjectColumn ? (
         <td className="cell-project">
@@ -684,7 +705,7 @@ export function TaskListDataTable({
 
   const showSelectionCol = Boolean(selection);
   const colSpan =
-    (showSelectionCol ? 1 : 0) + 4 + (showProjectColumn ? 1 : 0);
+    (showSelectionCol ? 1 : 0) + 5 + (showProjectColumn ? 1 : 0);
   return (
     <div className="table-wrap task-list-table-wrap">
       <table className="task-list-table" aria-busy={refreshing}>
@@ -694,6 +715,7 @@ export function TaskListDataTable({
           <col className="task-list-col-title" />
           <col className="task-list-col-status" />
           <col className="task-list-col-priority" />
+          <col className="task-list-col-created" />
           {showProjectColumn ? <col className="task-list-col-project" /> : null}
           <col className="task-list-col-actions" />
         </colgroup>

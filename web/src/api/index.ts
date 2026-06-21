@@ -6,6 +6,7 @@ export * from "./tasks";
 export * from "./cycles";
 export * from "./projects";
 export * from "./settings";
+export * from "./settingsBrowse";
 export * from "./runners";
 export * from "./rum";
 export * from "./bootstrap";

@@ -1,3 +1,4 @@
+import { useState } from "react";
 import type { UseQueryResult } from "@tanstack/react-query";
 import { useMemo } from "react";
 import { MutationErrorBanner } from "@/shared/MutationErrorBanner";
@@ -16,6 +17,7 @@ import {
   type SettingsStatus,
 } from "./settingsForm";
 import { DEFAULT_VERIFY_MAX_RETRIES } from "@/types/task";
+import { WorkspaceDirPickerModal } from "./WorkspaceDirPickerModal";
 
 type HandleField = <K extends keyof SettingsFormState>(
   key: K,
@@ -119,11 +121,12 @@ export function WorkspaceWarning() {
       </svg>
       <div className="settings-banner-body">
         <p className="settings-banner-title">
-          <strong>Workspace not configured.</strong>
+          <strong>Agent workspace not configured.</strong>
         </p>
         <p className="settings-banner-text">
-          Set the repository root in <strong>Workspace</strong> below to enable
-          the agent worker, file mentions, and the <code>/repo/*</code> endpoints.
+          Choose the project folder agents should work in under{" "}
+          <strong>Agent workspace</strong> below to enable the worker, file
+          mentions, and <code>/repo/*</code> endpoints.
         </p>
       </div>
     </div>
@@ -169,22 +172,57 @@ export function WorkspaceSettingsSection({
   form: SettingsFormState;
   onField: HandleField;
 }) {
+  const [pickerOpen, setPickerOpen] = useState(false);
+  const [advancedOpen, setAdvancedOpen] = useState(false);
+  const repoRoot = form.repoRoot.trim();
+
   return (
-    <SectionCard id={SECTION_IDS.workspace} title="Workspace">
-      <label className="settings-field">
-        <span className="settings-field-label">Repository root</span>
-        <input
-          type="text"
-          value={form.repoRoot}
-          onChange={(e) => onField("repoRoot", e.target.value)}
-          placeholder="/Users/me/code/my-project"
-          spellCheck={false}
-          autoComplete="off"
-        />
-      </label>
-      <p className="settings-field-help">
-        Absolute path. Empty disables repo features until you pick a workspace.
+    <SectionCard id={SECTION_IDS.workspace} title="Agent workspace">
+      <p className="settings-section-lead">
+        Folder agents edit, commit, and verify against.
       </p>
+
+      <div className="workspace-picker-control">
+        <button
+          type="button"
+          className="btn-primary workspace-picker-open"
+          onClick={() => setPickerOpen(true)}
+        >
+          Choose project folder
+        </button>
+        {repoRoot !== "" ? (
+          <p className="workspace-selected-path" title={repoRoot}>
+            <span className="workspace-selected-path-label">Selected</span>
+            <code className="workspace-selected-path-value">{repoRoot}</code>
+          </p>
+        ) : (
+          <p className="settings-field-help">No folder selected yet.</p>
+        )}
+      </div>
+
+      <details
+        className="settings-learn-more workspace-advanced-path"
+        open={advancedOpen}
+        onToggle={(e) => setAdvancedOpen(e.currentTarget.open)}
+      >
+        <summary>Advanced: type path manually</summary>
+        <label className="settings-field">
+          <span className="settings-field-label">Repository root path</span>
+          <input
+            type="text"
+            value={form.repoRoot}
+            onChange={(e) => onField("repoRoot", e.target.value)}
+            placeholder="/path/to/your/project"
+            spellCheck={false}
+            autoComplete="off"
+          />
+        </label>
+        <p className="settings-field-help">
+          Absolute path on the machine where taskapi runs. Prefer{" "}
+          <strong>Choose project folder</strong> above.
+        </p>
+      </details>
+
       <details className="settings-learn-more">
         <summary>What reads this path?</summary>
         <p>
@@ -192,6 +230,13 @@ export function WorkspaceSettingsSection({
           <code>@file</code> mentions all resolve paths against this root.
         </p>
       </details>
+
+      <WorkspaceDirPickerModal
+        open={pickerOpen}
+        currentPath={form.repoRoot}
+        onClose={() => setPickerOpen(false)}
+        onSelect={(path) => onField("repoRoot", path)}
+      />
     </SectionCard>
   );
 }

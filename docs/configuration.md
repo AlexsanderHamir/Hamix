@@ -44,6 +44,8 @@ The two surfaces do not overlap. Anything in `app_settings` is **not** driven by
 
 | Variable | Default | Purpose |
 | --- | --- | --- |
+| `HAMIX_HOST_HOME` | Host `HOME` / `USERPROFILE` (Docker Compose only) | Host path bind-mounted to `/host-home` in [compose.yml](../compose.yml) so the workspace folder picker can browse projects without per-repo compose edits. Optional override when full home is too broad (e.g. narrow to `C:/Users/me/projects`). |
+| `HAMIX_BROWSE_ROOTS` | — | Comma-separated absolute paths. When set, **replaces** default picker roots (install + home). For CI or restricted deployments. |
 | `DEV_TASKAPI_PORT` | `8080` | Non-default API port when using `scripts/dev.*`. Set `VITE_TASKAPI_ORIGIN` in `web/.env.local` to match. |
 | `VITE_TASKAPI_ORIGIN` | `http://127.0.0.1:8080` | Vite dev proxy target (`web/` only). See [web.md](./web.md). |
 | `VITE_UI_TEST_MODE` | — | When `true`/`1`, demo JSON for some GET routes (layouts without DB seed). Mutations still hit taskapi. Settings → UI test mode. |
@@ -97,7 +99,7 @@ Singleton row in Postgres (CHECK enforces `id=1`). AutoMigrate creates the table
 |---|---|---|---|
 | `agent_paused` | bool | `false` | Operator-facing soft pause exposed as a one-click toggle in the SPA header chip. The agent worker always starts at boot; pause is the only "stop dequeuing" knob. Idle reason: `paused_by_operator`. Surfaces in `GET /system/health`. |
 | `runner` | string | `"cursor"` | Identifier from `pkgs/agents/runner/registry`. Production: `cursor`. Scaffold: `claude-code` (registered but not production-ready). See [domain/runner-adapters.md](domain/runner-adapters.md). |
-| `repo_root` | string | `""` | Absolute path to the workspace the worker and `/repo/*` operate against. **Empty = not configured**: supervisor stays idle, repo routes respond `409 repo_root_not_configured`, `@`-mention validation is skipped. See [domain/workspace-repo.md](domain/workspace-repo.md). |
+| `repo_root` | string | `""` | Absolute path to the workspace the worker and `/repo/*` operate against. Set from Settings → **Agent workspace** → **Choose project folder** (stored as the absolute path taskapi sees). **Empty = not configured**: supervisor stays idle, repo routes respond `409 repo_root_not_configured`, `@`-mention validation is skipped. See [domain/workspace-repo.md](domain/workspace-repo.md). |
 | `cursor_bin` | string | `""` | Cursor CLI binary path. Empty = `PATH` lookup of `cursor`. Absolute paths pin a build. |
 | `cursor_model` | string | `""` | Optional Cursor model forwarded to the runner. Empty = omit the model flag (Cursor uses account default). |
 | `max_run_duration_seconds` | int (≥0) | `0` | Per-run wall-clock cap on `runner.Request.Timeout`. `0` = no limit. |

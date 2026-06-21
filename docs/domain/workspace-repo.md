@@ -31,7 +31,7 @@ How `app_settings.repo_root` gates the agent worker and `/repo/*`, how `pkgs/rep
 
 ## Overview
 
-Hamix treats one filesystem directory as the **workspace repo**: the tree the operator edits in the SPA, the tree `@`-mentions in task prompts refer to, and the **working directory** for every execute and verify runner invocation. That path lives in `app_settings.repo_root` (configured from the SPA Settings page or `PATCH /settings`).
+Hamix treats one filesystem directory as the **workspace repo**: the tree the operator picks in Settings → **Agent workspace**, the tree `@`-mentions in task prompts refer to, and the **working directory** for every execute and verify runner invocation. That path lives in `app_settings.repo_root` (chosen via the folder picker or `PATCH /settings`).
 
 When `repo_root` is **empty**, the product deliberately degrades:
 
@@ -125,6 +125,8 @@ At a high level:
 4. When a ready task is dequeued, the harness runs agents with **`WorkingDir`** pinned to the same directory.
 
 ## Configuration gate
+
+Operators set `repo_root` from Settings → **Agent workspace** → **Choose project folder**. The SPA calls `GET /settings/workspace-roots` and `GET /settings/browse-dirs` (no `repo_root` required). Defaults: **Home** (user home on native; `/host-home` in Docker) and **Hamix checkout** (install root). The saved value remains an absolute path in `app_settings.repo_root`.
 
 `repo_root` is the single switch for workspace-aware behavior. Effects are consistent across HTTP, readiness, and the worker.
 

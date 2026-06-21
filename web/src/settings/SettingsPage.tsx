@@ -46,7 +46,7 @@ import "./settings.css";
  * SettingsSections.tsx.
  */
 const SETTINGS_NAV_ITEMS: SettingsNavItem[] = [
-  { id: SECTION_IDS.workspace, label: "Workspace" },
+  { id: SECTION_IDS.workspace, label: "Agent workspace" },
   { id: SECTION_IDS.cursorAgent, label: "Runner" },
   { id: SECTION_IDS.phases, label: "Phases" },
   { id: SECTION_IDS.display, label: "Display" },

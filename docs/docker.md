@@ -61,7 +61,7 @@ Press Ctrl+C to stop. Run `docker compose down` to remove the container.
 | Piece | Role |
 | --- | --- |
 | [docker/Dockerfile.dev](../docker/Dockerfile.dev) | Toolchain image: Go 1.25, Node 20, PowerShell (for web standards check) |
-| [compose.yml](../compose.yml) | Mounts the repo, loads `.env`, publishes ports 8080 and 5173 |
+| [compose.yml](../compose.yml) | Mounts the repo at `/app`, host home at `/host-home`, loads `.env`, publishes ports 8080 and 5173 |
 | [docker/dev-entrypoint.sh](../docker/dev-entrypoint.sh) | Validates `DATABASE_URL`, then runs your command |
 | [scripts/dev.sh](../scripts/dev.sh) | Same script as native dev; Compose passes `--host 0.0.0.0 --vite-host 0.0.0.0` so the browser on your machine can reach the servers |
 
@@ -109,6 +109,12 @@ taskapi writes JSON lines to **`./logs/`** by default (`HAMIX_LOG_DIR` unset). I
 
 `docker compose logs` shows the foreground process (mostly Vite). For taskapi request traces, open the JSON files under **`logs/`** on the host.
 
+## Agent workspace (folder picker)
+
+Docker bind-mounts your host home directory to **`/host-home`** (via `${HOME:-${USERPROFILE}}` in [compose.yml](../compose.yml)). In Settings → **Agent workspace** → **Choose project folder**, pick any project under **Home** (`/host-home/...`) or **Hamix checkout** (`/app`). Agent file edits under that path appear on your host immediately.
+
+Optional: set `HAMIX_HOST_HOME` in `.env` to mount a narrower folder instead of full home — see [configuration.md](./configuration.md).
+
 ## Running checks
 
 Same bar as [CONTRIBUTING.md § Before you open a PR](../CONTRIBUTING.md#before-you-open-a-pr), inside the container:
@@ -141,11 +147,13 @@ After changes to [docker/Dockerfile.dev](../docker/Dockerfile.dev) or to refresh
 | DB connection refused from container | Use `host.docker.internal` if DB is on the host |
 | Port 8080 or 5173 in use | Stop native `./scripts/dev.sh` or other listeners |
 | Vite hot reload stalls (Windows + Docker) | Set `CHOKIDAR_USEPOLLING=true` in `.env` |
+| `workspace_repo: fail` after picking a folder | Saved `repo_root` may be a path from another environment (e.g. Windows path while running in Docker). Re-pick under **Agent workspace**. |
+| Folder picker shows only `/app` | Home mount failed — check Docker file sharing and that `HOME` / `USERPROFILE` is set on the host |
 | `permission denied` on entrypoint | Ensure [docker/dev-entrypoint.sh](../docker/dev-entrypoint.sh) is executable, or run `git update-index --chmod=+x docker/dev-entrypoint.sh` |
 
 ## Known limitations
 
-- **Agent execution** (Cursor CLI, workspace repo path) is configured in the SPA **Settings** page and runs against paths on your **host**. Docker covers API/web development and PR checks, not running Cursor inside the container unless you configure that separately.
+- **Cursor CLI in Docker** — workspace selection and `/repo/*` work in Docker; running the execute agent still requires Cursor CLI where taskapi runs. The dev image does not include Cursor today — use native taskapi for full agent runs, or install Cursor in the container separately.
 
 ## See also
 

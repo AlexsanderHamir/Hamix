@@ -12,6 +12,7 @@ services:
       - "host.docker.internal:host-gateway"
     volumes:
       - .:/app
+      - ${HAMIX_HOST_HOME:-${HOME:-${USERPROFILE}}}:/host-home
       - dev_node_modules:/app/web/node_modules
       - go_mod_cache:/go/pkg/mod
     ports:

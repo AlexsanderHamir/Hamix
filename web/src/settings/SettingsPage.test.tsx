@@ -35,6 +35,13 @@ function stubListCursorModelsFetch(
   };
 }
 
+/** Open the advanced repo path field in Agent workspace settings. */
+async function openAdvancedRepoInput() {
+  await screen.findByRole("button", { name: /Choose project folder/i });
+  await userEvent.click(await screen.findByText(/Advanced: type path manually/i));
+  return screen.findByLabelText(/Repository root path/i);
+}
+
 function defaultSettings(overrides: Partial<Record<string, unknown>> = {}) {
   return {
     agent_paused: false,
@@ -113,8 +120,7 @@ describe("SettingsPage", () => {
     }));
 
     renderPage();
-    const repoInput = await screen.findByLabelText(/Repository root/);
-    expect(repoInput).toHaveValue("/Users/me/code/example");
+    expect(await screen.findByText("/Users/me/code/example")).toBeInTheDocument();
     expect(screen.getByLabelText(/^CLI path$/)).toHaveValue(
       "/usr/local/bin/cursor-agent",
     );
@@ -224,7 +230,7 @@ describe("SettingsPage", () => {
 
     renderPage();
     expect(
-      await screen.findByText(/Workspace not configured/i),
+      await screen.findByText(/Agent workspace not configured/i),
     ).toBeInTheDocument();
   });
 
@@ -248,7 +254,7 @@ describe("SettingsPage", () => {
       }));
 
     renderPage();
-    const repoInput = await screen.findByLabelText(/Repository root/);
+    const repoInput = await openAdvancedRepoInput();
     await userEvent.clear(repoInput);
     await userEvent.type(repoInput, "/var/repos/new");
 
@@ -284,7 +290,7 @@ describe("SettingsPage", () => {
       );
 
       renderPage();
-      const repoInput = await screen.findByLabelText(/Repository root/);
+      const repoInput = await openAdvancedRepoInput();
       await userEvent.clear(repoInput);
       await userEvent.type(repoInput, "/var/repos/new");
       await userEvent.click(screen.getByRole("button", { name: /Save changes/ }));
@@ -419,7 +425,7 @@ describe("SettingsPage", () => {
     }));
 
     renderPage();
-    const repoInput = await screen.findByLabelText(/Repository root/);
+    const repoInput = await openAdvancedRepoInput();
     await userEvent.clear(repoInput);
     await userEvent.type(repoInput, "/var/repos/new");
 
@@ -464,7 +470,7 @@ describe("SettingsPage", () => {
     );
 
     renderPage();
-    const repoInput = await screen.findByLabelText(/Repository root/);
+    const repoInput = await openAdvancedRepoInput();
     await userEvent.clear(repoInput);
     await userEvent.type(repoInput, "/var/repos/new");
 
@@ -528,7 +534,7 @@ describe("SettingsPage", () => {
     );
 
     renderPage();
-    const repoInput = await screen.findByLabelText(/Repository root/);
+    const repoInput = await openAdvancedRepoInput();
     await userEvent.clear(repoInput);
     await userEvent.type(repoInput, "/var/repos/A");
 

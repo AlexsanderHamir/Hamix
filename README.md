@@ -4,23 +4,6 @@
 
 ![T2A task board — structured tasks with status, priority, and acceptance criteria](assets/product_example.png)
 
-<table>
-  <tr>
-    <td width="50%"><img src="assets/task_view_1.png" alt="Done criteria with per-item verification" width="100%"/></td>
-    <td width="50%"><img src="assets/task_view_2.png" alt="Execution cycles and linked commits" width="100%"/></td>
-  </tr>
-  <tr>
-    <td align="center"><sub>Acceptance criteria & verification</sub></td>
-    <td align="center"><sub>Recorded attempts & commits</sub></td>
-  </tr>
-  <tr>
-    <td colspan="2"><img src="assets/attempt_view.png" alt="Attempt detail with execute and verify phases plus activity log" width="100%"/></td>
-  </tr>
-  <tr>
-    <td colspan="2" align="center"><sub>Attempt view — phased execution with tool calls and audit events</sub></td>
-  </tr>
-</table>
-
 ---
 ## Why T2A Exists
 

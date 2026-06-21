@@ -45,12 +45,12 @@ Agent and workspace settings are in the web UI at `/settings` — see [docs/conf
 
 ## Before you run tasks
 
-Read [docs/execute-and-verify.md](docs/execute-and-verify.md) before creating tasks or writing done criteria.
-
 - Every task runs an **execute** agent and a **verify** agent.
 - The worker runs **one task at a time** — you can queue many, but they run sequentially.
 - Do not edit, commit, or checkout files in the workspace repo during **verify**. Git changes there end the cycle as `verify_tampered` (no retry).
-- Point **Workspace repository** at a **dedicated git worktree** so you can keep working in your main checkout — [details](docs/execute-and-verify.md#dedicated-worktree-recommended).
+- Point **Workspace repository** at a **dedicated git worktree** so you can keep working in your main checkout — [why?](docs/execute-and-verify.md#dedicated-worktree-recommended).
+
+Read [docs/execute-and-verify.md](docs/execute-and-verify.md) for mroe details.
 
 ## Docs
 

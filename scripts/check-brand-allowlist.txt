@@ -1,0 +1,4 @@
+# Paths excluded from check-brand forbidden-pattern scans.
+# One path prefix per line (repo-relative, forward slashes).
+# Historical ADRs may reference retired product identifiers.
+docs/adr/

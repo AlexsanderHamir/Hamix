@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# T2A Go verification — source of truth for the CI backend job.
+# Hamix Go verification — source of truth for the CI backend job.
 #
 # Steps: gofmt, go vet, scheduling boundary, go test, funclogmeasure
 #
@@ -36,15 +36,15 @@ while [[ $# -gt 0 ]]; do
   esac
 done
 
-CHECK_BANNER="T2A check (Go)"
+CHECK_BANNER="Hamix check (Go)"
 CHECK_SECTION="go"
 CHECK_START=$SECONDS
 STEP=0
 PASSED=0
 if [[ "$SKIP_FUNCLOG" -eq 0 ]]; then
-  TOTAL=5
+  TOTAL=6
 else
-  TOTAL=4
+  TOTAL=5
 fi
 
 # shellcheck source=check-lib.sh
@@ -115,7 +115,7 @@ run_go_test() {
   local label="go test"
   local start=$SECONDS
   local log
-  log="$(mktemp "${TMPDIR:-/tmp}/t2a-check.XXXXXX")"
+  log="$(mktemp "${TMPDIR:-/tmp}/hamix-check.XXXXXX")"
 
   step_prefix
   printf '%s ' "$label"
@@ -158,6 +158,7 @@ run_go_test() {
 }
 
 print_banner
+run_cmd "check-brand" bash "$(dirname "$0")/check-brand.sh"
 step_gofmt
 run_cmd "go vet" go vet ./...
 step_scheduling_boundary

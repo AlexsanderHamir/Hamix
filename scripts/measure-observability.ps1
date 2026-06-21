@@ -13,7 +13,7 @@ $prof = Join-Path $repo "coverage-observability.out"
 go test ./... -coverprofile=$prof -count=1
 
 # Capture stdout only (avoid 2>&1 here: stderr as ErrorRecord breaks Select-String).
-$coverTmp = Join-Path ([IO.Path]::GetTempPath()) "t2a-cover-func-$PID.txt"
+$coverTmp = Join-Path ([IO.Path]::GetTempPath()) "hamix-cover-func-$PID.txt"
 go tool cover "-func=$prof" | Set-Content -LiteralPath $coverTmp -Encoding utf8
 $coverFunc = Get-Content -LiteralPath $coverTmp
 Remove-Item -LiteralPath $coverTmp -ErrorAction SilentlyContinue

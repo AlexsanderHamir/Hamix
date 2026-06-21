@@ -1,7 +1,7 @@
 # Shared step runner for check-go.sh and check-web.sh.
 # Sourced from repo root after cd. Not executed directly.
 
-: "${CHECK_BANNER:=T2A check}"
+: "${CHECK_BANNER:=Hamix check}"
 : "${CHECK_SECTION:=go}"
 : "${VERBOSE:=0}"
 : "${STEP:=0}"
@@ -79,7 +79,7 @@ run_capture() {
   shift
   local start=$SECONDS
   local log
-  log="$(mktemp "${TMPDIR:-/tmp}/t2a-check.XXXXXX")"
+  log="$(mktemp "${TMPDIR:-/tmp}/hamix-check.XXXXXX")"
 
   step_prefix
   printf '%s ' "$label"

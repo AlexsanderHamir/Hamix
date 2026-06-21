@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# T2A web verification — source of truth for the CI web job.
+# Hamix web verification — source of truth for the CI web job.
 #
 # Steps: npm ci (--install), web test, web lint, web standards, web build
 #
@@ -41,13 +41,13 @@ if [[ ! -f web/package.json ]]; then
   exit 1
 fi
 
-CHECK_BANNER="T2A check (web)"
+CHECK_BANNER="Hamix check (web)"
 CHECK_SECTION="web"
 CHECK_START=$SECONDS
 STEP=0
 PASSED=0
-TOTAL=4
-[[ "$INSTALL" -eq 1 ]] && TOTAL=5
+TOTAL=5
+[[ "$INSTALL" -eq 1 ]] && TOTAL=6
 
 # shellcheck source=check-lib.sh
 source "$(dirname "$0")/check-lib.sh"
@@ -72,7 +72,7 @@ run_web_test() {
   local label="web test"
   local start=$SECONDS
   local log
-  log="$(mktemp "${TMPDIR:-/tmp}/t2a-check.XXXXXX")"
+  log="$(mktemp "${TMPDIR:-/tmp}/hamix-check.XXXXXX")"
   local reporter_args=(--run)
   if [[ "$VERBOSE" != "1" ]]; then
     reporter_args+=(--reporter=basic)
@@ -122,7 +122,7 @@ run_web_lint() {
   local label="web lint"
   local start=$SECONDS
   local log
-  log="$(mktemp "${TMPDIR:-/tmp}/t2a-check.XXXXXX")"
+  log="$(mktemp "${TMPDIR:-/tmp}/hamix-check.XXXXXX")"
 
   step_prefix
   printf '%s ' "$label"
@@ -165,6 +165,7 @@ run_web_lint() {
 }
 
 print_banner
+run_cmd "check-brand" bash "$(dirname "$0")/check-brand.sh"
 
 if [[ "$INSTALL" -eq 1 ]]; then
   run_cmd "npm ci" bash -c 'cd web && npm ci'

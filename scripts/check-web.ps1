@@ -1,4 +1,4 @@
-# T2A web verification — source of truth for the CI web job.
+# Hamix web verification — source of truth for the CI web job.
 #
 # Steps: npm ci (-Install), web test, web lint, web standards, web build
 #
@@ -35,7 +35,7 @@ if (-not (Test-Path (Join-Path $webDir "package.json"))) {
 $CheckStart = Get-Date
 $script:Step = 0
 $script:Passed = 0
-$script:Total = if ($Install) { 5 } else { 4 }
+$script:Total = if ($Install) { 6 } else { 5 }
 
 function Format-Duration {
     param([TimeSpan]$Span)
@@ -146,8 +146,10 @@ function Get-WebLintStats {
     return ""
 }
 
-Write-Host "T2A check (web)"
+Write-Host "Hamix check (web)"
 Write-Host ""
+
+Invoke-CapturedStep "check-brand" { & "$PSScriptRoot\check-brand.ps1" }
 
 if ($Install) {
     Invoke-CapturedStep "npm ci" { Push-Location $webDir; try { npm ci } finally { Pop-Location } }

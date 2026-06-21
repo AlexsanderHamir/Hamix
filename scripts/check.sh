@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# T2A full verification — runs check-go.sh then check-web.sh.
+# Hamix full verification — runs check-go.sh then check-web.sh.
 #
 # Usage (repo root): ./scripts/check.sh [flags]
 #

@@ -1,4 +1,4 @@
-# T2A full verification — runs check-go.ps1 then check-web.ps1.
+# Hamix full verification — runs check-go.ps1 then check-web.ps1.
 #
 # Usage (repo root): .\scripts\check.ps1 [flags]
 #

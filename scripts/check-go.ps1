@@ -1,4 +1,4 @@
-# T2A Go verification — source of truth for the CI backend job.
+# Hamix Go verification — source of truth for the CI backend job.
 #
 # Steps: gofmt, go vet, scheduling boundary, go test, funclogmeasure
 #
@@ -29,7 +29,7 @@ Set-Location $repo
 $CheckStart = Get-Date
 $script:Step = 0
 $script:Passed = 0
-$script:Total = if ($SkipFunclog) { 4 } else { 5 }
+$script:Total = if ($SkipFunclog) { 5 } else { 6 }
 $script:StepStats = ""
 
 function Format-Duration {
@@ -184,9 +184,10 @@ function Step-SchedulingBoundary {
     Write-OkLine $label $sw.Elapsed
 }
 
-Write-Host "T2A check (Go)"
+Write-Host "Hamix check (Go)"
 Write-Host ""
 
+Invoke-CapturedStep "check-brand" { & "$PSScriptRoot\check-brand.ps1" }
 Step-Gofmt
 Invoke-CapturedStep "go vet" { go vet ./... }
 Step-SchedulingBoundary

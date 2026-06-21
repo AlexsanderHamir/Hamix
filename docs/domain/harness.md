@@ -356,7 +356,7 @@ Each phase row carries a stable **`run_correlation_id`** minted at `StartPhase` 
 | --- | --- |
 | UI deep link | `/tasks/{taskId}/cycles/{cycleId}?phase={phase_seq}` — filters Cursor + Audit on attempt detail |
 | Log grep | `run_correlation_id=<uuid>` — isolates one execute or verify invocation in taskapi logs |
-| Phase details | `phase.details.run_correlation_id` (copy from attempt detail Debug panel) |
+| Phase details | `phase.details.run_correlation_id` on cycle API rows; also in `phase_started` audit `data_json` |
 
 Fallback for legacy rows: `task_id` + `cycle_id` + `phase_seq`.
 

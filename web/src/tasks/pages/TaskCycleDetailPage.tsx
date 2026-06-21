@@ -38,7 +38,6 @@ import {
   filterStreamEventsByPhase,
 } from "./attempt/filterActivityByPhase";
 import { useAttemptPhaseFilter } from "./attempt/useAttemptPhaseFilter";
-import { PhaseDebugDetails } from "./attempt/PhaseDebugDetails";
 
 const STREAM_VISIBLE_INITIAL = 6;
 const AUDIT_VISIBLE_INITIAL = 6;
@@ -516,7 +515,6 @@ function AttemptPhaseStep({
     >
       <span className="task-attempt-phase-step-marker" aria-hidden="true" />
       {main}
-      <PhaseDebugDetails phase={phase} />
       <LivePhaseTail taskId={taskId} cycleId={cycleId} phase={phase} />
     </li>
   );

@@ -31,8 +31,9 @@ Work hierarchy is **Project → Task**. Tasks may have:
 | `gate` | object \| null | Per-task dequeue pause (see below). |
 | `pickup_not_before` | RFC3339 UTC \| null | Defer when the worker may dequeue. |
 | `cursor_model` | string | Optional model override at runtime. |
+| `created_at` | RFC3339 UTC | Hydrated from the seq=1 `task_created` audit event on read. Omitted when unknown. |
 
-The JSON resource has **no** `created_at` / `updated_at` fields. Timestamps live on `task_events`.
+`GET /tasks` returns tasks **newest first** (`task_created` time descending, then `id` descending). Other timestamps remain on `task_events`.
 
 ## Dependencies
 

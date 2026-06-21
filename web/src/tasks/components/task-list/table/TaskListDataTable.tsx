@@ -24,6 +24,7 @@ import {
   EmptyStateFilterGlyph,
   type EmptyStateAction,
 } from "@/shared/EmptyState";
+import { computeTaskListDisplayOrder } from "./taskListDisplayOrder";
 
 /**
  * Matches the `task-list-row-fade-out` keyframe duration in
@@ -148,29 +149,6 @@ function scheduleFilterRemovedRowExits(
     scheduledFilterExit = true;
   }
   return scheduledFilterExit;
-}
-
-function computeTaskListDisplayOrder(
-  prevOrder: TaskWithDepth[],
-  filteredTasks: TaskWithDepth[],
-  filterExitingRef: MutableRefObject<Map<string, TaskWithDepth>>,
-): TaskWithDepth[] {
-  const nextOrder: TaskWithDepth[] = [];
-  const filteredById = new Map(filteredTasks.map((t) => [t.id, t]));
-  for (const t of prevOrder) {
-    const visible = filteredById.get(t.id);
-    if (visible) {
-      nextOrder.push(visible);
-    } else if (filterExitingRef.current.has(t.id)) {
-      nextOrder.push(filterExitingRef.current.get(t.id)!);
-    }
-  }
-  for (const t of filteredTasks) {
-    if (!nextOrder.some((row) => row.id === t.id)) {
-      nextOrder.push(t);
-    }
-  }
-  return nextOrder;
 }
 
 function syncTaskListEnteringIds(
@@ -316,7 +294,8 @@ function useTaskListRowAnimations(filteredTasks: TaskWithDepth[], tasks: TaskWit
     displayOrderRef.current = computeTaskListDisplayOrder(
       prevOrder,
       filteredTasks,
-      filterExitingRef,
+      new Set(filterExitingRef.current.keys()),
+      filterExitingRef.current,
     );
     prevFilteredRef.current = filteredTasks;
     if (scheduledFilterExit) {

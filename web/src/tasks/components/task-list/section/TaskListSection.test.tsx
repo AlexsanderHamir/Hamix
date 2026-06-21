@@ -842,6 +842,74 @@ describe("TaskListSection", () => {
     });
   });
 
+  it("renders newly refetched tasks in created_at order after bulk template create", () => {
+    const oldTask = makeRow("old-task", "Older task", { status: "done" });
+    Object.assign(oldTask, { created_at: "2026-01-01T00:00:00Z" });
+
+    const queryClient = new QueryClient({
+      defaultOptions: {
+        queries: { retry: false, staleTime: Infinity },
+        mutations: { retry: false },
+      },
+    });
+
+    const { rerender } = render(
+      <QueryClientProvider client={queryClient}>
+        <MemoryRouter future={ROUTER_FUTURE_FLAGS}>
+          <TaskListSection
+            tasks={[oldTask]}
+            loading={false}
+            refreshing={false}
+            saving={false}
+            smoothTransitions={false}
+            {...listPagerDefaults}
+            rootTasksOnPage={1}
+            onEdit={vi.fn()}
+            onRequestDelete={vi.fn()}
+          />
+        </MemoryRouter>
+      </QueryClientProvider>,
+    );
+
+    const newTaskA = makeRow("new-a", "Refactor module", { status: "in_progress" });
+    Object.assign(newTaskA, { created_at: "2026-06-20T12:00:00Z" });
+    const newTaskB = makeRow("new-b", "Split function", { status: "ready" });
+    Object.assign(newTaskB, { created_at: "2026-06-20T11:59:00Z" });
+
+    rerender(
+      <QueryClientProvider client={queryClient}>
+        <MemoryRouter future={ROUTER_FUTURE_FLAGS}>
+          <TaskListSection
+            tasks={[newTaskA, newTaskB, oldTask]}
+            loading={false}
+            refreshing={false}
+            saving={false}
+            smoothTransitions={false}
+            {...listPagerDefaults}
+            rootTasksOnPage={3}
+            onEdit={vi.fn()}
+            onRequestDelete={vi.fn()}
+          />
+        </MemoryRouter>
+      </QueryClientProvider>,
+    );
+
+    const table = screen.getByRole("table", {
+      name: /all tasks: title with context line/i,
+    });
+    const titles = within(table)
+      .getAllByRole("row")
+      .slice(1)
+      .map(
+        (row) =>
+          row.querySelector(".cell-title-text--primary")?.textContent?.trim() ?? "",
+      );
+
+    expect(titles[0]).toMatch(/refactor module/i);
+    expect(titles[1]).toMatch(/split function/i);
+    expect(titles[2]).toMatch(/older task/i);
+  });
+
   it("shows list pager when another server page may exist", async () => {
     const user = userEvent.setup();
     const onListPageChange = vi.fn();

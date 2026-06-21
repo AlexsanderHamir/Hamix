@@ -1,6 +1,6 @@
 # T2A
 
-Orchestration layer for agentic coding systems. Coordinates Cursor CLI, Claude Code, Codex, and others.
+Control plane for coding agents. Coordinates Cursor CLI, Claude Code, Codex, and other agentic systems.
 
 ![T2A task board — structured tasks with status, priority, and acceptance criteria](assets/product_example.png)
 
@@ -8,12 +8,17 @@ Orchestration layer for agentic coding systems. Coordinates Cursor CLI, Claude C
 
 ## Why T2A Exists
 
-**Problem:** Chat-based interfaces introduce too much variability into software engineering. Chat is an excellent interface for exploration, but a poor interface for executing large amounts of work while maintaining consistent quality.
+To address the following problems and more:
 
-Instead of relying on conversations, T2A structures work as tasks with explicit acceptance criteria. One AI agent implements the work, a separate AI agent verifies it against those criteria, and every attempt is recorded so the workflow can be inspected, repeated, and improved.
+1. Chat-based interfaces introduce too much variability into software engineering.
+2. Developers already coordinate multiple AI agents manually. T2A makes that workflow explicit and repeatable.
+3. Existing project management tools were designed for human teams, not AI-driven software engineering.
 
+---
 
-## Features
+## Initial Features
+
+**Task Templates** —> Define a task once, instantiate it many times.
 
 **Execute & Verify** —> One agent executes the task, another independently verifies the acceptance criteria.
 
@@ -21,10 +26,7 @@ Instead of relying on conversations, T2A structures work as tasks with explicit 
 
 **Acceptance Criteria** —> Define what "done" means with checklists and optional verification commands.
 
-**Task Templates** —> Reuse task definitions from the UI or API.
-
 **Runner Adapters** —> Run T2A with different agentic systems.
-
 
 ---
 
@@ -32,7 +34,7 @@ Instead of relying on conversations, T2A structures work as tasks with explicit 
 
 **Requirements:** Go 1.25+, Node 20+, and `DATABASE_URL` in a repo-root `.env`.
 
-1. Copy `.env.example` to `.env` and set `DATABASE_URL`.
+1. Create a `.env` file and set `DATABASE_URL`.
 2. Apply the schema: `go run ./cmd/dbcheck -migrate`
 3. Start the API and web UI:
 

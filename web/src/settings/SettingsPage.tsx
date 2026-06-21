@@ -181,7 +181,6 @@ function resolveProbeDefaultBin(
 
 function computeTimezoneDisplayContext(
   form: SettingsFormState,
-  tzSelectOptions: ReturnType<typeof getTimezoneSelectOptions>,
   lastUpdated: string,
   tzValueSet: Set<string>,
 ): TimezoneDisplayContext {
@@ -605,7 +604,6 @@ function useSettingsPageController() {
       showCustomTz,
     } = computeTimezoneDisplayContext(
       form,
-      tzSelectOptions,
       lastUpdated,
       tzValueSet,
     );

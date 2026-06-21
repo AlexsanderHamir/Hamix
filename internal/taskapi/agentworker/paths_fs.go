@@ -15,14 +15,17 @@ type pathProbeFS interface {
 
 type osPathProbeFS struct{}
 
+//funclogmeasure:skip category=hot-path reason="Thin os stdlib delegate; operation trace is emitted by paths.go chokepoints."
 func (osPathProbeFS) Stat(name string) (os.FileInfo, error) {
 	return os.Stat(name)
 }
 
+//funclogmeasure:skip category=hot-path reason="Thin os stdlib delegate; operation trace is emitted by paths.go chokepoints."
 func (osPathProbeFS) MkdirAll(path string, perm os.FileMode) error {
 	return os.MkdirAll(path, perm)
 }
 
+//funclogmeasure:skip category=hot-path reason="Thin os stdlib delegate; operation trace is emitted by paths.go chokepoints."
 func (osPathProbeFS) CreateTemp(dir, pattern string) (string, error) {
 	f, err := os.CreateTemp(dir, pattern)
 	if err != nil {
@@ -35,6 +38,7 @@ func (osPathProbeFS) CreateTemp(dir, pattern string) (string, error) {
 	return name, nil
 }
 
+//funclogmeasure:skip category=hot-path reason="Thin os stdlib delegate; operation trace is emitted by paths.go chokepoints."
 func (osPathProbeFS) Remove(path string) error {
 	return os.Remove(path)
 }

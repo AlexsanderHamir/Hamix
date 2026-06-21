@@ -871,7 +871,7 @@ describe("TaskListSection", () => {
       </QueryClientProvider>,
     );
 
-    const newTaskA = makeRow("new-a", "Refactor module", { status: "in_progress" });
+    const newTaskA = makeRow("new-a", "Refactor module", { status: "running" });
     Object.assign(newTaskA, { created_at: "2026-06-20T12:00:00Z" });
     const newTaskB = makeRow("new-b", "Split function", { status: "ready" });
     Object.assign(newTaskB, { created_at: "2026-06-20T11:59:00Z" });

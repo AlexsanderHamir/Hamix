@@ -1,4 +1,4 @@
-import { useRef, useState, type FormEvent, type ReactNode, type RefObject } from "react";
+import { useRef, useState, type FormEvent, type LegacyRef, type ReactNode, type RefObject } from "react";
 import type { ChecklistItemDraft, PriorityChoice, Status } from "@/types";
 import type { RichPromptEditorProjectContextProps } from "../rich-prompt";
 import type { TestScenario } from "@/tasks/test-scenarios";
@@ -187,7 +187,7 @@ function TaskCreateModalHeader(props: {
         </h2>
         {!presentation.showTestScenarios ? null : (
           <TestScenariosTrigger
-            ref={scenariosTriggerRef}
+            ref={scenariosTriggerRef as LegacyRef<HTMLButtonElement>}
             open={scenariosOpen}
             disabled={disabled}
             onToggle={onToggleScenarios}

@@ -62,6 +62,7 @@ type taskTemplateInstantiateResponseJSON struct {
 	Errors []taskTemplateInstantiateErrorJSON `json:"errors"`
 }
 
+//funclogmeasure:skip category=hot-path reason="Pure helper without I/O; operation trace is emitted by the calling chokepoint."
 func resolveInstantiateCount(raw *int) (int, error) {
 	if raw == nil {
 		return 1, nil
@@ -72,6 +73,7 @@ func resolveInstantiateCount(raw *int) (int, error) {
 	return *raw, nil
 }
 
+//funclogmeasure:skip category=hot-path reason="Pure helper without I/O; operation trace is emitted by the calling chokepoint."
 func normalizeInstantiateItems(body taskTemplateInstantiateJSON) ([]taskTemplateInstantiateItem, error) {
 	if len(body.Items) > 0 {
 		items := make([]taskTemplateInstantiateItem, 0, len(body.Items))

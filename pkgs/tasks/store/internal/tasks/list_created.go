@@ -21,6 +21,7 @@ type listRowScan struct {
 	TaskCreatedAt time.Time `gorm:"column:task_created_at"`
 }
 
+//funclogmeasure:skip category=hot-path reason="Pure query builder without I/O; operation trace is emitted by the calling chokepoint."
 func applyTaskCreatedJoin(q *gorm.DB) *gorm.DB {
 	return q.
 		Select("tasks.*, te.at AS task_created_at").
@@ -28,6 +29,7 @@ func applyTaskCreatedJoin(q *gorm.DB) *gorm.DB {
 			taskCreatedEventSeq, domain.EventTaskCreated)
 }
 
+//funclogmeasure:skip category=hot-path reason="Pure helper without I/O; operation trace is emitted by the calling chokepoint."
 func tasksFromListRows(rows []listRowScan) []domain.Task {
 	out := make([]domain.Task, len(rows))
 	for i, r := range rows {
@@ -62,6 +64,7 @@ func hydrateCreatedAt(ctx context.Context, db *gorm.DB, t *domain.Task) error {
 }
 
 func loadCreatedAtCursor(ctx context.Context, db *gorm.DB, afterID string) (time.Time, error) {
+	slog.Debug("trace", "cmd", logCmd, "operation", "tasks.store.tasks.loadCreatedAtCursor")
 	var at time.Time
 	err := db.WithContext(ctx).Model(&domain.TaskEvent{}).
 		Where("task_id = ? AND seq = ? AND type = ?", afterID, taskCreatedEventSeq, domain.EventTaskCreated).

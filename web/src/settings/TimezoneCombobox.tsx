@@ -8,6 +8,7 @@ import {
   useState,
   type KeyboardEvent,
   type KeyboardEventHandler,
+  type LegacyRef,
   type RefObject,
 } from "react";
 import { createPortal } from "react-dom";
@@ -329,7 +330,7 @@ function TimezoneComboboxPanel({
     >
       <div className="settings-dropdown-panel-search">
         <input
-          ref={searchRef}
+          ref={searchRef as LegacyRef<HTMLInputElement>}
           id={searchId}
           type="search"
           className="settings-dropdown-panel-search-input"
@@ -345,7 +346,7 @@ function TimezoneComboboxPanel({
       </div>
       {rowCount > 0 ? (
         <ul
-          ref={listRef}
+          ref={listRef as LegacyRef<HTMLUListElement>}
           id={listId}
           role="listbox"
           tabIndex={-1}

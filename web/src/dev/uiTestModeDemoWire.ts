@@ -5,6 +5,25 @@ export const DEMO_THIRD_PROJECT_ID = "33333333-3333-4333-8333-333333333333";
 
 const ISO = "2026-03-10T12:00:00Z";
 
+/** Fixed anchors so sample tasks span relative-time buckets (newest → oldest). */
+const CREATED = {
+  justNow: "2026-06-20T17:59:00Z",
+  min12: "2026-06-20T17:48:00Z",
+  min45: "2026-06-20T17:15:00Z",
+  h3: "2026-06-20T15:00:00Z",
+  h9: "2026-06-20T09:00:00Z",
+  d1: "2026-06-19T10:00:00Z",
+  d3: "2026-06-17T14:00:00Z",
+  d5: "2026-06-15T11:00:00Z",
+  w1: "2026-06-13T16:00:00Z",
+  w2: "2026-06-06T12:00:00Z",
+  w3: "2026-05-30T08:00:00Z",
+  mo1: "2026-05-20T12:00:00Z",
+  mo2: "2026-04-18T12:00:00Z",
+  mo3: "2026-03-10T12:00:00Z",
+  mo5: "2026-01-15T12:00:00Z",
+} as const;
+
 const DEMO_PROJECT_IDS = new Set([
   DEFAULT_PROJECT_ID,
   DEMO_SECOND_PROJECT_ID,
@@ -20,12 +39,14 @@ function task(
   title: string,
   status: string,
   priority: string,
+  initialPrompt: string,
+  createdAt: string,
   opt: Record<string, unknown> = {},
 ): Record<string, unknown> {
   return {
     id,
     title,
-    initial_prompt: `Operator context for “${title}”. Includes acceptance notes and links.`,
+    initial_prompt: initialPrompt,
     status,
     priority,
     runner: "cursor",
@@ -33,7 +54,7 @@ function task(
     checklist_inherit: true,
     tags: [],
     depends_on: [],
-    created_at: ISO,
+    created_at: createdAt,
     ...opt,
   };
 }
@@ -61,85 +82,270 @@ function reg(id: string) {
 }
 
 const ROOT_TASKS: Record<string, unknown>[] = [
-  task(reg("f0000001-0000-4000-8000-000000000001"), "Auth refactor rollout", "running", "high", {
-    project_id: DEFAULT_PROJECT_ID,
-    milestone: M_JWT,
-    tags: ["auth"],
-  }),
-  task(reg("f0000002-0000-4000-8000-000000000002"), "Session invalidation sweep", "ready", "medium", {
-    project_id: DEFAULT_PROJECT_ID,
-    milestone: M_SESS,
-    tags: ["auth"],
-  }),
-  task(reg("f0000003-0000-4000-8000-000000000003"), "OAuth consent copy review", "blocked", "low", {
-    project_id: DEFAULT_PROJECT_ID,
-    milestone: M_DISC,
-  }),
-  task(reg("f0000004-0000-4000-8000-000000000004"), "Load-test harness for login", "review", "critical", {
-    project_id: DEFAULT_PROJECT_ID,
-    milestone: M_TEST,
-  }),
-  task(reg("f0000005-0000-4000-8000-000000000005"), "Release checklist: AuthV2", "done", "medium", {
-    project_id: DEFAULT_PROJECT_ID,
-    milestone: M_REL,
-  }),
-  task(reg("f0000006-0000-4000-8000-000000000006"), "Backfill audit logs", "ready", "medium", {
-    project_id: DEFAULT_PROJECT_ID,
-  }),
-  task(reg("f0000007-0000-4000-8000-000000000007"), "Customer migration dry run", "failed", "high", {
-    project_id: DEFAULT_PROJECT_ID,
-    milestone: M_TEST,
-  }),
-  task(reg("f0000008-0000-4000-8000-000000000008"), "Billing webhook resilience", "running", "critical", {
-    project_id: DEMO_SECOND_PROJECT_ID,
-  }),
-  task(reg("f0000009-0000-4000-8000-000000000009"), "Usage dashboard tiles", "ready", "medium", {
-    project_id: DEMO_SECOND_PROJECT_ID,
-  }),
-  task(reg("f000000a-0000-4000-8000-00000000000a"), "Unassigned triage: docs site", "ready", "low", {}),
+  task(
+    reg("f0000001-0000-4000-8000-000000000001"),
+    "Auth refactor rollout",
+    "running",
+    "high",
+    "Replace session cookies with short-lived JWT access tokens and refresh rotation across internal services. Acceptance: zero-downtime deploy with a 72-hour backward-compatibility window.",
+    CREATED.h3,
+    {
+      project_id: DEFAULT_PROJECT_ID,
+      milestone: M_JWT,
+      tags: ["auth"],
+    },
+  ),
+  task(
+    reg("f0000002-0000-4000-8000-000000000002"),
+    "Session invalidation sweep",
+    "ready",
+    "medium",
+    "Audit and revoke stale sessions older than 90 days. Cross-reference recent password resets and security alerts before bulk invalidation.",
+    CREATED.d3,
+    {
+      project_id: DEFAULT_PROJECT_ID,
+      milestone: M_SESS,
+      tags: ["auth"],
+    },
+  ),
+  task(
+    reg("f0000003-0000-4000-8000-000000000003"),
+    "OAuth consent copy review",
+    "blocked",
+    "low",
+    "Legal must approve updated OAuth consent screen copy before the partner portal ships. Blocked on compliance review ticket #4421.",
+    CREATED.w2,
+    {
+      project_id: DEFAULT_PROJECT_ID,
+      milestone: M_DISC,
+    },
+  ),
+  task(
+    reg("f0000004-0000-4000-8000-000000000004"),
+    "Load-test harness for login",
+    "review",
+    "critical",
+    "Build k6 scripts simulating 500 concurrent logins against staging. Agent finished the scripts; operator review needed for thresholds and alerting config.",
+    CREATED.h9,
+    {
+      project_id: DEFAULT_PROJECT_ID,
+      milestone: M_TEST,
+    },
+  ),
+  task(
+    reg("f0000005-0000-4000-8000-000000000005"),
+    "Release checklist: AuthV2",
+    "done",
+    "medium",
+    "Final pre-launch checklist: feature flags, rollback plan, monitoring dashboards, and on-call runbook. All items verified and signed off.",
+    CREATED.mo3,
+    {
+      project_id: DEFAULT_PROJECT_ID,
+      milestone: M_REL,
+    },
+  ),
+  task(
+    reg("f0000006-0000-4000-8000-000000000006"),
+    "Backfill audit logs",
+    "ready",
+    "medium",
+    "Backfill missing audit events from the Jan–Feb migration window into the central log store. Estimated volume: 2.4M records.",
+    CREATED.w1,
+    {
+      project_id: DEFAULT_PROJECT_ID,
+    },
+  ),
+  task(
+    reg("f0000007-0000-4000-8000-000000000007"),
+    "Customer migration dry run",
+    "failed",
+    "high",
+    "Dry-run migration of 50 pilot customers to AuthV2. Failed at step 3 when session mapping hit an edge case with federated accounts.",
+    CREATED.d1,
+    {
+      project_id: DEFAULT_PROJECT_ID,
+      milestone: M_TEST,
+    },
+  ),
+  task(
+    reg("f0000008-0000-4000-8000-000000000008"),
+    "Billing webhook resilience",
+    "running",
+    "critical",
+    "Add exponential backoff, a dead-letter queue, and idempotency keys to Stripe webhook processing. Must dedupe events within a 24-hour window.",
+    CREATED.min12,
+    {
+      project_id: DEMO_SECOND_PROJECT_ID,
+    },
+  ),
+  task(
+    reg("f0000009-0000-4000-8000-000000000009"),
+    "Usage dashboard tiles",
+    "ready",
+    "medium",
+    "Implement three summary tiles on the usage dashboard: current-period spend, forecast, and anomaly alerts. Match existing billing design tokens.",
+    CREATED.d5,
+    {
+      project_id: DEMO_SECOND_PROJECT_ID,
+    },
+  ),
+  task(
+    reg("f000000a-0000-4000-8000-00000000000a"),
+    "Unassigned triage: docs site",
+    "ready",
+    "low",
+    "Several broken links reported on the developer docs site. Triage scope, estimate effort, and assign an owner.",
+    CREATED.justNow,
+    {},
+  ),
   task(
     reg("f000000b-0000-4000-8000-00000000000b"),
     "Parent: onboarding epic",
     "running",
     "medium",
+    "Coordinate new-user onboarding improvements across empty states, analytics beacons, and help-center links.",
+    CREATED.mo2,
     {
       project_id: DEFAULT_PROJECT_ID,
       milestone: M_DISC,
       children: [
-        task(reg("f000000c-0000-4000-8000-00000000000c"), "Child: empty state illustrations", "done", "low", {
-          parent_id: "f000000b-0000-4000-8000-00000000000b",
-          project_id: DEFAULT_PROJECT_ID,
-        }),
-        task(reg("f000000d-0000-4000-8000-00000000000d"), "Child: analytics beacon", "ready", "medium", {
-          parent_id: "f000000b-0000-4000-8000-00000000000b",
-          project_id: DEFAULT_PROJECT_ID,
-        }),
+        task(
+          reg("f000000c-0000-4000-8000-00000000000c"),
+          "Child: empty state illustrations",
+          "done",
+          "low",
+          "Replace placeholder illustrations on the welcome screen and first-run checklist with final brand assets from design.",
+          CREATED.mo3,
+          {
+            parent_id: "f000000b-0000-4000-8000-00000000000b",
+            project_id: DEFAULT_PROJECT_ID,
+          },
+        ),
+        task(
+          reg("f000000d-0000-4000-8000-00000000000d"),
+          "Child: analytics beacon",
+          "ready",
+          "medium",
+          "Wire onboarding step completion events to the product analytics pipeline. Include step name, duration, and drop-off reason.",
+          CREATED.d3,
+          {
+            parent_id: "f000000b-0000-4000-8000-00000000000b",
+            project_id: DEFAULT_PROJECT_ID,
+          },
+        ),
       ],
     },
   ),
+  task(
+    reg("fafaf001-fafa-4afa-bafa-000000000001"),
+    "Rotate JWT signing keys for staging",
+    "done",
+    "medium",
+    "Rotate staging signing keys ahead of production rollout. Verify all services pick up the new JWKS endpoint within the 72-hour overlap window.",
+    CREATED.mo5,
+    {
+      project_id: DEFAULT_PROJECT_ID,
+      milestone: M_JWT,
+    },
+  ),
+  task(
+    reg("fafaf002-fafa-4afa-bafa-000000000002"),
+    "Add retry logic to Stripe webhook handler",
+    "ready",
+    "high",
+    "Retry failed webhook deliveries with exponential backoff and surface permanent failures to the ops dashboard.",
+    CREATED.d1,
+    {
+      project_id: DEMO_SECOND_PROJECT_ID,
+    },
+  ),
+  task(
+    reg("fafaf003-fafa-4afa-bafa-000000000003"),
+    "Document API rate limits in developer portal",
+    "ready",
+    "low",
+    "Add a rate-limits page to the developer portal covering per-endpoint quotas, burst behavior, and 429 response headers.",
+    CREATED.w1,
+    {},
+  ),
+  task(
+    reg("fafaf004-fafa-4afa-bafa-000000000004"),
+    "Migrate legacy sessions to new token format",
+    "blocked",
+    "high",
+    "Convert remaining cookie-based sessions to JWT pairs on next login. Blocked until the mobile app ships token refresh support.",
+    CREATED.mo1,
+    {
+      project_id: DEFAULT_PROJECT_ID,
+      milestone: M_JWT,
+    },
+  ),
+  task(
+    reg("fafaf005-fafa-4afa-bafa-000000000005"),
+    "Fix timezone display on usage export CSV",
+    "ready",
+    "medium",
+    "Usage export CSVs show UTC timestamps without a label. Format timestamps in the account timezone and add a column header note.",
+    CREATED.min45,
+    {
+      project_id: DEMO_SECOND_PROJECT_ID,
+    },
+  ),
+  task(
+    reg("fafaf006-fafa-4afa-bafa-000000000006"),
+    "Add CSRF protection to login form",
+    "done",
+    "medium",
+    "Issue a CSRF token on the login page and validate it server-side on POST. Regression-test OAuth redirect flows.",
+    CREATED.mo2,
+    {
+      project_id: DEFAULT_PROJECT_ID,
+      milestone: M_JWT,
+    },
+  ),
+  task(
+    reg("fafaf007-fafa-4afa-bafa-000000000007"),
+    "Implement invoice PDF download endpoint",
+    "ready",
+    "medium",
+    "Expose GET /invoices/{id}/pdf returning a cached PDF with correct Content-Disposition headers and audit logging.",
+    CREATED.d5,
+    {
+      project_id: DEMO_SECOND_PROJECT_ID,
+    },
+  ),
+  task(
+    reg("fafaf008-fafa-4afa-bafa-000000000008"),
+    "Update dependency audit in CI pipeline",
+    "ready",
+    "low",
+    "Switch CI from npm audit to osv-scanner and fail the build on critical CVEs in production dependencies.",
+    CREATED.w3,
+    {},
+  ),
+  task(
+    reg("fafaf009-fafa-4afa-bafa-000000000009"),
+    "Resolve OAuth redirect loop on mobile Safari",
+    "blocked",
+    "high",
+    "Users on iOS 17 Safari hit an infinite redirect during OAuth login. Reproduce on device farm and patch redirect URI validation.",
+    CREATED.d3,
+    {
+      project_id: DEFAULT_PROJECT_ID,
+    },
+  ),
+  task(
+    reg("fafaf00a-fafa-4afa-bafa-00000000000a"),
+    "Normalize currency formatting in billing dashboard",
+    "done",
+    "low",
+    "Some dashboard tiles mix USD and locale-formatted amounts. Standardize on Intl.NumberFormat with the account currency setting.",
+    CREATED.mo1,
+    {
+      project_id: DEMO_SECOND_PROJECT_ID,
+    },
+  ),
 ];
-
-const EXTRA_BACKLOG_IDS = [
-  "fafaf001-fafa-4afa-bafa-000000000001",
-  "fafaf002-fafa-4afa-bafa-000000000002",
-  "fafaf003-fafa-4afa-bafa-000000000003",
-  "fafaf004-fafa-4afa-bafa-000000000004",
-  "fafaf005-fafa-4afa-bafa-000000000005",
-  "fafaf006-fafa-4afa-bafa-000000000006",
-  "fafaf007-fafa-4afa-bafa-000000000007",
-  "fafaf008-fafa-4afa-bafa-000000000008",
-  "fafaf009-fafa-4afa-bafa-000000000009",
-  "fafaf00a-fafa-4afa-bafa-00000000000a",
-];
-EXTRA_BACKLOG_IDS.forEach((id, i) => {
-  ROOT_TASKS.push(
-    task(reg(id), `Synthetic backlog item ${i + 1}`, i % 5 === 0 ? "done" : i % 4 === 0 ? "blocked" : "ready", "medium", {
-      project_id:
-        i % 3 === 0 ? DEFAULT_PROJECT_ID : i % 3 === 1 ? DEMO_SECOND_PROJECT_ID : undefined,
-      milestone: i % 2 === 0 ? M_JWT : undefined,
-    }),
-  );
-});
 
 const DEMO_TASK_BY_ID = new Map<string, Record<string, unknown>>();
 for (const row of ROOT_TASKS) {

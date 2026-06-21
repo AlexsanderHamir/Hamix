@@ -1,9 +1,45 @@
 #!/usr/bin/env bash
 # taskapi + Vite from repo root: ./scripts/dev.sh  (needs .env / DATABASE_URL)
+#
+# Usage: ./scripts/dev.sh [--host HOST] [--vite-host HOST]
+#
+# Flags:
+#   --host HOST       taskapi listen host (taskapi -host; default 127.0.0.1)
+#   --vite-host HOST  Vite dev server --host (default: localhost only)
+#   --help, -h        Show options
 set -euo pipefail
 
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 cd "$ROOT"
+
+HOST=""
+VITE_HOST=""
+
+show_help() {
+  sed -n '2,10p' "$0" | sed 's/^# \{0,1\}//'
+}
+
+while [[ $# -gt 0 ]]; do
+  case "$1" in
+    --host)
+      HOST="$2"
+      shift 2
+      ;;
+    --vite-host)
+      VITE_HOST="$2"
+      shift 2
+      ;;
+    --help|-h)
+      show_help
+      exit 0
+      ;;
+    *)
+      echo "unknown flag: $1 (try --help)" >&2
+      exit 2
+      ;;
+  esac
+done
+
 GOOS="$(go env GOOS)"
 PORT="${DEV_TASKAPI_PORT:-8080}"
 EXE="$ROOT/taskapi-dev"
@@ -36,9 +72,14 @@ cleanup() {
 }
 trap cleanup EXIT INT TERM
 
+api_args=(-port "$PORT")
+if [[ -n "$HOST" ]]; then
+  api_args=(-host "$HOST" -port "$PORT")
+fi
+
 for attempt in 1 2; do
   stop_listener_on_port "$PORT"
-  "$EXE" -port "$PORT" &
+  "$EXE" "${api_args[@]}" &
   API_PID=$!
 
   deadline=$((SECONDS + 90))
@@ -74,4 +115,8 @@ for attempt in 1 2; do
 done
 
 cd "$ROOT/web"
-npm run dev
+if [[ -n "$VITE_HOST" ]]; then
+  npm run dev -- --host "$VITE_HOST"
+else
+  npm run dev
+fi

@@ -1,0 +1,14 @@
+.git
+.env
+.env.*
+web/node_modules
+web/dist
+taskapi-dev
+taskapi-dev.exe
+logs
+coverage.out
+coverage
+coverage-handler
+coverage-pg
+.agent
+.cursor/skills

@@ -20,18 +20,34 @@ Set up the repo, verify your change, and find the right documentation for learni
 
 ## Requirements
 
-- **Go** 1.25+
-- **Node** 20+ (npm/npx included; for the web UI)
-- **Database** — `DATABASE_URL` in repo-root `.env`
+- **Database** — `DATABASE_URL` in repo-root `.env` (always)
 - **Never commit** `.env` or secrets
+
+**Docker path** — Docker only; no Go or Node on the host. See [docs/docker.md](docs/docker.md).
+
+**Native path** — **Go** 1.25+ and **Node** 20+ (npm/npx included; for the web UI).
 
 > **Warning** — Workspace repo path, agent worker settings, cursor binary, and run timeout are configured in the SPA **Settings** page (`/settings`), not in `.env`. See [docs/configuration.md](docs/configuration.md).
 
 ## Setup
 
 1. Copy `.env.example` to `.env` and set `DATABASE_URL`.
+
+### Docker
+
+```bash
+./scripts/docker-build.sh
+docker compose up
+```
+
+Migrate runs automatically on first `docker compose up`. Details: [docs/docker.md](docs/docker.md).
+
+API: `http://127.0.0.1:8080` · Web: `http://localhost:5173`
+
+### Native
+
 2. Apply schema: `go run ./cmd/dbcheck -migrate`
-3. Run API + web together (recommended):
+3. Run API + web together:
 
 ```bash
 ./scripts/dev.sh        # Unix — chmod +x once if needed
@@ -46,6 +62,7 @@ Verification steps live in `scripts/check-go.sh` / `scripts/check-web.sh` (and P
 
 | I want to… | Command |
 |------------|---------|
+| Run everything (Docker, no local Go/Node) | `docker compose run --rm dev ./scripts/check.sh --install` |
 | Run everything locally | `./scripts/check.sh` or `.\scripts\check.ps1` |
 | First run / lockfile changed | `./scripts/check.sh --install` or `.\scripts\check.ps1 -Install` |
 | Same as CI backend | `./scripts/check-go.sh --verbose` or `.\scripts\check-go.ps1 -Verbose` |

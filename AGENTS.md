@@ -137,6 +137,7 @@ See [CONTRIBUTING.md § Before you open a PR](CONTRIBUTING.md#before-you-open-a-
 | --- | --- |
 | Go production code or tests | `go vet ./...`, then `go test ./... -count=1`; format touched `*.go` with `gofmt`. |
 | Meaningful `web/` change | `cd web && npm test -- --run && npm run lint && npm run check:standards && npm run build` |
+| Docker-only environment (no local Go/Node) | `docker compose run --rm dev ./scripts/check.sh --install` — see [docs/docker.md](docs/docker.md) |
 
 Default tests must not require real Postgres, real outbound network, or a running `taskapi` (see [CONTRIBUTING.md](CONTRIBUTING.md#before-you-open-a-pr) and `backend-engineering-bar.mdc` §11).
 

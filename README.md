@@ -28,24 +28,34 @@ To address the following problems and more:
 
 ## Get started
 
-**Requirements:** Go 1.25+ | Node 20+
+1. Create a `.env` file and set `DATABASE_URL` (copy from `.env.example`).
 
-1. Create a `.env` file and set `DATABASE_URL`.
+### Docker (no Go or Node required)
+
+Requires [Docker](https://www.docker.com/products/docker-desktop/) only. Full guide: [docs/docker.md](docs/docker.md).
+
+```bash
+./scripts/docker-build.sh
+docker compose up
+```
+
+API at `http://127.0.0.1:8080` · Web at `http://localhost:5173` · Ctrl+C stops the stack.
+
+### Native (Go 1.25+ and Node 20+)
+
 2. Apply the schema: `go run ./cmd/dbcheck -migrate`
 3. Start the API and web UI:
 
 ```bash
 ./scripts/dev.sh        # Unix — chmod +x once if needed
 .\scripts\dev.ps1       # Windows
-
-# Result 
-
-API at `http://127.0.0.1:8080`
-Web at `http://localhost:5173`
-Ctrl+C stops both.
 ```
 
-4. Optional (when changing code): Run the same checks as CI before opening a PR.
+API at `http://127.0.0.1:8080` · Web at `http://localhost:5173` · Ctrl+C stops both.
+
+### Before a PR
+
+Optional (when changing code): Run the same checks as CI.
 
 ```bash
 ./scripts/check.sh

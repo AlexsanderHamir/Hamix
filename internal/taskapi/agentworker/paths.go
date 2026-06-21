@@ -4,7 +4,6 @@ import (
 	"errors"
 	"fmt"
 	"log/slog"
-	"os"
 )
 
 func assertWorkingDirExists(dir string) error {
@@ -13,7 +12,7 @@ func assertWorkingDirExists(dir string) error {
 	if dir == "" {
 		return errors.New("working directory is empty")
 	}
-	info, err := os.Stat(dir)
+	info, err := pathProbe.Stat(dir)
 	if err != nil {
 		return fmt.Errorf("stat %q: %w", dir, err)
 	}
@@ -29,15 +28,13 @@ func ensureWorkerReportDirWritable(dir string) error {
 	if dir == "" {
 		return errors.New("report dir is empty")
 	}
-	if err := os.MkdirAll(dir, 0o755); err != nil {
+	if err := pathProbe.MkdirAll(dir, 0o755); err != nil {
 		return fmt.Errorf("mkdir %q: %w", dir, err)
 	}
-	probe, err := os.CreateTemp(dir, ".t2a-worker-probe-*")
+	probePath, err := pathProbe.CreateTemp(dir, ".t2a-worker-probe-*")
 	if err != nil {
 		return fmt.Errorf("write probe in %q: %w", dir, err)
 	}
-	probePath := probe.Name()
-	_ = probe.Close()
-	_ = os.Remove(probePath)
+	_ = pathProbe.Remove(probePath)
 	return nil
 }

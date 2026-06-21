@@ -95,7 +95,7 @@ Named, durable task compose blueprints. Payload shape matches task create fields
 | GET | `/task-templates/{id}` | Full template with `payload`. |
 | PATCH | `/task-templates/{id}` | Partial `{ name?, payload? }`. **200** full detail. |
 | DELETE | `/task-templates/{id}` | `204`. |
-| POST | `/task-templates/instantiate` | Body `{ template_ids: string[] }`. Processes IDs in request order (duplicates allowed). **200** `{ tasks: Task[], errors: { template_id, error }[] }`. Strips `depends_on`; omits past `pickup_not_before`. **400** when `template_ids` is empty. |
+| POST | `/task-templates/instantiate` | Body `{ template_ids: string[], count?: number }` **or** `{ items: { template_id, count? }[] }`. When `items` is non-empty it takes precedence over `template_ids` / top-level `count`. Omitted `count` defaults to **1** per template. Per-item and top-level `count` must be **1..25**; total creates (`sum(counts)`) must not exceed **100**. Duplicate `template_id` in `items` is **400**. Processes each item in order, creating `count` tasks per item. **200** `{ tasks: Task[], errors: { template_id, error }[] }`. Strips `depends_on`; omits past `pickup_not_before`. **400** when neither `template_ids` nor `items` is provided. |
 
 ### Execution cycles
 

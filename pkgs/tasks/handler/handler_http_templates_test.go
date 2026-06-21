@@ -187,6 +187,159 @@ func TestHTTP_task_templates_instantiate_empty_ids(t *testing.T) {
 	}
 }
 
+func TestHTTP_task_templates_instantiate_count(t *testing.T) {
+	srv, st := newTaskTestServerWithStore(t)
+	defer srv.Close()
+	ctx := context.Background()
+	payload := []byte(withCreateChecklist(`{"title":"Repeated template","priority":"medium"}`))
+	tmpl, err := st.SaveTemplate(ctx, "", "Repeated template", payload)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	res, err := http.Post(srv.URL+"/task-templates/instantiate", "application/json",
+		strings.NewReader(`{"template_ids":["`+tmpl.ID+`"],"count":5}`))
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer res.Body.Close()
+	if res.StatusCode != http.StatusOK {
+		b, _ := io.ReadAll(res.Body)
+		t.Fatalf("status %d body %s", res.StatusCode, b)
+	}
+	var body struct {
+		Tasks []struct {
+			Title string `json:"title"`
+		} `json:"tasks"`
+		Errors []any `json:"errors"`
+	}
+	if err := json.NewDecoder(res.Body).Decode(&body); err != nil {
+		t.Fatal(err)
+	}
+	if len(body.Tasks) != 5 {
+		t.Fatalf("tasks %d want 5", len(body.Tasks))
+	}
+	for _, task := range body.Tasks {
+		if task.Title != "Repeated template" {
+			t.Fatalf("title %q", task.Title)
+		}
+	}
+	if len(body.Errors) != 0 {
+		t.Fatalf("errors %+v", body.Errors)
+	}
+}
+
+func TestHTTP_task_templates_instantiate_items_mixed_counts(t *testing.T) {
+	srv, st := newTaskTestServerWithStore(t)
+	defer srv.Close()
+	ctx := context.Background()
+	payloadA := []byte(withCreateChecklist(`{"title":"Template A","priority":"medium"}`))
+	tmplA, err := st.SaveTemplate(ctx, "", "Template A", payloadA)
+	if err != nil {
+		t.Fatal(err)
+	}
+	payloadB := []byte(withCreateChecklist(`{"title":"Template B","priority":"medium"}`))
+	tmplB, err := st.SaveTemplate(ctx, "", "Template B", payloadB)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	res, err := http.Post(srv.URL+"/task-templates/instantiate", "application/json",
+		strings.NewReader(`{"items":[{"template_id":"`+tmplA.ID+`","count":3},{"template_id":"`+tmplB.ID+`","count":2}]}`))
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer res.Body.Close()
+	if res.StatusCode != http.StatusOK {
+		b, _ := io.ReadAll(res.Body)
+		t.Fatalf("status %d body %s", res.StatusCode, b)
+	}
+	var body struct {
+		Tasks []struct {
+			Title string `json:"title"`
+		} `json:"tasks"`
+	}
+	if err := json.NewDecoder(res.Body).Decode(&body); err != nil {
+		t.Fatal(err)
+	}
+	if len(body.Tasks) != 5 {
+		t.Fatalf("tasks %d want 5", len(body.Tasks))
+	}
+	if body.Tasks[0].Title != "Template A" || body.Tasks[2].Title != "Template A" {
+		t.Fatalf("first three titles want Template A, got %q %q %q", body.Tasks[0].Title, body.Tasks[1].Title, body.Tasks[2].Title)
+	}
+	if body.Tasks[3].Title != "Template B" || body.Tasks[4].Title != "Template B" {
+		t.Fatalf("last two titles want Template B, got %q %q", body.Tasks[3].Title, body.Tasks[4].Title)
+	}
+}
+
+func TestHTTP_task_templates_instantiate_invalid_count(t *testing.T) {
+	srv, st := newTaskTestServerWithStore(t)
+	defer srv.Close()
+	ctx := context.Background()
+	payload := []byte(withCreateChecklist(`{"title":"T","priority":"medium"}`))
+	tmpl, err := st.SaveTemplate(ctx, "", "T", payload)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	for _, bodyJSON := range []string{
+		`{"template_ids":["` + tmpl.ID + `"],"count":0}`,
+		`{"template_ids":["` + tmpl.ID + `"],"count":26}`,
+	} {
+		res, err := http.Post(srv.URL+"/task-templates/instantiate", "application/json", strings.NewReader(bodyJSON))
+		if err != nil {
+			t.Fatal(err)
+		}
+		res.Body.Close()
+		if res.StatusCode != http.StatusBadRequest {
+			t.Fatalf("body %s status %d want 400", bodyJSON, res.StatusCode)
+		}
+	}
+}
+
+func TestHTTP_task_templates_instantiate_total_cap_exceeded(t *testing.T) {
+	srv, st := newTaskTestServerWithStore(t)
+	defer srv.Close()
+	ctx := context.Background()
+	payload := []byte(withCreateChecklist(`{"title":"T","priority":"medium"}`))
+	tmpl, err := st.SaveTemplate(ctx, "", "T", payload)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	res, err := http.Post(srv.URL+"/task-templates/instantiate", "application/json",
+		strings.NewReader(`{"template_ids":["`+tmpl.ID+`"],"count":101}`))
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer res.Body.Close()
+	if res.StatusCode != http.StatusBadRequest {
+		t.Fatalf("status %d want 400", res.StatusCode)
+	}
+}
+
+func TestHTTP_task_templates_instantiate_duplicate_items(t *testing.T) {
+	srv, st := newTaskTestServerWithStore(t)
+	defer srv.Close()
+	ctx := context.Background()
+	payload := []byte(withCreateChecklist(`{"title":"T","priority":"medium"}`))
+	tmpl, err := st.SaveTemplate(ctx, "", "T", payload)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	res, err := http.Post(srv.URL+"/task-templates/instantiate", "application/json",
+		strings.NewReader(`{"items":[{"template_id":"`+tmpl.ID+`","count":2},{"template_id":"`+tmpl.ID+`","count":1}]}`))
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer res.Body.Close()
+	if res.StatusCode != http.StatusBadRequest {
+		t.Fatalf("status %d want 400", res.StatusCode)
+	}
+}
+
 func TestHTTP_task_templates_save_requires_valid_payload(t *testing.T) {
 	srv := newTaskTestServer(t)
 	defer srv.Close()

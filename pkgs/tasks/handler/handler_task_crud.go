@@ -16,8 +16,10 @@ import (
 )
 
 const (
-	maxListIntQueryParamBytes = 32
-	maxListAfterIDParamBytes  = 128
+	maxListIntQueryParamBytes          = 32
+	maxListAfterIDParamBytes           = 128
+	maxTemplateInstantiateCountPerItem = 25
+	maxTemplateInstantiateTotalCreates = 100
 )
 
 func (h *Handler) create(w http.ResponseWriter, r *http.Request) {

@@ -173,8 +173,9 @@ func (h *Handler) instantiateTaskTemplates(w http.ResponseWriter, r *http.Reques
 		writeError(w, r, op, err, http.StatusBadRequest)
 		return
 	}
-	if len(body.TemplateIDs) == 0 {
-		writeStoreError(w, r, op, fmt.Errorf("%w: template_ids required", domain.ErrInvalidInput))
+	items, err := normalizeInstantiateItems(body)
+	if err != nil {
+		writeStoreError(w, r, op, err)
 		return
 	}
 	by := actorFromRequest(r)
@@ -182,44 +183,38 @@ func (h *Handler) instantiateTaskTemplates(w http.ResponseWriter, r *http.Reques
 		Tasks:  make([]domain.Task, 0),
 		Errors: make([]taskTemplateInstantiateErrorJSON, 0),
 	}
-	for _, templateID := range body.TemplateIDs {
-		templateID = strings.TrimSpace(templateID)
-		if templateID == "" {
-			resp.Errors = append(resp.Errors, taskTemplateInstantiateErrorJSON{
-				TemplateID: templateID,
-				Error:      "template id required",
-			})
-			continue
+	for _, item := range items {
+		for range item.Count {
+			detail, err := h.store.GetTemplate(r.Context(), item.TemplateID)
+			if err != nil {
+				resp.Errors = append(resp.Errors, taskTemplateInstantiateErrorJSON{
+					TemplateID: item.TemplateID,
+					Error:      err.Error(),
+				})
+				continue
+			}
+			compose, err := decodeComposePayload(detail.Payload)
+			if err != nil {
+				resp.Errors = append(resp.Errors, taskTemplateInstantiateErrorJSON{
+					TemplateID: item.TemplateID,
+					Error:      err.Error(),
+				})
+				continue
+			}
+			task, err := h.createTaskFromComposeJSON(r.Context(), r, op, compose, createTaskComposeOpts{
+				StripDependsOn:          true,
+				OmitPastPickupNotBefore: true,
+				InstantiateFromTemplate: true,
+			}, by)
+			if err != nil {
+				resp.Errors = append(resp.Errors, taskTemplateInstantiateErrorJSON{
+					TemplateID: item.TemplateID,
+					Error:      err.Error(),
+				})
+				continue
+			}
+			resp.Tasks = append(resp.Tasks, *task)
 		}
-		detail, err := h.store.GetTemplate(r.Context(), templateID)
-		if err != nil {
-			resp.Errors = append(resp.Errors, taskTemplateInstantiateErrorJSON{
-				TemplateID: templateID,
-				Error:      err.Error(),
-			})
-			continue
-		}
-		compose, err := decodeComposePayload(detail.Payload)
-		if err != nil {
-			resp.Errors = append(resp.Errors, taskTemplateInstantiateErrorJSON{
-				TemplateID: templateID,
-				Error:      err.Error(),
-			})
-			continue
-		}
-		task, err := h.createTaskFromComposeJSON(r.Context(), r, op, compose, createTaskComposeOpts{
-			StripDependsOn:          true,
-			OmitPastPickupNotBefore: true,
-			InstantiateFromTemplate: true,
-		}, by)
-		if err != nil {
-			resp.Errors = append(resp.Errors, taskTemplateInstantiateErrorJSON{
-				TemplateID: templateID,
-				Error:      err.Error(),
-			})
-			continue
-		}
-		resp.Tasks = append(resp.Tasks, *task)
 	}
 	writeJSON(w, r, op, http.StatusOK, resp)
 }

@@ -2,10 +2,12 @@ package gitwork
 
 import (
 	"context"
+	"log/slog"
 	"strings"
 )
 
 func (s *DefaultService) ListBranches(ctx context.Context, repo *Repository) ([]Branch, error) {
+	slog.DebugContext(ctx, "trace", "cmd", logCmd, "operation", "gitwork.ListBranches")
 	if repo == nil {
 		return nil, ErrNotARepository
 	}
@@ -41,6 +43,7 @@ func (s *DefaultService) ListBranches(ctx context.Context, repo *Repository) ([]
 }
 
 func (s *DefaultService) CreateBranch(ctx context.Context, repo *Repository, name, startPoint string) (*Branch, error) {
+	slog.DebugContext(ctx, "trace", "cmd", logCmd, "operation", "gitwork.CreateBranch")
 	if repo == nil {
 		return nil, ErrNotARepository
 	}
@@ -59,6 +62,7 @@ func (s *DefaultService) CreateBranch(ctx context.Context, repo *Repository, nam
 }
 
 func (s *DefaultService) DeleteBranch(ctx context.Context, repo *Repository, name string, force bool) error {
+	slog.DebugContext(ctx, "trace", "cmd", logCmd, "operation", "gitwork.DeleteBranch")
 	if repo == nil {
 		return ErrNotARepository
 	}
@@ -73,6 +77,7 @@ func (s *DefaultService) DeleteBranch(ctx context.Context, repo *Repository, nam
 }
 
 func (s *DefaultService) Checkout(ctx context.Context, worktreePath, branch string) error {
+	slog.DebugContext(ctx, "trace", "cmd", logCmd, "operation", "gitwork.Checkout")
 	abs, err := absPath(worktreePath)
 	if err != nil {
 		return err

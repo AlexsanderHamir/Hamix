@@ -162,6 +162,7 @@ func (s *Store) DeleteGitWorktree(ctx context.Context, projectID, worktreeID str
 	return nil
 }
 
+//funclogmeasure:skip category=hot-path reason="Pure helper without I/O; operation trace is emitted by the calling chokepoint."
 func mapGitworkCreateErr(err error) error {
 	switch {
 	case errors.Is(err, gitwork.ErrWorktreeExists):
@@ -173,6 +174,7 @@ func mapGitworkCreateErr(err error) error {
 	}
 }
 
+//funclogmeasure:skip category=hot-path reason="Pure helper without I/O; operation trace is emitted by the calling chokepoint."
 func mapGitworkRemoveErr(err error) error {
 	if errors.Is(err, gitwork.ErrDirty) {
 		return domain.NewGitErr(domain.GitCodePathExists, "worktree has uncommitted changes; use force")

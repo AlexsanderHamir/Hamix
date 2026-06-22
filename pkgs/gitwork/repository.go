@@ -2,11 +2,13 @@ package gitwork
 
 import (
 	"context"
+	"log/slog"
 	"path/filepath"
 	"strings"
 )
 
 func (s *DefaultService) OpenRepository(ctx context.Context, path string) (*Repository, error) {
+	slog.DebugContext(ctx, "trace", "cmd", logCmd, "operation", "gitwork.OpenRepository")
 	abs, err := absPath(path)
 	if err != nil {
 		return nil, err
@@ -34,6 +36,7 @@ func (s *DefaultService) OpenRepository(ctx context.Context, path string) (*Repo
 	return &Repository{Root: root, CommonDir: common}, nil
 }
 
+//funclogmeasure:skip category=hot-path reason="Pure helper without I/O; operation trace is emitted by the calling chokepoint."
 func splitNonEmptyLines(s string) []string {
 	raw := strings.Split(s, "\n")
 	out := make([]string, 0, len(raw))

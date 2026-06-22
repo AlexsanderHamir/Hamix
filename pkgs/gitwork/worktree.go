@@ -2,12 +2,14 @@ package gitwork
 
 import (
 	"context"
+	"log/slog"
 	"os"
 	"path/filepath"
 	"strings"
 )
 
 func (s *DefaultService) ListWorktrees(ctx context.Context, repo *Repository) ([]Worktree, error) {
+	slog.DebugContext(ctx, "trace", "cmd", logCmd, "operation", "gitwork.ListWorktrees")
 	if repo == nil {
 		return nil, ErrNotARepository
 	}
@@ -18,6 +20,7 @@ func (s *DefaultService) ListWorktrees(ctx context.Context, repo *Repository) ([
 	return parseWorktreePorcelain(out, repo.Root)
 }
 
+//funclogmeasure:skip category=hot-path reason="Pure helper without I/O; operation trace is emitted by the calling chokepoint."
 func parseWorktreePorcelain(out, mainRoot string) ([]Worktree, error) {
 	mainRoot, err := absPath(mainRoot)
 	if err != nil {
@@ -78,6 +81,7 @@ func parseWorktreePorcelain(out, mainRoot string) ([]Worktree, error) {
 }
 
 func (s *DefaultService) AddWorktree(ctx context.Context, repo *Repository, path string, opts AddWorktreeOptions) (*Worktree, error) {
+	slog.DebugContext(ctx, "trace", "cmd", logCmd, "operation", "gitwork.AddWorktree")
 	if repo == nil {
 		return nil, ErrNotARepository
 	}
@@ -116,6 +120,7 @@ func (s *DefaultService) AddWorktree(ctx context.Context, repo *Repository, path
 }
 
 func (s *DefaultService) RemoveWorktree(ctx context.Context, repo *Repository, path string, force bool) error {
+	slog.DebugContext(ctx, "trace", "cmd", logCmd, "operation", "gitwork.RemoveWorktree")
 	if repo == nil {
 		return ErrNotARepository
 	}
@@ -134,6 +139,7 @@ func (s *DefaultService) RemoveWorktree(ctx context.Context, repo *Repository, p
 	return nil
 }
 
+//funclogmeasure:skip category=delegate-already-logs reason="Thin wrapper around runGit which emits git command trace."
 func (s *DefaultService) runGitRemove(ctx context.Context, dir string, args ...string) error {
 	_, err := s.runGit(ctx, dir, args...)
 	return err

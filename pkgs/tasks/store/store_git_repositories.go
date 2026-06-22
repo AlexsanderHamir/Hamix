@@ -165,6 +165,7 @@ func (s *Store) DeleteGitRepository(ctx context.Context, projectID, repoID strin
 	return nil
 }
 
+//funclogmeasure:skip category=hot-path reason="Pure helper without I/O; operation trace is emitted by the calling chokepoint."
 func worktreeDisplayName(path string) string {
 	base := filepath.Base(filepath.Clean(path))
 	if base == "" || base == "." {

@@ -10,6 +10,7 @@ import (
 	"github.com/AlexsanderHamir/Hamix/pkgs/tasks/store"
 )
 
+//funclogmeasure:skip category=hot-path reason="Pure helper without I/O; operation trace is emitted by the calling chokepoint."
 func toGitWorktreeJSON(w domain.GitWorktree) gitWorktreeJSON {
 	return gitWorktreeJSON{
 		ID:           w.ID,
@@ -23,6 +24,7 @@ func toGitWorktreeJSON(w domain.GitWorktree) gitWorktreeJSON {
 
 func (h *Handler) listGitWorktrees(w http.ResponseWriter, r *http.Request) {
 	const op = "git.worktrees.list"
+	slog.Debug("trace", "cmd", calltrace.LogCmd, "operation", "handler.listGitWorktrees")
 	r = calltrace.WithRequestRoot(r, op)
 	projectID, err := parseGitProjectID(r)
 	if err != nil {
@@ -43,6 +45,7 @@ func (h *Handler) listGitWorktrees(w http.ResponseWriter, r *http.Request) {
 
 func (h *Handler) createGitWorktree(w http.ResponseWriter, r *http.Request) {
 	const op = "git.worktrees.create"
+	slog.Debug("trace", "cmd", calltrace.LogCmd, "operation", "handler.createGitWorktree")
 	r = calltrace.WithRequestRoot(r, op)
 	projectID, err := parseGitProjectID(r)
 	if err != nil {

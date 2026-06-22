@@ -10,6 +10,7 @@ import (
 	"github.com/AlexsanderHamir/Hamix/pkgs/tasks/store"
 )
 
+//funclogmeasure:skip category=hot-path reason="Pure helper without I/O; operation trace is emitted by the calling chokepoint."
 func toGitRepositoryJSON(r domain.GitRepository) gitRepositoryJSON {
 	return gitRepositoryJSON{
 		ID:            r.ID,
@@ -24,6 +25,7 @@ func toGitRepositoryJSON(r domain.GitRepository) gitRepositoryJSON {
 
 func (h *Handler) listGitRepositories(w http.ResponseWriter, r *http.Request) {
 	const op = "git.repositories.list"
+	slog.Debug("trace", "cmd", calltrace.LogCmd, "operation", "handler.listGitRepositories")
 	r = calltrace.WithRequestRoot(r, op)
 	projectID, err := parseGitProjectID(r)
 	if err != nil {
@@ -44,6 +46,7 @@ func (h *Handler) listGitRepositories(w http.ResponseWriter, r *http.Request) {
 
 func (h *Handler) createGitRepository(w http.ResponseWriter, r *http.Request) {
 	const op = "git.repositories.create"
+	slog.Debug("trace", "cmd", calltrace.LogCmd, "operation", "handler.createGitRepository")
 	r = calltrace.WithRequestRoot(r, op)
 	projectID, err := parseGitProjectID(r)
 	if err != nil {
@@ -69,6 +72,7 @@ func (h *Handler) createGitRepository(w http.ResponseWriter, r *http.Request) {
 
 func (h *Handler) getGitRepository(w http.ResponseWriter, r *http.Request) {
 	const op = "git.repositories.get"
+	slog.Debug("trace", "cmd", calltrace.LogCmd, "operation", "handler.getGitRepository")
 	r = calltrace.WithRequestRoot(r, op)
 	projectID, err := parseGitProjectID(r)
 	if err != nil {
@@ -102,6 +106,7 @@ func (h *Handler) deleteGitRepository(w http.ResponseWriter, r *http.Request) {
 
 func (h *Handler) reconcileGitRepository(w http.ResponseWriter, r *http.Request) {
 	const op = "git.repositories.reconcile"
+	slog.Debug("trace", "cmd", calltrace.LogCmd, "operation", "handler.reconcileGitRepository")
 	r = calltrace.WithRequestRoot(r, op)
 	projectID, err := parseGitProjectID(r)
 	if err != nil {

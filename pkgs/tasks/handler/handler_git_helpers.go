@@ -16,6 +16,7 @@ type jsonCodedErrorBody struct {
 	RequestID string `json:"request_id,omitempty"`
 }
 
+//funclogmeasure:skip category=hot-path reason="Pure helper without I/O; operation trace is emitted by the calling chokepoint."
 func (h *Handler) gitService() gitwork.Service {
 	if h.git != nil {
 		return h.git
@@ -23,6 +24,7 @@ func (h *Handler) gitService() gitwork.Service {
 	return gitwork.New()
 }
 
+//funclogmeasure:skip category=hot-path reason="Pure helper without I/O; operation trace is emitted by the calling chokepoint."
 func gitErrHTTP(err error) (status int, code, msg string) {
 	status = http.StatusInternalServerError
 	msg = "internal server error"
@@ -55,6 +57,7 @@ func gitErrHTTP(err error) (status int, code, msg string) {
 	}
 }
 
+//funclogmeasure:skip category=delegate-already-logs reason="Error response helper; HTTP handler chokepoint emits trace."
 func writeGitStoreError(w http.ResponseWriter, r *http.Request, op string, err error) {
 	status, code, msg := gitErrHTTP(err)
 	if code != "" {
@@ -68,6 +71,7 @@ func writeGitStoreError(w http.ResponseWriter, r *http.Request, op string, err e
 	writeJSONError(w, r, op, status, msg)
 }
 
+//funclogmeasure:skip category=delegate-already-logs reason="Error response helper; HTTP handler chokepoint emits trace."
 func writeJSONCodedError(w http.ResponseWriter, r *http.Request, op string, status int, code, msg string) {
 	setJSONHeaders(w)
 	w.WriteHeader(status)

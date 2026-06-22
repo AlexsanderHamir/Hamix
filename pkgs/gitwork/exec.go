@@ -60,6 +60,7 @@ func (s *DefaultService) runGit(ctx context.Context, dir string, args ...string)
 	return strings.TrimSpace(stdout.String()), nil
 }
 
+//funclogmeasure:skip category=hot-path reason="Pure helper without I/O; operation trace is emitted by the calling chokepoint."
 func execStderr(err error) string {
 	var ee *execError
 	if errors.As(err, &ee) {
@@ -68,10 +69,12 @@ func execStderr(err error) string {
 	return ""
 }
 
+//funclogmeasure:skip category=hot-path reason="Pure helper without I/O; operation trace is emitted by the calling chokepoint."
 func stderrContains(err error, substr string) bool {
 	return strings.Contains(strings.ToLower(execStderr(err)), strings.ToLower(substr))
 }
 
+//funclogmeasure:skip category=hot-path reason="Pure helper without I/O; operation trace is emitted by the calling chokepoint."
 func mapNotARepository(err error) error {
 	if err == nil {
 		return nil
@@ -82,6 +85,7 @@ func mapNotARepository(err error) error {
 	return err
 }
 
+//funclogmeasure:skip category=hot-path reason="Pure helper without I/O; operation trace is emitted by the calling chokepoint."
 func mapWorktreeAddErr(err error) error {
 	if err == nil {
 		return nil
@@ -96,6 +100,7 @@ func mapWorktreeAddErr(err error) error {
 	return err
 }
 
+//funclogmeasure:skip category=hot-path reason="Pure helper without I/O; operation trace is emitted by the calling chokepoint."
 func mapBranchCreateErr(err error) error {
 	if err == nil {
 		return nil
@@ -106,6 +111,7 @@ func mapBranchCreateErr(err error) error {
 	return err
 }
 
+//funclogmeasure:skip category=hot-path reason="Pure helper without I/O; operation trace is emitted by the calling chokepoint."
 func mapBranchDeleteErr(err error) error {
 	if err == nil {
 		return nil
@@ -117,6 +123,7 @@ func mapBranchDeleteErr(err error) error {
 	return err
 }
 
+//funclogmeasure:skip category=hot-path reason="Pure helper without I/O; operation trace is emitted by the calling chokepoint."
 func mapWorktreeRemoveErr(err error) error {
 	if err == nil {
 		return nil
@@ -128,6 +135,7 @@ func mapWorktreeRemoveErr(err error) error {
 	return err
 }
 
+//funclogmeasure:skip category=hot-path reason="Pure helper without I/O; operation trace is emitted by the calling chokepoint."
 func mapCheckoutErr(err error) error {
 	if err == nil {
 		return nil
@@ -139,6 +147,7 @@ func mapCheckoutErr(err error) error {
 	return err
 }
 
+//funclogmeasure:skip category=hot-path reason="Pure helper without I/O; operation trace is emitted by the calling chokepoint."
 func absPath(p string) (string, error) {
 	p = filepath.Clean(p)
 	abs, err := filepath.Abs(p)

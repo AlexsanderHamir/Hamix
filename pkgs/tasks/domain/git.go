@@ -27,11 +27,15 @@ type GitErr struct {
 func (e *GitErr) Error() string { return e.Msg }
 
 // NewGitErr returns an error tagged with a stable git API code.
+//
+//funclogmeasure:skip category=hot-path reason="Pure helper without I/O; operation trace is emitted by the calling chokepoint."
 func NewGitErr(code, msg string) error {
 	return &GitErr{Code: code, Msg: msg}
 }
 
 // GitErrCode returns the stable code when err wraps *GitErr.
+//
+//funclogmeasure:skip category=hot-path reason="Pure helper without I/O; operation trace is emitted by the calling chokepoint."
 func GitErrCode(err error) string {
 	var ge *GitErr
 	if errors.As(err, &ge) {

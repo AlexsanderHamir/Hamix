@@ -10,6 +10,7 @@ import (
 	"github.com/AlexsanderHamir/Hamix/pkgs/tasks/store"
 )
 
+//funclogmeasure:skip category=hot-path reason="Pure helper without I/O; operation trace is emitted by the calling chokepoint."
 func toGitBranchJSON(b domain.GitBranch) gitBranchJSON {
 	return gitBranchJSON{
 		ID:           b.ID,
@@ -22,6 +23,7 @@ func toGitBranchJSON(b domain.GitBranch) gitBranchJSON {
 
 func (h *Handler) listGitBranches(w http.ResponseWriter, r *http.Request) {
 	const op = "git.branches.list"
+	slog.Debug("trace", "cmd", calltrace.LogCmd, "operation", "handler.listGitBranches")
 	r = calltrace.WithRequestRoot(r, op)
 	projectID, err := parseGitProjectID(r)
 	if err != nil {
@@ -42,6 +44,7 @@ func (h *Handler) listGitBranches(w http.ResponseWriter, r *http.Request) {
 
 func (h *Handler) createGitBranch(w http.ResponseWriter, r *http.Request) {
 	const op = "git.branches.create"
+	slog.Debug("trace", "cmd", calltrace.LogCmd, "operation", "handler.createGitBranch")
 	r = calltrace.WithRequestRoot(r, op)
 	projectID, err := parseGitProjectID(r)
 	if err != nil {

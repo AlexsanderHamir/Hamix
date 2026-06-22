@@ -91,6 +91,9 @@ func Migrate(ctx context.Context, db *gorm.DB) error {
 		&domain.ProjectContextEdge{},
 		&domain.TaskContextSnapshot{},
 		&domain.AppSettings{},
+		&domain.GitRepository{},
+		&domain.GitWorktree{},
+		&domain.GitBranch{},
 	); err != nil {
 		return fmt.Errorf("automigrate task models: %w", err)
 	}

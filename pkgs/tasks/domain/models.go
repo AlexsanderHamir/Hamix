@@ -44,6 +44,10 @@ type Task struct {
 	// CreatedAt is hydrated from the seq=1 task_created audit row on read;
 	// not a tasks-table column.
 	CreatedAt *time.Time `json:"created_at,omitempty" gorm:"-"`
+	// WorktreeID and BranchID bind a task to a git context (Plan 4 validates
+	// on create; columns exist in Plan 3 for delete guards).
+	WorktreeID *string `json:"worktree_id,omitempty" gorm:"index"`
+	BranchID   *string `json:"branch_id,omitempty" gorm:"index"`
 
 	Project *Project `json:"-" gorm:"foreignKey:ProjectID;references:ID;constraint:OnDelete:SET NULL"`
 }

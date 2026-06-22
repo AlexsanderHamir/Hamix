@@ -7,15 +7,15 @@ import (
 
 // Git API error codes returned in JSON {"error","code"} responses.
 const (
-	GitCodeNotARepository    = "not_a_git_repository"
-	GitCodePathExists        = "path_exists"
-	GitCodeBranchExists      = "branch_exists"
-	GitCodeBranchCheckedOut  = "branch_checked_out"
-	GitCodeHasRunningTask    = "has_running_task"
+	GitCodeNotARepository     = "not_a_git_repository"
+	GitCodePathExists         = "path_exists"
+	GitCodeBranchExists       = "branch_exists"
+	GitCodeBranchCheckedOut   = "branch_checked_out"
+	GitCodeHasRunningTask     = "has_running_task"
 	GitCodeRepositoryNotFound = "repository_not_found"
-	GitCodeWorktreeNotFound  = "worktree_not_found"
-	GitCodeBranchNotFound    = "branch_not_found"
-	GitCodeDuplicate         = "duplicate"
+	GitCodeWorktreeNotFound   = "worktree_not_found"
+	GitCodeBranchNotFound     = "branch_not_found"
+	GitCodeDuplicate          = "duplicate"
 )
 
 // GitErr is a domain error with a stable API code for git entity routes.

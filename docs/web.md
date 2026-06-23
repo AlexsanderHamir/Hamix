@@ -1,6 +1,6 @@
 # Web SPA
 
-Vite + React client under `web/`. All `fetch` calls live in `web/src/api/`; responses are parsed through typed parsers before use.
+Vite + React client under `web/`. All `fetch` calls live in `web/src/api/`; responses are parsed through typed parsers before use. Wire enums mirrored in `web/src/types/` and `web/src/constants/` are documented in [ADR-0035](./adr/ADR-0035-cross-stack-constant-ownership.md).
 
 | | |
 | --- | --- |
@@ -82,3 +82,4 @@ The task detail page also loads **`GET /tasks/{id}/commits`** via `TaskCommitsPa
 - [agent-map.md](./agent-map.md) — web code paths
 - [CONTRIBUTING.md](../CONTRIBUTING.md) — setup and PR checklist
 - [domain/sse-hub.md](./domain/sse-hub.md) — SSE event catalog and operator tuning
+- [ADR-0035](./adr/ADR-0035-cross-stack-constant-ownership.md) — cross-stack constant ownership and intentional omissions

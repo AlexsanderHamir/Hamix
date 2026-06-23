@@ -4,6 +4,8 @@ Per-request **call stack** for structured logs (`call_path`, `helper.io`): `Push
 
 **Consumers:** `pkgs/tasks/handler` (HTTP handlers and JSON helpers), `pkgs/tasks/middleware` (access log `call_path` via `Path` passed into `Stack`), `internal/taskapi` (wires `middleware.Stack(..., calltrace.Path)`).
 
+Constant ownership across Go and web mirrors: [ADR-0035](../../../docs/adr/ADR-0035-cross-stack-constant-ownership.md).
+
 **Dependencies:** stdlib and `log/slog` only in production code; tests use `pkgs/tasks/logctx` for `log_seq` assertions.
 
 | File | Role |

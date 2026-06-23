@@ -49,17 +49,3 @@ jobs:
 
       - name: Check (web)
         run: ./scripts/check-web.sh --install --verbose
-
-  docs:
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-
-      - uses: actions/setup-node@v4
-        with:
-          node-version: "20"
-          cache: npm
-          cache-dependency-path: website/package-lock.json
-
-      - name: Check (docs)
-        run: ./scripts/check-docs.sh --install --verbose

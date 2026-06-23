@@ -3,11 +3,12 @@
 .git-commit-msg.tmp
 coverage.out
 coverage*.out
-coverage
+/coverage*
 coverage-handler
 coverage-pg
 node_modules/
 web/dist/
+website/build/
 taskapi-dev
 taskapi-dev.exe
 /handler

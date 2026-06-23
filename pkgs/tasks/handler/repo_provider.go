@@ -3,8 +3,8 @@ package handler
 import (
 	"context"
 	"log/slog"
-	"sync"
 	"strings"
+	"sync"
 
 	"github.com/AlexsanderHamir/Hamix/pkgs/repo"
 	"github.com/AlexsanderHamir/Hamix/pkgs/tasks/calltrace"

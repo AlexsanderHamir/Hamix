@@ -4,10 +4,12 @@ import (
 	"context"
 	"os/exec"
 	"testing"
+	"time"
 
 	"github.com/AlexsanderHamir/Hamix/pkgs/tasks/domain"
 	"github.com/glebarez/sqlite"
 	"gorm.io/gorm"
+	"gorm.io/gorm/clause"
 	"gorm.io/gorm/logger"
 )
 
@@ -23,13 +25,11 @@ func TestMigrateRepoRootToGitRepository_idempotent(t *testing.T) {
 		t.Fatal(err)
 	}
 	ctx := context.Background()
-	if err := Migrate(ctx, db); err != nil {
-		t.Fatal(err)
-	}
+	seedLegacyAppSettingsWithRepoRoot(ctx, t, db)
 	main := initMigrateGitRepo(t)
-	settings := domain.DefaultAppSettings()
-	settings.RepoRoot = main
-	if err := db.Save(&settings).Error; err != nil {
+	if err := db.WithContext(ctx).Exec(
+		`UPDATE app_settings SET repo_root = ? WHERE id = ?`, main, domain.AppSettingsRowID,
+	).Error; err != nil {
 		t.Fatal(err)
 	}
 	if err := migrateRepoRootToGitRepository(ctx, db); err != nil {
@@ -50,6 +50,38 @@ func TestMigrateRepoRootToGitRepository_idempotent(t *testing.T) {
 	}
 	if n != 1 {
 		t.Fatalf("after second migrate count=%d want 1", n)
+	}
+}
+
+// seedLegacyAppSettingsWithRepoRoot creates a pre-ADR-0033 schema slice: app_settings
+// still carries repo_root before migrateRepoRootToGitRepository backfills git_repositories.
+func seedLegacyAppSettingsWithRepoRoot(ctx context.Context, t *testing.T, db *gorm.DB) {
+	t.Helper()
+	if err := db.WithContext(ctx).AutoMigrate(
+		&domain.Project{},
+		&domain.AppSettings{},
+		&domain.GitRepository{},
+		&domain.GitWorktree{},
+		&domain.GitBranch{},
+	); err != nil {
+		t.Fatal(err)
+	}
+	defaultProject := domain.DefaultProject(time.Now().UTC())
+	if err := db.WithContext(ctx).Clauses(clause.OnConflict{DoNothing: true}).Create(&defaultProject).Error; err != nil {
+		t.Fatal(err)
+	}
+	has, err := tableHasColumn(ctx, db, "app_settings", "repo_root")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !has {
+		if err := db.WithContext(ctx).Exec(`ALTER TABLE app_settings ADD COLUMN repo_root TEXT NOT NULL DEFAULT ''`).Error; err != nil {
+			t.Fatal(err)
+		}
+	}
+	settings := domain.DefaultAppSettings()
+	if err := db.WithContext(ctx).Clauses(clause.OnConflict{DoNothing: true}).Create(&settings).Error; err != nil {
+		t.Fatal(err)
 	}
 }
 

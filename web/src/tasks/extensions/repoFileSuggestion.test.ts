@@ -5,6 +5,11 @@ import { waitFor } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { RepoFileMention } from "./repoFileMention";
 import { RepoFileSuggestion } from "./repoFileSuggestion";
+import { GIT_TEST_WORKTREE_ID } from "@/test/handlers/git";
+
+const suggestionOptions = {
+  getWorktreeId: () => GIT_TEST_WORKTREE_ID,
+};
 
 describe("RepoFileSuggestion", () => {
   beforeEach(() => {
@@ -31,7 +36,7 @@ describe("RepoFileSuggestion", () => {
         StarterKit,
         Placeholder.configure({ placeholder: "" }),
         RepoFileMention,
-        RepoFileSuggestion.configure({ onRepoUnavailable }),
+        RepoFileSuggestion.configure({ onRepoUnavailable, ...suggestionOptions }),
       ],
       content: "<p></p>",
     });
@@ -48,7 +53,7 @@ describe("RepoFileSuggestion", () => {
         StarterKit,
         Placeholder.configure({ placeholder: "" }),
         RepoFileMention,
-        RepoFileSuggestion.configure({ onRepoUnavailable }),
+        RepoFileSuggestion.configure({ onRepoUnavailable, ...suggestionOptions }),
       ],
       content: "<p></p>",
     });
@@ -66,7 +71,7 @@ describe("RepoFileSuggestion", () => {
         StarterKit,
         Placeholder.configure({ placeholder: "" }),
         RepoFileMention,
-        RepoFileSuggestion.configure({ onRepoAvailable }),
+        RepoFileSuggestion.configure({ onRepoAvailable, ...suggestionOptions }),
       ],
       content: "<p></p>",
     });

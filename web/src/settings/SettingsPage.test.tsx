@@ -35,11 +35,12 @@ function stubListCursorModelsFetch(
   };
 }
 
-/** Open the advanced repo path field in Agent workspace settings. */
-async function openAdvancedRepoInput() {
-  await screen.findByRole("button", { name: /Choose project folder/i });
-  await userEvent.click(await screen.findByText(/Advanced: type path manually/i));
-  return screen.findByLabelText(/Repository root path/i);
+/** Edit the Cursor CLI path field in Agent settings. */
+async function editCursorBin(value: string) {
+  const cursorBin = await screen.findByLabelText(/^CLI path$/);
+  await userEvent.clear(cursorBin);
+  await userEvent.type(cursorBin, value);
+  return cursorBin;
 }
 
 function defaultSettings(overrides: Partial<Record<string, unknown>> = {}) {
@@ -120,7 +121,7 @@ describe("SettingsPage", () => {
     }));
 
     renderPage();
-    expect(await screen.findByText("/Users/me/code/example")).toBeInTheDocument();
+    expect(await screen.findByRole("link", { name: /^Open Worktrees$/i })).toBeInTheDocument();
     expect(screen.getByLabelText(/^CLI path$/)).toHaveValue(
       "/usr/local/bin/cursor-agent",
     );
@@ -223,6 +224,17 @@ describe("SettingsPage", () => {
     });
   });
 
+  it("links to the Worktrees page from the Agent workspace section", async () => {
+    vi.spyOn(globalThis, "fetch").mockImplementation(stubListCursorModelsFetch(async () =>
+      jsonResponse(defaultSettings()),
+    ));
+
+    renderPage();
+    const links = await screen.findAllByRole("link", { name: /^Open Worktrees$/i });
+    expect(links.length).toBeGreaterThan(0);
+    expect(links[0]).toHaveAttribute("href", "/worktrees");
+  });
+
   it("shows the workspace warning banner when repo root is empty", async () => {
     vi.spyOn(globalThis, "fetch").mockImplementation(stubListCursorModelsFetch(async () =>
       jsonResponse(defaultSettings({ repo_root: "" })),
@@ -244,19 +256,20 @@ describe("SettingsPage", () => {
         }
         if (url.endsWith("/settings") && init?.method === "PATCH") {
           const body = JSON.parse(String(init.body ?? "{}")) as Record<string, unknown>;
-          expect(Object.keys(body)).toEqual(["repo_root"]);
-          expect(body.repo_root).toBe("/var/repos/new");
+          expect(Object.keys(body)).toEqual(["cursor_bin"]);
+          expect(body.cursor_bin).toBe("/opt/local/bin/cursor-agent-2");
           return jsonResponse(
-            defaultSettings({ repo_root: "/var/repos/new", updated_at: "2026-04-18T12:30:00Z" }),
+            defaultSettings({
+              cursor_bin: "/opt/local/bin/cursor-agent-2",
+              updated_at: "2026-04-18T12:30:00Z",
+            }),
           );
         }
         return new Response("not found", { status: 404 });
       }));
 
     renderPage();
-    const repoInput = await openAdvancedRepoInput();
-    await userEvent.clear(repoInput);
-    await userEvent.type(repoInput, "/var/repos/new");
+    await editCursorBin("/opt/local/bin/cursor-agent-2");
 
     const saveBtn = screen.getByRole("button", { name: /Save changes/ });
     expect(saveBtn).not.toBeDisabled();
@@ -280,7 +293,7 @@ describe("SettingsPage", () => {
           if (url.endsWith("/settings") && init?.method === "PATCH") {
             return jsonResponse(
               defaultSettings({
-                repo_root: "/var/repos/new",
+                cursor_bin: "/opt/local/bin/cursor-agent-2",
                 updated_at: "2026-04-18T12:30:00Z",
               }),
             );
@@ -290,9 +303,7 @@ describe("SettingsPage", () => {
       );
 
       renderPage();
-      const repoInput = await openAdvancedRepoInput();
-      await userEvent.clear(repoInput);
-      await userEvent.type(repoInput, "/var/repos/new");
+      await editCursorBin("/opt/local/bin/cursor-agent-2");
       await userEvent.click(screen.getByRole("button", { name: /Save changes/ }));
 
       await waitFor(() =>
@@ -425,9 +436,7 @@ describe("SettingsPage", () => {
     }));
 
     renderPage();
-    const repoInput = await openAdvancedRepoInput();
-    await userEvent.clear(repoInput);
-    await userEvent.type(repoInput, "/var/repos/new");
+    await editCursorBin("/opt/local/bin/cursor-agent-2");
 
     const saveBtn = screen.getByRole("button", { name: /Save changes/ });
     await userEvent.click(saveBtn);
@@ -470,28 +479,22 @@ describe("SettingsPage", () => {
     );
 
     renderPage();
-    const repoInput = await openAdvancedRepoInput();
-    await userEvent.clear(repoInput);
-    await userEvent.type(repoInput, "/var/repos/new");
+    const cursorInput = await editCursorBin("/opt/local/bin/cursor-agent-2");
 
     const saveBtn = screen.getByRole("button", { name: /Save changes/ });
     await userEvent.click(saveBtn);
 
-    // PATCH is in flight; the user keeps typing in the cursor-bin
-    // field (a field NOT in the submitted patch body).
-    const cursorInput = screen.getByLabelText(/^CLI path$/);
-    await userEvent.clear(cursorInput);
-    await userEvent.type(cursorInput, "/opt/local/bin/cursor-agent");
+    // PATCH is in flight; the user keeps typing in max execute duration
+    // (a field NOT in the submitted patch body).
+    const maxInput = screen.getByLabelText(/Max execute duration/i);
+    await userEvent.clear(maxInput);
+    await userEvent.type(maxInput, "120");
 
-    // Now release the PATCH. The response carries the server's
-    // pre-edit cursor_bin (because the user's in-flight typing was
-    // never sent). Without the race-hardening, the form would now
-    // overwrite the cursor field back to the server value.
     if (!releasePatch) throw new Error("PATCH was not in flight");
     (releasePatch as (value: Response) => void)(
       jsonResponse(
         defaultSettings({
-          repo_root: "/var/repos/new",
+          cursor_bin: "/opt/local/bin/cursor-agent-2",
           updated_at: "2026-04-19T12:30:00Z",
         }),
       ),
@@ -500,14 +503,8 @@ describe("SettingsPage", () => {
     await waitFor(() =>
       expect(screen.getByTestId("settings-status")).toHaveTextContent(/saved/i),
     );
-    // The user's in-flight typing in cursor_bin must survive.
-    expect(cursorInput).toHaveValue("/opt/local/bin/cursor-agent");
-    // The patched field (repo_root) is whatever the user submitted
-    // (no further edits), so the server value applies cleanly.
-    expect(repoInput).toHaveValue("/var/repos/new");
-    // Form is now dirty against the new server baseline (user has
-    // unsaved cursor_bin changes), so Save re-enables for the next
-    // round.
+    expect(maxInput).toHaveValue(120);
+    expect(cursorInput).toHaveValue("/opt/local/bin/cursor-agent-2");
     expect(screen.getByRole("button", { name: /Save changes/ })).not.toBeDisabled();
   });
 
@@ -534,20 +531,18 @@ describe("SettingsPage", () => {
     );
 
     renderPage();
-    const repoInput = await openAdvancedRepoInput();
-    await userEvent.clear(repoInput);
-    await userEvent.type(repoInput, "/var/repos/A");
+    const cursorInput = await editCursorBin("/var/repos/A");
 
     await userEvent.click(screen.getByRole("button", { name: /Save changes/ }));
 
-    await userEvent.clear(repoInput);
-    await userEvent.type(repoInput, "/var/repos/B");
+    await userEvent.clear(cursorInput);
+    await userEvent.type(cursorInput, "/var/repos/B");
 
     if (!releasePatch) throw new Error("PATCH was not in flight");
     (releasePatch as (value: Response) => void)(
       jsonResponse(
         defaultSettings({
-          repo_root: "/var/repos/A",
+          cursor_bin: "/var/repos/A",
           updated_at: "2026-04-19T12:30:00Z",
         }),
       ),
@@ -556,7 +551,7 @@ describe("SettingsPage", () => {
     await waitFor(() =>
       expect(screen.getByTestId("settings-status")).toHaveTextContent(/saved/i),
     );
-    expect(repoInput).toHaveValue("/var/repos/B");
+    expect(cursorInput).toHaveValue("/var/repos/B");
   });
 
   it("rejects negative max_run_duration_seconds", async () => {

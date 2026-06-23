@@ -9,6 +9,7 @@ import { TASK_TEST_DEFAULTS } from "@/test/taskDefaults";
 import App from "./App";
 import { stubEventSource } from "../test/browserMocks";
 import { requestUrl } from "../test/requestUrl";
+import { respondGitApi } from "@/test/handlers/git";
 
 /** Task create modal loads models via POST /settings/list-cursor-models; mocks must not 404 here. */
 function jsonListCursorModelsOk(): Response {
@@ -16,6 +17,14 @@ function jsonListCursorModelsOk(): Response {
     ok: true,
     runner: TASK_TEST_DEFAULTS.runner,
     models: [{ id: "test", label: "Test" }],
+  });
+}
+
+async function waitForCreateTaskEnabled(dialog: HTMLElement) {
+  await waitFor(() => {
+    expect(
+      within(dialog).getByRole("button", { name: /^create task$/i }),
+    ).not.toBeDisabled();
   });
 }
 
@@ -256,6 +265,8 @@ describe("App", () => {
 
     vi.spyOn(globalThis, "fetch").mockImplementation(async (input, init) => {
       const url = requestUrl(input);
+      const git = respondGitApi(url, init?.method ?? "GET");
+      if (git) return git;
       if (url.startsWith("/tasks?")) {
         if (!created) {
           return Response.json({ tasks: [], limit: 200, offset: 0 });
@@ -308,6 +319,7 @@ describe("App", () => {
     await user.type(within(dialog).getByLabelText(/^title$/i), "Ship fix");
     await choosePriorityInDialog(user, dialog);
     await addCriterionInDialog(user, dialog, "Ship criterion");
+    await waitForCreateTaskEnabled(dialog);
     await user.click(
       within(dialog).getByRole("button", { name: /^create task$/i }),
     );
@@ -1042,6 +1054,8 @@ describe("App", () => {
 
     vi.spyOn(globalThis, "fetch").mockImplementation(async (input, init) => {
       const url = requestUrl(input);
+      const git = respondGitApi(url, init?.method ?? "GET");
+      if (git) return git;
       if (url.startsWith("/tasks?")) {
         if (!created) {
           return Response.json({ tasks: [], limit: 200, offset: 0 });
@@ -1105,6 +1119,7 @@ describe("App", () => {
       within(criterionDialog).getByRole("button", { name: /^add criterion$/i }),
     );
 
+    await waitForCreateTaskEnabled(dialog);
     await user.click(
       within(dialog).getByRole("button", { name: /^create task$/i }),
     );
@@ -1124,6 +1139,8 @@ describe("App", () => {
 
     vi.spyOn(globalThis, "fetch").mockImplementation(async (input, init) => {
       const url = requestUrl(input);
+      const git = respondGitApi(url, init?.method ?? "GET");
+      if (git) return git;
       if (url.startsWith("/tasks?")) {
         if (!created) {
           return Response.json({ tasks: [], limit: 200, offset: 0 });
@@ -1203,6 +1220,7 @@ describe("App", () => {
       within(editCriterionDialog).getByRole("button", { name: /^save changes$/i }),
     );
 
+    await waitForCreateTaskEnabled(dialog);
     await user.click(
       within(dialog).getByRole("button", { name: /^create task$/i }),
     );
@@ -1276,6 +1294,8 @@ describe("App", () => {
 
     vi.spyOn(globalThis, "fetch").mockImplementation(async (input, init) => {
       const url = requestUrl(input);
+      const git = respondGitApi(url, init?.method ?? "GET");
+      if (git) return git;
       if (url.startsWith("/tasks?")) {
         return Response.json({
           tasks: [
@@ -1328,6 +1348,7 @@ describe("App", () => {
     );
     await choosePriorityInDialog(user, dialog);
     await addCriterionInDialog(user, dialog, "Standalone criterion");
+    await waitForCreateTaskEnabled(dialog);
     await user.click(
       within(dialog).getByRole("button", { name: /^create task$/i }),
     );

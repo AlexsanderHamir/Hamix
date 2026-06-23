@@ -60,6 +60,11 @@ const ProjectContextPage = lazy(() =>
     default: m.ProjectContextPage,
   })),
 );
+const WorktreesPage = lazy(() =>
+  import("@/worktrees").then((m) => ({
+    default: m.WorktreesPage,
+  })),
+);
 import { UiTestModeBanner } from "@/dev/UiTestModeBanner";
 import { ErrorBanner } from "../shared/ErrorBanner";
 import { ModalStackProvider } from "../shared/ModalStackContext";
@@ -77,6 +82,7 @@ function AppShell() {
   const homeIsCurrent = location.pathname === "/";
   const draftsIsCurrent = location.pathname.startsWith("/drafts");
   const templatesIsCurrent = location.pathname.startsWith("/templates");
+  const worktreesIsCurrent = location.pathname.startsWith("/worktrees");
   const projectsUiEnabled = !isUiFeatureOmitted("projects");
   const projectsIsCurrent = projectsUiEnabled && location.pathname.startsWith("/projects");
   const headerElevated = useStickyShellElevation();
@@ -126,6 +132,15 @@ function AppShell() {
                   : {})}
               >
                 Templates
+              </Link>
+              <Link
+                to="/worktrees"
+                className="app-nav__link"
+                {...(worktreesIsCurrent
+                  ? { "aria-current": "page" as const }
+                  : {})}
+              >
+                Worktrees
               </Link>
               <Link
                 to="/drafts"
@@ -232,6 +247,7 @@ function routeNeedsHomeListData(pathname: string): boolean {
   if (pathname === "/" || pathname === "") return true;
   if (pathname.startsWith("/drafts")) return true;
   if (pathname.startsWith("/templates")) return true;
+  if (pathname.startsWith("/worktrees")) return true;
   // The task detail / cycle / event / graph routes embed the same
   // shell modals (edit/delete/change-model) that read from the home
   // list cache on close. Keeping data enabled here avoids a flash of
@@ -256,6 +272,7 @@ export default function App() {
             <Route index element={<TaskHome />} />
             <Route path="drafts" element={<TaskDraftsPage />} />
             <Route path="templates" element={<TaskTemplatesPage />} />
+            <Route path="worktrees" element={<WorktreesPage />} />
           {projectsUiEnabled ? (
             <>
               <Route path="projects" element={<ProjectListPage />} />

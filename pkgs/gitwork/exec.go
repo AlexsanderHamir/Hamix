@@ -140,6 +140,10 @@ func mapCheckoutErr(err error) error {
 	if err == nil {
 		return nil
 	}
+	if stderrContains(err, "already checked out") ||
+		stderrContains(err, "used by worktree") {
+		return ErrBranchCheckedOut
+	}
 	if stderrContains(err, "local changes") ||
 		stderrContains(err, "would be overwritten") {
 		return ErrDirty

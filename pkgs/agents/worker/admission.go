@@ -98,7 +98,14 @@ func (w *Worker) processOne(parentCtx context.Context, task domain.Task) {
 				"operation", "agent.worker.Worker.processOne.no_open_cycle", "task_id", task.ID)
 			return
 		}
-		w.harness.Resume(parentCtx, fresh, cycle)
+		if !taskHasBinding(fresh) {
+			slog.Warn("running task missing git binding", "cmd", workerLogCmd,
+				"operation", "agent.worker.Worker.processOne.missing_binding", "task_id", task.ID)
+			return
+		}
+		w.runWithGitPrep(parentCtx, fresh, func() {
+			w.harness.Resume(parentCtx, fresh, cycle)
+		})
 		return
 	case domain.StatusReady:
 		// continue below
@@ -123,11 +130,19 @@ func (w *Worker) processOne(parentCtx context.Context, task domain.Task) {
 		w.deferTaskPickup(parentCtx, task.ID, 60*time.Second)
 		return
 	}
+	if !taskHasBinding(fresh) {
+		slog.Warn("agent worker task missing git binding; deferring pickup", "cmd", workerLogCmd,
+			"operation", "agent.worker.Worker.processOne.missing_binding", "task_id", task.ID)
+		w.deferTaskPickup(parentCtx, task.ID, 60*time.Second)
+		return
+	}
 	picked, consumedRetry, ok := w.transitionTaskToRunning(parentCtx, task.ID)
 	if !ok {
 		return
 	}
-	w.harness.RunWithRetry(parentCtx, picked, consumedRetry)
+	w.runWithGitPrep(parentCtx, picked, func() {
+		w.harness.RunWithRetry(parentCtx, picked, consumedRetry)
+	})
 }
 
 func (w *Worker) recoverAdmissionPanic(taskID string) {

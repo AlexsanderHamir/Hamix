@@ -194,9 +194,6 @@ func (h *Harness) resolveCursorResume(
 		return CursorResumeDecision{Mode: CursorResumeFresh, DenyReason: "no_session_id"}, nil
 	}
 	workdir := strings.TrimSpace(h.opts.WorkingDir)
-	if repoRoot := strings.TrimSpace(h.repoRootForGit(ctx)); repoRoot != "" {
-		workdir = repoRoot
-	}
 	if workdir == "" {
 		return CursorResumeDecision{Mode: CursorResumeFresh, DenyReason: "workspace_mismatch"}, nil
 	}

@@ -5,10 +5,12 @@ import (
 	"errors"
 	"fmt"
 	"log/slog"
+	"sync"
 
 	"github.com/AlexsanderHamir/Hamix/pkgs/agents"
 	"github.com/AlexsanderHamir/Hamix/pkgs/agents/harness"
 	"github.com/AlexsanderHamir/Hamix/pkgs/agents/runner"
+	"github.com/AlexsanderHamir/Hamix/pkgs/gitwork"
 	"github.com/AlexsanderHamir/Hamix/pkgs/tasks/store"
 )
 
@@ -18,10 +20,12 @@ const workerLogCmd = "taskapi"
 // MemoryQueue (contract: docs/architecture.md). It handles queue
 // admission and delegates cycle choreography to pkgs/agents/harness.
 type Worker struct {
-	store   *store.Store
-	queue   *agents.MemoryQueue
-	harness *harness.Harness
-	opts    Options
+	store         *store.Store
+	queue         *agents.MemoryQueue
+	harness       *harness.Harness
+	opts          Options
+	gitSvc        gitwork.Service
+	worktreeLocks sync.Map
 }
 
 // NewWorker constructs a Worker with sensible defaults applied to opts.

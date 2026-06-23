@@ -1,0 +1,45 @@
+package worker_test
+
+import (
+	"context"
+	"testing"
+	"time"
+
+	"github.com/AlexsanderHamir/Hamix/pkgs/agents/runner/runnerfake"
+	"github.com/AlexsanderHamir/Hamix/pkgs/agents/worker"
+	"github.com/AlexsanderHamir/Hamix/pkgs/tasks/domain"
+	"github.com/AlexsanderHamir/Hamix/pkgs/tasks/store"
+)
+
+func TestWorker_missingGitBinding_defersPickup(t *testing.T) {
+	t.Parallel()
+	h := newHarness(t)
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+
+	tsk, err := h.store.Create(ctx, store.CreateTaskInput{
+		Title:         "unbound",
+		InitialPrompt: "do the thing",
+		Status:        domain.StatusReady,
+		Priority:      domain.PriorityMedium,
+	}, domain.ActorUser)
+	if err != nil {
+		t.Fatalf("create: %v", err)
+	}
+
+	_, done := h.startWorker(ctx, runnerfake.New(), worker.Options{})
+	time.Sleep(200 * time.Millisecond)
+	cancel()
+	<-done
+
+	got, err := h.store.Get(context.Background(), tsk.ID)
+	if err != nil {
+		t.Fatalf("get: %v", err)
+	}
+	if got.Status != domain.StatusReady {
+		t.Fatalf("status=%q want ready (missing binding should defer, not run)", got.Status)
+	}
+	if got.PickupNotBefore == nil {
+		t.Fatal("expected pickup_not_before defer")
+	}
+}

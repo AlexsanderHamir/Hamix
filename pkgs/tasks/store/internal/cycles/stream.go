@@ -1,5 +1,6 @@
 package cycles
 
+import "github.com/AlexsanderHamir/Hamix/pkgs/tasks/calltrace"
 import (
 	"context"
 	"fmt"
@@ -20,7 +21,7 @@ const maxStreamEventLimit = 500
 // AppendStreamEvent appends one normalized runner progress event to a cycle.
 func AppendStreamEvent(ctx context.Context, db *gorm.DB, in AppendStreamEventInput) (*domain.TaskCycleStreamEvent, error) {
 	defer kernel.DeferLatency(kernel.OpAppendCycleStreamEvent)()
-	slog.Debug("trace", "cmd", logCmd, "operation", "tasks.store.cycles.AppendStreamEvent")
+	slog.Debug("trace", "cmd", calltrace.LogCmd, "operation", "tasks.store.cycles.AppendStreamEvent")
 	taskID := strings.TrimSpace(in.TaskID)
 	cycleID := strings.TrimSpace(in.CycleID)
 	source := strings.TrimSpace(in.Source)
@@ -81,7 +82,7 @@ func AppendStreamEvent(ctx context.Context, db *gorm.DB, in AppendStreamEventInp
 // ListStreamEvents returns stream events for cycleID ordered by stream_seq ASC.
 func ListStreamEvents(ctx context.Context, db *gorm.DB, cycleID string, afterSeq int64, limit int) ([]domain.TaskCycleStreamEvent, error) {
 	defer kernel.DeferLatency(kernel.OpListCycleStreamEvents)()
-	slog.Debug("trace", "cmd", logCmd, "operation", "tasks.store.cycles.ListStreamEvents")
+	slog.Debug("trace", "cmd", calltrace.LogCmd, "operation", "tasks.store.cycles.ListStreamEvents")
 	cycleID = strings.TrimSpace(cycleID)
 	if cycleID == "" {
 		return nil, fmt.Errorf("%w: cycle_id", domain.ErrInvalidInput)
@@ -113,7 +114,7 @@ func ListStreamEvents(ctx context.Context, db *gorm.DB, cycleID string, afterSeq
 }
 
 func nextStreamSeqInTx(tx *gorm.DB, cycleID string) (int64, error) {
-	slog.Debug("trace", "cmd", logCmd, "operation", "tasks.store.cycles.nextStreamSeqInTx")
+	slog.Debug("trace", "cmd", calltrace.LogCmd, "operation", "tasks.store.cycles.nextStreamSeqInTx")
 	var max int64
 	if err := tx.Raw(`SELECT COALESCE(MAX(stream_seq), 0) FROM task_cycle_stream_events WHERE cycle_id = ?`, cycleID).Scan(&max).Error; err != nil {
 		return 0, fmt.Errorf("next stream_seq: %w", err)

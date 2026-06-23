@@ -1,5 +1,6 @@
 package store
 
+import "github.com/AlexsanderHamir/Hamix/pkgs/tasks/calltrace"
 import (
 	"context"
 	"log/slog"
@@ -49,14 +50,14 @@ type PreFeatureCycleCounts = stats.PreFeatureCycleCounts
 // TaskStats returns global counters across all tasks (totals plus by-status,
 // by-priority, by-scope breakdowns).
 func (s *Store) TaskStats(ctx context.Context) (TaskStats, error) {
-	slog.Debug("trace", "cmd", storeLogCmd, "operation", "tasks.store.TaskStats")
+	slog.Debug("trace", "cmd", calltrace.LogCmd, "operation", "tasks.store.TaskStats")
 	return stats.Get(ctx, s.db)
 }
 
 // ListCycleFailures returns paginated cycle_failed mirror rows for the
 // observability failures page. See stats.ListCycleFailures.
 func (s *Store) ListCycleFailures(ctx context.Context, in ListCycleFailuresInput) (ListCycleFailuresResult, error) {
-	slog.Debug("trace", "cmd", storeLogCmd, "operation", "tasks.store.ListCycleFailures")
+	slog.Debug("trace", "cmd", calltrace.LogCmd, "operation", "tasks.store.ListCycleFailures")
 	return stats.ListCycleFailures(ctx, s.db, in)
 }
 
@@ -67,6 +68,6 @@ func (s *Store) ListCycleFailures(ctx context.Context, in ListCycleFailuresInput
 // hot path. See pkgs/tasks/store/internal/stats/count_pre_feature.go
 // for the per-bucket semantics.
 func (s *Store) CountPreFeatureCycles(ctx context.Context) (PreFeatureCycleCounts, error) {
-	slog.Debug("trace", "cmd", storeLogCmd, "operation", "tasks.store.CountPreFeatureCycles")
+	slog.Debug("trace", "cmd", calltrace.LogCmd, "operation", "tasks.store.CountPreFeatureCycles")
 	return stats.CountPreFeatureCycles(ctx, s.db)
 }

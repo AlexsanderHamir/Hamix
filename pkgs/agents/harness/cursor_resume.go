@@ -1,5 +1,6 @@
 package harness
 
+import "github.com/AlexsanderHamir/Hamix/pkgs/tasks/calltrace"
 import (
 	"context"
 	"log/slog"
@@ -39,7 +40,7 @@ func (h *Harness) planExecuteRun(
 ) (CursorResumeDecision, error) {
 	decision, err := h.resolveCursorResume(ctx, domain.PhaseExecute, task, cycle, state, opts, false)
 	if err != nil {
-		slog.Warn("agent harness cursor resume policy failed; using fresh prompt", "cmd", harnessLogCmd,
+		slog.Warn("agent harness cursor resume policy failed; using fresh prompt", "cmd", calltrace.LogCmd,
 			"operation", "agent.harness.Harness.planExecuteRun.fallback",
 			"cycle_id", cycle.ID, "err", err)
 		return h.freshExecuteDecision(ctx, task, cycle, state, opts, "policy_error"), nil
@@ -97,7 +98,7 @@ func (h *Harness) planVerifyRun(
 	}
 	decision, err := h.resolveCursorResume(ctx, domain.PhaseVerify, task, cycle, state, opts, false)
 	if err != nil {
-		slog.Warn("agent harness verify cursor resume policy failed; using fresh prompt", "cmd", harnessLogCmd,
+		slog.Warn("agent harness verify cursor resume policy failed; using fresh prompt", "cmd", calltrace.LogCmd,
 			"operation", "agent.harness.Harness.planVerifyRun.fallback",
 			"cycle_id", cycle.ID, "err", err)
 		decision = CursorResumeDecision{
@@ -145,7 +146,7 @@ func (h *Harness) resolveCursorResume(
 	opts cycleLoopOpts,
 	forceFresh bool,
 ) (CursorResumeDecision, error) {
-	slog.Debug("trace", "cmd", harnessLogCmd, "operation", "agent.harness.Harness.resolveCursorResume",
+	slog.Debug("trace", "cmd", calltrace.LogCmd, "operation", "agent.harness.Harness.resolveCursorResume",
 		"cycle_id", cycle.ID, "phase", string(phase), "force_fresh", forceFresh)
 	if forceFresh {
 		return CursorResumeDecision{Mode: CursorResumeFresh, DenyReason: "resume_failed"}, nil
@@ -353,7 +354,7 @@ func activeCriterionIDs(state *processState) []string {
 
 func logRecoveryCompose(decision CursorResumeDecision) {
 	attrs := []any{
-		"cmd", harnessLogCmd,
+		"cmd", calltrace.LogCmd,
 		"operation", "agent.harness.Harness.cursorResume",
 		"cursor_resume_mode", string(decision.Mode),
 		"recovery_hint_bytes", len(decision.Prompt),

@@ -1,5 +1,6 @@
 package cycles
 
+import "github.com/AlexsanderHamir/Hamix/pkgs/tasks/calltrace"
 import (
 	"context"
 	"encoding/json"
@@ -16,8 +17,6 @@ import (
 	"gorm.io/gorm"
 )
 
-const logCmd = "taskapi"
-
 // Start creates a new TaskCycle row with status=running. Enforces "at
 // most one running cycle per task" via an in-TX guard (portable across
 // Postgres + SQLite); concurrent attempts surface as
@@ -31,7 +30,7 @@ const logCmd = "taskapi"
 // is rolled back.
 func Start(ctx context.Context, db *gorm.DB, in StartCycleInput) (*domain.TaskCycle, error) {
 	defer kernel.DeferLatency(kernel.OpStartCycle)()
-	slog.Debug("trace", "cmd", logCmd, "operation", "tasks.store.cycles.Start")
+	slog.Debug("trace", "cmd", calltrace.LogCmd, "operation", "tasks.store.cycles.Start")
 	if err := kernel.ValidateActor(in.TriggeredBy); err != nil {
 		return nil, err
 	}
@@ -115,7 +114,7 @@ func Start(ctx context.Context, db *gorm.DB, in StartCycleInput) (*domain.TaskCy
 // payload.
 func Terminate(ctx context.Context, db *gorm.DB, cycleID string, status domain.CycleStatus, reason string, by domain.Actor) (*domain.TaskCycle, error) {
 	defer kernel.DeferLatency(kernel.OpTerminateCycle)()
-	slog.Debug("trace", "cmd", logCmd, "operation", "tasks.store.cycles.Terminate")
+	slog.Debug("trace", "cmd", calltrace.LogCmd, "operation", "tasks.store.cycles.Terminate")
 	if err := kernel.ValidateActor(by); err != nil {
 		return nil, err
 	}
@@ -192,7 +191,7 @@ func Terminate(ctx context.Context, db *gorm.DB, cycleID string, status domain.C
 // Get returns one cycle by id; ErrNotFound when missing.
 func Get(ctx context.Context, db *gorm.DB, cycleID string) (*domain.TaskCycle, error) {
 	defer kernel.DeferLatency(kernel.OpGetCycle)()
-	slog.Debug("trace", "cmd", logCmd, "operation", "tasks.store.cycles.Get")
+	slog.Debug("trace", "cmd", calltrace.LogCmd, "operation", "tasks.store.cycles.Get")
 	cycleID = strings.TrimSpace(cycleID)
 	if cycleID == "" {
 		return nil, fmt.Errorf("%w: cycle_id", domain.ErrInvalidInput)
@@ -203,7 +202,7 @@ func Get(ctx context.Context, db *gorm.DB, cycleID string) (*domain.TaskCycle, e
 // ListForTask returns cycles for a task ordered by attempt_seq DESC
 // (newest first). limit is clamped to [1, 200]; the task must exist.
 func ListForTask(ctx context.Context, db *gorm.DB, taskID string, limit int) ([]domain.TaskCycle, error) {
-	slog.Debug("trace", "cmd", logCmd, "operation", "tasks.store.cycles.ListForTask")
+	slog.Debug("trace", "cmd", calltrace.LogCmd, "operation", "tasks.store.cycles.ListForTask")
 	return ListForTaskBefore(ctx, db, taskID, 0, limit)
 }
 
@@ -223,7 +222,7 @@ func ListForTask(ctx context.Context, db *gorm.DB, taskID string, limit int) ([]
 // the existing /events `before_seq` convention.
 func ListForTaskBefore(ctx context.Context, db *gorm.DB, taskID string, beforeAttemptSeq int64, limit int) ([]domain.TaskCycle, error) {
 	defer kernel.DeferLatency(kernel.OpListCyclesForTask)()
-	slog.Debug("trace", "cmd", logCmd, "operation", "tasks.store.cycles.ListForTaskBefore")
+	slog.Debug("trace", "cmd", calltrace.LogCmd, "operation", "tasks.store.cycles.ListForTaskBefore")
 	taskID = strings.TrimSpace(taskID)
 	if taskID == "" {
 		return nil, fmt.Errorf("%w: task_id", domain.ErrInvalidInput)
@@ -257,7 +256,7 @@ func ListForTaskBefore(ctx context.Context, db *gorm.DB, taskID string, beforeAt
 // loadByIDInTx fetches one cycle by id with gorm errors mapped to the
 // domain sentinels. Shared with the phase code via the in-TX scope.
 func loadByIDInTx(tx *gorm.DB, cycleID string) (*domain.TaskCycle, error) {
-	slog.Debug("trace", "cmd", logCmd, "operation", "tasks.store.cycles.loadByIDInTx")
+	slog.Debug("trace", "cmd", calltrace.LogCmd, "operation", "tasks.store.cycles.loadByIDInTx")
 	var c domain.TaskCycle
 	if err := tx.Where("id = ?", cycleID).First(&c).Error; err != nil {
 		if errors.Is(err, gorm.ErrRecordNotFound) {
@@ -269,7 +268,7 @@ func loadByIDInTx(tx *gorm.DB, cycleID string) (*domain.TaskCycle, error) {
 }
 
 func assertNoRunningCycleForTaskInTx(tx *gorm.DB, taskID string) error {
-	slog.Debug("trace", "cmd", logCmd, "operation", "tasks.store.cycles.assertNoRunningCycleForTaskInTx")
+	slog.Debug("trace", "cmd", calltrace.LogCmd, "operation", "tasks.store.cycles.assertNoRunningCycleForTaskInTx")
 	var n int64
 	if err := tx.Model(&domain.TaskCycle{}).Where("task_id = ? AND status = ?", taskID, domain.CycleStatusRunning).Count(&n).Error; err != nil {
 		return fmt.Errorf("running cycle lookup: %w", err)
@@ -281,7 +280,7 @@ func assertNoRunningCycleForTaskInTx(tx *gorm.DB, taskID string) error {
 }
 
 func nextAttemptSeqInTx(tx *gorm.DB, taskID string) (int64, error) {
-	slog.Debug("trace", "cmd", logCmd, "operation", "tasks.store.cycles.nextAttemptSeqInTx")
+	slog.Debug("trace", "cmd", calltrace.LogCmd, "operation", "tasks.store.cycles.nextAttemptSeqInTx")
 	var max int64
 	if err := tx.Raw(`SELECT COALESCE(MAX(attempt_seq), 0) FROM task_cycles WHERE task_id = ?`, taskID).Scan(&max).Error; err != nil {
 		return 0, fmt.Errorf("next attempt_seq: %w", err)
@@ -292,7 +291,7 @@ func nextAttemptSeqInTx(tx *gorm.DB, taskID string) (int64, error) {
 // startedPayload builds the data_json payload for the EventCycleStarted
 // audit mirror. Keys are stable (asserted by the dual-write invariant test).
 func startedPayload(c *domain.TaskCycle) ([]byte, error) {
-	slog.Debug("trace", "cmd", logCmd, "operation", "tasks.store.cycles.startedPayload")
+	slog.Debug("trace", "cmd", calltrace.LogCmd, "operation", "tasks.store.cycles.startedPayload")
 	out := map[string]any{
 		"cycle_id":     c.ID,
 		"attempt_seq":  c.AttemptSeq,
@@ -311,7 +310,7 @@ func startedPayload(c *domain.TaskCycle) ([]byte, error) {
 // terminatedPayload builds the data_json payload for the
 // EventCycleCompleted / EventCycleFailed audit mirror.
 func terminatedPayload(c *domain.TaskCycle, reason, failureSummary string) ([]byte, error) {
-	slog.Debug("trace", "cmd", logCmd, "operation", "tasks.store.cycles.terminatedPayload")
+	slog.Debug("trace", "cmd", calltrace.LogCmd, "operation", "tasks.store.cycles.terminatedPayload")
 	out := map[string]any{
 		"cycle_id":    c.ID,
 		"attempt_seq": c.AttemptSeq,
@@ -335,7 +334,7 @@ func terminatedPayload(c *domain.TaskCycle, reason, failureSummary string) ([]by
 // folds into EventCycleFailed; the payload's status field preserves
 // the distinction.
 func mirrorEventTypeForCycleStatus(s domain.CycleStatus) domain.EventType {
-	slog.Debug("trace", "cmd", logCmd, "operation", "tasks.store.cycles.mirrorEventTypeForCycleStatus")
+	slog.Debug("trace", "cmd", calltrace.LogCmd, "operation", "tasks.store.cycles.mirrorEventTypeForCycleStatus")
 	if s == domain.CycleStatusSucceeded {
 		return domain.EventCycleCompleted
 	}

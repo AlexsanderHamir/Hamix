@@ -1,4 +1,4 @@
-package calltrace
+package calltrace_test
 
 import (
 	"bytes"
@@ -10,6 +10,7 @@ import (
 	"sync/atomic"
 	"testing"
 
+	"github.com/AlexsanderHamir/Hamix/pkgs/tasks/calltrace"
 	"github.com/AlexsanderHamir/Hamix/pkgs/tasks/logctx"
 )
 
@@ -22,7 +23,7 @@ func TestRunObserved_successEmitsHelperInThenOut(t *testing.T) {
 	slog.SetDefault(slog.New(logctx.WrapSlogHandlerWithLogSequence(base, &processSeq)))
 
 	ctx := logctx.ContextWithRequestID(logctx.ContextWithLogSeq(context.Background()), "obs-rid")
-	err := RunObserved(ctx, "unitObserved", []any{"in_k", "in_v"}, func(ctx context.Context) ([]any, error) {
+	err := calltrace.RunObserved(ctx, "unitObserved", []any{"in_k", "in_v"}, func(ctx context.Context) ([]any, error) {
 		return []any{"out_k", 42}, nil
 	})
 	if err != nil {
@@ -73,7 +74,7 @@ func TestRunObserved_errorAppendsErrOnOut(t *testing.T) {
 
 	ctx := logctx.ContextWithRequestID(logctx.ContextWithLogSeq(context.Background()), "obs-err")
 	sentinel := errors.New("boom")
-	err := RunObserved(ctx, "unitFail", nil, func(ctx context.Context) ([]any, error) {
+	err := calltrace.RunObserved(ctx, "unitFail", nil, func(ctx context.Context) ([]any, error) {
 		return nil, sentinel
 	})
 	if err != sentinel {

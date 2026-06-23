@@ -1,5 +1,6 @@
 package tasks
 
+import "github.com/AlexsanderHamir/Hamix/pkgs/tasks/calltrace"
 import (
 	"fmt"
 	"log/slog"
@@ -12,7 +13,7 @@ import (
 const maxSelectedProjectContextItems = 20
 
 func normalizeProjectContextItemIDs(raw []string) ([]string, error) {
-	slog.Debug("trace", "cmd", logCmd, "operation", "tasks.store.tasks.normalizeProjectContextItemIDs")
+	slog.Debug("trace", "cmd", calltrace.LogCmd, "operation", "tasks.store.tasks.normalizeProjectContextItemIDs")
 	if len(raw) > maxSelectedProjectContextItems {
 		return nil, fmt.Errorf("%w: project_context_item_ids max %d", domain.ErrInvalidInput, maxSelectedProjectContextItems)
 	}
@@ -33,7 +34,7 @@ func normalizeProjectContextItemIDs(raw []string) ([]string, error) {
 }
 
 func validateProjectContextSelection(tx *gorm.DB, projectID string, ids []string) error {
-	slog.Debug("trace", "cmd", logCmd, "operation", "tasks.store.tasks.validateProjectContextSelection",
+	slog.Debug("trace", "cmd", calltrace.LogCmd, "operation", "tasks.store.tasks.validateProjectContextSelection",
 		"project_id", projectID, "count", len(ids))
 	var count int64
 	if err := tx.Model(&domain.ProjectContextItem{}).

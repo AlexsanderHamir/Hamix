@@ -12,8 +12,6 @@ import (
 	"github.com/AlexsanderHamir/Hamix/pkgs/tasks/store"
 )
 
-const cmdLog = "taskapi"
-
 // NewHTTPHandler returns the REST + SSE task API with the standard middleware stack
 // (see pkgs/tasks/middleware.Stack) wrapping handler.NewHandler.
 //
@@ -27,7 +25,7 @@ const cmdLog = "taskapi"
 // /settings sub-routes (PATCH /settings, POST /settings/probe-cursor,
 // POST /settings/cancel-current-run); GET /settings still works.
 func NewHTTPHandler(s *store.Store, hub *handler.SSEHub, rep *repo.Root, agent handler.AgentWorkerControl, drift postgres.SchemaDriftReport) http.Handler {
-	slog.Debug("trace", "cmd", cmdLog, "operation", "internal.taskapi.NewHTTPHandler")
+	slog.Debug("trace", "cmd", calltrace.LogCmd, "operation", "internal.taskapi.NewHTTPHandler")
 	opts := []handler.HandlerOption{
 		handler.WithPathMap(handler.NewPathMapFromEnv()),
 		handler.WithSchemaDriftReport(drift),

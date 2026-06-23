@@ -1,5 +1,6 @@
 package store
 
+import "github.com/AlexsanderHamir/Hamix/pkgs/tasks/calltrace"
 import (
 	"context"
 	"log/slog"
@@ -15,7 +16,7 @@ const DefaultReadyTimeout = 2 * time.Second
 
 // Ping checks that the database session is reachable (e.g. for HTTP readiness probes).
 func (s *Store) Ping(ctx context.Context) error {
-	slog.Debug("trace", "cmd", storeLogCmd, "operation", "tasks.store.Ping")
+	slog.Debug("trace", "cmd", calltrace.LogCmd, "operation", "tasks.store.Ping")
 	if s == nil {
 		return health.Ping(ctx, nil)
 	}
@@ -24,7 +25,7 @@ func (s *Store) Ping(ctx context.Context) error {
 
 // Ready checks Ping plus a trivial SQL round-trip (readiness beyond the pool ping).
 func (s *Store) Ready(ctx context.Context) error {
-	slog.Debug("trace", "cmd", storeLogCmd, "operation", "tasks.store.Ready")
+	slog.Debug("trace", "cmd", calltrace.LogCmd, "operation", "tasks.store.Ready")
 	if s == nil {
 		return health.Ready(ctx, nil)
 	}

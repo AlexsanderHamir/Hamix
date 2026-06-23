@@ -1,5 +1,6 @@
 package tasks
 
+import "github.com/AlexsanderHamir/Hamix/pkgs/tasks/calltrace"
 import (
 	"fmt"
 	"log/slog"
@@ -92,7 +93,7 @@ func listDependenciesInTx(tx *gorm.DB, taskID string) ([]string, error) {
 }
 
 func setDependenciesInTx(tx *gorm.DB, taskID string, dependsOn []domain.DependencyEdge) error {
-	slog.Debug("trace", "cmd", logCmd, "operation", "tasks.store.tasks.setDependenciesInTx")
+	slog.Debug("trace", "cmd", calltrace.LogCmd, "operation", "tasks.store.tasks.setDependenciesInTx")
 	normalized, err := normalizeDependencyEdges(taskID, dependsOn)
 	if err != nil {
 		return err

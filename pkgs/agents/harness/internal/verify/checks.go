@@ -1,5 +1,6 @@
 package verify
 
+import "github.com/AlexsanderHamir/Hamix/pkgs/tasks/calltrace"
 import (
 	"context"
 	"fmt"
@@ -20,7 +21,7 @@ func (s *Service) runVerifyChecks(
 	previouslyPassed map[string]Verdict,
 	feedback string,
 ) ([]Verdict, string, error) {
-	slog.Debug("trace", "cmd", logCmd, "operation", "agent.harness.verify.runVerifyChecks",
+	slog.Debug("trace", "cmd", calltrace.LogCmd, "operation", "agent.harness.verify.runVerifyChecks",
 		"task_id", task.ID, "cycle_id", cycle.ID,
 		"run_correlation_id", runCorrelationID,
 		"criteria_count", len(snap.Criteria), "previously_passed", len(previouslyPassed))
@@ -39,7 +40,7 @@ func (s *Service) runVerifyChecks(
 
 	if uerr := s.PersistCriteriaReports(parentCtx, cycle.ID, attemptSeq, snap.Criteria, previouslyPassed, selfReport); uerr != nil {
 		slog.Warn("agent harness UpsertCriteriaReports failed",
-			"cmd", logCmd, "operation", "agent.harness.verify.runVerifyChecks.upsert_criteria_err",
+			"cmd", calltrace.LogCmd, "operation", "agent.harness.verify.runVerifyChecks.upsert_criteria_err",
 			"cycle_id", cycle.ID, "attempt_seq", attemptSeq, "err", uerr)
 	}
 
@@ -83,7 +84,7 @@ func (s *Service) runVerifyChecks(
 
 	if uerr := s.persistVerifyReports(parentCtx, cycle.ID, attemptSeq, verdicts, previouslyPassed); uerr != nil {
 		slog.Warn("agent harness UpsertVerifyReports failed",
-			"cmd", logCmd, "operation", "agent.harness.verify.runVerifyChecks.upsert_verify_err",
+			"cmd", calltrace.LogCmd, "operation", "agent.harness.verify.runVerifyChecks.upsert_verify_err",
 			"cycle_id", cycle.ID, "attempt_seq", attemptSeq, "err", uerr)
 	}
 

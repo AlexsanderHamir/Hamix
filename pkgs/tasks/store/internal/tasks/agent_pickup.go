@@ -1,5 +1,6 @@
 package tasks
 
+import "github.com/AlexsanderHamir/Hamix/pkgs/tasks/calltrace"
 import (
 	"context"
 	"errors"
@@ -24,7 +25,7 @@ type AgentPickupResult struct {
 // pending_retry, and returns a copy of the consumed intent (if any).
 func AgentPickup(ctx context.Context, db *gorm.DB, taskID string, by domain.Actor) (*AgentPickupResult, error) {
 	defer kernel.DeferLatency(kernel.OpUpdateTask)()
-	slog.Debug("trace", "cmd", logCmd, "operation", "tasks.store.tasks.AgentPickup", "task_id", taskID)
+	slog.Debug("trace", "cmd", calltrace.LogCmd, "operation", "tasks.store.tasks.AgentPickup", "task_id", taskID)
 	if err := kernel.ValidateActor(by); err != nil {
 		return nil, err
 	}

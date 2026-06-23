@@ -1,5 +1,6 @@
 package store
 
+import "github.com/AlexsanderHamir/Hamix/pkgs/tasks/calltrace"
 import (
 	"context"
 	"errors"
@@ -22,7 +23,7 @@ type CreateGitBranchInput struct {
 
 // ListGitBranches returns branches for a repository.
 func (s *Store) ListGitBranches(ctx context.Context, projectID, repoID string) ([]domain.GitBranch, error) {
-	slog.Debug("trace", "cmd", storeLogCmd, "operation", "tasks.store.ListGitBranches")
+	slog.Debug("trace", "cmd", calltrace.LogCmd, "operation", "tasks.store.ListGitBranches")
 	if _, err := s.GetGitRepository(ctx, projectID, repoID); err != nil {
 		return nil, err
 	}
@@ -39,7 +40,7 @@ func (s *Store) ListGitBranches(ctx context.Context, projectID, repoID string) (
 
 // GetGitBranch returns one branch scoped through its repository project.
 func (s *Store) GetGitBranch(ctx context.Context, projectID, branchID string) (domain.GitBranch, error) {
-	slog.Debug("trace", "cmd", storeLogCmd, "operation", "tasks.store.GetGitBranch")
+	slog.Debug("trace", "cmd", calltrace.LogCmd, "operation", "tasks.store.GetGitBranch")
 	var row domain.GitBranch
 	err := s.db.WithContext(ctx).
 		Joins("JOIN git_repositories ON git_repositories.id = git_branches.repository_id").
@@ -56,7 +57,7 @@ func (s *Store) GetGitBranch(ctx context.Context, projectID, branchID string) (d
 
 // CreateGitBranch creates a branch via git and inserts a row.
 func (s *Store) CreateGitBranch(ctx context.Context, projectID, repoID string, input CreateGitBranchInput, gitSvc gitwork.Service) (domain.GitBranch, error) {
-	slog.Debug("trace", "cmd", storeLogCmd, "operation", "tasks.store.CreateGitBranch")
+	slog.Debug("trace", "cmd", calltrace.LogCmd, "operation", "tasks.store.CreateGitBranch")
 	repo, err := s.GetGitRepository(ctx, projectID, repoID)
 	if err != nil {
 		return domain.GitBranch{}, err
@@ -97,7 +98,7 @@ func (s *Store) CreateGitBranch(ctx context.Context, projectID, repoID string, i
 
 // DeleteGitBranch removes a branch via git and the database.
 func (s *Store) DeleteGitBranch(ctx context.Context, projectID, branchID string, force bool, gitSvc gitwork.Service) error {
-	slog.Debug("trace", "cmd", storeLogCmd, "operation", "tasks.store.DeleteGitBranch")
+	slog.Debug("trace", "cmd", calltrace.LogCmd, "operation", "tasks.store.DeleteGitBranch")
 	branch, err := s.GetGitBranch(ctx, projectID, branchID)
 	if err != nil {
 		return err

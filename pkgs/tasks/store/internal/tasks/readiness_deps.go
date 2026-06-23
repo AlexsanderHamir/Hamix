@@ -1,5 +1,6 @@
 package tasks
 
+import "github.com/AlexsanderHamir/Hamix/pkgs/tasks/calltrace"
 import (
 	"context"
 	"log/slog"
@@ -10,7 +11,7 @@ import (
 
 // DependenciesSatisfied reports whether every predecessor edge for taskID is met.
 func DependenciesSatisfied(ctx context.Context, db *gorm.DB, taskID string) (bool, error) {
-	slog.Debug("trace", "cmd", logCmd, "operation", "tasks.store.tasks.DependenciesSatisfied")
+	slog.Debug("trace", "cmd", calltrace.LogCmd, "operation", "tasks.store.tasks.DependenciesSatisfied")
 	edges, err := ListDependencyEdges(ctx, db, taskID)
 	if err != nil {
 		return false, err

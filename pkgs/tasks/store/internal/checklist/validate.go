@@ -1,5 +1,6 @@
 package checklist
 
+import "github.com/AlexsanderHamir/Hamix/pkgs/tasks/calltrace"
 import (
 	"errors"
 	"fmt"
@@ -14,7 +15,7 @@ import (
 // for the task that owns them (must already be the resolved definition
 // owner; not the inherit-true subject).
 func itemsForDefinitionInTx(tx *gorm.DB, defTaskID string) ([]domain.TaskChecklistItem, error) {
-	slog.Debug("trace", "cmd", logCmd, "operation", "tasks.store.checklist.itemsForDefinitionInTx")
+	slog.Debug("trace", "cmd", calltrace.LogCmd, "operation", "tasks.store.checklist.itemsForDefinitionInTx")
 	var items []domain.TaskChecklistItem
 	if err := tx.Where("task_id = ?", defTaskID).Order("sort_order ASC, id ASC").Find(&items).Error; err != nil {
 		return nil, err
@@ -28,7 +29,7 @@ func itemsForDefinitionInTx(tx *gorm.DB, defTaskID string) ([]domain.TaskCheckli
 // ErrInvalidInput when at least one item is unchecked, so the caller
 // can surface a 400 to the API client.
 func validateChecklistCompleteInTx(tx *gorm.DB, subjectTaskID string) error {
-	slog.Debug("trace", "cmd", logCmd, "operation", "tasks.store.checklist.validateChecklistCompleteInTx")
+	slog.Debug("trace", "cmd", calltrace.LogCmd, "operation", "tasks.store.checklist.validateChecklistCompleteInTx")
 	defID, err := DefinitionSourceTaskIDInTx(tx, subjectTaskID)
 	if err != nil {
 		return err
@@ -63,14 +64,14 @@ func validateChecklistCompleteInTx(tx *gorm.DB, subjectTaskID string) error {
 // CRUD/update/devmirror code calls before transitioning a task to
 // status=done. Requires checklist complete.
 func ValidateCanMarkDoneInTx(tx *gorm.DB, taskID string) error {
-	slog.Debug("trace", "cmd", logCmd, "operation", "tasks.store.checklist.ValidateCanMarkDoneInTx")
+	slog.Debug("trace", "cmd", calltrace.LogCmd, "operation", "tasks.store.checklist.ValidateCanMarkDoneInTx")
 	return validateChecklistCompleteInTx(tx, taskID)
 }
 
 // ValidateCanAddCriterionInTx rejects appending definition rows while the
 // agent is actively working the task (status=running).
 func ValidateCanAddCriterionInTx(tx *gorm.DB, t *domain.Task) error {
-	slog.Debug("trace", "cmd", logCmd, "operation", "tasks.store.checklist.ValidateCanAddCriterionInTx")
+	slog.Debug("trace", "cmd", calltrace.LogCmd, "operation", "tasks.store.checklist.ValidateCanAddCriterionInTx")
 	return validateCriteriaMutable(t)
 }
 
@@ -110,7 +111,7 @@ func criterionLockedByCompletion(taskStatus domain.Status, doneCount int64) bool
 // items. Exported so the task update/delete paths can drop a task's
 // checklist atomically alongside the parent row.
 func DeleteOwnedItemsInTx(tx *gorm.DB, taskID string) error {
-	slog.Debug("trace", "cmd", logCmd, "operation", "tasks.store.checklist.DeleteOwnedItemsInTx")
+	slog.Debug("trace", "cmd", calltrace.LogCmd, "operation", "tasks.store.checklist.DeleteOwnedItemsInTx")
 	var ids []string
 	if err := tx.Model(&domain.TaskChecklistItem{}).Where("task_id = ?", taskID).Pluck("id", &ids).Error; err != nil {
 		return fmt.Errorf("list checklist items: %w", err)

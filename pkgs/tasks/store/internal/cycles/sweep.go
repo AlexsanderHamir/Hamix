@@ -1,5 +1,6 @@
 package cycles
 
+import "github.com/AlexsanderHamir/Hamix/pkgs/tasks/calltrace"
 import (
 	"context"
 	"fmt"
@@ -18,7 +19,7 @@ import (
 // an explicit cap would silently drop rows that need cleanup.
 func ListRunning(ctx context.Context, db *gorm.DB) ([]domain.TaskCycle, error) {
 	defer kernel.DeferLatency(kernel.OpListCyclesForTask)()
-	slog.Debug("trace", "cmd", logCmd, "operation", "tasks.store.cycles.ListRunning")
+	slog.Debug("trace", "cmd", calltrace.LogCmd, "operation", "tasks.store.cycles.ListRunning")
 	var out []domain.TaskCycle
 	q := db.WithContext(ctx).
 		Where("status = ?", domain.CycleStatusRunning).
@@ -36,7 +37,7 @@ func ListRunning(ctx context.Context, db *gorm.DB) ([]domain.TaskCycle, error) {
 // terminated while a phase write was in flight).
 func ListRunningPhases(ctx context.Context, db *gorm.DB) ([]domain.TaskCyclePhase, error) {
 	defer kernel.DeferLatency(kernel.OpListCyclePhases)()
-	slog.Debug("trace", "cmd", logCmd, "operation", "tasks.store.cycles.ListRunningPhases")
+	slog.Debug("trace", "cmd", calltrace.LogCmd, "operation", "tasks.store.cycles.ListRunningPhases")
 	var out []domain.TaskCyclePhase
 	q := db.WithContext(ctx).
 		Where("status = ?", domain.PhaseStatusRunning).

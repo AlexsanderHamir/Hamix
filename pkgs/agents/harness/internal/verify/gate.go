@@ -1,5 +1,6 @@
 package verify
 
+import "github.com/AlexsanderHamir/Hamix/pkgs/tasks/calltrace"
 import (
 	"context"
 	"errors"
@@ -11,7 +12,7 @@ import (
 
 // LoadSnapshot reads app settings and checklist criteria for verify gating.
 func (s *Service) LoadSnapshot(ctx context.Context, taskID string) (Snapshot, error) {
-	slog.Debug("trace", "cmd", logCmd, "operation", "agent.harness.verify.LoadSnapshot",
+	slog.Debug("trace", "cmd", calltrace.LogCmd, "operation", "agent.harness.verify.LoadSnapshot",
 		"task_id", taskID)
 	settings, err := s.store.GetSettings(ctx)
 	if err != nil {
@@ -37,7 +38,7 @@ func (s *Service) LoadSnapshot(ctx context.Context, taskID string) (Snapshot, er
 
 // CompleteChecklistLegacy marks every checklist item done when verify is disabled.
 func (s *Service) CompleteChecklistLegacy(ctx context.Context, taskID string) error {
-	slog.Debug("trace", "cmd", logCmd, "operation", "agent.harness.verify.CompleteChecklistLegacy", "task_id", taskID)
+	slog.Debug("trace", "cmd", calltrace.LogCmd, "operation", "agent.harness.verify.CompleteChecklistLegacy", "task_id", taskID)
 	items, err := s.store.ListChecklistForSubject(ctx, taskID)
 	if err != nil {
 		return err
@@ -55,7 +56,7 @@ func (s *Service) CompleteChecklistLegacy(ctx context.Context, taskID string) er
 
 // ApplyVerifiedCompletions writes checklist completions for passed verdicts.
 func (s *Service) ApplyVerifiedCompletions(ctx context.Context, taskID, cycleID string, verdicts []Verdict) error {
-	slog.Debug("trace", "cmd", logCmd, "operation", "agent.harness.verify.ApplyVerifiedCompletions",
+	slog.Debug("trace", "cmd", calltrace.LogCmd, "operation", "agent.harness.verify.ApplyVerifiedCompletions",
 		"task_id", taskID, "cycle_id", cycleID, "verdict_count", len(verdicts))
 	for _, v := range verdicts {
 		if !v.Passed {

@@ -1,5 +1,6 @@
 package checklist
 
+import "github.com/AlexsanderHamir/Hamix/pkgs/tasks/calltrace"
 import (
 	"context"
 	"fmt"
@@ -24,7 +25,7 @@ type VerifyItem struct {
 // checklist source.
 func ListForVerify(ctx context.Context, db *gorm.DB, taskID string) ([]VerifyItem, error) {
 	defer kernel.DeferLatency(kernel.OpListChecklist)()
-	slog.Debug("trace", "cmd", logCmd, "operation", "tasks.store.checklist.ListForVerify")
+	slog.Debug("trace", "cmd", calltrace.LogCmd, "operation", "tasks.store.checklist.ListForVerify")
 	taskID = strings.TrimSpace(taskID)
 	if taskID == "" {
 		return nil, fmt.Errorf("%w: id", domain.ErrInvalidInput)

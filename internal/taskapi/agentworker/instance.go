@@ -1,5 +1,6 @@
 package agentworker
 
+import "github.com/AlexsanderHamir/Hamix/pkgs/tasks/calltrace"
 import (
 	"context"
 	"log/slog"
@@ -40,7 +41,7 @@ func instanceSnapshot(inst *instance, version string) *policy.InstanceSnapshot {
 }
 
 func instanceMatchesSettings(inst *instance, cfg store.AppSettings, version string) bool {
-	slog.Debug("trace", "cmd", logCmd, "operation", "taskapi.instanceMatchesSettings")
+	slog.Debug("trace", "cmd", calltrace.LogCmd, "operation", "taskapi.instanceMatchesSettings")
 	return policy.InstanceMatchesSettings(instanceSnapshot(inst, version), cfg, version)
 }
 
@@ -51,7 +52,7 @@ func verifyRunnerStatusForInstance(prev *instance, cfg store.AppSettings) string
 }
 
 func stopWorkerInstance(inst *instance, reason string) {
-	slog.Debug("trace", "cmd", logCmd, "operation", "taskapi.stopWorkerInstance",
+	slog.Debug("trace", "cmd", calltrace.LogCmd, "operation", "taskapi.stopWorkerInstance",
 		"reason", reason)
 	if inst == nil || inst.cancelCtx == nil {
 		return
@@ -63,10 +64,10 @@ func stopWorkerInstance(inst *instance, reason string) {
 	}
 	select {
 	case <-inst.doneCh:
-		slog.Info("agent worker instance stopped", "cmd", logCmd,
+		slog.Info("agent worker instance stopped", "cmd", calltrace.LogCmd,
 			"operation", "taskapi.agent_worker.stop", "reason", reason)
 	case <-time.After(deadline):
-		slog.Warn("agent worker instance drain timeout", "cmd", logCmd,
+		slog.Warn("agent worker instance drain timeout", "cmd", calltrace.LogCmd,
 			"operation", "taskapi.agent_worker.stop_timeout",
 			"reason", reason, "deadline", deadline.String())
 	}
@@ -81,7 +82,7 @@ func (s *Supervisor) spawnWorkerInstance(ctx context.Context, cfg store.AppSetti
 	reportDir := taskapiconfig.WorkerReportDir()
 	if err := ensureWorkerReportDirWritable(reportDir); err != nil {
 		slog.Warn("agent worker report dir not writable; worker will start but verify will fail",
-			"cmd", logCmd, "operation", "taskapi.agent_worker.report_dir_not_writable",
+			"cmd", calltrace.LogCmd, "operation", "taskapi.agent_worker.report_dir_not_writable",
 			"path", reportDir, "err", err)
 	}
 	w := worker.NewWorker(s.store, s.queue, r, worker.Options{
@@ -99,7 +100,7 @@ func (s *Supervisor) spawnWorkerInstance(ctx context.Context, cfg store.AppSetti
 	go func() {
 		defer close(done)
 		if err := w.Run(workerCtx); err != nil {
-			slog.Error("agent worker exited with error", "cmd", logCmd,
+			slog.Error("agent worker exited with error", "cmd", calltrace.LogCmd,
 				"operation", "taskapi.agent_worker.exit_err", "err", err)
 		}
 	}()

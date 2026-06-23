@@ -1,5 +1,6 @@
 package store
 
+import "github.com/AlexsanderHamir/Hamix/pkgs/tasks/calltrace"
 import (
 	"context"
 	"errors"
@@ -24,7 +25,7 @@ type CreateGitRepositoryInput struct {
 
 // ListGitRepositories returns repositories for a project ordered by created_at.
 func (s *Store) ListGitRepositories(ctx context.Context, projectID string) ([]domain.GitRepository, error) {
-	slog.Debug("trace", "cmd", storeLogCmd, "operation", "tasks.store.ListGitRepositories")
+	slog.Debug("trace", "cmd", calltrace.LogCmd, "operation", "tasks.store.ListGitRepositories")
 	projectID = strings.TrimSpace(projectID)
 	if projectID == "" {
 		return nil, fmt.Errorf("%w: project_id", domain.ErrInvalidInput)
@@ -42,7 +43,7 @@ func (s *Store) ListGitRepositories(ctx context.Context, projectID string) ([]do
 
 // CountGitRepositories returns the total number of registered git repositories.
 func (s *Store) CountGitRepositories(ctx context.Context) (int64, error) {
-	slog.Debug("trace", "cmd", storeLogCmd, "operation", "tasks.store.CountGitRepositories")
+	slog.Debug("trace", "cmd", calltrace.LogCmd, "operation", "tasks.store.CountGitRepositories")
 	var n int64
 	err := s.db.WithContext(ctx).Model(&domain.GitRepository{}).Count(&n).Error
 	if err != nil {
@@ -53,7 +54,7 @@ func (s *Store) CountGitRepositories(ctx context.Context) (int64, error) {
 
 // GetGitRepository returns one repository scoped to a project.
 func (s *Store) GetGitRepository(ctx context.Context, projectID, repoID string) (domain.GitRepository, error) {
-	slog.Debug("trace", "cmd", storeLogCmd, "operation", "tasks.store.GetGitRepository")
+	slog.Debug("trace", "cmd", calltrace.LogCmd, "operation", "tasks.store.GetGitRepository")
 	var row domain.GitRepository
 	err := s.db.WithContext(ctx).
 		Where("id = ? AND project_id = ?", strings.TrimSpace(repoID), strings.TrimSpace(projectID)).
@@ -69,7 +70,7 @@ func (s *Store) GetGitRepository(ctx context.Context, projectID, repoID string) 
 
 // CreateGitRepository validates path with git, then inserts repository + main worktree + current branch.
 func (s *Store) CreateGitRepository(ctx context.Context, projectID string, input CreateGitRepositoryInput, gitSvc gitwork.Service) (domain.GitRepository, error) {
-	slog.Debug("trace", "cmd", storeLogCmd, "operation", "tasks.store.CreateGitRepository")
+	slog.Debug("trace", "cmd", calltrace.LogCmd, "operation", "tasks.store.CreateGitRepository")
 	projectID = strings.TrimSpace(projectID)
 	path := strings.TrimSpace(input.Path)
 	if projectID == "" || path == "" {
@@ -157,7 +158,7 @@ func (s *Store) CreateGitRepository(ctx context.Context, projectID string, input
 
 // DeleteGitRepository removes a repository when no running tasks reference it.
 func (s *Store) DeleteGitRepository(ctx context.Context, projectID, repoID string) error {
-	slog.Debug("trace", "cmd", storeLogCmd, "operation", "tasks.store.DeleteGitRepository")
+	slog.Debug("trace", "cmd", calltrace.LogCmd, "operation", "tasks.store.DeleteGitRepository")
 	if _, err := s.GetGitRepository(ctx, projectID, repoID); err != nil {
 		return err
 	}

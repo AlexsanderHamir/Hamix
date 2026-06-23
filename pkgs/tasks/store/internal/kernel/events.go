@@ -1,5 +1,6 @@
 package kernel
 
+import "github.com/AlexsanderHamir/Hamix/pkgs/tasks/calltrace"
 import (
 	"encoding/json"
 	"fmt"
@@ -34,7 +35,7 @@ import (
 // `FOR UPDATE` is unnecessary (and unsupported pre-3.45). Mirrors the
 // dialect guard in events/thread.MarkResponded.
 func NextEventSeq(tx *gorm.DB, taskID string) (int64, error) {
-	slog.Debug("trace", "cmd", LogCmd, "operation", "tasks.store.kernel.NextEventSeq")
+	slog.Debug("trace", "cmd", calltrace.LogCmd, "operation", "tasks.store.kernel.NextEventSeq")
 	if tx.Dialector.Name() != "sqlite" {
 		var locked domain.Task
 		if err := tx.Clauses(clause.Locking{Strength: "UPDATE"}).
@@ -63,7 +64,7 @@ func NextEventSeq(tx *gorm.DB, taskID string) (int64, error) {
 // is caught at the writing call site instead of leaking past the read-side
 // normalizeJSONObjectForResponse defense.
 func AppendEvent(tx *gorm.DB, taskID string, seq int64, typ domain.EventType, by domain.Actor, data []byte) error {
-	slog.Debug("trace", "cmd", LogCmd, "operation", "tasks.store.kernel.AppendEvent")
+	slog.Debug("trace", "cmd", calltrace.LogCmd, "operation", "tasks.store.kernel.AppendEvent")
 	normalized, err := NormalizeJSONObject(data, "data")
 	if err != nil {
 		return err
@@ -86,7 +87,7 @@ func AppendEvent(tx *gorm.DB, taskID string, seq int64, typ domain.EventType, by
 // EventPairJSON marshals a {"from": from, "to": to} payload used by
 // status / priority / type transition audit events.
 func EventPairJSON(from, to string) ([]byte, error) {
-	slog.Debug("trace", "cmd", LogCmd, "operation", "tasks.store.kernel.EventPairJSON")
+	slog.Debug("trace", "cmd", calltrace.LogCmd, "operation", "tasks.store.kernel.EventPairJSON")
 	b, err := json.Marshal(map[string]string{"from": from, "to": to})
 	if err != nil {
 		return nil, fmt.Errorf("marshal event payload: %w", err)

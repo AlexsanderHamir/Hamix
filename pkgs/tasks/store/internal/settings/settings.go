@@ -1,5 +1,6 @@
 package settings
 
+import "github.com/AlexsanderHamir/Hamix/pkgs/tasks/calltrace"
 import (
 	"context"
 	"encoding/json"
@@ -15,8 +16,6 @@ import (
 	"gorm.io/gorm"
 	"gorm.io/gorm/clause"
 )
-
-const logCmd = "taskapi"
 
 // Patch is the partial-update payload for app_settings. Pointer-typed
 // fields distinguish "not provided" (nil) from "set to zero value"
@@ -85,7 +84,7 @@ func (p Patch) IsEmpty() bool {
 // the insert race will simply re-read the row the loser created.
 func Get(ctx context.Context, db *gorm.DB) (domain.AppSettings, error) {
 	defer kernel.DeferLatency(kernel.OpGetAppSettings)()
-	slog.Debug("trace", "cmd", logCmd, "operation", "tasks.store.settings.Get")
+	slog.Debug("trace", "cmd", calltrace.LogCmd, "operation", "tasks.store.settings.Get")
 	if db == nil {
 		return domain.AppSettings{}, errors.New("tasks store: nil database")
 	}
@@ -113,7 +112,7 @@ func Get(ctx context.Context, db *gorm.DB) (domain.AppSettings, error) {
 		return domain.AppSettings{}, fmt.Errorf("get app settings (post-seed): %w", err)
 	}
 	slog.Info("app settings seeded with defaults",
-		"cmd", logCmd, "operation", "tasks.store.settings.seeded",
+		"cmd", calltrace.LogCmd, "operation", "tasks.store.settings.seeded",
 		"agent_paused", row.AgentPaused,
 		"runner", row.Runner,
 		"cursor_bin", row.CursorBin,
@@ -140,7 +139,7 @@ func Get(ctx context.Context, db *gorm.DB) (domain.AppSettings, error) {
 // store layer.
 func Update(ctx context.Context, db *gorm.DB, patch Patch) (domain.AppSettings, error) {
 	defer kernel.DeferLatency(kernel.OpUpdateAppSettings)()
-	slog.Debug("trace", "cmd", logCmd, "operation", "tasks.store.settings.Update")
+	slog.Debug("trace", "cmd", calltrace.LogCmd, "operation", "tasks.store.settings.Update")
 	if db == nil {
 		return domain.AppSettings{}, errors.New("tasks store: nil database")
 	}
@@ -178,7 +177,7 @@ func Update(ctx context.Context, db *gorm.DB, patch Patch) (domain.AppSettings, 
 }
 
 func validatePatch(patch Patch) error {
-	slog.Debug("trace", "cmd", logCmd, "operation", "tasks.store.settings.validatePatch")
+	slog.Debug("trace", "cmd", calltrace.LogCmd, "operation", "tasks.store.settings.validatePatch")
 	if patch.Runner != nil {
 		trimmed := strings.TrimSpace(*patch.Runner)
 		if trimmed == "" {
@@ -229,7 +228,7 @@ func validatePatch(patch Patch) error {
 }
 
 func applyPatch(row *domain.AppSettings, patch Patch) {
-	slog.Debug("trace", "cmd", logCmd, "operation", "tasks.store.settings.applyPatch")
+	slog.Debug("trace", "cmd", calltrace.LogCmd, "operation", "tasks.store.settings.applyPatch")
 	if patch.AgentPaused != nil {
 		row.AgentPaused = *patch.AgentPaused
 	}
@@ -291,7 +290,7 @@ func applyPatch(row *domain.AppSettings, patch Patch) {
 // generic path can read them. Called at the end of applyPatch so any
 // CursorBin/CursorModel changes are captured.
 func dualWriteCursorToRunnerConfigs(row *domain.AppSettings) {
-	slog.Debug("trace", "cmd", logCmd, "operation", "tasks.store.settings.dualWriteCursorToRunnerConfigs")
+	slog.Debug("trace", "cmd", calltrace.LogCmd, "operation", "tasks.store.settings.dualWriteCursorToRunnerConfigs")
 	var configs map[string]json.RawMessage
 	if len(row.RunnerConfigs) > 0 {
 		_ = json.Unmarshal([]byte(row.RunnerConfigs), &configs)
@@ -306,7 +305,7 @@ func dualWriteCursorToRunnerConfigs(row *domain.AppSettings) {
 	raw, err := json.Marshal(cursorCfg)
 	if err != nil {
 		slog.Warn("dual-write cursor config marshal failed",
-			"cmd", logCmd, "operation", "tasks.store.settings.dualWriteCursorToRunnerConfigs",
+			"cmd", calltrace.LogCmd, "operation", "tasks.store.settings.dualWriteCursorToRunnerConfigs",
 			"err", err)
 		return
 	}
@@ -314,7 +313,7 @@ func dualWriteCursorToRunnerConfigs(row *domain.AppSettings) {
 	merged, err := json.Marshal(configs)
 	if err != nil {
 		slog.Warn("dual-write runner configs marshal failed",
-			"cmd", logCmd, "operation", "tasks.store.settings.dualWriteCursorToRunnerConfigs",
+			"cmd", calltrace.LogCmd, "operation", "tasks.store.settings.dualWriteCursorToRunnerConfigs",
 			"err", err)
 		return
 	}

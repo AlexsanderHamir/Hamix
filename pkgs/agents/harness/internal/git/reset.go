@@ -1,5 +1,6 @@
 package git
 
+import "github.com/AlexsanderHamir/Hamix/pkgs/tasks/calltrace"
 import (
 	"context"
 	"errors"
@@ -12,7 +13,7 @@ import (
 
 // ResetForFreshRetry resets the working tree to the parent cycle anchor before fresh retry.
 func (s *Service) ResetForFreshRetry(ctx context.Context, workingDir, parentCycleID string) (FreshRetryResetOutcome, error) {
-	slog.Debug("trace", "cmd", logCmd, "operation", "agent.harness.git.ResetForFreshRetry",
+	slog.Debug("trace", "cmd", calltrace.LogCmd, "operation", "agent.harness.git.ResetForFreshRetry",
 		"parent_cycle_id", parentCycleID)
 	workdir := strings.TrimSpace(workingDir)
 	if workdir == "" {
@@ -38,7 +39,7 @@ func (s *Service) ResetForFreshRetry(ctx context.Context, workingDir, parentCycl
 	if err := resetHardClean(resetCtx, s.repo(), workdir, anchor); err != nil {
 		return FreshRetryResetOutcome{}, fmt.Errorf("%s: %w", RetryGitResetFailed, err)
 	}
-	slog.Info("agent harness fresh retry git reset", "cmd", logCmd,
+	slog.Info("agent harness fresh retry git reset", "cmd", calltrace.LogCmd,
 		"operation", "agent.harness.fresh_retry.git_reset",
 		"parent_cycle_id", parentCycleID, "anchor", anchor, "workdir", workdir)
 	return FreshRetryResetOutcome{}, nil

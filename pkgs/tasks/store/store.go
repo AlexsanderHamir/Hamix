@@ -1,5 +1,6 @@
 package store
 
+import "github.com/AlexsanderHamir/Hamix/pkgs/tasks/calltrace"
 import (
 	"context"
 	"log/slog"
@@ -10,8 +11,6 @@ import (
 	"github.com/AlexsanderHamir/Hamix/pkgs/tasks/store/internal/notify"
 	"gorm.io/gorm"
 )
-
-const storeLogCmd = "taskapi"
 
 // Store is the public GORM-backed persistence facade for tasks, audit
 // events, checklists, drafts, evaluations, cycles/phases, the ready-task
@@ -29,7 +28,7 @@ type Store struct {
 // NewStore returns a Store backed by db. The caller still configures
 // ready-task notifications via SetReadyTaskNotifier after construction.
 func NewStore(db *gorm.DB) *Store {
-	slog.Debug("trace", "cmd", storeLogCmd, "operation", "tasks.store.NewStore")
+	slog.Debug("trace", "cmd", calltrace.LogCmd, "operation", "tasks.store.NewStore")
 	return &Store{db: db}
 }
 
@@ -46,7 +45,7 @@ type ReadyTaskNotifier = notify.Notifier
 // SetReadyTaskNotifier registers n for ready-task notifications. Pass nil to clear the notifier.
 // Safe for use before serving traffic; typical wiring is once at process startup.
 func (s *Store) SetReadyTaskNotifier(n ReadyTaskNotifier) {
-	slog.Debug("trace", "cmd", storeLogCmd, "operation", "tasks.store.SetReadyTaskNotifier", "enabled", n != nil)
+	slog.Debug("trace", "cmd", calltrace.LogCmd, "operation", "tasks.store.SetReadyTaskNotifier", "enabled", n != nil)
 	if s == nil {
 		return
 	}
@@ -56,7 +55,7 @@ func (s *Store) SetReadyTaskNotifier(n ReadyTaskNotifier) {
 // SetPickupWake registers w for deferred-pickup scheduling (nil clears).
 // Typical wiring: once at taskapi startup after SetReadyTaskNotifier.
 func (s *Store) SetPickupWake(w PickupWake) {
-	slog.Debug("trace", "cmd", storeLogCmd, "operation", "tasks.store.SetPickupWake", "enabled", w != nil)
+	slog.Debug("trace", "cmd", calltrace.LogCmd, "operation", "tasks.store.SetPickupWake", "enabled", w != nil)
 	if s == nil {
 		return
 	}
@@ -91,7 +90,7 @@ func (s *Store) cancelPickupWake(taskID string) {
 // update, and dev-mirror code paths. It forwards to the holder so the
 // concurrency policy lives in one place.
 func (s *Store) notifyReadyTask(ctx context.Context, task domain.Task) {
-	slog.Debug("trace", "cmd", storeLogCmd, "operation", "tasks.store.notifyReadyTask", "task_id", task.ID)
+	slog.Debug("trace", "cmd", calltrace.LogCmd, "operation", "tasks.store.notifyReadyTask", "task_id", task.ID)
 	if s == nil {
 		return
 	}

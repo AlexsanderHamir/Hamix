@@ -1,5 +1,6 @@
 package cursor
 
+import "github.com/AlexsanderHamir/Hamix/pkgs/tasks/calltrace"
 import (
 	"context"
 	"errors"
@@ -20,7 +21,7 @@ type ModelInfo struct {
 // ListModels runs `<binary> --list-models` with a bounded deadline and
 // parses the CLI's human-readable table (lines like "id - Label").
 func ListModels(ctx context.Context, binaryPath string, timeout time.Duration, run ProbeFn) ([]ModelInfo, string, error) {
-	slog.Debug("trace", "cmd", cursorLogCmd, "operation", "cursor.ListModels",
+	slog.Debug("trace", "cmd", calltrace.LogCmd, "operation", "cursor.ListModels",
 		"binary", binaryPath, "timeout_ns", int64(timeout))
 	p := strings.TrimSpace(binaryPath)
 	if p == "" {

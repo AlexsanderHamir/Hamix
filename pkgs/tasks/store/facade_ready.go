@@ -1,5 +1,6 @@
 package store
 
+import "github.com/AlexsanderHamir/Hamix/pkgs/tasks/calltrace"
 import (
 	"context"
 	"log/slog"
@@ -24,20 +25,20 @@ type DeferredPickup = ready.DeferredPickup
 // ListDeferredReadyPickupTasks returns ready tasks deferred by pickup_not_before
 // after now, ordered by pickup time (for pickup wake hydration).
 func (s *Store) ListDeferredReadyPickupTasks(ctx context.Context, limit int) ([]DeferredPickup, error) {
-	slog.Debug("trace", "cmd", storeLogCmd, "operation", "tasks.store.ListDeferredReadyPickupTasks")
+	slog.Debug("trace", "cmd", calltrace.LogCmd, "operation", "tasks.store.ListDeferredReadyPickupTasks")
 	return ready.ListDeferredReadyPickups(ctx, s.db, time.Now().UTC(), limit)
 }
 
 // ListReadyTaskQueueCandidates returns ready tasks ordered for fair scheduling
 // (see internal/ready). Pagination is keyset; pass the cursor from the last row.
 func (s *Store) ListReadyTaskQueueCandidates(ctx context.Context, limit int, cursor *ReadyTaskQueueCursor) ([]ReadyTaskQueueCandidate, error) {
-	slog.Debug("trace", "cmd", storeLogCmd, "operation", "tasks.store.ListReadyTaskQueueCandidates")
+	slog.Debug("trace", "cmd", calltrace.LogCmd, "operation", "tasks.store.ListReadyTaskQueueCandidates")
 	return ready.ListQueueCandidates(ctx, s.db, limit, cursor)
 }
 
 // ListReadyTasksUserCreated returns tasks with status ready whose first audit
 // row is task_created by user (the user-task agent queue policy).
 func (s *Store) ListReadyTasksUserCreated(ctx context.Context, limit int, afterID string) ([]domain.Task, error) {
-	slog.Debug("trace", "cmd", storeLogCmd, "operation", "tasks.store.ListReadyTasksUserCreated")
+	slog.Debug("trace", "cmd", calltrace.LogCmd, "operation", "tasks.store.ListReadyTasksUserCreated")
 	return ready.ListUserCreated(ctx, s.db, limit, afterID)
 }

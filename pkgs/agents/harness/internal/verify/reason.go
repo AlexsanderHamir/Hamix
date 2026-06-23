@@ -1,5 +1,6 @@
 package verify
 
+import "github.com/AlexsanderHamir/Hamix/pkgs/tasks/calltrace"
 import (
 	"log/slog"
 	"sort"
@@ -9,7 +10,7 @@ import (
 // FormatFailedReason builds terminate-reason for verification exhaustion.
 // Prefix "verification_failed" is contract-stable for SPA prefix matching.
 func FormatFailedReason(finalVerdicts []Verdict, lockedPasses map[string]Verdict) string {
-	slog.Debug("trace", "cmd", logCmd, "operation", "agent.harness.verify.FormatFailedReason",
+	slog.Debug("trace", "cmd", calltrace.LogCmd, "operation", "agent.harness.verify.FormatFailedReason",
 		"verdict_count", len(finalVerdicts), "locked_count", len(lockedPasses))
 	failing := make([]string, 0, len(finalVerdicts))
 	seen := map[string]struct{}{}

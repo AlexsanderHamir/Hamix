@@ -1,5 +1,6 @@
 package store
 
+import "github.com/AlexsanderHamir/Hamix/pkgs/tasks/calltrace"
 import (
 	"context"
 	"log/slog"
@@ -28,7 +29,7 @@ type FailedPredicate = scheduling.FailedPredicate
 // `pickupNotBefore` is the task's pickup_not_before column value
 // (nil = no deferral; in the past = effectively no deferral).
 func ShouldNotifyReadyNow(pickupNotBefore *time.Time, now time.Time) bool {
-	slog.Debug("trace", "cmd", storeLogCmd, "operation", "tasks.store.ShouldNotifyReadyNow",
+	slog.Debug("trace", "cmd", calltrace.LogCmd, "operation", "tasks.store.ShouldNotifyReadyNow",
 		"has_pickup", pickupNotBefore != nil)
 	return scheduling.ShouldNotifyReadyNow(pickupNotBefore, now)
 }
@@ -53,20 +54,20 @@ type AgentPickupResult = tasks.AgentPickupResult
 
 // Get loads a task by id. See tasks.Get for the full contract.
 func (s *Store) Get(ctx context.Context, id string) (*domain.Task, error) {
-	slog.Debug("trace", "cmd", storeLogCmd, "operation", "tasks.store.Get")
+	slog.Debug("trace", "cmd", calltrace.LogCmd, "operation", "tasks.store.Get")
 	return tasks.Get(ctx, s.db, id)
 }
 
 // AgentPickup transitions ready→running and consumes pending_retry. Used by
 // the agent worker at dequeue time instead of a bare status patch.
 func (s *Store) AgentPickup(ctx context.Context, taskID string, by domain.Actor) (*AgentPickupResult, error) {
-	slog.Debug("trace", "cmd", storeLogCmd, "operation", "tasks.store.AgentPickup", "task_id", taskID)
+	slog.Debug("trace", "cmd", calltrace.LogCmd, "operation", "tasks.store.AgentPickup", "task_id", taskID)
 	return tasks.AgentPickup(ctx, s.db, taskID, by)
 }
 
 // RequestTaskRetry queues operator retry intent for a failed task.
 func (s *Store) RequestTaskRetry(ctx context.Context, in tasks.RequestRetryInput, by domain.Actor) (*domain.Task, error) {
-	slog.Debug("trace", "cmd", storeLogCmd, "operation", "tasks.store.RequestTaskRetry", "task_id", in.TaskID)
+	slog.Debug("trace", "cmd", calltrace.LogCmd, "operation", "tasks.store.RequestTaskRetry", "task_id", in.TaskID)
 	updated, prev, err := tasks.RequestTaskRetry(ctx, s.db, in, by)
 	if err != nil {
 		return nil, err
@@ -83,7 +84,7 @@ func (s *Store) RequestTaskRetry(ctx context.Context, in tasks.RequestRetryInput
 // source draft, appends task_created, and runs the checklist guard when
 // the initial status is StatusDone — all in one transaction.
 func (s *Store) Create(ctx context.Context, in CreateTaskInput, by domain.Actor) (*domain.Task, error) {
-	slog.Debug("trace", "cmd", storeLogCmd, "operation", "tasks.store.Create")
+	slog.Debug("trace", "cmd", calltrace.LogCmd, "operation", "tasks.store.Create")
 	t, err := tasks.Create(ctx, s.db, in, by)
 	if err != nil {
 		return nil, err
@@ -95,7 +96,7 @@ func (s *Store) Create(ctx context.Context, in CreateTaskInput, by domain.Actor)
 
 // Update applies the patch and notifies the ready-task channel when appropriate.
 func (s *Store) Update(ctx context.Context, id string, in UpdateTaskInput, by domain.Actor) (*domain.Task, error) {
-	slog.Debug("trace", "cmd", storeLogCmd, "operation", "tasks.store.Update")
+	slog.Debug("trace", "cmd", calltrace.LogCmd, "operation", "tasks.store.Update")
 	updated, prev, err := tasks.Update(ctx, s.db, id, in, by)
 	if err != nil {
 		return nil, err
@@ -115,7 +116,7 @@ func (s *Store) Update(ctx context.Context, id string, in UpdateTaskInput, by do
 }
 
 func (s *Store) notifyUnblockedDependents(ctx context.Context, predecessorID string) {
-	slog.Debug("trace", "cmd", storeLogCmd, "operation", "tasks.store.notifyUnblockedDependents", "predecessor_id", predecessorID)
+	slog.Debug("trace", "cmd", calltrace.LogCmd, "operation", "tasks.store.notifyUnblockedDependents", "predecessor_id", predecessorID)
 	dependents, err := tasks.ListDependents(ctx, s.db, predecessorID)
 	if err != nil {
 		slog.Warn("list dependents after predecessor unblock", "task_id", predecessorID, "err", err)
@@ -142,7 +143,7 @@ func (s *Store) NotifyUnblockedDependents(ctx context.Context, predecessorID str
 
 // Delete removes the task at id. Returns the deleted id on success.
 func (s *Store) Delete(ctx context.Context, id string, by domain.Actor) ([]string, error) {
-	slog.Debug("trace", "cmd", storeLogCmd, "operation", "tasks.store.Delete")
+	slog.Debug("trace", "cmd", calltrace.LogCmd, "operation", "tasks.store.Delete")
 	deletedIDs, err := tasks.Delete(ctx, s.db, id, by)
 	if err != nil {
 		return nil, err
@@ -158,51 +159,51 @@ type ListFilter = tasks.ListFilter
 
 // ListFlat returns tasks ordered by id ASC with limit/offset.
 func (s *Store) ListFlat(ctx context.Context, limit, offset int, filter *ListFilter) ([]domain.Task, error) {
-	slog.Debug("trace", "cmd", storeLogCmd, "operation", "tasks.store.ListFlat")
+	slog.Debug("trace", "cmd", calltrace.LogCmd, "operation", "tasks.store.ListFlat")
 	return tasks.ListFlat(ctx, s.db, limit, offset, filter)
 }
 
 // ListFlatPage returns a flat page with hasMore.
 func (s *Store) ListFlatPage(ctx context.Context, limit, offset int, filter *ListFilter) ([]domain.Task, bool, error) {
-	slog.Debug("trace", "cmd", storeLogCmd, "operation", "tasks.store.ListFlatPage")
+	slog.Debug("trace", "cmd", calltrace.LogCmd, "operation", "tasks.store.ListFlatPage")
 	return tasks.ListFlatPage(ctx, s.db, limit, offset, filter)
 }
 
 // ListFlatAfter is the keyset-pagination variant of ListFlat.
 func (s *Store) ListFlatAfter(ctx context.Context, limit int, afterID string) ([]domain.Task, bool, error) {
-	slog.Debug("trace", "cmd", storeLogCmd, "operation", "tasks.store.ListFlatAfter")
+	slog.Debug("trace", "cmd", calltrace.LogCmd, "operation", "tasks.store.ListFlatAfter")
 	return tasks.ListFlatAfter(ctx, s.db, limit, afterID)
 }
 
 // List is an alias for ListFlat. Prefer ListFlat in new code.
 func (s *Store) List(ctx context.Context, limit, offset int) ([]domain.Task, error) {
-	slog.Debug("trace", "cmd", storeLogCmd, "operation", "tasks.store.List")
+	slog.Debug("trace", "cmd", calltrace.LogCmd, "operation", "tasks.store.List")
 	return tasks.ListFlat(ctx, s.db, limit, offset, nil)
 }
 
 func (s *Store) AddTaskDependency(ctx context.Context, taskID, dependsOnTaskID string, satisfies domain.DependencySatisfies) error {
-	slog.Debug("trace", "cmd", storeLogCmd, "operation", "tasks.store.AddTaskDependency")
+	slog.Debug("trace", "cmd", calltrace.LogCmd, "operation", "tasks.store.AddTaskDependency")
 	return tasks.AddDependency(ctx, s.db, taskID, dependsOnTaskID, satisfies)
 }
 
 func (s *Store) RemoveTaskDependency(ctx context.Context, taskID, dependsOnTaskID string) error {
-	slog.Debug("trace", "cmd", storeLogCmd, "operation", "tasks.store.RemoveTaskDependency")
+	slog.Debug("trace", "cmd", calltrace.LogCmd, "operation", "tasks.store.RemoveTaskDependency")
 	return tasks.RemoveDependency(ctx, s.db, taskID, dependsOnTaskID)
 }
 
 func (s *Store) ListTaskDependencies(ctx context.Context, taskID string) ([]domain.DependencyEdge, error) {
-	slog.Debug("trace", "cmd", storeLogCmd, "operation", "tasks.store.ListTaskDependencies")
+	slog.Debug("trace", "cmd", calltrace.LogCmd, "operation", "tasks.store.ListTaskDependencies")
 	return tasks.ListDependencyEdges(ctx, s.db, taskID)
 }
 
 func (s *Store) SetTaskDependencies(ctx context.Context, taskID string, dependsOn []domain.DependencyEdge) error {
-	slog.Debug("trace", "cmd", storeLogCmd, "operation", "tasks.store.SetTaskDependencies")
+	slog.Debug("trace", "cmd", calltrace.LogCmd, "operation", "tasks.store.SetTaskDependencies")
 	return tasks.SetDependencies(ctx, s.db, taskID, dependsOn)
 }
 
 // ReadyForAgentPickup reports whether the task passes dequeue predicates.
 func (s *Store) ReadyForAgentPickup(ctx context.Context, t *domain.Task, now time.Time) (bool, FailedPredicate, error) {
-	slog.Debug("trace", "cmd", storeLogCmd, "operation", "tasks.store.ReadyForAgentPickup")
+	slog.Debug("trace", "cmd", calltrace.LogCmd, "operation", "tasks.store.ReadyForAgentPickup")
 	return tasks.ReadyForAgentPickup(ctx, s.db, t, now)
 }
 
@@ -222,6 +223,6 @@ func (s *Store) applyNotifyDecision(ctx context.Context, task domain.Task, d sch
 
 // ApplyTaskGateAction applies release/hold/clear_hold to a task gate.
 func (s *Store) ApplyTaskGateAction(ctx context.Context, taskID, action string, by domain.Actor) (*domain.Task, error) {
-	slog.Debug("trace", "cmd", storeLogCmd, "operation", "tasks.store.ApplyTaskGateAction")
+	slog.Debug("trace", "cmd", calltrace.LogCmd, "operation", "tasks.store.ApplyTaskGateAction")
 	return tasks.ApplyTaskGateAction(ctx, s.db, taskID, action, by)
 }

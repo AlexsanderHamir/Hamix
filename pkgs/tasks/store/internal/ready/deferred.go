@@ -1,5 +1,6 @@
 package ready
 
+import "github.com/AlexsanderHamir/Hamix/pkgs/tasks/calltrace"
 import (
 	"context"
 	"fmt"
@@ -22,7 +23,7 @@ type DeferredPickup struct {
 // pickup wake scheduler at startup.
 func ListDeferredReadyPickups(ctx context.Context, db *gorm.DB, now time.Time, limit int) ([]DeferredPickup, error) {
 	defer kernel.DeferLatency(kernel.OpListReadyQueue)()
-	slog.Debug("trace", "cmd", logCmd, "operation", "tasks.store.ready.ListDeferredReadyPickups")
+	slog.Debug("trace", "cmd", calltrace.LogCmd, "operation", "tasks.store.ready.ListDeferredReadyPickups")
 	if limit <= 0 {
 		limit = 10_000
 	}

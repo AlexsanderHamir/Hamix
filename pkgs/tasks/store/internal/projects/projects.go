@@ -2,6 +2,7 @@
 // context items, and immutable task context snapshots.
 package projects
 
+import "github.com/AlexsanderHamir/Hamix/pkgs/tasks/calltrace"
 import (
 	"context"
 	"encoding/json"
@@ -18,8 +19,6 @@ import (
 	"gorm.io/gorm"
 	"gorm.io/gorm/clause"
 )
-
-const logCmd = "taskapi"
 
 // CreateProjectInput is the store input for creating a project.
 type CreateProjectInput struct {
@@ -71,7 +70,7 @@ type CreateSnapshotInput struct {
 // CreateProject inserts a new active project.
 func CreateProject(ctx context.Context, db *gorm.DB, input CreateProjectInput) (domain.Project, error) {
 	defer kernel.DeferLatency(kernel.OpCreateProject)()
-	slog.Debug("trace", "cmd", logCmd, "operation", "tasks.store.projects.CreateProject")
+	slog.Debug("trace", "cmd", calltrace.LogCmd, "operation", "tasks.store.projects.CreateProject")
 	id := strings.TrimSpace(input.ID)
 	if id == "" {
 		id = uuid.NewString()
@@ -99,7 +98,7 @@ func CreateProject(ctx context.Context, db *gorm.DB, input CreateProjectInput) (
 // ListProjects returns projects ordered by most recently updated first.
 func ListProjects(ctx context.Context, db *gorm.DB, includeArchived bool, limit int) ([]domain.Project, error) {
 	defer kernel.DeferLatency(kernel.OpListProjects)()
-	slog.Debug("trace", "cmd", logCmd, "operation", "tasks.store.projects.ListProjects")
+	slog.Debug("trace", "cmd", calltrace.LogCmd, "operation", "tasks.store.projects.ListProjects")
 	if limit <= 0 {
 		limit = 50
 	}
@@ -120,7 +119,7 @@ func ListProjects(ctx context.Context, db *gorm.DB, includeArchived bool, limit 
 // GetProject returns one project by id.
 func GetProject(ctx context.Context, db *gorm.DB, id string) (domain.Project, error) {
 	defer kernel.DeferLatency(kernel.OpGetProject)()
-	slog.Debug("trace", "cmd", logCmd, "operation", "tasks.store.projects.GetProject")
+	slog.Debug("trace", "cmd", calltrace.LogCmd, "operation", "tasks.store.projects.GetProject")
 	id = strings.TrimSpace(id)
 	if id == "" {
 		return domain.Project{}, fmt.Errorf("%w: project id required", domain.ErrInvalidInput)
@@ -135,7 +134,7 @@ func GetProject(ctx context.Context, db *gorm.DB, id string) (domain.Project, er
 // UpdateProject applies a partial metadata patch and returns the updated row.
 func UpdateProject(ctx context.Context, db *gorm.DB, id string, input UpdateProjectInput) (domain.Project, error) {
 	defer kernel.DeferLatency(kernel.OpUpdateProject)()
-	slog.Debug("trace", "cmd", logCmd, "operation", "tasks.store.projects.UpdateProject")
+	slog.Debug("trace", "cmd", calltrace.LogCmd, "operation", "tasks.store.projects.UpdateProject")
 	id = strings.TrimSpace(id)
 	if id == "" {
 		return domain.Project{}, fmt.Errorf("%w: project id required", domain.ErrInvalidInput)
@@ -169,7 +168,7 @@ func UpdateProject(ctx context.Context, db *gorm.DB, id string, input UpdateProj
 // DeleteProject removes a project when no tasks still reference it.
 func DeleteProject(ctx context.Context, db *gorm.DB, id string) error {
 	defer kernel.DeferLatency(kernel.OpDeleteProject)()
-	slog.Debug("trace", "cmd", logCmd, "operation", "tasks.store.projects.DeleteProject")
+	slog.Debug("trace", "cmd", calltrace.LogCmd, "operation", "tasks.store.projects.DeleteProject")
 	id = strings.TrimSpace(id)
 	if id == "" {
 		return fmt.Errorf("%w: project id required", domain.ErrInvalidInput)
@@ -197,7 +196,7 @@ func DeleteProject(ctx context.Context, db *gorm.DB, id string) error {
 // CreateContext inserts one context item for a project.
 func CreateContext(ctx context.Context, db *gorm.DB, projectID string, input CreateContextInput) (domain.ProjectContextItem, error) {
 	defer kernel.DeferLatency(kernel.OpCreateProjectContext)()
-	slog.Debug("trace", "cmd", logCmd, "operation", "tasks.store.projects.CreateContext")
+	slog.Debug("trace", "cmd", calltrace.LogCmd, "operation", "tasks.store.projects.CreateContext")
 	projectID = strings.TrimSpace(projectID)
 	if projectID == "" {
 		return domain.ProjectContextItem{}, fmt.Errorf("%w: project id required", domain.ErrInvalidInput)
@@ -250,7 +249,7 @@ func CreateContext(ctx context.Context, db *gorm.DB, projectID string, input Cre
 // ListContext returns context items for a project, pinned items first.
 func ListContext(ctx context.Context, db *gorm.DB, projectID string, includeUnpinned bool, limit int) ([]domain.ProjectContextItem, error) {
 	defer kernel.DeferLatency(kernel.OpListProjectContext)()
-	slog.Debug("trace", "cmd", logCmd, "operation", "tasks.store.projects.ListContext")
+	slog.Debug("trace", "cmd", calltrace.LogCmd, "operation", "tasks.store.projects.ListContext")
 	projectID = strings.TrimSpace(projectID)
 	if projectID == "" {
 		return nil, fmt.Errorf("%w: project id required", domain.ErrInvalidInput)
@@ -275,7 +274,7 @@ func ListContext(ctx context.Context, db *gorm.DB, projectID string, includeUnpi
 // ListContextByIDs returns selected context items for one project in caller order.
 func ListContextByIDs(ctx context.Context, db *gorm.DB, projectID string, ids []string) ([]domain.ProjectContextItem, error) {
 	defer kernel.DeferLatency(kernel.OpListProjectContext)()
-	slog.Debug("trace", "cmd", logCmd, "operation", "tasks.store.projects.ListContextByIDs")
+	slog.Debug("trace", "cmd", calltrace.LogCmd, "operation", "tasks.store.projects.ListContextByIDs")
 	projectID = strings.TrimSpace(projectID)
 	if projectID == "" {
 		return nil, fmt.Errorf("%w: project id required", domain.ErrInvalidInput)
@@ -305,7 +304,7 @@ func ListContextByIDs(ctx context.Context, db *gorm.DB, projectID string, ids []
 // UpdateContext applies a partial patch to one context item.
 func UpdateContext(ctx context.Context, db *gorm.DB, projectID, itemID string, input UpdateContextInput) (domain.ProjectContextItem, error) {
 	defer kernel.DeferLatency(kernel.OpUpdateProjectContext)()
-	slog.Debug("trace", "cmd", logCmd, "operation", "tasks.store.projects.UpdateContext")
+	slog.Debug("trace", "cmd", calltrace.LogCmd, "operation", "tasks.store.projects.UpdateContext")
 	projectID = strings.TrimSpace(projectID)
 	itemID = strings.TrimSpace(itemID)
 	if projectID == "" || itemID == "" {
@@ -337,7 +336,7 @@ func UpdateContext(ctx context.Context, db *gorm.DB, projectID, itemID string, i
 // DeleteContext removes one context item.
 func DeleteContext(ctx context.Context, db *gorm.DB, projectID, itemID string) error {
 	defer kernel.DeferLatency(kernel.OpDeleteProjectContext)()
-	slog.Debug("trace", "cmd", logCmd, "operation", "tasks.store.projects.DeleteContext")
+	slog.Debug("trace", "cmd", calltrace.LogCmd, "operation", "tasks.store.projects.DeleteContext")
 	projectID = strings.TrimSpace(projectID)
 	itemID = strings.TrimSpace(itemID)
 	if projectID == "" || itemID == "" {
@@ -361,7 +360,7 @@ func DeleteContext(ctx context.Context, db *gorm.DB, projectID, itemID string) e
 // CreateSnapshot inserts an immutable task context snapshot.
 func CreateSnapshot(ctx context.Context, db *gorm.DB, input CreateSnapshotInput) (domain.TaskContextSnapshot, error) {
 	defer kernel.DeferLatency(kernel.OpCreateContextSnapshot)()
-	slog.Debug("trace", "cmd", logCmd, "operation", "tasks.store.projects.CreateSnapshot")
+	slog.Debug("trace", "cmd", calltrace.LogCmd, "operation", "tasks.store.projects.CreateSnapshot")
 	id := strings.TrimSpace(input.ID)
 	if id == "" {
 		id = uuid.NewString()
@@ -395,7 +394,7 @@ func CreateSnapshot(ctx context.Context, db *gorm.DB, input CreateSnapshotInput)
 // GetSnapshotForCycle returns the context snapshot recorded for a cycle.
 func GetSnapshotForCycle(ctx context.Context, db *gorm.DB, cycleID string) (domain.TaskContextSnapshot, error) {
 	defer kernel.DeferLatency(kernel.OpGetContextSnapshot)()
-	slog.Debug("trace", "cmd", logCmd, "operation", "tasks.store.projects.GetSnapshotForCycle")
+	slog.Debug("trace", "cmd", calltrace.LogCmd, "operation", "tasks.store.projects.GetSnapshotForCycle")
 	cycleID = strings.TrimSpace(cycleID)
 	if cycleID == "" {
 		return domain.TaskContextSnapshot{}, fmt.Errorf("%w: cycle id required", domain.ErrInvalidInput)

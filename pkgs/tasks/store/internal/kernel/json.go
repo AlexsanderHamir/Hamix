@@ -1,5 +1,6 @@
 package kernel
 
+import "github.com/AlexsanderHamir/Hamix/pkgs/tasks/calltrace"
 import (
 	"bytes"
 	"encoding/json"
@@ -38,7 +39,7 @@ import (
 // field is the human-readable name of the offending column; it is
 // only used to format the wrapped error.
 func NormalizeJSONObject(b []byte, field string) ([]byte, error) {
-	slog.Debug("trace", "cmd", LogCmd, "operation", "tasks.store.kernel.NormalizeJSONObject")
+	slog.Debug("trace", "cmd", calltrace.LogCmd, "operation", "tasks.store.kernel.NormalizeJSONObject")
 	trimmed := bytes.TrimSpace(b)
 	if len(trimmed) == 0 || bytes.Equal(trimmed, []byte("null")) {
 		return []byte("{}"), nil

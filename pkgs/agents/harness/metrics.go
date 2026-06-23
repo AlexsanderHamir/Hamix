@@ -1,5 +1,6 @@
 package harness
 
+import "github.com/AlexsanderHamir/Hamix/pkgs/tasks/calltrace"
 import (
 	"log/slog"
 	"time"
@@ -64,7 +65,7 @@ type RunMetrics interface {
 // did not actually start the cycle (state.startedAt zero) so we do not
 // pollute the histogram with sub-millisecond garbage.
 func (h *Harness) recordRun(terminalStatus, runnerName, model string, started time.Time) {
-	slog.Debug("trace", "cmd", harnessLogCmd, "operation", "agent.harness.Harness.recordRun",
+	slog.Debug("trace", "cmd", calltrace.LogCmd, "operation", "agent.harness.Harness.recordRun",
 		"terminal_status", terminalStatus, "runner", runnerName, "model", model)
 	if h == nil || h.opts.Metrics == nil {
 		return
@@ -82,7 +83,7 @@ func (h *Harness) recordRun(terminalStatus, runnerName, model string, started ti
 // recordVerifyVerdict fans the per-criterion verdict out to the
 // configured RunMetrics. No-op when Metrics is nil.
 func (h *Harness) recordVerifyVerdict(kind domain.VerifierKind, passed bool) {
-	slog.Debug("trace", "cmd", harnessLogCmd, "operation", "agent.harness.Harness.recordVerifyVerdict",
+	slog.Debug("trace", "cmd", calltrace.LogCmd, "operation", "agent.harness.Harness.recordVerifyVerdict",
 		"verifier_kind", string(kind), "passed", passed)
 	if h == nil || h.opts.Metrics == nil {
 		return
@@ -94,7 +95,7 @@ func (h *Harness) recordVerifyVerdict(kind domain.VerifierKind, passed bool) {
 // out to the configured RunMetrics. d is clamped to >= 0 so a backwards
 // fake clock cannot land a negative observation in the histogram.
 func (h *Harness) observeVerifyDuration(d time.Duration) {
-	slog.Debug("trace", "cmd", harnessLogCmd, "operation", "agent.harness.Harness.observeVerifyDuration",
+	slog.Debug("trace", "cmd", calltrace.LogCmd, "operation", "agent.harness.Harness.observeVerifyDuration",
 		"duration_ms", d.Milliseconds())
 	if h == nil || h.opts.Metrics == nil {
 		return
@@ -110,7 +111,7 @@ func (h *Harness) observeVerifyDuration(d time.Duration) {
 // adding a new TerminateCycle call site cannot accidentally skip
 // metrics.
 func (h *Harness) observeVerifyRetries(n int) {
-	slog.Debug("trace", "cmd", harnessLogCmd, "operation", "agent.harness.Harness.observeVerifyRetries",
+	slog.Debug("trace", "cmd", calltrace.LogCmd, "operation", "agent.harness.Harness.observeVerifyRetries",
 		"retries", n)
 	if h == nil || h.opts.Metrics == nil {
 		return

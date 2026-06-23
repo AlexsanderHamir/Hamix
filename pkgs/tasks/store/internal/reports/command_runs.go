@@ -1,5 +1,6 @@
 package reports
 
+import "github.com/AlexsanderHamir/Hamix/pkgs/tasks/calltrace"
 import (
 	"context"
 	"fmt"
@@ -25,7 +26,7 @@ type CommandRunEntry struct {
 // UpsertCommandRuns persists command run metadata for one verify attempt.
 func UpsertCommandRuns(ctx context.Context, db *gorm.DB, cycleID string, attemptSeq int64, entries []CommandRunEntry) error {
 	defer kernel.DeferLatency(kernel.OpUpsertCommandRuns)()
-	slog.Debug("trace", "cmd", logCmd, "operation", "tasks.store.reports.UpsertCommandRuns",
+	slog.Debug("trace", "cmd", calltrace.LogCmd, "operation", "tasks.store.reports.UpsertCommandRuns",
 		"cycle_id", cycleID, "attempt_seq", attemptSeq, "entry_count", len(entries))
 	cycleID = strings.TrimSpace(cycleID)
 	if cycleID == "" {
@@ -66,7 +67,7 @@ func UpsertCommandRuns(ctx context.Context, db *gorm.DB, cycleID string, attempt
 // (attempt_seq ASC, criterion_id ASC, command_seq ASC).
 func ListCommandRunsForCycle(ctx context.Context, db *gorm.DB, cycleID string) ([]domain.TaskCycleCommandRun, error) {
 	defer kernel.DeferLatency(kernel.OpListCommandRunsForCycle)()
-	slog.Debug("trace", "cmd", logCmd, "operation", "tasks.store.reports.ListCommandRunsForCycle", "cycle_id", cycleID)
+	slog.Debug("trace", "cmd", calltrace.LogCmd, "operation", "tasks.store.reports.ListCommandRunsForCycle", "cycle_id", cycleID)
 	cycleID = strings.TrimSpace(cycleID)
 	if cycleID == "" {
 		return nil, fmt.Errorf("%w: cycle_id", domain.ErrInvalidInput)

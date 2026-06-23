@@ -6,6 +6,7 @@
 // caller).
 package ready
 
+import "github.com/AlexsanderHamir/Hamix/pkgs/tasks/calltrace"
 import (
 	"context"
 	"fmt"
@@ -17,8 +18,6 @@ import (
 	"github.com/AlexsanderHamir/Hamix/pkgs/tasks/store/internal/kernel"
 	"gorm.io/gorm"
 )
-
-const logCmd = "taskapi"
 
 // QueueCursor is a keyset cursor for ListQueueCandidates. Nil means
 // the first page. On SQLite, AfterEventRowID is the joined task_events
@@ -45,7 +44,7 @@ type QueueCandidate struct {
 // row of the previous page.
 func ListQueueCandidates(ctx context.Context, db *gorm.DB, limit int, cursor *QueueCursor) ([]QueueCandidate, error) {
 	defer kernel.DeferLatency(kernel.OpListReadyQueue)()
-	slog.Debug("trace", "cmd", logCmd, "operation", "tasks.store.ready.ListQueueCandidates")
+	slog.Debug("trace", "cmd", calltrace.LogCmd, "operation", "tasks.store.ready.ListQueueCandidates")
 	if limit <= 0 {
 		limit = 200
 	}
@@ -112,7 +111,7 @@ func ListQueueCandidates(ctx context.Context, db *gorm.DB, limit int, cursor *Qu
 // after trim, restricts to tasks.id > afterID for pagination.
 func ListUserCreated(ctx context.Context, db *gorm.DB, limit int, afterID string) ([]domain.Task, error) {
 	defer kernel.DeferLatency(kernel.OpListReadyUserCreated)()
-	slog.Debug("trace", "cmd", logCmd, "operation", "tasks.store.ready.ListUserCreated")
+	slog.Debug("trace", "cmd", calltrace.LogCmd, "operation", "tasks.store.ready.ListUserCreated")
 	if limit <= 0 {
 		limit = 200
 	}
@@ -144,7 +143,7 @@ func ListUserCreated(ctx context.Context, db *gorm.DB, limit int, afterID string
 // a stable FIFO tie-breaker. Postgres has no equivalent stable
 // physical row id, so the fallback is purely (te.at, tasks.id).
 func UseSQLiteEventRowID(db *gorm.DB) bool {
-	slog.Debug("trace", "cmd", logCmd, "operation", "tasks.store.ready.UseSQLiteEventRowID")
+	slog.Debug("trace", "cmd", calltrace.LogCmd, "operation", "tasks.store.ready.UseSQLiteEventRowID")
 	if db == nil {
 		return false
 	}

@@ -1,5 +1,6 @@
 package agentworker
 
+import "github.com/AlexsanderHamir/Hamix/pkgs/tasks/calltrace"
 import (
 	"fmt"
 	"log/slog"
@@ -20,12 +21,12 @@ type cycleChangeSSEAdapter struct {
 }
 
 func newCycleChangeSSEAdapter(pub realtime.Publisher) *cycleChangeSSEAdapter {
-	slog.Debug("trace", "cmd", logCmd, "operation", "taskapi.newCycleChangeSSEAdapter")
+	slog.Debug("trace", "cmd", calltrace.LogCmd, "operation", "taskapi.newCycleChangeSSEAdapter")
 	return &cycleChangeSSEAdapter{pub: pub}
 }
 
 func (a *cycleChangeSSEAdapter) PublishCycleChange(taskID, cycleID string) {
-	slog.Debug("trace", "cmd", logCmd, "operation", "taskapi.cycleChangeSSEAdapter.PublishCycleChange",
+	slog.Debug("trace", "cmd", calltrace.LogCmd, "operation", "taskapi.cycleChangeSSEAdapter.PublishCycleChange",
 		"task_id", taskID, "cycle_id", cycleID)
 	if a == nil || a.pub == nil || taskID == "" {
 		return
@@ -46,7 +47,7 @@ type runProgressSSEAdapter struct {
 }
 
 func newRunProgressSSEAdapter(pub realtime.Publisher, minInterval time.Duration) *runProgressSSEAdapter {
-	slog.Debug("trace", "cmd", logCmd, "operation", "taskapi.newRunProgressSSEAdapter")
+	slog.Debug("trace", "cmd", calltrace.LogCmd, "operation", "taskapi.newRunProgressSSEAdapter")
 	return &runProgressSSEAdapter{
 		pub:         pub,
 		minInterval: minInterval,
@@ -55,7 +56,7 @@ func newRunProgressSSEAdapter(pub realtime.Publisher, minInterval time.Duration)
 }
 
 func (a *runProgressSSEAdapter) PublishRunProgress(taskID, cycleID string, phaseSeq int64, runCorrelationID string, ev runner.ProgressEvent) {
-	slog.Debug("trace", "cmd", logCmd, "operation", "taskapi.runProgressSSEAdapter.PublishRunProgress",
+	slog.Debug("trace", "cmd", calltrace.LogCmd, "operation", "taskapi.runProgressSSEAdapter.PublishRunProgress",
 		"task_id", taskID, "cycle_id", cycleID, "phase_seq", phaseSeq,
 		"run_correlation_id", runCorrelationID,
 		"kind", ev.Kind, "subtype", ev.Subtype)

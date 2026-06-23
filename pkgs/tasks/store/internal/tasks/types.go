@@ -78,5 +78,3 @@ type ProjectFieldPatch struct {
 	Clear bool
 	ID    string
 }
-
-const logCmd = "taskapi"

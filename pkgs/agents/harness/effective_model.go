@@ -1,5 +1,6 @@
 package harness
 
+import "github.com/AlexsanderHamir/Hamix/pkgs/tasks/calltrace"
 import (
 	"encoding/json"
 	"log/slog"
@@ -9,7 +10,7 @@ import (
 )
 
 func effectiveModelFromCycleMeta(r runner.Runner, task *domain.Task, cycle *domain.TaskCycle) string {
-	slog.Debug("trace", "cmd", harnessLogCmd, "operation", "agent.harness.effectiveModelFromCycleMeta",
+	slog.Debug("trace", "cmd", calltrace.LogCmd, "operation", "agent.harness.effectiveModelFromCycleMeta",
 		"task_id", task.ID, "cycle_id", cycleIDOrEmpty(cycle))
 	if cycle != nil && len(cycle.MetaJSON) > 0 {
 		var meta map[string]any

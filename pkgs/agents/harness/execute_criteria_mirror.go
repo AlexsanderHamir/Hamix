@@ -1,5 +1,6 @@
 package harness
 
+import "github.com/AlexsanderHamir/Hamix/pkgs/tasks/calltrace"
 import (
 	"context"
 	"errors"
@@ -14,7 +15,7 @@ func (h *Harness) bestEffortMirrorExecuteCriteria(
 	cycleID string,
 	state *processState,
 ) {
-	slog.Debug("trace", "cmd", harnessLogCmd, "operation", "agent.harness.bestEffortMirrorExecuteCriteria",
+	slog.Debug("trace", "cmd", calltrace.LogCmd, "operation", "agent.harness.bestEffortMirrorExecuteCriteria",
 		"cycle_id", cycleID)
 	if !state.verifySnap.Enabled || len(state.verifySnap.Criteria) == 0 {
 		return
@@ -23,7 +24,7 @@ func (h *Harness) bestEffortMirrorExecuteCriteria(
 	if err != nil {
 		if !errors.Is(err, ErrCriteriaReportMissing) {
 			slog.Warn("agent harness execute criteria mirror parse failed",
-				"cmd", harnessLogCmd, "operation", "agent.harness.bestEffortMirrorExecuteCriteria.parse_err",
+				"cmd", calltrace.LogCmd, "operation", "agent.harness.bestEffortMirrorExecuteCriteria.parse_err",
 				"cycle_id", cycleID, "err", err)
 		}
 		return
@@ -31,7 +32,7 @@ func (h *Harness) bestEffortMirrorExecuteCriteria(
 	if uerr := h.persistCriteriaReports(ctx, cycleID, domain.ExecuteCriteriaReportAttemptSeq,
 		state.verifySnap.Criteria, state.previouslyPassed, selfReport); uerr != nil {
 		slog.Warn("agent harness execute criteria mirror upsert failed",
-			"cmd", harnessLogCmd, "operation", "agent.harness.bestEffortMirrorExecuteCriteria.upsert_err",
+			"cmd", calltrace.LogCmd, "operation", "agent.harness.bestEffortMirrorExecuteCriteria.upsert_err",
 			"cycle_id", cycleID, "err", uerr)
 	}
 }

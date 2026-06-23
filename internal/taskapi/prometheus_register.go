@@ -1,5 +1,6 @@
 package taskapi
 
+import "github.com/AlexsanderHamir/Hamix/pkgs/tasks/calltrace"
 import (
 	"errors"
 	"log/slog"
@@ -15,7 +16,7 @@ var defaultPromCollectors sync.Once
 // collectors on prometheus.DefaultRegisterer (the registry used by GET /metrics).
 // It is safe to call multiple times; registration runs once per process.
 func RegisterDefaultPrometheusCollectors() {
-	slog.Debug("trace", "cmd", cmdLog, "operation", "taskapi.RegisterDefaultPrometheusCollectors")
+	slog.Debug("trace", "cmd", calltrace.LogCmd, "operation", "taskapi.RegisterDefaultPrometheusCollectors")
 	defaultPromCollectors.Do(func() {
 		reg := prometheus.DefaultRegisterer
 		for _, c := range []prometheus.Collector{
@@ -27,11 +28,11 @@ func RegisterDefaultPrometheusCollectors() {
 				if errors.As(err, &dup) {
 					continue
 				}
-				slog.Warn("prometheus collector register failed", "cmd", cmdLog, "operation", "taskapi.prometheus_register", "err", err)
+				slog.Warn("prometheus collector register failed", "cmd", calltrace.LogCmd, "operation", "taskapi.prometheus_register", "err", err)
 				continue
 			}
 		}
-		slog.Info("prometheus default collectors registered", "cmd", cmdLog, "operation", "taskapi.prometheus_register",
+		slog.Info("prometheus default collectors registered", "cmd", calltrace.LogCmd, "operation", "taskapi.prometheus_register",
 			"go_collector", true, "process_collector", true)
 	})
 }

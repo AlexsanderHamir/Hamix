@@ -1,5 +1,6 @@
 package checklist
 
+import "github.com/AlexsanderHamir/Hamix/pkgs/tasks/calltrace"
 import (
 	"context"
 	"errors"
@@ -12,7 +13,7 @@ import (
 
 // IsTaskCycleRunning reports whether taskID has a task_cycles row with status=running.
 func IsTaskCycleRunning(ctx context.Context, db *gorm.DB, taskID string) (bool, error) {
-	slog.Debug("trace", "cmd", logCmd, "operation", "tasks.store.checklist.IsTaskCycleRunning")
+	slog.Debug("trace", "cmd", calltrace.LogCmd, "operation", "tasks.store.checklist.IsTaskCycleRunning")
 	return isTaskCycleRunningInTx(db.WithContext(ctx), taskID)
 }
 

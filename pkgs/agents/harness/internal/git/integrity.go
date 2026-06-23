@@ -1,5 +1,6 @@
 package git
 
+import "github.com/AlexsanderHamir/Hamix/pkgs/tasks/calltrace"
 import (
 	"context"
 	"log/slog"
@@ -35,7 +36,7 @@ func CaptureIntegritySnapshot(ctx context.Context, repo GitRepo, workingDir stri
 	if repo == nil {
 		repo = DefaultRepo()
 	}
-	slog.Debug("trace", "cmd", logCmd, "operation", "agent.harness.git.CaptureIntegritySnapshot",
+	slog.Debug("trace", "cmd", calltrace.LogCmd, "operation", "agent.harness.git.CaptureIntegritySnapshot",
 		"working_dir", workingDir)
 
 	probeCtx, cancel := context.WithTimeout(ctx, integritySnapshotTimeout)
@@ -61,7 +62,7 @@ func CaptureIntegritySnapshot(ctx context.Context, repo GitRepo, workingDir stri
 
 // DiffIntegritySnapshots reports paths that appear in post but not in pre.
 func DiffIntegritySnapshots(pre, post IntegritySnapshot) IntegrityDiff {
-	slog.Debug("trace", "cmd", logCmd, "operation", "agent.harness.git.DiffIntegritySnapshots")
+	slog.Debug("trace", "cmd", calltrace.LogCmd, "operation", "agent.harness.git.DiffIntegritySnapshots")
 	if pre.NotGitRepo || post.NotGitRepo {
 		return IntegrityDiff{}
 	}
@@ -77,7 +78,7 @@ func DiffIntegritySnapshots(pre, post IntegritySnapshot) IntegrityDiff {
 
 // ClassifyIntegrityDiff turns a diff into a tampered flag and operator summary.
 func ClassifyIntegrityDiff(diff IntegrityDiff, cycleID string) (bool, string) {
-	slog.Debug("trace", "cmd", logCmd, "operation", "agent.harness.git.ClassifyIntegrityDiff",
+	slog.Debug("trace", "cmd", calltrace.LogCmd, "operation", "agent.harness.git.ClassifyIntegrityDiff",
 		"cycle_id", cycleID, "head_changed", diff.HeadChanged, "added_count", len(diff.AddedPaths))
 	if diff.HeadChanged {
 		return true, "HEAD ref moved during verify pass"
@@ -93,7 +94,7 @@ func CheckVerifyIntegrity(ctx context.Context, repo GitRepo, workingDir, cycleID
 	if repo == nil {
 		repo = DefaultRepo()
 	}
-	slog.Debug("trace", "cmd", logCmd, "operation", "agent.harness.git.CheckVerifyIntegrity",
+	slog.Debug("trace", "cmd", calltrace.LogCmd, "operation", "agent.harness.git.CheckVerifyIntegrity",
 		"cycle_id", cycleID)
 	if pre.NotGitRepo {
 		return false, ""
@@ -104,7 +105,7 @@ func CheckVerifyIntegrity(ctx context.Context, repo GitRepo, workingDir, cycleID
 	post, err := CaptureIntegritySnapshot(ctx, repo, workingDir)
 	if err != nil {
 		slog.Warn("agent harness post-verify integrity snapshot failed",
-			"cmd", logCmd, "operation", "agent.harness.git.CheckVerifyIntegrity.post_snapshot_err",
+			"cmd", calltrace.LogCmd, "operation", "agent.harness.git.CheckVerifyIntegrity.post_snapshot_err",
 			"cycle_id", cycleID, "err", err)
 		return true, "post-verify integrity snapshot failed: " + err.Error()
 	}
@@ -115,14 +116,14 @@ func CheckVerifyIntegrity(ctx context.Context, repo GitRepo, workingDir, cycleID
 	tampered, summary := ClassifyIntegrityDiff(diff, cycleID)
 	if tampered {
 		slog.Warn("verify pass tampered with working dir",
-			"cmd", logCmd, "operation", "agent.harness.git.CheckVerifyIntegrity.tampered",
+			"cmd", calltrace.LogCmd, "operation", "agent.harness.git.CheckVerifyIntegrity.tampered",
 			"cycle_id", cycleID, "summary", summary)
 	}
 	return tampered, summary
 }
 
 func summariseTamperedPaths(paths []string) string {
-	slog.Debug("trace", "cmd", logCmd, "operation", "agent.harness.git.summariseTamperedPaths",
+	slog.Debug("trace", "cmd", calltrace.LogCmd, "operation", "agent.harness.git.summariseTamperedPaths",
 		"path_count", len(paths))
 	const maxInline = 5
 	if len(paths) <= maxInline {
@@ -155,7 +156,7 @@ func itoa(n int) string {
 }
 
 func parsePorcelainZ(out string) map[string]struct{} {
-	slog.Debug("trace", "cmd", logCmd, "operation", "agent.harness.git.parsePorcelainZ",
+	slog.Debug("trace", "cmd", calltrace.LogCmd, "operation", "agent.harness.git.parsePorcelainZ",
 		"len", len(out))
 	result := map[string]struct{}{}
 	if out == "" {

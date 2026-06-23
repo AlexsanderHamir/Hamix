@@ -1,5 +1,6 @@
 package checklist
 
+import "github.com/AlexsanderHamir/Hamix/pkgs/tasks/calltrace"
 import (
 	"context"
 	"encoding/json"
@@ -28,7 +29,7 @@ func SetDoneWithEvidenceInTx(
 	reasoning, cycleID string,
 	by domain.Actor,
 ) (CriteriaFlagChange, error) {
-	slog.Debug("trace", "cmd", logCmd, "operation", "tasks.store.checklist.SetDoneWithEvidenceInTx")
+	slog.Debug("trace", "cmd", calltrace.LogCmd, "operation", "tasks.store.checklist.SetDoneWithEvidenceInTx")
 	if err := kernel.ValidateActor(by); err != nil {
 		return CriteriaFlagChange{}, err
 	}
@@ -118,7 +119,7 @@ func SetDoneWithEvidence(
 	reasoning, cycleID string,
 	by domain.Actor,
 ) (CriteriaFlagChange, error) {
-	slog.Debug("trace", "cmd", logCmd, "operation", "tasks.store.checklist.SetDoneWithEvidence")
+	slog.Debug("trace", "cmd", calltrace.LogCmd, "operation", "tasks.store.checklist.SetDoneWithEvidence")
 	defer kernel.DeferLatency(kernel.OpSetChecklistItemDone)()
 	var flag CriteriaFlagChange
 	err := db.WithContext(ctx).Transaction(func(tx *gorm.DB) error {

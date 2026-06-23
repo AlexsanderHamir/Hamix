@@ -1,5 +1,6 @@
 package store
 
+import "github.com/AlexsanderHamir/Hamix/pkgs/tasks/calltrace"
 import (
 	"context"
 	"errors"
@@ -27,7 +28,7 @@ type CreateGitWorktreeInput struct {
 
 // ListGitWorktrees returns worktrees for a repository.
 func (s *Store) ListGitWorktrees(ctx context.Context, projectID, repoID string) ([]domain.GitWorktree, error) {
-	slog.Debug("trace", "cmd", storeLogCmd, "operation", "tasks.store.ListGitWorktrees")
+	slog.Debug("trace", "cmd", calltrace.LogCmd, "operation", "tasks.store.ListGitWorktrees")
 	if _, err := s.GetGitRepository(ctx, projectID, repoID); err != nil {
 		return nil, err
 	}
@@ -44,7 +45,7 @@ func (s *Store) ListGitWorktrees(ctx context.Context, projectID, repoID string) 
 
 // GetGitWorktree returns one worktree scoped through its repository project.
 func (s *Store) GetGitWorktree(ctx context.Context, projectID, worktreeID string) (domain.GitWorktree, error) {
-	slog.Debug("trace", "cmd", storeLogCmd, "operation", "tasks.store.GetGitWorktree")
+	slog.Debug("trace", "cmd", calltrace.LogCmd, "operation", "tasks.store.GetGitWorktree")
 	var row domain.GitWorktree
 	err := s.db.WithContext(ctx).
 		Joins("JOIN git_repositories ON git_repositories.id = git_worktrees.repository_id").
@@ -61,7 +62,7 @@ func (s *Store) GetGitWorktree(ctx context.Context, projectID, worktreeID string
 
 // CreateGitWorktree adds a linked worktree via git and inserts a row.
 func (s *Store) CreateGitWorktree(ctx context.Context, projectID, repoID string, input CreateGitWorktreeInput, gitSvc gitwork.Service) (domain.GitWorktree, error) {
-	slog.Debug("trace", "cmd", storeLogCmd, "operation", "tasks.store.CreateGitWorktree")
+	slog.Debug("trace", "cmd", calltrace.LogCmd, "operation", "tasks.store.CreateGitWorktree")
 	repo, err := s.GetGitRepository(ctx, projectID, repoID)
 	if err != nil {
 		return domain.GitWorktree{}, err
@@ -130,7 +131,7 @@ func (s *Store) CreateGitWorktree(ctx context.Context, projectID, repoID string,
 
 // DeleteGitWorktree removes a worktree from disk and the database.
 func (s *Store) DeleteGitWorktree(ctx context.Context, projectID, worktreeID string, force bool, gitSvc gitwork.Service) error {
-	slog.Debug("trace", "cmd", storeLogCmd, "operation", "tasks.store.DeleteGitWorktree")
+	slog.Debug("trace", "cmd", calltrace.LogCmd, "operation", "tasks.store.DeleteGitWorktree")
 	wt, err := s.GetGitWorktree(ctx, projectID, worktreeID)
 	if err != nil {
 		return err
@@ -184,7 +185,7 @@ func mapGitworkRemoveErr(err error) error {
 
 // ReconcileGitRepository syncs worktree rows with git worktree list output.
 func (s *Store) ReconcileGitRepository(ctx context.Context, projectID, repoID string, gitSvc gitwork.Service) error {
-	slog.Debug("trace", "cmd", storeLogCmd, "operation", "tasks.store.ReconcileGitRepository")
+	slog.Debug("trace", "cmd", calltrace.LogCmd, "operation", "tasks.store.ReconcileGitRepository")
 	repo, err := s.GetGitRepository(ctx, projectID, repoID)
 	if err != nil {
 		return err

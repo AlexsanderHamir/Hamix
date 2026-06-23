@@ -1,5 +1,6 @@
 package harness
 
+import "github.com/AlexsanderHamir/Hamix/pkgs/tasks/calltrace"
 import (
 	"context"
 	"encoding/json"
@@ -89,7 +90,7 @@ func (h *Harness) Run(parentCtx context.Context, task *domain.Task) {
 // transitionTask flips the task to next; returns false on any store
 // error (including ErrNotFound when the task was deleted mid-cycle).
 func (h *Harness) transitionTask(ctx context.Context, taskID string, next domain.Status, op string) bool {
-	slog.Debug("trace", "cmd", harnessLogCmd, "operation", "agent.harness.Harness.transitionTask",
+	slog.Debug("trace", "cmd", calltrace.LogCmd, "operation", "agent.harness.Harness.transitionTask",
 		"task_id", taskID, "next", string(next), "op", op)
 	if _, err := h.store.Update(ctx, taskID, store.UpdateTaskInput{Status: &next}, domain.ActorAgent); err != nil {
 		level := slog.LevelWarn
@@ -97,7 +98,7 @@ func (h *Harness) transitionTask(ctx context.Context, taskID string, next domain
 			level = slog.LevelInfo
 		}
 		slog.Log(ctx, level, "agent harness task transition failed",
-			"cmd", harnessLogCmd, "operation", "agent.harness.Harness.transitionTask.err",
+			"cmd", calltrace.LogCmd, "operation", "agent.harness.Harness.transitionTask.err",
 			"task_id", taskID, "next", string(next), "op", op, "err", err)
 		return false
 	}
@@ -119,7 +120,7 @@ func (h *Harness) transitionTask(ctx context.Context, taskID string, next domain
 // MetricsLabeler. Both may produce "" and that empty string is the
 // truth, not a placeholder.
 func (h *Harness) startCycle(ctx context.Context, task *domain.Task, state *processState, opts startCycleOpts) (*domain.TaskCycle, bool) {
-	slog.Debug("trace", "cmd", harnessLogCmd, "operation", "agent.harness.Harness.startCycle",
+	slog.Debug("trace", "cmd", calltrace.LogCmd, "operation", "agent.harness.Harness.startCycle",
 		"task_id", task.ID)
 	req := runner.Request{
 		TaskID:      task.ID,
@@ -140,7 +141,7 @@ func (h *Harness) startCycle(ctx context.Context, task *domain.Task, state *proc
 	}
 	cycle, err := h.store.StartCycle(ctx, in)
 	if err != nil {
-		slog.Warn("agent harness StartCycle failed", "cmd", harnessLogCmd,
+		slog.Warn("agent harness StartCycle failed", "cmd", calltrace.LogCmd,
 			"operation", "agent.harness.Harness.startCycle.err", "task_id", task.ID, "err", err)
 		return nil, false
 	}
@@ -160,11 +161,11 @@ func (h *Harness) startCycle(ctx context.Context, task *domain.Task, state *proc
 // state is updated so the panic-recovery and shutdown branches can find
 // the phase to close out.
 func (h *Harness) startExecutePhase(ctx context.Context, cycle *domain.TaskCycle, state *processState) (*domain.TaskCyclePhase, bool) {
-	slog.Debug("trace", "cmd", harnessLogCmd, "operation", "agent.harness.Harness.startExecutePhase",
+	slog.Debug("trace", "cmd", calltrace.LogCmd, "operation", "agent.harness.Harness.startExecutePhase",
 		"cycle_id", cycle.ID)
 	exec, err := h.store.StartPhase(ctx, cycle.ID, domain.PhaseExecute, domain.ActorAgent)
 	if err != nil {
-		slog.Warn("agent harness StartPhase(execute) failed", "cmd", harnessLogCmd,
+		slog.Warn("agent harness StartPhase(execute) failed", "cmd", calltrace.LogCmd,
 			"operation", "agent.harness.Harness.startExecutePhase.err",
 			"cycle_id", cycle.ID, "err", err)
 		return nil, false
@@ -198,7 +199,7 @@ func (h *Harness) invokeRunnerWithDecision(
 	decision CursorResumeDecision,
 ) (runner.Result, error) {
 	runCorrelationID := domain.RunCorrelationIDFromDetailsJSON(phaseRow.DetailsJSON)
-	slog.Debug("trace", "cmd", harnessLogCmd, "operation", "agent.harness.Harness.invokeRunnerWithDecision",
+	slog.Debug("trace", "cmd", calltrace.LogCmd, "operation", "agent.harness.Harness.invokeRunnerWithDecision",
 		"task_id", task.ID, "cycle_id", cycle.ID, "phase_seq", phaseRow.PhaseSeq,
 		"run_correlation_id", runCorrelationID,
 		"cursor_resume_mode", string(decision.Mode),
@@ -258,7 +259,7 @@ func (h *Harness) invokeRunner(parentCtx context.Context, task *domain.Task, cyc
 }
 
 func (h *Harness) persistProgress(ctx context.Context, taskID, cycleID string, phaseSeq int64, ev runner.ProgressEvent) {
-	slog.Debug("trace", "cmd", harnessLogCmd, "operation", "agent.harness.Harness.persistProgress",
+	slog.Debug("trace", "cmd", calltrace.LogCmd, "operation", "agent.harness.Harness.persistProgress",
 		"task_id", taskID, "cycle_id", cycleID, "phase_seq", phaseSeq,
 		"kind", ev.Kind, "subtype", ev.Subtype)
 	if ev.Kind == "" {
@@ -270,7 +271,7 @@ func (h *Harness) persistProgress(ctx context.Context, taskID, cycleID string, p
 		payload, err = json.Marshal(ev)
 		if err != nil {
 			slog.Warn("agent harness progress payload marshal failed",
-				"cmd", harnessLogCmd, "operation", "agent.harness.Harness.persistProgress.marshal_err",
+				"cmd", calltrace.LogCmd, "operation", "agent.harness.Harness.persistProgress.marshal_err",
 				"task_id", taskID, "cycle_id", cycleID, "phase_seq", phaseSeq, "err", err)
 			payload = []byte("{}")
 		}
@@ -287,7 +288,7 @@ func (h *Harness) persistProgress(ctx context.Context, taskID, cycleID string, p
 		Payload:  payload,
 	}); err != nil {
 		slog.Warn("agent harness progress persistence failed",
-			"cmd", harnessLogCmd, "operation", "agent.harness.Harness.persistProgress.err",
+			"cmd", calltrace.LogCmd, "operation", "agent.harness.Harness.persistProgress.err",
 			"task_id", taskID, "cycle_id", cycleID, "phase_seq", phaseSeq,
 			"kind", ev.Kind, "err", err)
 	}
@@ -299,7 +300,7 @@ func (h *Harness) persistProgress(ctx context.Context, taskID, cycleID string, p
 // inside invokeRunner. The returned cancel func MUST be called either
 // directly (defer) or via CancelCurrentRun.
 func withOptionalRunTimeout(parent context.Context, d time.Duration) (context.Context, context.CancelFunc) {
-	slog.Debug("trace", "cmd", harnessLogCmd, "operation", "agent.harness.withOptionalRunTimeout",
+	slog.Debug("trace", "cmd", calltrace.LogCmd, "operation", "agent.harness.withOptionalRunTimeout",
 		"timeout_ns", int64(d))
 	if d <= 0 {
 		return context.WithCancel(parent)
@@ -312,7 +313,7 @@ func withOptionalRunTimeout(parent context.Context, d time.Duration) (context.Co
 // caller can stop the pipeline (a missing row usually means the task
 // was deleted mid-cycle).
 func (h *Harness) completeExecutePhase(ctx context.Context, state *processState, cycle *domain.TaskCycle, exec *domain.TaskCyclePhase, status domain.PhaseStatus, result runner.Result, phaseDetails []byte) bool {
-	slog.Debug("trace", "cmd", harnessLogCmd, "operation", "agent.harness.Harness.completeExecutePhase",
+	slog.Debug("trace", "cmd", calltrace.LogCmd, "operation", "agent.harness.Harness.completeExecutePhase",
 		"cycle_id", cycle.ID, "phase_seq", exec.PhaseSeq, "status", string(status))
 	details := phaseDetails
 	if details == nil {
@@ -335,7 +336,7 @@ func (h *Harness) completeExecutePhase(ctx context.Context, state *processState,
 			level = slog.LevelInfo
 		}
 		slog.Log(ctx, level, "agent harness CompletePhase(execute) failed",
-			"cmd", harnessLogCmd, "operation", "agent.harness.Harness.completeExecutePhase.err",
+			"cmd", calltrace.LogCmd, "operation", "agent.harness.Harness.completeExecutePhase.err",
 			"cycle_id", cycle.ID, "phase_seq", exec.PhaseSeq, "err", err)
 		// The phase row is in an indeterminate state (either still
 		// running, already terminal, or vanished). Clear the phase
@@ -367,7 +368,7 @@ func (h *Harness) completeExecutePhase(ctx context.Context, state *processState,
 // observation on success so cmd/taskapi's Prometheus counter +
 // histogram see the happy-path attempt outcome.
 func (h *Harness) terminateCycle(ctx context.Context, state *processState, taskID string, status domain.CycleStatus, reason string) bool {
-	slog.Debug("trace", "cmd", harnessLogCmd, "operation", "agent.harness.Harness.terminateCycle",
+	slog.Debug("trace", "cmd", calltrace.LogCmd, "operation", "agent.harness.Harness.terminateCycle",
 		"cycle_id", state.cycleID, "status", string(status), "reason", reason)
 	if state.cycleID == "" {
 		return true
@@ -378,7 +379,7 @@ func (h *Harness) terminateCycle(ctx context.Context, state *processState, taskI
 			level = slog.LevelInfo
 		}
 		slog.Log(ctx, level, "agent harness TerminateCycle failed",
-			"cmd", harnessLogCmd, "operation", "agent.harness.Harness.terminateCycle.err",
+			"cmd", calltrace.LogCmd, "operation", "agent.harness.Harness.terminateCycle.err",
 			"cycle_id", state.cycleID, "err", err)
 		state.cycleStarted = false
 		return false
@@ -393,7 +394,7 @@ func (h *Harness) terminateCycle(ctx context.Context, state *processState, taskI
 	// growth gap that existed when files were written under RepoRoot/.legacy-scratch.
 	if err := reports.CleanupReportDir(h.opts.ReportDir, state.cycleID); err != nil {
 		slog.Warn("agent harness cleanupReportDir failed",
-			"cmd", harnessLogCmd, "operation", "agent.harness.Harness.terminateCycle.cleanup_err",
+			"cmd", calltrace.LogCmd, "operation", "agent.harness.Harness.terminateCycle.cleanup_err",
 			"cycle_id", state.cycleID, "report_dir", h.opts.ReportDir, "err", err)
 	}
 	return true

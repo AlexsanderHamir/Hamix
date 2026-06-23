@@ -1,5 +1,6 @@
 package harness
 
+import "github.com/AlexsanderHamir/Hamix/pkgs/tasks/calltrace"
 import (
 	"context"
 	"log/slog"
@@ -11,12 +12,12 @@ import (
 // must already be StatusRunning and cycle must be StatusRunning. The worker
 // calls this after FinalizeInterruptedPhases and queue admission.
 func (h *Harness) Resume(parentCtx context.Context, task *domain.Task, cycle *domain.TaskCycle) {
-	slog.Info("agent harness resume", "cmd", harnessLogCmd, "operation", "agent.harness.Harness.Resume",
+	slog.Info("agent harness resume", "cmd", calltrace.LogCmd, "operation", "agent.harness.Harness.Resume",
 		"task_id", task.ID, "cycle_id", cycle.ID, "attempt_seq", cycle.AttemptSeq)
 	startedAt := h.opts.Clock()
 	cp, err := h.reconstructCheckpoint(parentCtx, cycle)
 	if err != nil {
-		slog.Warn("agent harness resume checkpoint failed", "cmd", harnessLogCmd,
+		slog.Warn("agent harness resume checkpoint failed", "cmd", calltrace.LogCmd,
 			"operation", "agent.harness.Harness.Resume.checkpoint_err",
 			"task_id", task.ID, "cycle_id", cycle.ID, "err", err)
 		h.bestEffortFailTask(parentCtx, task.ID)
@@ -49,7 +50,7 @@ func (h *Harness) Resume(parentCtx context.Context, task *domain.Task, cycle *do
 		opts.skipFirstExecute = true
 	}
 
-	slog.Info("agent harness resume branch", "cmd", harnessLogCmd,
+	slog.Info("agent harness resume branch", "cmd", calltrace.LogCmd,
 		"operation", "agent.harness.Harness.Resume.branch",
 		"task_id", task.ID, "cycle_id", cycle.ID,
 		"entry", cp.Entry, "locked_count", len(cp.PreviouslyPassed),

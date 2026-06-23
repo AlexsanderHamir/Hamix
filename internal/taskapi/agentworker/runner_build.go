@@ -1,5 +1,6 @@
 package agentworker
 
+import "github.com/AlexsanderHamir/Hamix/pkgs/tasks/calltrace"
 import (
 	"context"
 	"log/slog"
@@ -13,7 +14,7 @@ import (
 )
 
 func (s *Supervisor) buildVerifyRunner(ctx context.Context, cfg store.AppSettings) (runner.Runner, string) {
-	slog.Debug("trace", "cmd", logCmd, "operation", "taskapi.agentWorkerSupervisor.buildVerifyRunner",
+	slog.Debug("trace", "cmd", calltrace.LogCmd, "operation", "taskapi.agentWorkerSupervisor.buildVerifyRunner",
 		"verify_runner", cfg.VerifyRunnerName)
 	if cfg.VerifyRunnerName == "" {
 		return nil, ""
@@ -26,7 +27,7 @@ func (s *Supervisor) buildVerifyRunner(ctx context.Context, cfg store.AppSetting
 	cancel()
 	if probeErr != nil {
 		slog.Warn("verify_runner_probe_failed; demoting to execute runner",
-			"cmd", logCmd, "operation", "taskapi.agent_worker.verify_runner_probe_err",
+			"cmd", calltrace.LogCmd, "operation", "taskapi.agent_worker.verify_runner_probe_err",
 			"runner", cfg.VerifyRunnerName, "binary", cfg.CursorBin, "err", probeErr)
 		return nil, "demoted_probe_failed"
 	}
@@ -37,7 +38,7 @@ func (s *Supervisor) buildVerifyRunner(ctx context.Context, cfg store.AppSetting
 	})
 	if err != nil {
 		slog.Warn("verify_runner_build_failed; demoting to execute runner",
-			"cmd", logCmd, "operation", "taskapi.agent_worker.verify_runner_build_err",
+			"cmd", calltrace.LogCmd, "operation", "taskapi.agent_worker.verify_runner_build_err",
 			"runner", cfg.VerifyRunnerName, "err", err)
 		return nil, "demoted_build_failed"
 	}
@@ -53,21 +54,21 @@ func (s *Supervisor) probeExecuteRunner(ctx context.Context, cfg store.AppSettin
 }
 
 func (s *Supervisor) runStartupSweep(ctx context.Context) error {
-	slog.Debug("trace", "cmd", logCmd, "operation", "taskapi.agentWorkerSupervisor.runStartupSweep")
+	slog.Debug("trace", "cmd", calltrace.LogCmd, "operation", "taskapi.agentWorkerSupervisor.runStartupSweep")
 	sweepCtx, cancel := context.WithTimeout(ctx, agentWorkerStartupSweepTimeout)
 	defer cancel()
 	res, err := worker.SweepOrphanRunningCycles(sweepCtx, s.store)
 	if err != nil {
 		return err
 	}
-	slog.Info("agent worker startup finalize ok", "cmd", logCmd,
+	slog.Info("agent worker startup finalize ok", "cmd", calltrace.LogCmd,
 		"operation", "taskapi.agent_worker.finalize_ok",
 		"phases_finalized", res.PhasesFailed)
 	return nil
 }
 
 func (s *Supervisor) probeSchedulingHint(ctx context.Context) string {
-	slog.Debug("trace", "cmd", logCmd, "operation", "taskapi.agentWorkerSupervisor.probeSchedulingHint")
+	slog.Debug("trace", "cmd", calltrace.LogCmd, "operation", "taskapi.agentWorkerSupervisor.probeSchedulingHint")
 	if s.store == nil {
 		return ""
 	}
@@ -76,7 +77,7 @@ func (s *Supervisor) probeSchedulingHint(ctx context.Context) string {
 	candidates, err := s.store.ListReadyTaskQueueCandidates(probeCtx, 1, nil)
 	if err != nil {
 		slog.Debug("scheduling hint: queue probe failed",
-			"cmd", logCmd, "operation", "taskapi.agent_worker.scheduling_hint_queue_err",
+			"cmd", calltrace.LogCmd, "operation", "taskapi.agent_worker.scheduling_hint_queue_err",
 			"err", err)
 		return ""
 	}
@@ -87,11 +88,11 @@ func (s *Supervisor) probeSchedulingHint(ctx context.Context) string {
 	stats, err := s.store.TaskStats(probeCtx)
 	if err != nil {
 		slog.Debug("scheduling hint: stats probe failed",
-			"cmd", logCmd, "operation", "taskapi.agent_worker.scheduling_hint_stats_err",
+			"cmd", calltrace.LogCmd, "operation", "taskapi.agent_worker.scheduling_hint_stats_err",
 			"err", err)
 		return ""
 	}
-	slog.Debug("trace", "cmd", logCmd, "operation", "taskapi.decideSchedulingIdleHint",
+	slog.Debug("trace", "cmd", calltrace.LogCmd, "operation", "taskapi.decideSchedulingIdleHint",
 		"queue_empty", queueEmpty, "scheduled_count", stats.Scheduled)
 	return policy.DecideSchedulingIdleHint(queueEmpty, stats.Scheduled)
 }

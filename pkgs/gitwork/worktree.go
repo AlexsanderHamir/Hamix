@@ -1,5 +1,6 @@
 package gitwork
 
+import "github.com/AlexsanderHamir/Hamix/pkgs/tasks/calltrace"
 import (
 	"context"
 	"log/slog"
@@ -9,7 +10,7 @@ import (
 )
 
 func (s *DefaultService) ListWorktrees(ctx context.Context, repo *Repository) ([]Worktree, error) {
-	slog.DebugContext(ctx, "trace", "cmd", logCmd, "operation", "gitwork.ListWorktrees")
+	slog.DebugContext(ctx, "trace", "cmd", calltrace.LogCmd, "operation", "gitwork.ListWorktrees")
 	if repo == nil {
 		return nil, ErrNotARepository
 	}
@@ -81,7 +82,7 @@ func parseWorktreePorcelain(out, mainRoot string) ([]Worktree, error) {
 }
 
 func (s *DefaultService) AddWorktree(ctx context.Context, repo *Repository, path string, opts AddWorktreeOptions) (*Worktree, error) {
-	slog.DebugContext(ctx, "trace", "cmd", logCmd, "operation", "gitwork.AddWorktree")
+	slog.DebugContext(ctx, "trace", "cmd", calltrace.LogCmd, "operation", "gitwork.AddWorktree")
 	if repo == nil {
 		return nil, ErrNotARepository
 	}
@@ -120,7 +121,7 @@ func (s *DefaultService) AddWorktree(ctx context.Context, repo *Repository, path
 }
 
 func (s *DefaultService) RemoveWorktree(ctx context.Context, repo *Repository, path string, force bool) error {
-	slog.DebugContext(ctx, "trace", "cmd", logCmd, "operation", "gitwork.RemoveWorktree")
+	slog.DebugContext(ctx, "trace", "cmd", calltrace.LogCmd, "operation", "gitwork.RemoveWorktree")
 	if repo == nil {
 		return ErrNotARepository
 	}

@@ -6,6 +6,7 @@
 // rest of the store concerns.
 package health
 
+import "github.com/AlexsanderHamir/Hamix/pkgs/tasks/calltrace"
 import (
 	"context"
 	"errors"
@@ -16,13 +17,11 @@ import (
 	"gorm.io/gorm"
 )
 
-const logCmd = "taskapi"
-
 // Ping checks that the database session is reachable (sql.DB.PingContext).
 // Used by liveness checks and as the first hop of Ready.
 func Ping(ctx context.Context, db *gorm.DB) error {
 	defer kernel.DeferLatency(kernel.OpPing)()
-	slog.Debug("trace", "cmd", logCmd, "operation", "tasks.store.health.Ping")
+	slog.Debug("trace", "cmd", calltrace.LogCmd, "operation", "tasks.store.health.Ping")
 	if db == nil {
 		return errors.New("tasks store: nil database")
 	}
@@ -38,7 +37,7 @@ func Ping(ctx context.Context, db *gorm.DB) error {
 // reaches the full read/write code paths.
 func Ready(ctx context.Context, db *gorm.DB) error {
 	defer kernel.DeferLatency(kernel.OpReady)()
-	slog.Debug("trace", "cmd", logCmd, "operation", "tasks.store.health.Ready")
+	slog.Debug("trace", "cmd", calltrace.LogCmd, "operation", "tasks.store.health.Ready")
 	if db == nil {
 		return errors.New("tasks store: nil database")
 	}

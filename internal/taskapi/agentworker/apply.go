@@ -1,5 +1,6 @@
 package agentworker
 
+import "github.com/AlexsanderHamir/Hamix/pkgs/tasks/calltrace"
 import (
 	"context"
 	"errors"
@@ -32,7 +33,7 @@ type effectiveSettingsLog struct {
 }
 
 func (s *Supervisor) applySettings(ctx context.Context, phase string) error {
-	slog.Debug("trace", "cmd", logCmd, "operation", "taskapi.agentWorkerSupervisor.applySettings",
+	slog.Debug("trace", "cmd", calltrace.LogCmd, "operation", "taskapi.agentWorkerSupervisor.applySettings",
 		"phase", phase)
 	s.applyMu.Lock()
 	defer s.applyMu.Unlock()
@@ -42,13 +43,13 @@ func (s *Supervisor) applySettings(ctx context.Context, phase string) error {
 		return err
 	}
 
-	slog.Debug("trace", "cmd", logCmd, "operation", "taskapi.decideIdle",
+	slog.Debug("trace", "cmd", calltrace.LogCmd, "operation", "taskapi.decideIdle",
 		"paused", snap.cfg.AgentPaused)
 	idle, reason := policy.DecideIdle(ctx, snap.cfg, s.gitRegistrationChecker)
 	if idle {
 		if reason == "all_worktrees_invalid" {
 			slog.Warn("agent worker git worktrees not usable; staying idle",
-				"cmd", logCmd, "operation", "taskapi.agent_worker.worktrees_invalid")
+				"cmd", calltrace.LogCmd, "operation", "taskapi.agent_worker.worktrees_invalid")
 		}
 		return s.handleApplySettingsIdle(phase, snap.cfg, snap.prev, reason)
 	}
@@ -122,7 +123,7 @@ func (s *Supervisor) handleApplySettingsIdle(phase string, cfg store.AppSettings
 
 func (s *Supervisor) handleApplySettingsProbeFailed(phase string, cfg store.AppSettings, prev *instance, probeErr error) error {
 	s.clearCurrentInstance(prev, "probe_failed")
-	slog.Warn("agent worker probe failed; staying idle", "cmd", logCmd,
+	slog.Warn("agent worker probe failed; staying idle", "cmd", calltrace.LogCmd,
 		"operation", "taskapi.agent_worker.probe_err", "phase", phase,
 		"runner", cfg.Runner, "binary", cfg.CursorBin, "err", probeErr)
 	eff := baseEffectiveSettings(cfg)
@@ -146,7 +147,7 @@ func (s *Supervisor) handleApplySettingsUnchanged(ctx context.Context, phase str
 func (s *Supervisor) restartWorkerWithSettings(ctx context.Context, phase string, cfg store.AppSettings, prev *instance, version string) error {
 	if err := s.runStartupSweep(ctx); err != nil {
 		slog.Warn("agent worker startup sweep failed (continuing)",
-			"cmd", logCmd, "operation", "taskapi.agent_worker.sweep_err",
+			"cmd", calltrace.LogCmd, "operation", "taskapi.agent_worker.sweep_err",
 			"err", err)
 	}
 
@@ -184,9 +185,9 @@ func (s *Supervisor) restartWorkerWithSettings(ctx context.Context, phase string
 }
 
 func (s *Supervisor) logEffective(phase string, eff effectiveSettingsLog) {
-	slog.Debug("trace", "cmd", logCmd, "operation", "taskapi.agentWorkerSupervisor.logEffective",
+	slog.Debug("trace", "cmd", calltrace.LogCmd, "operation", "taskapi.agentWorkerSupervisor.logEffective",
 		"phase", phase)
-	slog.Info("agent worker effective config", "cmd", logCmd, "operation", "taskapi.agent_worker",
+	slog.Info("agent worker effective config", "cmd", calltrace.LogCmd, "operation", "taskapi.agent_worker",
 		"phase", phase,
 		"paused", eff.AgentPaused,
 		"idle", eff.Idle, "idle_reason", eff.IdleReason,
@@ -198,7 +199,7 @@ func (s *Supervisor) logEffective(phase string, eff effectiveSettingsLog) {
 }
 
 func (s *Supervisor) publishSettingsChanged() {
-	slog.Debug("trace", "cmd", logCmd, "operation", "taskapi.agentWorkerSupervisor.publishSettingsChanged")
+	slog.Debug("trace", "cmd", calltrace.LogCmd, "operation", "taskapi.agentWorkerSupervisor.publishSettingsChanged")
 	if s.publisher == nil {
 		return
 	}

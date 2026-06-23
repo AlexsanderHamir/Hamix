@@ -1,5 +1,6 @@
 package harness
 
+import "github.com/AlexsanderHamir/Hamix/pkgs/tasks/calltrace"
 import (
 	"context"
 	"encoding/json"
@@ -33,7 +34,7 @@ func (h *Harness) emitOnTaskDone(ctx context.Context, task *domain.Task, cycleID
 	rows, err := h.store.ListCommitsForCycle(ctx, cycleID)
 	if err != nil {
 		slog.Warn("on_task_done: list cycle commits failed",
-			"cmd", harnessLogCmd, "operation", "agent.harness.Harness.emitOnTaskDone",
+			"cmd", calltrace.LogCmd, "operation", "agent.harness.Harness.emitOnTaskDone",
 			"task_id", task.ID, "cycle_id", cycleID, "err", err)
 	} else {
 		for _, c := range rows {
@@ -46,13 +47,13 @@ func (h *Harness) emitOnTaskDone(ctx context.Context, task *domain.Task, cycleID
 	raw, err := json.Marshal(payload)
 	if err != nil {
 		slog.Warn("on_task_done: marshal payload failed",
-			"cmd", harnessLogCmd, "operation", "agent.harness.Harness.emitOnTaskDone",
+			"cmd", calltrace.LogCmd, "operation", "agent.harness.Harness.emitOnTaskDone",
 			"task_id", task.ID, "err", err)
 		return
 	}
 	if err := h.store.AppendTaskEvent(ctx, task.ID, domain.EventOnTaskDone, domain.ActorAgent, raw); err != nil {
 		slog.Warn("on_task_done: append event failed",
-			"cmd", harnessLogCmd, "operation", "agent.harness.Harness.emitOnTaskDone",
+			"cmd", calltrace.LogCmd, "operation", "agent.harness.Harness.emitOnTaskDone",
 			"task_id", task.ID, "err", err)
 	}
 }

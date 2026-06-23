@@ -5,8 +5,6 @@ import (
 	"github.com/AlexsanderHamir/Hamix/pkgs/agents/harness/internal/git"
 )
 
-const logCmd = "taskapi"
-
 // Options configures resume checkpoint and continuation loading.
 type Options struct {
 	WorkingDir string

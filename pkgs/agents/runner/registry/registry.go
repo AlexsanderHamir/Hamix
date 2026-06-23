@@ -1,5 +1,6 @@
 package registry
 
+import "github.com/AlexsanderHamir/Hamix/pkgs/tasks/calltrace"
 import (
 	"context"
 	"errors"
@@ -12,8 +13,6 @@ import (
 
 	"github.com/AlexsanderHamir/Hamix/pkgs/agents/runner"
 )
-
-const registryLogCmd = "taskapi"
 
 // Descriptor describes one runner choice exposed to the SPA settings
 // page. ID is the persisted enum value (matches AppSettings.Runner);
@@ -82,7 +81,7 @@ var (
 // the cmd/taskapi binary imports registry/all to trigger all inits.
 // Last-write-wins for a given ID so tests can override registrations.
 func Register(desc Descriptor, factory Factory) {
-	slog.Debug("trace", "cmd", registryLogCmd, "operation", "agents.runner.registry.Register",
+	slog.Debug("trace", "cmd", calltrace.LogCmd, "operation", "agents.runner.registry.Register",
 		"id", desc.ID)
 	mu.Lock()
 	defer mu.Unlock()
@@ -93,7 +92,7 @@ func Register(desc Descriptor, factory Factory) {
 // stable rendering in the SPA. The returned slice is a fresh copy so
 // callers can mutate it without affecting later calls.
 func List() []Descriptor {
-	slog.Debug("trace", "cmd", registryLogCmd, "operation", "agents.runner.registry.List")
+	slog.Debug("trace", "cmd", calltrace.LogCmd, "operation", "agents.runner.registry.List")
 	mu.RLock()
 	defer mu.RUnlock()
 	out := make([]Descriptor, 0, len(adapters))
@@ -106,7 +105,7 @@ func List() []Descriptor {
 
 // Lookup returns the descriptor for id, or ErrUnknownRunner.
 func Lookup(id string) (Descriptor, error) {
-	slog.Debug("trace", "cmd", registryLogCmd, "operation", "agents.runner.registry.Lookup", "id", id)
+	slog.Debug("trace", "cmd", calltrace.LogCmd, "operation", "agents.runner.registry.Lookup", "id", id)
 	id = strings.TrimSpace(id)
 	mu.RLock()
 	reg, ok := adapters[id]
@@ -122,7 +121,7 @@ func Lookup(id string) (Descriptor, error) {
 // BinaryPath falls back to the descriptor's DefaultBinaryHint so the
 // caller never has to special-case "use the default".
 func Build(id string, opts BuildOptions) (runner.Runner, error) {
-	slog.Debug("trace", "cmd", registryLogCmd, "operation", "agents.runner.registry.Build",
+	slog.Debug("trace", "cmd", calltrace.LogCmd, "operation", "agents.runner.registry.Build",
 		"id", id, "binary", opts.BinaryPath, "version", opts.Version)
 	id = strings.TrimSpace(id)
 	mu.RLock()
@@ -152,7 +151,7 @@ func Build(id string, opts BuildOptions) (runner.Runner, error) {
 // type-asserts to runner.Prober. Adapters that do not implement Prober
 // return ErrCapabilityNotSupported.
 func Probe(ctx context.Context, id, binaryPath string, timeout time.Duration) (version, resolvedBin string, err error) {
-	slog.Debug("trace", "cmd", registryLogCmd, "operation", "agents.runner.registry.Probe",
+	slog.Debug("trace", "cmd", calltrace.LogCmd, "operation", "agents.runner.registry.Probe",
 		"id", id, "binary", binaryPath, "timeout_ns", int64(timeout))
 	id = strings.TrimSpace(id)
 	mu.RLock()
@@ -181,7 +180,7 @@ func Probe(ctx context.Context, id, binaryPath string, timeout time.Duration) (v
 // ModelLister capability. Returns ErrCapabilityNotSupported when the
 // adapter does not implement runner.ModelLister.
 func ListModelsForRunner(ctx context.Context, id, binaryPath string, timeout time.Duration) ([]runner.ModelInfo, string, error) {
-	slog.Debug("trace", "cmd", registryLogCmd, "operation", "agents.runner.registry.ListModelsForRunner",
+	slog.Debug("trace", "cmd", calltrace.LogCmd, "operation", "agents.runner.registry.ListModelsForRunner",
 		"id", id, "binary", binaryPath, "timeout_ns", int64(timeout))
 	id = strings.TrimSpace(id)
 	mu.RLock()

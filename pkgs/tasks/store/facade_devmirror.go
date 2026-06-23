@@ -1,5 +1,6 @@
 package store
 
+import "github.com/AlexsanderHamir/Hamix/pkgs/tasks/calltrace"
 import (
 	"context"
 	"log/slog"
@@ -14,7 +15,7 @@ import (
 // simulation only (see pkgs/tasks/devsim). Fires the ready-task
 // notifier when the row transitions into StatusReady.
 func (s *Store) ApplyDevTaskRowMirror(ctx context.Context, taskID string, typ domain.EventType, data []byte) error {
-	slog.Debug("trace", "cmd", storeLogCmd, "operation", "tasks.store.ApplyDevTaskRowMirror")
+	slog.Debug("trace", "cmd", calltrace.LogCmd, "operation", "tasks.store.ApplyDevTaskRowMirror")
 	nt, prev, err := devmirror.ApplyTaskRowMirror(ctx, s.db, taskID, typ, data)
 	if err != nil {
 		return err
@@ -33,6 +34,6 @@ func (s *Store) ApplyDevTaskRowMirror(ctx context.Context, taskID string, typ do
 // ListDevsimTasks returns tasks whose id matches a SQL LIKE pattern
 // (dev simulation only).
 func (s *Store) ListDevsimTasks(ctx context.Context, idLikePattern string) ([]domain.Task, error) {
-	slog.Debug("trace", "cmd", storeLogCmd, "operation", "tasks.store.ListDevsimTasks")
+	slog.Debug("trace", "cmd", calltrace.LogCmd, "operation", "tasks.store.ListDevsimTasks")
 	return devmirror.ListDevsimTasks(ctx, s.db, idLikePattern)
 }

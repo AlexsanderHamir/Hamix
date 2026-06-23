@@ -1,5 +1,6 @@
 package cursor
 
+import "github.com/AlexsanderHamir/Hamix/pkgs/tasks/calltrace"
 import (
 	"bytes"
 	"context"
@@ -12,23 +13,23 @@ import (
 )
 
 func trimLeadingPartialRune(b []byte) []byte {
-	slog.Debug("trace", "cmd", cursorLogCmd, "operation", "agents.runner.cursor.trimLeadingPartialRune", "bytes", len(b))
+	slog.Debug("trace", "cmd", calltrace.LogCmd, "operation", "agents.runner.cursor.trimLeadingPartialRune", "bytes", len(b))
 	return adapterkit.TrimLeadingPartialRune(b)
 }
 
 func buildEnv(reqEnv map[string]string, extraKeys []string) []string {
-	slog.Debug("trace", "cmd", cursorLogCmd, "operation", "cursor.buildEnv",
+	slog.Debug("trace", "cmd", calltrace.LogCmd, "operation", "cursor.buildEnv",
 		"req_env_count", len(reqEnv), "extra_keys", len(extraKeys))
 	return adapterkit.BuildEnv(reqEnv, envPolicy(extraKeys))
 }
 
 func isDeniedEnvKey(k string) bool {
-	slog.Debug("trace", "cmd", cursorLogCmd, "operation", "cursor.isDeniedEnvKey", "key", k)
+	slog.Debug("trace", "cmd", calltrace.LogCmd, "operation", "cursor.isDeniedEnvKey", "key", k)
 	return adapterkit.IsDeniedEnvKey(k, envPolicy(nil))
 }
 
 func liveHomePaths() []string {
-	slog.Debug("trace", "cmd", cursorLogCmd, "operation", "cursor.liveHomePaths")
+	slog.Debug("trace", "cmd", calltrace.LogCmd, "operation", "cursor.liveHomePaths")
 	return adapterkit.LiveHomePaths()
 }
 
@@ -36,18 +37,18 @@ func liveHomePaths() []string {
 // and rewrites absolute home paths to "~". It is exported so callers
 // (worker logs, future adapters) can apply the same floor.
 func Redact(s string) string {
-	slog.Debug("trace", "cmd", cursorLogCmd, "operation", "cursor.Redact", "bytes", len(s))
+	slog.Debug("trace", "cmd", calltrace.LogCmd, "operation", "cursor.Redact", "bytes", len(s))
 	return redact(s, liveHomePaths())
 }
 
 func redact(s string, homePaths []string) string {
-	slog.Debug("trace", "cmd", cursorLogCmd, "operation", "cursor.redact",
+	slog.Debug("trace", "cmd", calltrace.LogCmd, "operation", "cursor.redact",
 		"bytes", len(s), "home_paths", len(homePaths))
 	return adapterkit.Redact(s, redactionPolicy(homePaths))
 }
 
 func withOptionalTimeout(ctx context.Context, d time.Duration) (context.Context, context.CancelFunc) {
-	slog.Debug("trace", "cmd", cursorLogCmd, "operation", "cursor.withOptionalTimeout",
+	slog.Debug("trace", "cmd", calltrace.LogCmd, "operation", "cursor.withOptionalTimeout",
 		"timeout_ns", int64(d))
 	if d <= 0 {
 		return context.WithCancel(ctx)
@@ -56,19 +57,19 @@ func withOptionalTimeout(ctx context.Context, d time.Duration) (context.Context,
 }
 
 func isCtxErr(ctx context.Context) bool {
-	slog.Debug("trace", "cmd", cursorLogCmd, "operation", "cursor.isCtxErr")
+	slog.Debug("trace", "cmd", calltrace.LogCmd, "operation", "cursor.isCtxErr")
 	err := ctx.Err()
 	return errors.Is(err, context.DeadlineExceeded) || errors.Is(err, context.Canceled)
 }
 
 func defaultExecFn(ctx context.Context, dir string, env []string, stdin []byte, name string, args ...string) ([]byte, []byte, int, error) {
-	slog.Debug("trace", "cmd", cursorLogCmd, "operation", "cursor.defaultExecFn",
+	slog.Debug("trace", "cmd", calltrace.LogCmd, "operation", "cursor.defaultExecFn",
 		"dir", dir, "env_count", len(env), "stdin_bytes", len(stdin), "name", name, "argc", len(args))
 	return adapterkit.DefaultExec(ctx, dir, env, stdin, name, args...)
 }
 
 func defaultStreamExecFn(ctx context.Context, dir string, env []string, stdin []byte, name string, onStdoutLine func([]byte), args ...string) ([]byte, []byte, int, error) {
-	slog.Debug("trace", "cmd", cursorLogCmd, "operation", "cursor.defaultStreamExecFn",
+	slog.Debug("trace", "cmd", calltrace.LogCmd, "operation", "cursor.defaultStreamExecFn",
 		"dir", dir, "env_count", len(env), "stdin_bytes", len(stdin), "name", name, "argc", len(args))
 	return adapterkit.DefaultStreamExec(ctx, dir, env, stdin, name, onStdoutLine, args...)
 }
@@ -79,7 +80,7 @@ func scanStdoutLines(r io.Reader, dst *bytes.Buffer, onLine func([]byte)) error 
 }
 
 func normalizePipeReadError(err error) error {
-	slog.Debug("trace", "cmd", cursorLogCmd, "operation", "cursor.normalizePipeReadError",
+	slog.Debug("trace", "cmd", calltrace.LogCmd, "operation", "cursor.normalizePipeReadError",
 		"err", err)
 	if isClosedPipeReadError(err) {
 		return nil
@@ -88,7 +89,7 @@ func normalizePipeReadError(err error) error {
 }
 
 func isClosedPipeReadError(err error) bool {
-	slog.Debug("trace", "cmd", cursorLogCmd, "operation", "cursor.isClosedPipeReadError",
+	slog.Debug("trace", "cmd", calltrace.LogCmd, "operation", "cursor.isClosedPipeReadError",
 		"err", err)
 	return adapterkit.IsClosedPipeReadError(err)
 }

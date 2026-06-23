@@ -1,5 +1,6 @@
 package devsim
 
+import "github.com/AlexsanderHamir/Hamix/pkgs/tasks/calltrace"
 import (
 	"context"
 	"encoding/json"
@@ -11,8 +12,6 @@ import (
 )
 
 const listPage = 200 // store.ListFlat maximum page size
-
-const logCmd = "taskapi"
 
 // EventCycle is the full set of domain.EventType values used by the dev ticker, in display order.
 // Keep in sync with pkgs/tasks/domain/enums.go (every EventType exactly once).
@@ -41,7 +40,7 @@ var EventCycle = []domain.EventType{
 }
 
 func samplePayloadForType(typ domain.EventType) ([]byte, error) {
-	slog.Debug("trace", "cmd", logCmd, "operation", "devsim.samplePayloadForType", "type", typ)
+	slog.Debug("trace", "cmd", calltrace.LogCmd, "operation", "devsim.samplePayloadForType", "type", typ)
 	if f, ok := samplePayloadByType[typ]; ok {
 		return f()
 	}
@@ -49,7 +48,7 @@ func samplePayloadForType(typ domain.EventType) ([]byte, error) {
 }
 
 func nextEventTypeFromCount(n int64) domain.EventType {
-	slog.Debug("trace", "cmd", logCmd, "operation", "devsim.nextEventTypeFromCount")
+	slog.Debug("trace", "cmd", calltrace.LogCmd, "operation", "devsim.nextEventTypeFromCount")
 	if len(EventCycle) == 0 {
 		return domain.EventSyncPing
 	}
@@ -78,7 +77,7 @@ func persistSampleEvent(ctx context.Context, st *store.Store, t *domain.Task, op
 	}
 	if opts.SyncTaskRow {
 		if err := st.ApplyDevTaskRowMirror(ctx, t.ID, typ, payload); err != nil {
-			slog.Debug("sse dev mirror skipped", "cmd", logCmd, "operation", "devsim.mirror_task",
+			slog.Debug("sse dev mirror skipped", "cmd", calltrace.LogCmd, "operation", "devsim.mirror_task",
 				"task_id", t.ID, "type", typ, "err", err)
 		}
 	}
@@ -95,7 +94,7 @@ func persistSampleEvent(ctx context.Context, st *store.Store, t *domain.Task, op
 			msg = "Synthetic triage note (devsim)."
 		}
 		if err := st.AppendTaskEventResponseMessage(ctx, t.ID, seq, msg, domain.ActorUser); err != nil {
-			slog.Debug("sse dev user_response skipped", "cmd", logCmd, "operation", "devsim.user_response",
+			slog.Debug("sse dev user_response skipped", "cmd", calltrace.LogCmd, "operation", "devsim.user_response",
 				"task_id", t.ID, "seq", seq, "err", err)
 		}
 	}
@@ -119,13 +118,13 @@ func PersistAllTasks(ctx context.Context, st *store.Store, opts Options, publish
 	for offset := 0; ; offset += listPage {
 		rows, err := st.ListFlat(ctx, listPage, offset, nil)
 		if err != nil {
-			slog.Debug("sse dev ticker list failed", "cmd", logCmd, "operation", "devsim.tick_list", "err", err)
+			slog.Debug("sse dev ticker list failed", "cmd", calltrace.LogCmd, "operation", "devsim.tick_list", "err", err)
 			return
 		}
 		for i := range rows {
 			for range per {
 				if err := persistSampleEvent(ctx, st, &rows[i], opts, publish); err != nil {
-					slog.Debug("sse dev ticker task skipped", "cmd", logCmd, "operation", "devsim.tick_task",
+					slog.Debug("sse dev ticker task skipped", "cmd", calltrace.LogCmd, "operation", "devsim.tick_task",
 						"task_id", rows[i].ID, "err", err)
 					break
 				}

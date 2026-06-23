@@ -2,6 +2,7 @@
 // /task-templates. Payload writes use kernel.NormalizeJSONObject like drafts.
 package templates
 
+import "github.com/AlexsanderHamir/Hamix/pkgs/tasks/calltrace"
 import (
 	"context"
 	"encoding/json"
@@ -17,8 +18,6 @@ import (
 	"gorm.io/datatypes"
 	"gorm.io/gorm"
 )
-
-const logCmd = "taskapi"
 
 type Summary struct {
 	ID        string    `json:"id"`
@@ -37,7 +36,7 @@ type Detail struct {
 
 func Save(ctx context.Context, db *gorm.DB, id, name string, payload json.RawMessage) (*Summary, error) {
 	defer kernel.DeferLatency(kernel.OpSaveTemplate)()
-	slog.Debug("trace", "cmd", logCmd, "operation", "tasks.store.templates.Save")
+	slog.Debug("trace", "cmd", calltrace.LogCmd, "operation", "tasks.store.templates.Save")
 	id = strings.TrimSpace(id)
 	if id == "" {
 		id = uuid.NewString()
@@ -74,7 +73,7 @@ func Save(ctx context.Context, db *gorm.DB, id, name string, payload json.RawMes
 
 func List(ctx context.Context, db *gorm.DB, limit int, q string) ([]Summary, error) {
 	defer kernel.DeferLatency(kernel.OpListTemplates)()
-	slog.Debug("trace", "cmd", logCmd, "operation", "tasks.store.templates.List")
+	slog.Debug("trace", "cmd", calltrace.LogCmd, "operation", "tasks.store.templates.List")
 	if limit <= 0 {
 		limit = 50
 	}
@@ -105,7 +104,7 @@ func List(ctx context.Context, db *gorm.DB, limit int, q string) ([]Summary, err
 
 func Get(ctx context.Context, db *gorm.DB, id string) (*Detail, error) {
 	defer kernel.DeferLatency(kernel.OpGetTemplate)()
-	slog.Debug("trace", "cmd", logCmd, "operation", "tasks.store.templates.Get")
+	slog.Debug("trace", "cmd", calltrace.LogCmd, "operation", "tasks.store.templates.Get")
 	id = strings.TrimSpace(id)
 	if id == "" {
 		return nil, fmt.Errorf("%w: id", domain.ErrInvalidInput)
@@ -125,7 +124,7 @@ func Get(ctx context.Context, db *gorm.DB, id string) (*Detail, error) {
 
 func Patch(ctx context.Context, db *gorm.DB, id string, name *string, payload json.RawMessage) (*Detail, error) {
 	defer kernel.DeferLatency(kernel.OpPatchTemplate)()
-	slog.Debug("trace", "cmd", logCmd, "operation", "tasks.store.templates.Patch")
+	slog.Debug("trace", "cmd", calltrace.LogCmd, "operation", "tasks.store.templates.Patch")
 	id = strings.TrimSpace(id)
 	if id == "" {
 		return nil, fmt.Errorf("%w: id", domain.ErrInvalidInput)
@@ -160,7 +159,7 @@ func Patch(ctx context.Context, db *gorm.DB, id string, name *string, payload js
 
 func Delete(ctx context.Context, db *gorm.DB, id string) error {
 	defer kernel.DeferLatency(kernel.OpDeleteTemplate)()
-	slog.Debug("trace", "cmd", logCmd, "operation", "tasks.store.templates.Delete")
+	slog.Debug("trace", "cmd", calltrace.LogCmd, "operation", "tasks.store.templates.Delete")
 	id = strings.TrimSpace(id)
 	if id == "" {
 		return fmt.Errorf("%w: id", domain.ErrInvalidInput)

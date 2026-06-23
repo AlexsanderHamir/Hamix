@@ -1,5 +1,6 @@
 package harness
 
+import "github.com/AlexsanderHamir/Hamix/pkgs/tasks/calltrace"
 import (
 	"context"
 	"log/slog"
@@ -32,7 +33,7 @@ func (h *Harness) anchorPostExecuteState(
 	state.lastCommitIngestOK = commitIngestOK(snap, ingestAttempted, ingestOutcome, ingestErr)
 	head, ok, err := h.resolveCurrentHeadSHA(ctx, snap)
 	if err != nil {
-		slog.Warn("agent harness post-execute head anchor failed", "cmd", harnessLogCmd,
+		slog.Warn("agent harness post-execute head anchor failed", "cmd", calltrace.LogCmd,
 			"operation", "agent.harness.Harness.anchorPostExecuteState.head",
 			"cycle_id", state.cycleID, "err", err)
 		return

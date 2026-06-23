@@ -1,5 +1,6 @@
 package stats
 
+import "github.com/AlexsanderHamir/Hamix/pkgs/tasks/calltrace"
 import (
 	"context"
 	"encoding/json"
@@ -74,7 +75,7 @@ type cycleFailedPayload struct {
 // at Debug) rather than failing the whole query — a lossy but operator-
 // friendly behavior consistent with the rest of the timeline reads.
 func scanRecentFailures(ctx context.Context, db *gorm.DB, limit int) ([]RecentFailure, error) {
-	slog.Debug("trace", "cmd", logCmd, "operation", "tasks.store.stats.scanRecentFailures",
+	slog.Debug("trace", "cmd", calltrace.LogCmd, "operation", "tasks.store.stats.scanRecentFailures",
 		"limit", limit)
 	if limit <= 0 || limit > RecentFailureLimit {
 		limit = RecentFailureLimit
@@ -102,7 +103,7 @@ func decodeCycleFailedRows(rows []cycleFailedRow) []RecentFailure {
 		var p cycleFailedPayload
 		if err := json.Unmarshal(r.Data, &p); err != nil {
 			slog.Debug("recent failure decode skipped",
-				"cmd", logCmd,
+				"cmd", calltrace.LogCmd,
 				"operation", "tasks.store.stats.decodeCycleFailedRows",
 				"task_id", r.TaskID, "seq", r.Seq, "err", err)
 			continue
@@ -169,7 +170,7 @@ func enrichRecentFailuresFromPhaseEvents(ctx context.Context, db *gorm.DB, failu
 		Order("seq DESC").
 		Limit(5000).
 		Scan(&rows).Error; err != nil {
-		slog.Debug("recent failures phase enrich skipped", "cmd", logCmd,
+		slog.Debug("recent failures phase enrich skipped", "cmd", calltrace.LogCmd,
 			"operation", "tasks.store.stats.enrichRecentFailuresFromPhaseEvents",
 			"err", err)
 		return

@@ -1,5 +1,6 @@
 package devsim
 
+import "github.com/AlexsanderHamir/Hamix/pkgs/tasks/calltrace"
 import (
 	"context"
 	"log/slog"
@@ -14,7 +15,7 @@ const devsimTaskIDPrefix = "hamix-devsim-"
 
 // RunLifecycleOnce either creates a prefixed dev task or deletes one (no children), then calls publish.
 func RunLifecycleOnce(ctx context.Context, st *store.Store, publish func(ChangeKind, string)) {
-	slog.Debug("trace", "cmd", logCmd, "operation", "devsim.RunLifecycleOnce")
+	slog.Debug("trace", "cmd", calltrace.LogCmd, "operation", "devsim.RunLifecycleOnce")
 	if st == nil || publish == nil {
 		return
 	}
@@ -35,7 +36,7 @@ func tryCreateDevsimTask(ctx context.Context, st *store.Store, publish func(Chan
 		Priority:      domain.PriorityMedium,
 	}, domain.ActorAgent)
 	if err != nil {
-		slog.Debug("sse dev lifecycle create skipped", "cmd", logCmd, "operation", "devsim.lifecycle_create", "err", err)
+		slog.Debug("sse dev lifecycle create skipped", "cmd", calltrace.LogCmd, "operation", "devsim.lifecycle_create", "err", err)
 		return
 	}
 	publish(ChangeCreated, t.ID)
@@ -44,7 +45,7 @@ func tryCreateDevsimTask(ctx context.Context, st *store.Store, publish func(Chan
 func tryDeleteDevsimTask(ctx context.Context, st *store.Store, publish func(ChangeKind, string)) {
 	tasks, err := st.ListDevsimTasks(ctx, devsimTaskIDPrefix+"%")
 	if err != nil {
-		slog.Debug("sse dev lifecycle list skipped", "cmd", logCmd, "operation", "devsim.lifecycle_list", "err", err)
+		slog.Debug("sse dev lifecycle list skipped", "cmd", calltrace.LogCmd, "operation", "devsim.lifecycle_list", "err", err)
 		return
 	}
 	if len(tasks) == 0 {

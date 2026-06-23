@@ -1,5 +1,6 @@
 package worker
 
+import "github.com/AlexsanderHamir/Hamix/pkgs/tasks/calltrace"
 import (
 	"context"
 	"errors"
@@ -13,8 +14,6 @@ import (
 	"github.com/AlexsanderHamir/Hamix/pkgs/gitwork"
 	"github.com/AlexsanderHamir/Hamix/pkgs/tasks/store"
 )
-
-const workerLogCmd = "taskapi"
 
 // Worker is the single-goroutine in-process consumer of the
 // MemoryQueue (contract: docs/architecture.md). It handles queue
@@ -51,7 +50,7 @@ func (w *Worker) CancelCurrentRun() bool {
 
 // Run blocks on the queue and processes one task at a time until ctx cancels.
 func (w *Worker) Run(ctx context.Context) error {
-	slog.Debug("trace", "cmd", workerLogCmd, "operation", "agent.worker.Worker.Run")
+	slog.Debug("trace", "cmd", calltrace.LogCmd, "operation", "agent.worker.Worker.Run")
 	if w == nil {
 		return errors.New("agent worker: nil receiver")
 	}
@@ -62,7 +61,7 @@ func (w *Worker) Run(ctx context.Context) error {
 		task, err := w.queue.Receive(ctx)
 		if err != nil {
 			if errors.Is(err, context.Canceled) || errors.Is(err, context.DeadlineExceeded) {
-				slog.Info("agent worker shutdown", "cmd", workerLogCmd,
+				slog.Info("agent worker shutdown", "cmd", calltrace.LogCmd,
 					"operation", "agent.worker.Worker.Run.shutdown", "err", err)
 				return nil
 			}

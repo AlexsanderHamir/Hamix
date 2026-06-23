@@ -1,5 +1,6 @@
 package git
 
+import "github.com/AlexsanderHamir/Hamix/pkgs/tasks/calltrace"
 import (
 	"context"
 	"encoding/json"
@@ -27,7 +28,7 @@ func CaptureExecuteGitSnapshot(ctx context.Context, repo GitRepo, repoRoot, work
 	if repo == nil {
 		repo = DefaultRepo()
 	}
-	slog.Debug("trace", "cmd", logCmd, "operation", "agent.harness.git.CaptureExecuteGitSnapshot",
+	slog.Debug("trace", "cmd", calltrace.LogCmd, "operation", "agent.harness.git.CaptureExecuteGitSnapshot",
 		"repo_root", repoRoot, "workdir", workdir)
 	workdir = strings.TrimSpace(workdir)
 	if workdir == "" {

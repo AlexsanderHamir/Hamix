@@ -1,5 +1,6 @@
 package cursor
 
+import "github.com/AlexsanderHamir/Hamix/pkgs/tasks/calltrace"
 import (
 	"bytes"
 	"encoding/json"
@@ -91,7 +92,7 @@ func progressFromLine(raw []byte, homePaths []string) (runner.ProgressEvent, boo
 }
 
 func progressPayload(raw []byte, homePaths []string) json.RawMessage {
-	slog.Debug("trace", "cmd", cursorLogCmd, "operation", "cursor.progressPayload", "bytes", len(raw))
+	slog.Debug("trace", "cmd", calltrace.LogCmd, "operation", "cursor.progressPayload", "bytes", len(raw))
 	redacted := []byte(redact(string(raw), homePaths))
 	if !json.Valid(redacted) {
 		return nil

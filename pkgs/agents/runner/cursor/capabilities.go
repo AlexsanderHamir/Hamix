@@ -1,5 +1,6 @@
 package cursor
 
+import "github.com/AlexsanderHamir/Hamix/pkgs/tasks/calltrace"
 import (
 	"context"
 	"encoding/json"
@@ -17,7 +18,7 @@ import (
 
 // ConfigSchema implements runner.ConfigSchemaProvider.
 func (a *Adapter) ConfigSchema() runner.ConfigSchema {
-	slog.Debug("trace", "cmd", cursorLogCmd, "operation", "cursor.Adapter.ConfigSchema")
+	slog.Debug("trace", "cmd", calltrace.LogCmd, "operation", "cursor.Adapter.ConfigSchema")
 	return runner.ConfigSchema{
 		Version: 1,
 		Fields: []runner.ConfigField{
@@ -50,7 +51,7 @@ type cursorConfigBlob struct {
 // ValidateConfig implements runner.ConfigValidator. It accepts any
 // combination of the known keys and rejects unknown top-level keys.
 func (a *Adapter) ValidateConfig(blob json.RawMessage) error {
-	slog.Debug("trace", "cmd", cursorLogCmd, "operation", "cursor.Adapter.ValidateConfig")
+	slog.Debug("trace", "cmd", calltrace.LogCmd, "operation", "cursor.Adapter.ValidateConfig")
 	if len(blob) == 0 || string(blob) == "null" || string(blob) == "{}" {
 		return nil
 	}
@@ -75,7 +76,7 @@ func (a *Adapter) ValidateConfig(blob json.RawMessage) error {
 // function and ResolveBinaryPath, using the adapter's probe function or
 // the production default.
 func (a *Adapter) Probe(ctx context.Context, binaryPath string, timeout time.Duration) (version, resolvedBin string, err error) {
-	slog.Debug("trace", "cmd", cursorLogCmd, "operation", "cursor.Adapter.Probe",
+	slog.Debug("trace", "cmd", calltrace.LogCmd, "operation", "cursor.Adapter.Probe",
 		"binary", binaryPath)
 	resolved := ResolveBinaryPath(binaryPath)
 	if resolved == "" {
@@ -92,7 +93,7 @@ func (a *Adapter) Probe(ctx context.Context, binaryPath string, timeout time.Dur
 // ListModels implements runner.ModelLister. Returns runner.ModelInfo
 // (the generic type) by delegating to the package-level ListModels.
 func (a *Adapter) ListModels(ctx context.Context, binaryPath string, timeout time.Duration) ([]runner.ModelInfo, string, error) {
-	slog.Debug("trace", "cmd", cursorLogCmd, "operation", "cursor.Adapter.ListModels",
+	slog.Debug("trace", "cmd", calltrace.LogCmd, "operation", "cursor.Adapter.ListModels",
 		"binary", binaryPath)
 	cursorModels, resolved, err := ListModels(ctx, binaryPath, timeout, nil)
 	if err != nil {
@@ -112,7 +113,7 @@ func (a *Adapter) ListModels(ctx context.Context, binaryPath string, timeout tim
 // ClassifyFailure implements runner.FailureClassifier by delegating to
 // the package-level classifyCursorFailure.
 func (a *Adapter) ClassifyFailure(combined string) (kind, standardizedMsg string) {
-	slog.Debug("trace", "cmd", cursorLogCmd, "operation", "cursor.Adapter.ClassifyFailure")
+	slog.Debug("trace", "cmd", calltrace.LogCmd, "operation", "cursor.Adapter.ClassifyFailure")
 	return classifyCursorFailure(combined)
 }
 
@@ -124,7 +125,7 @@ func (a *Adapter) ClassifyFailure(combined string) (kind, standardizedMsg string
 // the worker uses for Prometheus metrics. The "model" key preserves
 // backward-compatible series shape.
 func (a *Adapter) MetricsLabels(req runner.Request) map[string]string {
-	slog.Debug("trace", "cmd", cursorLogCmd, "operation", "cursor.Adapter.MetricsLabels",
+	slog.Debug("trace", "cmd", calltrace.LogCmd, "operation", "cursor.Adapter.MetricsLabels",
 		"task_id", req.TaskID)
 	m := a.EffectiveModel(req)
 	return map[string]string{"model": m}
@@ -138,7 +139,7 @@ func (a *Adapter) MetricsLabels(req runner.Request) map[string]string {
 // pairs the worker writes into TaskCycle.MetaJSON, preserving the
 // existing audit-trail shape.
 func (a *Adapter) CycleMeta(req runner.Request) map[string]any {
-	slog.Debug("trace", "cmd", cursorLogCmd, "operation", "cursor.Adapter.CycleMeta",
+	slog.Debug("trace", "cmd", calltrace.LogCmd, "operation", "cursor.Adapter.CycleMeta",
 		"task_id", req.TaskID)
 	intent := strings.TrimSpace(req.CursorModel)
 	effective := a.EffectiveModel(req)

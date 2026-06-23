@@ -1,5 +1,6 @@
 package tasks
 
+import "github.com/AlexsanderHamir/Hamix/pkgs/tasks/calltrace"
 import (
 	"fmt"
 	"log/slog"
@@ -9,7 +10,7 @@ import (
 )
 
 func normalizeDependencyEdges(taskID string, edges []domain.DependencyEdge) ([]domain.DependencyEdge, error) {
-	slog.Debug("trace", "cmd", logCmd, "operation", "tasks.store.tasks.normalizeDependencyEdges")
+	slog.Debug("trace", "cmd", calltrace.LogCmd, "operation", "tasks.store.tasks.normalizeDependencyEdges")
 	out := make([]domain.DependencyEdge, 0, len(edges))
 	seen := make(map[string]struct{})
 	for _, e := range edges {

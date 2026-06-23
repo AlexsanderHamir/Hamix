@@ -1,5 +1,6 @@
 package checklist
 
+import "github.com/AlexsanderHamir/Hamix/pkgs/tasks/calltrace"
 import (
 	"context"
 	"encoding/json"
@@ -15,8 +16,6 @@ import (
 	"gorm.io/gorm"
 	"gorm.io/gorm/clause"
 )
-
-const logCmd = "taskapi"
 
 // ItemView is one definition row plus completion for a subject task.
 // Re-aliased by the store facade as store.ChecklistItemView so the
@@ -41,7 +40,7 @@ type ItemView struct {
 //     cycle in the parent chain is detected.
 func DefinitionSourceTaskID(ctx context.Context, db *gorm.DB, taskID string) (string, error) {
 	defer kernel.DeferLatency(kernel.OpDefinitionSourceTask)()
-	slog.Debug("trace", "cmd", logCmd, "operation", "tasks.store.checklist.DefinitionSourceTaskID")
+	slog.Debug("trace", "cmd", calltrace.LogCmd, "operation", "tasks.store.checklist.DefinitionSourceTaskID")
 	return DefinitionSourceTaskIDInTx(db.WithContext(ctx), taskID)
 }
 
@@ -49,7 +48,7 @@ func DefinitionSourceTaskID(ctx context.Context, db *gorm.DB, taskID string) (st
 // other internal store packages that already hold a *gorm.DB tx
 // handle.
 func DefinitionSourceTaskIDInTx(tx *gorm.DB, taskID string) (string, error) {
-	slog.Debug("trace", "cmd", logCmd, "operation", "tasks.store.checklist.DefinitionSourceTaskIDInTx")
+	slog.Debug("trace", "cmd", calltrace.LogCmd, "operation", "tasks.store.checklist.DefinitionSourceTaskIDInTx")
 	taskID = strings.TrimSpace(taskID)
 	if taskID == "" {
 		return "", fmt.Errorf("%w: id", domain.ErrInvalidInput)
@@ -68,7 +67,7 @@ func DefinitionSourceTaskIDInTx(tx *gorm.DB, taskID string) (string, error) {
 // same task. The taskID must exist; otherwise ErrNotFound.
 func List(ctx context.Context, db *gorm.DB, taskID string) ([]ItemView, error) {
 	defer kernel.DeferLatency(kernel.OpListChecklist)()
-	slog.Debug("trace", "cmd", logCmd, "operation", "tasks.store.checklist.List")
+	slog.Debug("trace", "cmd", calltrace.LogCmd, "operation", "tasks.store.checklist.List")
 	taskID = strings.TrimSpace(taskID)
 	if taskID == "" {
 		return nil, fmt.Errorf("%w: id", domain.ErrInvalidInput)
@@ -135,7 +134,7 @@ func List(ctx context.Context, db *gorm.DB, taskID string) ([]ItemView, error) {
 // EventChecklistItemAdded in the same TX.
 func Add(ctx context.Context, db *gorm.DB, taskID, text string, verifyCommands []VerifyCommandInput, by domain.Actor) (*domain.TaskChecklistItem, error) {
 	defer kernel.DeferLatency(kernel.OpAddChecklistItem)()
-	slog.Debug("trace", "cmd", logCmd, "operation", "tasks.store.checklist.Add")
+	slog.Debug("trace", "cmd", calltrace.LogCmd, "operation", "tasks.store.checklist.Add")
 	if err := kernel.ValidateActor(by); err != nil {
 		return nil, err
 	}
@@ -199,7 +198,7 @@ func Add(ctx context.Context, db *gorm.DB, taskID, text string, verifyCommands [
 // EventChecklistItemRemoved in the same TX.
 func Delete(ctx context.Context, db *gorm.DB, taskID, itemID string, by domain.Actor) error {
 	defer kernel.DeferLatency(kernel.OpDeleteChecklistItem)()
-	slog.Debug("trace", "cmd", logCmd, "operation", "tasks.store.checklist.Delete")
+	slog.Debug("trace", "cmd", calltrace.LogCmd, "operation", "tasks.store.checklist.Delete")
 	if err := kernel.ValidateActor(by); err != nil {
 		return err
 	}
@@ -277,7 +276,7 @@ func Delete(ctx context.Context, db *gorm.DB, taskID, itemID string, by domain.A
 // EventChecklistItemUpdated in the same TX otherwise.
 func UpdateText(ctx context.Context, db *gorm.DB, taskID, itemID, text string, by domain.Actor) error {
 	defer kernel.DeferLatency(kernel.OpUpdateChecklistItemText)()
-	slog.Debug("trace", "cmd", logCmd, "operation", "tasks.store.checklist.UpdateText")
+	slog.Debug("trace", "cmd", calltrace.LogCmd, "operation", "tasks.store.checklist.UpdateText")
 	if err := kernel.ValidateActor(by); err != nil {
 		return err
 	}
@@ -351,7 +350,7 @@ func UpdateText(ctx context.Context, db *gorm.DB, taskID, itemID, text string, b
 // TX.
 func SetDone(ctx context.Context, db *gorm.DB, subjectTaskID, itemID string, done bool, by domain.Actor) error {
 	defer kernel.DeferLatency(kernel.OpSetChecklistItemDone)()
-	slog.Debug("trace", "cmd", logCmd, "operation", "tasks.store.checklist.SetDone")
+	slog.Debug("trace", "cmd", calltrace.LogCmd, "operation", "tasks.store.checklist.SetDone")
 	if err := kernel.ValidateActor(by); err != nil {
 		return err
 	}

@@ -9,6 +9,7 @@
 // satisfies runner.Runner.
 package runnerfake
 
+import "github.com/AlexsanderHamir/Hamix/pkgs/tasks/calltrace"
 import (
 	"context"
 	"fmt"
@@ -19,8 +20,6 @@ import (
 	"github.com/AlexsanderHamir/Hamix/pkgs/agents/runner"
 	"github.com/AlexsanderHamir/Hamix/pkgs/tasks/domain"
 )
-
-const runnerfakeLogCmd = "taskapi"
 
 // Runner is a deterministic fake implementation of runner.Runner.
 //
@@ -53,7 +52,7 @@ type scripted struct {
 // needs to assert on Runner.Name / Runner.Version (the worker records
 // these in TaskCyclePhase.MetaJSON).
 func New() *Runner {
-	slog.Debug("trace", "cmd", runnerfakeLogCmd, "operation", "runnerfake.New")
+	slog.Debug("trace", "cmd", calltrace.LogCmd, "operation", "runnerfake.New")
 	return &Runner{
 		name:    "fake",
 		version: "v0",
@@ -63,7 +62,7 @@ func New() *Runner {
 
 // WithName overrides the value returned by Name().
 func (r *Runner) WithName(name string) *Runner {
-	slog.Debug("trace", "cmd", runnerfakeLogCmd, "operation", "runnerfake.Runner.WithName", "name", name)
+	slog.Debug("trace", "cmd", calltrace.LogCmd, "operation", "runnerfake.Runner.WithName", "name", name)
 	r.mu.Lock()
 	defer r.mu.Unlock()
 	r.name = name
@@ -72,7 +71,7 @@ func (r *Runner) WithName(name string) *Runner {
 
 // WithVersion overrides the value returned by Version().
 func (r *Runner) WithVersion(version string) *Runner {
-	slog.Debug("trace", "cmd", runnerfakeLogCmd, "operation", "runnerfake.Runner.WithVersion", "version", version)
+	slog.Debug("trace", "cmd", calltrace.LogCmd, "operation", "runnerfake.Runner.WithVersion", "version", version)
 	r.mu.Lock()
 	defer r.mu.Unlock()
 	r.version = version
@@ -84,7 +83,7 @@ func (r *Runner) WithVersion(version string) *Runner {
 // DefaultCursorModel option so worker tests can pin the
 // cursor_model_effective audit value end-to-end.
 func (r *Runner) WithDefaultModel(model string) *Runner {
-	slog.Debug("trace", "cmd", runnerfakeLogCmd, "operation", "runnerfake.Runner.WithDefaultModel", "model", model)
+	slog.Debug("trace", "cmd", calltrace.LogCmd, "operation", "runnerfake.Runner.WithDefaultModel", "model", model)
 	r.mu.Lock()
 	defer r.mu.Unlock()
 	r.defaultModel = model
@@ -95,7 +94,7 @@ func (r *Runner) WithDefaultModel(model string) *Runner {
 // Last write wins. Result is stored as-is; tests should typically build it
 // via runner.NewResult so caps are applied.
 func (r *Runner) Script(taskID string, phase domain.Phase, result runner.Result) {
-	slog.Debug("trace", "cmd", runnerfakeLogCmd, "operation", "runnerfake.Runner.Script",
+	slog.Debug("trace", "cmd", calltrace.LogCmd, "operation", "runnerfake.Runner.Script",
 		"task_id", taskID, "phase", string(phase))
 	r.mu.Lock()
 	defer r.mu.Unlock()
@@ -106,7 +105,7 @@ func (r *Runner) Script(taskID string, phase domain.Phase, result runner.Result)
 // accompanying result is the zero Result (mirroring the contract of
 // runner.ErrInvalidOutput).
 func (r *Runner) Fail(taskID string, phase domain.Phase, err error) {
-	slog.Debug("trace", "cmd", runnerfakeLogCmd, "operation", "runnerfake.Runner.Fail",
+	slog.Debug("trace", "cmd", calltrace.LogCmd, "operation", "runnerfake.Runner.Fail",
 		"task_id", taskID, "phase", string(phase), "err", err)
 	r.mu.Lock()
 	defer r.mu.Unlock()
@@ -117,7 +116,7 @@ func (r *Runner) Fail(taskID string, phase domain.Phase, err error) {
 // when the adapter contract requires both a partial Result and a typed
 // error (e.g. ErrNonZeroExit with the captured RawOutput).
 func (r *Runner) FailWithResult(taskID string, phase domain.Phase, result runner.Result, err error) {
-	slog.Debug("trace", "cmd", runnerfakeLogCmd, "operation", "runnerfake.Runner.FailWithResult",
+	slog.Debug("trace", "cmd", calltrace.LogCmd, "operation", "runnerfake.Runner.FailWithResult",
 		"task_id", taskID, "phase", string(phase), "err", err)
 	r.mu.Lock()
 	defer r.mu.Unlock()
@@ -130,7 +129,7 @@ func (r *Runner) FailWithResult(taskID string, phase domain.Phase, result runner
 // context returns ctx.Err() wrapped with runner.ErrTimeout so callers can
 // errors.Is against the typed-error contract.
 func (r *Runner) Run(ctx context.Context, req runner.Request) (runner.Result, error) {
-	slog.Debug("trace", "cmd", runnerfakeLogCmd, "operation", "runnerfake.Runner.Run",
+	slog.Debug("trace", "cmd", calltrace.LogCmd, "operation", "runnerfake.Runner.Run",
 		"task_id", req.TaskID, "phase", string(req.Phase), "attempt_seq", req.AttemptSeq)
 
 	if err := ctx.Err(); err != nil {
@@ -151,7 +150,7 @@ func (r *Runner) Run(ctx context.Context, req runner.Request) (runner.Result, er
 
 // Name returns the configured runner name (default "fake").
 func (r *Runner) Name() string {
-	slog.Debug("trace", "cmd", runnerfakeLogCmd, "operation", "runnerfake.Runner.Name")
+	slog.Debug("trace", "cmd", calltrace.LogCmd, "operation", "runnerfake.Runner.Name")
 	r.mu.Lock()
 	defer r.mu.Unlock()
 	return r.name
@@ -159,7 +158,7 @@ func (r *Runner) Name() string {
 
 // Version returns the configured runner version (default "v0").
 func (r *Runner) Version() string {
-	slog.Debug("trace", "cmd", runnerfakeLogCmd, "operation", "runnerfake.Runner.Version")
+	slog.Debug("trace", "cmd", calltrace.LogCmd, "operation", "runnerfake.Runner.Version")
 	r.mu.Lock()
 	defer r.mu.Unlock()
 	return r.version
@@ -169,7 +168,7 @@ func (r *Runner) Version() string {
 // fallback: trim req.CursorModel and use it when non-empty; otherwise
 // fall back to the value set via WithDefaultModel (default "").
 func (r *Runner) EffectiveModel(req runner.Request) string {
-	slog.Debug("trace", "cmd", runnerfakeLogCmd, "operation", "runnerfake.Runner.EffectiveModel",
+	slog.Debug("trace", "cmd", calltrace.LogCmd, "operation", "runnerfake.Runner.EffectiveModel",
 		"task_id", req.TaskID)
 	m := strings.TrimSpace(req.CursorModel)
 	if m != "" {
@@ -183,7 +182,7 @@ func (r *Runner) EffectiveModel(req runner.Request) string {
 // Calls returns a copy of every Request seen by Run, in invocation order.
 // Tests use this to assert on what the worker sent to the runner.
 func (r *Runner) Calls() []runner.Request {
-	slog.Debug("trace", "cmd", runnerfakeLogCmd, "operation", "runnerfake.Runner.Calls")
+	slog.Debug("trace", "cmd", calltrace.LogCmd, "operation", "runnerfake.Runner.Calls")
 	r.mu.Lock()
 	defer r.mu.Unlock()
 	out := make([]runner.Request, len(r.calls))
@@ -194,7 +193,7 @@ func (r *Runner) Calls() []runner.Request {
 // Reset clears recorded calls and registered scripts. Useful in
 // table-driven tests that share one *Runner across subtests.
 func (r *Runner) Reset() {
-	slog.Debug("trace", "cmd", runnerfakeLogCmd, "operation", "runnerfake.Runner.Reset")
+	slog.Debug("trace", "cmd", calltrace.LogCmd, "operation", "runnerfake.Runner.Reset")
 	r.mu.Lock()
 	defer r.mu.Unlock()
 	r.scripts = make(map[scriptKey]scripted)

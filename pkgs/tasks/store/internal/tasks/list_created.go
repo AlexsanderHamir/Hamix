@@ -1,5 +1,6 @@
 package tasks
 
+import "github.com/AlexsanderHamir/Hamix/pkgs/tasks/calltrace"
 import (
 	"context"
 	"fmt"
@@ -44,7 +45,7 @@ func tasksFromListRows(rows []listRowScan) []domain.Task {
 }
 
 func hydrateCreatedAt(ctx context.Context, db *gorm.DB, t *domain.Task) error {
-	slog.Debug("trace", "cmd", logCmd, "operation", "tasks.store.tasks.hydrateCreatedAt")
+	slog.Debug("trace", "cmd", calltrace.LogCmd, "operation", "tasks.store.tasks.hydrateCreatedAt")
 	if t == nil || strings.TrimSpace(t.ID) == "" {
 		return nil
 	}
@@ -64,7 +65,7 @@ func hydrateCreatedAt(ctx context.Context, db *gorm.DB, t *domain.Task) error {
 }
 
 func loadCreatedAtCursor(ctx context.Context, db *gorm.DB, afterID string) (time.Time, error) {
-	slog.Debug("trace", "cmd", logCmd, "operation", "tasks.store.tasks.loadCreatedAtCursor")
+	slog.Debug("trace", "cmd", calltrace.LogCmd, "operation", "tasks.store.tasks.loadCreatedAtCursor")
 	var at time.Time
 	err := db.WithContext(ctx).Model(&domain.TaskEvent{}).
 		Where("task_id = ? AND seq = ? AND type = ?", afterID, taskCreatedEventSeq, domain.EventTaskCreated).

@@ -1,5 +1,6 @@
 package verify
 
+import "github.com/AlexsanderHamir/Hamix/pkgs/tasks/calltrace"
 import (
 	"context"
 	"errors"
@@ -12,7 +13,7 @@ import (
 )
 
 func (s *Service) loadCriteriaSelfReport(ctx context.Context, cycleID string, attemptSeq int64, expected map[string]struct{}) (map[string]reports.CriteriaEntry, error) {
-	slog.Debug("trace", "cmd", logCmd, "operation", "agent.harness.verify.loadCriteriaSelfReport",
+	slog.Debug("trace", "cmd", calltrace.LogCmd, "operation", "agent.harness.verify.loadCriteriaSelfReport",
 		"cycle_id", cycleID, "attempt_seq", attemptSeq, "expected", len(expected))
 	selfReport, err := reports.ParseCriteriaReport(s.reportDir, cycleID, expected)
 	if err == nil {
@@ -56,7 +57,7 @@ func (s *Service) PersistCriteriaReports(
 	previouslyPassed map[string]Verdict,
 	selfReport map[string]reports.CriteriaEntry,
 ) error {
-	slog.Debug("trace", "cmd", logCmd, "operation", "agent.harness.verify.persistCriteriaReports",
+	slog.Debug("trace", "cmd", calltrace.LogCmd, "operation", "agent.harness.verify.persistCriteriaReports",
 		"cycle_id", cycleID, "attempt_seq", attemptSeq)
 	entries := make([]store.CriteriaReportEntry, 0, len(criteria))
 	for _, it := range criteria {
@@ -83,7 +84,7 @@ func (s *Service) persistVerifyReports(
 	verdicts []Verdict,
 	previouslyPassed map[string]Verdict,
 ) error {
-	slog.Debug("trace", "cmd", logCmd, "operation", "agent.harness.verify.persistVerifyReports",
+	slog.Debug("trace", "cmd", calltrace.LogCmd, "operation", "agent.harness.verify.persistVerifyReports",
 		"cycle_id", cycleID, "attempt_seq", attemptSeq, "verdict_count", len(verdicts))
 	entries := make([]store.VerifyReportEntry, 0, len(verdicts))
 	for _, v := range verdicts {

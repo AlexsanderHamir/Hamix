@@ -1,5 +1,6 @@
 package agentworker
 
+import "github.com/AlexsanderHamir/Hamix/pkgs/tasks/calltrace"
 import (
 	"context"
 	"log/slog"
@@ -13,8 +14,6 @@ import (
 	"github.com/AlexsanderHamir/Hamix/pkgs/tasks/realtime"
 	"github.com/AlexsanderHamir/Hamix/pkgs/tasks/store"
 )
-
-const logCmd = "taskapi"
 
 const (
 	shutdownGraceAfterRunTimeout   = 10 * time.Second
@@ -46,7 +45,7 @@ type Supervisor struct {
 // not start the worker; the caller invokes Start once after the rest
 // of taskapi assembly finishes.
 func New(ctx context.Context, st *store.Store, q *agents.MemoryQueue, pub realtime.Publisher) *Supervisor {
-	slog.Debug("trace", "cmd", logCmd, "operation", "taskapi.newAgentWorkerSupervisor")
+	slog.Debug("trace", "cmd", calltrace.LogCmd, "operation", "taskapi.newAgentWorkerSupervisor")
 	return &Supervisor{
 		parentCtx:  ctx,
 		store:      st,
@@ -60,25 +59,25 @@ func New(ctx context.Context, st *store.Store, q *agents.MemoryQueue, pub realti
 
 // Start performs the first boot of the worker by delegating to applySettings.
 func (s *Supervisor) Start(ctx context.Context) error {
-	slog.Debug("trace", "cmd", logCmd, "operation", "taskapi.agentWorkerSupervisor.Start")
+	slog.Debug("trace", "cmd", calltrace.LogCmd, "operation", "taskapi.agentWorkerSupervisor.Start")
 	s.logPreFeatureCycleCount(ctx)
 	return s.applySettings(ctx, "boot")
 }
 
 func (s *Supervisor) logPreFeatureCycleCount(ctx context.Context) {
-	slog.Debug("trace", "cmd", logCmd, "operation", "taskapi.agentWorkerSupervisor.logPreFeatureCycleCount")
+	slog.Debug("trace", "cmd", calltrace.LogCmd, "operation", "taskapi.agentWorkerSupervisor.logPreFeatureCycleCount")
 	countCtx, cancel := context.WithTimeout(ctx, agentWorkerStartupSweepTimeout)
 	defer cancel()
 	counts, err := s.store.CountPreFeatureCycles(countCtx)
 	if err != nil {
 		slog.Warn("agent worker pre-feature cycle count skipped",
-			"cmd", logCmd,
+			"cmd", calltrace.LogCmd,
 			"operation", "taskapi.agent_worker.pre_feature_count_err",
 			"err", err)
 		return
 	}
 	slog.Info("agent worker pre-feature cycles",
-		"cmd", logCmd,
+		"cmd", calltrace.LogCmd,
 		"operation", "taskapi.agentWorkerSupervisor.startup.preFeatureCycleCount",
 		"terminal_cycles_total", counts.Total,
 		"missing_cursor_model_effective_key", counts.MissingKey,
@@ -87,13 +86,13 @@ func (s *Supervisor) logPreFeatureCycleCount(ctx context.Context) {
 
 // Reload re-reads AppSettings and respawns the worker if anything material changed.
 func (s *Supervisor) Reload(ctx context.Context) error {
-	slog.Debug("trace", "cmd", logCmd, "operation", "taskapi.agentWorkerSupervisor.Reload")
+	slog.Debug("trace", "cmd", calltrace.LogCmd, "operation", "taskapi.agentWorkerSupervisor.Reload")
 	return s.applySettings(ctx, "reload")
 }
 
 // ProbeRunner exposes the runner registry probe to the HTTP handler.
 func (s *Supervisor) ProbeRunner(ctx context.Context, runnerID, binaryPath string, timeout time.Duration) (version, resolvedBin string, err error) {
-	slog.Debug("trace", "cmd", logCmd, "operation", "taskapi.agentWorkerSupervisor.ProbeRunner",
+	slog.Debug("trace", "cmd", calltrace.LogCmd, "operation", "taskapi.agentWorkerSupervisor.ProbeRunner",
 		"runner", runnerID, "binary", binaryPath)
 	if timeout <= 0 {
 		timeout = s.probeBudge
@@ -105,7 +104,7 @@ func (s *Supervisor) ProbeRunner(ctx context.Context, runnerID, binaryPath strin
 
 // CancelCurrentRun cancels the in-flight runner.Run, if any.
 func (s *Supervisor) CancelCurrentRun() bool {
-	slog.Debug("trace", "cmd", logCmd, "operation", "taskapi.agentWorkerSupervisor.CancelCurrentRun")
+	slog.Debug("trace", "cmd", calltrace.LogCmd, "operation", "taskapi.agentWorkerSupervisor.CancelCurrentRun")
 	s.mu.Lock()
 	inst := s.current
 	s.mu.Unlock()
@@ -117,7 +116,7 @@ func (s *Supervisor) CancelCurrentRun() bool {
 
 // Drain cancels the worker context and waits for Worker.Run to return.
 func (s *Supervisor) Drain() {
-	slog.Debug("trace", "cmd", logCmd, "operation", "taskapi.agentWorkerSupervisor.Drain")
+	slog.Debug("trace", "cmd", calltrace.LogCmd, "operation", "taskapi.agentWorkerSupervisor.Drain")
 	s.mu.Lock()
 	if s.drained {
 		s.mu.Unlock()

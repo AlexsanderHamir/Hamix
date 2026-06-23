@@ -10,6 +10,7 @@
 // error never duplicates rows or shifts a verdict.
 package reports
 
+import "github.com/AlexsanderHamir/Hamix/pkgs/tasks/calltrace"
 import (
 	"context"
 	"errors"
@@ -24,8 +25,6 @@ import (
 	"gorm.io/gorm"
 	"gorm.io/gorm/clause"
 )
-
-const logCmd = "taskapi"
 
 // CriteriaEntry is the per-criterion payload for one execute attempt's
 // criteria-report.json row, in the shape the worker hands to
@@ -63,7 +62,7 @@ type VerifyEntry struct {
 // function without changing the contract.
 func UpsertCriteriaReports(ctx context.Context, db *gorm.DB, cycleID string, attemptSeq int64, entries []CriteriaEntry) error {
 	defer kernel.DeferLatency(kernel.OpUpsertCriteriaReports)()
-	slog.Debug("trace", "cmd", logCmd, "operation", "tasks.store.reports.UpsertCriteriaReports",
+	slog.Debug("trace", "cmd", calltrace.LogCmd, "operation", "tasks.store.reports.UpsertCriteriaReports",
 		"cycle_id", cycleID, "attempt_seq", attemptSeq, "entry_count", len(entries))
 	cycleID = strings.TrimSpace(cycleID)
 	if cycleID == "" {
@@ -114,7 +113,7 @@ func UpsertCriteriaReports(ctx context.Context, db *gorm.DB, cycleID string, att
 // same key.
 func UpsertVerifyReports(ctx context.Context, db *gorm.DB, cycleID string, attemptSeq int64, entries []VerifyEntry) error {
 	defer kernel.DeferLatency(kernel.OpUpsertVerifyReports)()
-	slog.Debug("trace", "cmd", logCmd, "operation", "tasks.store.reports.UpsertVerifyReports",
+	slog.Debug("trace", "cmd", calltrace.LogCmd, "operation", "tasks.store.reports.UpsertVerifyReports",
 		"cycle_id", cycleID, "attempt_seq", attemptSeq, "entry_count", len(entries))
 	cycleID = strings.TrimSpace(cycleID)
 	if cycleID == "" {
@@ -169,7 +168,7 @@ func UpsertVerifyReports(ctx context.Context, db *gorm.DB, cycleID string, attem
 // available" rather than 404.
 func ListCriteriaReportsForCycle(ctx context.Context, db *gorm.DB, cycleID string) ([]domain.TaskCycleCriteriaReport, error) {
 	defer kernel.DeferLatency(kernel.OpListCriteriaReportsForCycle)()
-	slog.Debug("trace", "cmd", logCmd, "operation", "tasks.store.reports.ListCriteriaReportsForCycle",
+	slog.Debug("trace", "cmd", calltrace.LogCmd, "operation", "tasks.store.reports.ListCriteriaReportsForCycle",
 		"cycle_id", cycleID)
 	cycleID = strings.TrimSpace(cycleID)
 	if cycleID == "" {
@@ -189,7 +188,7 @@ func ListCriteriaReportsForCycle(ctx context.Context, db *gorm.DB, cycleID strin
 // ListCriteriaReportsForCycle.
 func ListVerifyReportsForCycle(ctx context.Context, db *gorm.DB, cycleID string) ([]domain.TaskCycleVerifyReport, error) {
 	defer kernel.DeferLatency(kernel.OpListVerifyReportsForCycle)()
-	slog.Debug("trace", "cmd", logCmd, "operation", "tasks.store.reports.ListVerifyReportsForCycle",
+	slog.Debug("trace", "cmd", calltrace.LogCmd, "operation", "tasks.store.reports.ListVerifyReportsForCycle",
 		"cycle_id", cycleID)
 	cycleID = strings.TrimSpace(cycleID)
 	if cycleID == "" {
@@ -209,7 +208,7 @@ func ListVerifyReportsForCycle(ctx context.Context, db *gorm.DB, cycleID string)
 // criterionID); ErrNotFound when missing. Used by tests and a future
 // per-criterion drill-down endpoint.
 func GetCriteriaReport(ctx context.Context, db *gorm.DB, cycleID string, attemptSeq int64, criterionID string) (*domain.TaskCycleCriteriaReport, error) {
-	slog.Debug("trace", "cmd", logCmd, "operation", "tasks.store.reports.GetCriteriaReport",
+	slog.Debug("trace", "cmd", calltrace.LogCmd, "operation", "tasks.store.reports.GetCriteriaReport",
 		"cycle_id", cycleID, "attempt_seq", attemptSeq, "criterion_id", criterionID)
 	cycleID = strings.TrimSpace(cycleID)
 	criterionID = strings.TrimSpace(criterionID)

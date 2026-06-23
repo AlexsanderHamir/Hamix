@@ -1,5 +1,6 @@
 package agents
 
+import "github.com/AlexsanderHamir/Hamix/pkgs/tasks/calltrace"
 import (
 	"container/heap"
 	"context"
@@ -70,7 +71,7 @@ func (h *wakeHeap) Pop() interface{} {
 // caller must register it with (*store.Store).SetPickupWake and call
 // Hydrate once at startup.
 func NewPickupWakeScheduler(st *store.Store, q *MemoryQueue) *PickupWakeScheduler {
-	slog.Debug("trace", "cmd", agentsLogCmd, "operation", "agents.NewPickupWakeScheduler")
+	slog.Debug("trace", "cmd", calltrace.LogCmd, "operation", "agents.NewPickupWakeScheduler")
 	return &PickupWakeScheduler{
 		st:   st,
 		q:    q,
@@ -81,7 +82,7 @@ func NewPickupWakeScheduler(st *store.Store, q *MemoryQueue) *PickupWakeSchedule
 // Hydrate schedules wake timers for every ready task with pickup_not_before
 // in the future (bounded list). Safe to call once after SetPickupWake.
 func (w *PickupWakeScheduler) Hydrate(ctx context.Context) error {
-	slog.Debug("trace", "cmd", agentsLogCmd, "operation", "agents.PickupWakeScheduler.Hydrate")
+	slog.Debug("trace", "cmd", calltrace.LogCmd, "operation", "agents.PickupWakeScheduler.Hydrate")
 	if w == nil || w.st == nil {
 		return nil
 	}

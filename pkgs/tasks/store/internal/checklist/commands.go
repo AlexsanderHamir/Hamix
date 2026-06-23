@@ -1,5 +1,6 @@
 package checklist
 
+import "github.com/AlexsanderHamir/Hamix/pkgs/tasks/calltrace"
 import (
 	"context"
 	"errors"
@@ -62,7 +63,7 @@ func NormalizeVerifyCommandInputs(in []VerifyCommandInput) ([]VerifyCommandInput
 }
 
 func replaceCommandsInTx(tx *gorm.DB, itemID string, cmds []VerifyCommandInput) error {
-	slog.Debug("trace", "cmd", logCmd, "operation", "tasks.store.checklist.replaceCommandsInTx")
+	slog.Debug("trace", "cmd", calltrace.LogCmd, "operation", "tasks.store.checklist.replaceCommandsInTx")
 	if err := tx.Where("item_id = ?", itemID).Delete(&domain.TaskChecklistItemCommand{}).Error; err != nil {
 		return fmt.Errorf("delete verify commands: %w", err)
 	}
@@ -82,7 +83,7 @@ func replaceCommandsInTx(tx *gorm.DB, itemID string, cmds []VerifyCommandInput) 
 }
 
 func commandsForItemsInTx(tx *gorm.DB, itemIDs []string) (map[string][]VerifyCommandView, error) {
-	slog.Debug("trace", "cmd", logCmd, "operation", "tasks.store.checklist.commandsForItemsInTx")
+	slog.Debug("trace", "cmd", calltrace.LogCmd, "operation", "tasks.store.checklist.commandsForItemsInTx")
 	if len(itemIDs) == 0 {
 		return map[string][]VerifyCommandView{}, nil
 	}
@@ -112,7 +113,7 @@ func commandsForItemInTx(tx *gorm.DB, itemID string) ([]VerifyCommandView, error
 
 // ReplaceVerifyCommands replaces all verify commands for an item owned by taskID.
 func ReplaceVerifyCommands(ctx context.Context, db *gorm.DB, taskID, itemID string, cmds []VerifyCommandInput, by domain.Actor) error {
-	slog.Debug("trace", "cmd", logCmd, "operation", "tasks.store.checklist.ReplaceVerifyCommands")
+	slog.Debug("trace", "cmd", calltrace.LogCmd, "operation", "tasks.store.checklist.ReplaceVerifyCommands")
 	if err := kernel.ValidateActor(by); err != nil {
 		return err
 	}

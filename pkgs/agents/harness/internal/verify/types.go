@@ -6,8 +6,6 @@ import (
 	"github.com/AlexsanderHamir/Hamix/pkgs/tasks/store"
 )
 
-const logCmd = "taskapi"
-
 const failedReasonPrefix = "verification_failed"
 
 // FailedReasonPrefix is the stable terminate_reason prefix for verification failures.

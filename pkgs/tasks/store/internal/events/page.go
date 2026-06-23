@@ -1,5 +1,6 @@
 package events
 
+import "github.com/AlexsanderHamir/Hamix/pkgs/tasks/calltrace"
 import (
 	"context"
 	"errors"
@@ -33,7 +34,7 @@ type Page struct {
 // of 50; beforeSeq and afterSeq must not both be set.
 func PageCursor(ctx context.Context, db *gorm.DB, taskID string, limit int, beforeSeq, afterSeq *int64) (*Page, error) {
 	defer kernel.DeferLatency(kernel.OpListTaskEventsPage)()
-	slog.Debug("trace", "cmd", logCmd, "operation", "tasks.store.events.PageCursor")
+	slog.Debug("trace", "cmd", calltrace.LogCmd, "operation", "tasks.store.events.PageCursor")
 	var err error
 	taskID, limit, err = validatePageInputs(taskID, limit, beforeSeq, afterSeq)
 	if err != nil {
@@ -70,7 +71,7 @@ func PageCursor(ctx context.Context, db *gorm.DB, taskID string, limit int, befo
 // /tasks/{id}/approval write paths.
 func ApprovalPending(ctx context.Context, db *gorm.DB, taskID string) (bool, error) {
 	defer kernel.DeferLatency(kernel.OpApprovalPending)()
-	slog.Debug("trace", "cmd", logCmd, "operation", "tasks.store.events.ApprovalPending")
+	slog.Debug("trace", "cmd", calltrace.LogCmd, "operation", "tasks.store.events.ApprovalPending")
 	taskID = strings.TrimSpace(taskID)
 	if taskID == "" {
 		return false, fmt.Errorf("%w: id", domain.ErrInvalidInput)
@@ -99,7 +100,7 @@ func ApprovalPending(ctx context.Context, db *gorm.DB, taskID string) (bool, err
 }
 
 func fillPageBounds(ctx context.Context, db *gorm.DB, taskID string, out *Page, rows []domain.TaskEvent) error {
-	slog.Debug("trace", "cmd", logCmd, "operation", "tasks.store.events.fillPageBounds")
+	slog.Debug("trace", "cmd", calltrace.LogCmd, "operation", "tasks.store.events.fillPageBounds")
 	if len(rows) == 0 {
 		return nil
 	}
@@ -127,7 +128,7 @@ func fillPageBounds(ctx context.Context, db *gorm.DB, taskID string, out *Page, 
 }
 
 func validatePageInputs(taskID string, limit int, beforeSeq, afterSeq *int64) (string, int, error) {
-	slog.Debug("trace", "cmd", logCmd, "operation", "tasks.store.events.validatePageInputs")
+	slog.Debug("trace", "cmd", calltrace.LogCmd, "operation", "tasks.store.events.validatePageInputs")
 	taskID = strings.TrimSpace(taskID)
 	if taskID == "" {
 		return "", 0, fmt.Errorf("%w: id", domain.ErrInvalidInput)

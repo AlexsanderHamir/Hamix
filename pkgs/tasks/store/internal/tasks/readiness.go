@@ -1,5 +1,6 @@
 package tasks
 
+import "github.com/AlexsanderHamir/Hamix/pkgs/tasks/calltrace"
 import (
 	"context"
 	"log/slog"
@@ -12,7 +13,7 @@ import (
 
 // ReadyForAgentPickup applies the same predicates as ListQueueCandidates for one task row.
 func ReadyForAgentPickup(ctx context.Context, db *gorm.DB, t *domain.Task, now time.Time) (bool, scheduling.FailedPredicate, error) {
-	slog.Debug("trace", "cmd", logCmd, "operation", "tasks.store.tasks.ReadyForAgentPickup")
+	slog.Debug("trace", "cmd", calltrace.LogCmd, "operation", "tasks.store.tasks.ReadyForAgentPickup")
 	partial := scheduling.EvaluateWorkerReadiness(t, now, false)
 	if !partial.Ready && partial.FailedPredicate != scheduling.FailedPredicateDependencies {
 		return false, partial.FailedPredicate, nil

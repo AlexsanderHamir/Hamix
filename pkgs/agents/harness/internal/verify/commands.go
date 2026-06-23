@@ -1,5 +1,6 @@
 package verify
 
+import "github.com/AlexsanderHamir/Hamix/pkgs/tasks/calltrace"
 import (
 	"context"
 	"encoding/json"
@@ -109,7 +110,7 @@ func (s *Service) RunCriterionCommands(
 	selfReport map[string]reports.CriteriaEntry,
 	execFn shellExecFunc,
 ) ([]CommandEvidence, error) {
-	slog.Debug("trace", "cmd", logCmd, "operation", "agent.harness.verify.RunCriterionCommands",
+	slog.Debug("trace", "cmd", calltrace.LogCmd, "operation", "agent.harness.verify.RunCriterionCommands",
 		"cycle_id", cycleID, "attempt_seq", attemptSeq)
 	if execFn == nil {
 		execFn = defaultShellExec
@@ -202,7 +203,7 @@ func (s *Service) RunCriterionCommands(
 	if len(persist) > 0 {
 		if err := s.store.UpsertCommandRuns(parentCtx, cycleID, attemptSeq, persist); err != nil {
 			slog.Warn("agent harness UpsertCommandRuns failed",
-				"cmd", logCmd, "operation", "agent.harness.verify.RunCriterionCommands.upsert_err",
+				"cmd", calltrace.LogCmd, "operation", "agent.harness.verify.RunCriterionCommands.upsert_err",
 				"cycle_id", cycleID, "attempt_seq", attemptSeq, "err", err)
 		}
 	}

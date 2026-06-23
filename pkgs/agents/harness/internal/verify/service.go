@@ -1,5 +1,6 @@
 package verify
 
+import "github.com/AlexsanderHamir/Hamix/pkgs/tasks/calltrace"
 import (
 	"context"
 	"log/slog"
@@ -79,7 +80,7 @@ func (s *Service) SetVerifyRunner(r runner.Runner) {
 }
 
 func (s *Service) SetStreamIdleStuck(d time.Duration) {
-	slog.Debug("trace", "cmd", logCmd, "operation", "agent.harness.verify.SetStreamIdleStuck",
+	slog.Debug("trace", "cmd", calltrace.LogCmd, "operation", "agent.harness.verify.SetStreamIdleStuck",
 		"stuck_ns", int64(d))
 	s.hooks.StreamIdleStuck = d
 }

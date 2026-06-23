@@ -1,5 +1,6 @@
 package resume
 
+import "github.com/AlexsanderHamir/Hamix/pkgs/tasks/calltrace"
 import (
 	"context"
 	"errors"
@@ -17,7 +18,7 @@ const (
 
 // ReconstructCheckpoint rebuilds resume state for an in-flight running cycle.
 func (s *Service) ReconstructCheckpoint(ctx context.Context, cycle *domain.TaskCycle) (Checkpoint, error) {
-	slog.Debug("trace", "cmd", logCmd, "operation", "agent.harness.resume.ReconstructCheckpoint",
+	slog.Debug("trace", "cmd", calltrace.LogCmd, "operation", "agent.harness.resume.ReconstructCheckpoint",
 		"cycle_id", cycle.ID)
 	var cp Checkpoint
 	cp.PreviouslyPassed = map[string]CriterionVerdict{}
@@ -79,7 +80,7 @@ func (s *Service) ReconstructCheckpoint(ctx context.Context, cycle *domain.TaskC
 
 // LoadCheckpointFromParent builds a checkpoint from a terminal parent cycle continuation bundle.
 func (s *Service) LoadCheckpointFromParent(ctx context.Context, parentCycleID string) (Checkpoint, error) {
-	slog.Debug("trace", "cmd", logCmd, "operation", "agent.harness.resume.LoadCheckpointFromParent",
+	slog.Debug("trace", "cmd", calltrace.LogCmd, "operation", "agent.harness.resume.LoadCheckpointFromParent",
 		"parent_cycle_id", parentCycleID)
 	bundle, err := s.LoadContinuationBundle(ctx, parentCycleID)
 	if err != nil {
@@ -93,7 +94,7 @@ func (s *Service) LoadCheckpointFromParent(ctx context.Context, parentCycleID st
 }
 
 func (s *Service) loadKnownCommitsForTask(ctx context.Context, taskID string) ([]domain.TaskCycleCommit, error) {
-	slog.Debug("trace", "cmd", logCmd, "operation", "agent.harness.resume.loadKnownCommitsForTask",
+	slog.Debug("trace", "cmd", calltrace.LogCmd, "operation", "agent.harness.resume.loadKnownCommitsForTask",
 		"task_id", taskID)
 	return s.store.ListCommitsForTask(ctx, taskID)
 }
@@ -132,7 +133,7 @@ func (s *Service) loadVerifyCheckpointData(ctx context.Context, cycleID string) 
 }
 
 func isInterruptPhase(p domain.TaskCyclePhase) bool {
-	slog.Debug("trace", "cmd", logCmd, "operation", "agent.harness.resume.isInterruptPhase",
+	slog.Debug("trace", "cmd", calltrace.LogCmd, "operation", "agent.harness.resume.isInterruptPhase",
 		"phase_seq", p.PhaseSeq, "phase", string(p.Phase), "status", string(p.Status))
 	if p.Status != domain.PhaseStatusFailed {
 		return false
@@ -144,7 +145,7 @@ func isInterruptPhase(p domain.TaskCyclePhase) bool {
 }
 
 func buildVerifyFeedbackFromRows(rows []domain.TaskCycleVerifyReport, attemptSeq int64) string {
-	slog.Debug("trace", "cmd", logCmd, "operation", "agent.harness.resume.buildVerifyFeedbackFromRows",
+	slog.Debug("trace", "cmd", calltrace.LogCmd, "operation", "agent.harness.resume.buildVerifyFeedbackFromRows",
 		"attempt_seq", attemptSeq, "rows", len(rows))
 	var failures []string
 	for _, row := range rows {

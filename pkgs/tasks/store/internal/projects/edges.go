@@ -1,5 +1,6 @@
 package projects
 
+import "github.com/AlexsanderHamir/Hamix/pkgs/tasks/calltrace"
 import (
 	"context"
 	"fmt"
@@ -34,7 +35,7 @@ type UpdateContextEdgeInput struct {
 // CreateContextEdge inserts one relationship between project-owned context nodes.
 func CreateContextEdge(ctx context.Context, db *gorm.DB, projectID string, input CreateContextEdgeInput) (domain.ProjectContextEdge, error) {
 	defer kernel.DeferLatency(kernel.OpCreateProjectContext)()
-	slog.Debug("trace", "cmd", logCmd, "operation", "tasks.store.projects.CreateContextEdge")
+	slog.Debug("trace", "cmd", calltrace.LogCmd, "operation", "tasks.store.projects.CreateContextEdge")
 	projectID = strings.TrimSpace(projectID)
 	if projectID == "" {
 		return domain.ProjectContextEdge{}, fmt.Errorf("%w: project id required", domain.ErrInvalidInput)
@@ -84,7 +85,7 @@ func CreateContextEdge(ctx context.Context, db *gorm.DB, projectID string, input
 // ListContextEdges returns context edges for one project, optionally restricted to a selected node set.
 func ListContextEdges(ctx context.Context, db *gorm.DB, projectID string, nodeIDs []string) ([]domain.ProjectContextEdge, error) {
 	defer kernel.DeferLatency(kernel.OpListProjectContext)()
-	slog.Debug("trace", "cmd", logCmd, "operation", "tasks.store.projects.ListContextEdges")
+	slog.Debug("trace", "cmd", calltrace.LogCmd, "operation", "tasks.store.projects.ListContextEdges")
 	projectID = strings.TrimSpace(projectID)
 	if projectID == "" {
 		return nil, fmt.Errorf("%w: project id required", domain.ErrInvalidInput)
@@ -107,7 +108,7 @@ func ListContextEdges(ctx context.Context, db *gorm.DB, projectID string, nodeID
 // UpdateContextEdge applies a partial patch to one context edge.
 func UpdateContextEdge(ctx context.Context, db *gorm.DB, projectID, edgeID string, input UpdateContextEdgeInput) (domain.ProjectContextEdge, error) {
 	defer kernel.DeferLatency(kernel.OpUpdateProjectContext)()
-	slog.Debug("trace", "cmd", logCmd, "operation", "tasks.store.projects.UpdateContextEdge")
+	slog.Debug("trace", "cmd", calltrace.LogCmd, "operation", "tasks.store.projects.UpdateContextEdge")
 	projectID = strings.TrimSpace(projectID)
 	edgeID = strings.TrimSpace(edgeID)
 	if projectID == "" || edgeID == "" {
@@ -139,7 +140,7 @@ func UpdateContextEdge(ctx context.Context, db *gorm.DB, projectID, edgeID strin
 // DeleteContextEdge removes one relationship between project context nodes.
 func DeleteContextEdge(ctx context.Context, db *gorm.DB, projectID, edgeID string) error {
 	defer kernel.DeferLatency(kernel.OpDeleteProjectContext)()
-	slog.Debug("trace", "cmd", logCmd, "operation", "tasks.store.projects.DeleteContextEdge")
+	slog.Debug("trace", "cmd", calltrace.LogCmd, "operation", "tasks.store.projects.DeleteContextEdge")
 	projectID = strings.TrimSpace(projectID)
 	edgeID = strings.TrimSpace(edgeID)
 	if projectID == "" || edgeID == "" {

@@ -2,6 +2,7 @@
 // cycles into task_cycle_commits.
 package commits
 
+import "github.com/AlexsanderHamir/Hamix/pkgs/tasks/calltrace"
 import (
 	"context"
 	"fmt"
@@ -15,8 +16,6 @@ import (
 	"gorm.io/gorm"
 	"gorm.io/gorm/clause"
 )
-
-const logCmd = "taskapi"
 
 // Entry is one commit row to upsert for a cycle.
 type Entry struct {
@@ -34,7 +33,7 @@ type Entry struct {
 // Idempotent on (cycle_id, sha). Empty entries is a no-op.
 func UpsertCycleCommits(ctx context.Context, db *gorm.DB, taskID, cycleID string, entries []Entry) error {
 	defer kernel.DeferLatency(kernel.OpUpsertCycleCommits)()
-	slog.Debug("trace", "cmd", logCmd, "operation", "tasks.store.commits.UpsertCycleCommits",
+	slog.Debug("trace", "cmd", calltrace.LogCmd, "operation", "tasks.store.commits.UpsertCycleCommits",
 		"cycle_id", cycleID, "entry_count", len(entries))
 	taskID = strings.TrimSpace(taskID)
 	cycleID = strings.TrimSpace(cycleID)
@@ -93,7 +92,7 @@ func UpsertCycleCommits(ctx context.Context, db *gorm.DB, taskID, cycleID string
 // ListCommitsForCycle returns commits for cycleID ordered by seq ASC.
 func ListCommitsForCycle(ctx context.Context, db *gorm.DB, cycleID string) ([]domain.TaskCycleCommit, error) {
 	defer kernel.DeferLatency(kernel.OpListCommitsForCycle)()
-	slog.Debug("trace", "cmd", logCmd, "operation", "tasks.store.commits.ListCommitsForCycle",
+	slog.Debug("trace", "cmd", calltrace.LogCmd, "operation", "tasks.store.commits.ListCommitsForCycle",
 		"cycle_id", cycleID)
 	cycleID = strings.TrimSpace(cycleID)
 	if cycleID == "" {
@@ -114,7 +113,7 @@ func ListCommitsForCycle(ctx context.Context, db *gorm.DB, cycleID string) ([]do
 // committed_at row wins.
 func ListCommitsForTask(ctx context.Context, db *gorm.DB, taskID string) ([]domain.TaskCycleCommit, error) {
 	defer kernel.DeferLatency(kernel.OpListCommitsForTask)()
-	slog.Debug("trace", "cmd", logCmd, "operation", "tasks.store.commits.ListCommitsForTask",
+	slog.Debug("trace", "cmd", calltrace.LogCmd, "operation", "tasks.store.commits.ListCommitsForTask",
 		"task_id", taskID)
 	taskID = strings.TrimSpace(taskID)
 	if taskID == "" {

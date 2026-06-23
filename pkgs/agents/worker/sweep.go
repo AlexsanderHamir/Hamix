@@ -1,5 +1,6 @@
 package worker
 
+import "github.com/AlexsanderHamir/Hamix/pkgs/tasks/calltrace"
 import (
 	"context"
 	"errors"
@@ -41,7 +42,7 @@ type SweepResult struct {
 //
 // Idempotent: re-running on a clean DB is a no-op.
 func FinalizeInterruptedPhases(ctx context.Context, st *store.Store) (FinalizeResult, error) {
-	slog.Debug("trace", "cmd", workerLogCmd, "operation", "agent.worker.FinalizeInterruptedPhases")
+	slog.Debug("trace", "cmd", calltrace.LogCmd, "operation", "agent.worker.FinalizeInterruptedPhases")
 	var res FinalizeResult
 	if st == nil {
 		return res, errors.New("agent worker finalize: nil store")
@@ -68,14 +69,14 @@ func FinalizeInterruptedPhases(ctx context.Context, st *store.Store) (FinalizeRe
 				level = slog.LevelInfo
 			}
 			slog.Log(ctx, level, "agent worker finalize CompletePhase failed",
-				"cmd", workerLogCmd, "operation", "agent.worker.FinalizeInterruptedPhases.complete_err",
+				"cmd", calltrace.LogCmd, "operation", "agent.worker.FinalizeInterruptedPhases.complete_err",
 				"cycle_id", p.CycleID, "phase_seq", p.PhaseSeq, "err", err)
 			continue
 		}
 		res.PhasesFinalized++
 	}
 
-	slog.Info("agent worker startup finalize complete", "cmd", workerLogCmd,
+	slog.Info("agent worker startup finalize complete", "cmd", calltrace.LogCmd,
 		"operation", "agent.worker.FinalizeInterruptedPhases.summary",
 		"phases_finalized", res.PhasesFinalized)
 	return res, nil
@@ -85,7 +86,7 @@ func FinalizeInterruptedPhases(ctx context.Context, st *store.Store) (FinalizeRe
 // FinalizeInterruptedPhases only. Cycles and tasks are no longer aborted
 // or failed on startup.
 func SweepOrphanRunningCycles(ctx context.Context, st *store.Store) (SweepResult, error) {
-	slog.Debug("trace", "cmd", workerLogCmd, "operation", "agent.worker.SweepOrphanRunningCycles")
+	slog.Debug("trace", "cmd", calltrace.LogCmd, "operation", "agent.worker.SweepOrphanRunningCycles")
 	fr, err := FinalizeInterruptedPhases(ctx, st)
 	if err != nil {
 		return SweepResult{}, err

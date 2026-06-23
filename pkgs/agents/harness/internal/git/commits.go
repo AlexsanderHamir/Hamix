@@ -1,5 +1,6 @@
 package git
 
+import "github.com/AlexsanderHamir/Hamix/pkgs/tasks/calltrace"
 import (
 	"context"
 	"errors"
@@ -126,7 +127,7 @@ func (s *Service) resolveClaimedCommits(
 		}
 		if g.CycleBaseSHA != "" && !s.commitInRange(ctx, g.Worktree, g.CycleBaseSHA, sha) {
 			slog.Warn("claimed commit outside cycle_base_sha..HEAD; indexing anyway",
-				"cmd", logCmd, "operation", "agent.harness.git.resolveClaimedCommits.out_of_range",
+				"cmd", calltrace.LogCmd, "operation", "agent.harness.git.resolveClaimedCommits.out_of_range",
 				"sha", sha, "cycle_base_sha", g.CycleBaseSHA)
 		}
 		msg, at, err := s.commitDetails(ctx, g.Worktree, sha)
@@ -162,7 +163,7 @@ func (s *Service) warnMissingIndexedCommits(ctx context.Context, taskID string, 
 	for _, row := range prior {
 		if !s.commitExists(ctx, worktree, row.SHA) {
 			slog.Warn("indexed commit no longer in repository",
-				"cmd", logCmd, "operation", "agent.harness.git.IngestExecuteCommits.missing_prior_sha",
+				"cmd", calltrace.LogCmd, "operation", "agent.harness.git.IngestExecuteCommits.missing_prior_sha",
 				"task_id", taskID, "sha", row.SHA)
 		}
 	}
@@ -197,7 +198,7 @@ func (s *Service) IngestExecuteCommits(
 	snap PhaseSnapshot,
 	publish func(taskID, cycleID string),
 ) (ExecuteCommitIngestOutcome, error) {
-	slog.Debug("trace", "cmd", logCmd, "operation", "agent.harness.git.IngestExecuteCommits",
+	slog.Debug("trace", "cmd", calltrace.LogCmd, "operation", "agent.harness.git.IngestExecuteCommits",
 		"task_id", taskID, "cycle_id", cycle.ID, "phase_seq", execPhaseSeq)
 	if snap.Skipped {
 		return ExecuteCommitIngestOutcome{}, nil

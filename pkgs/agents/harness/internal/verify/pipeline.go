@@ -1,5 +1,6 @@
 package verify
 
+import "github.com/AlexsanderHamir/Hamix/pkgs/tasks/calltrace"
 import (
 	"context"
 	"fmt"
@@ -27,14 +28,14 @@ func (s *Service) RunPipeline(
 	feedback string,
 	phaseCB PhaseCallbacks,
 ) ([]Verdict, string, error) {
-	slog.Debug("trace", "cmd", logCmd, "operation", "agent.harness.verify.RunPipeline",
+	slog.Debug("trace", "cmd", calltrace.LogCmd, "operation", "agent.harness.verify.RunPipeline",
 		"task_id", task.ID, "cycle_id", cycle.ID, "enabled", snap.Enabled)
 	if !snap.Enabled {
 		return nil, "", nil
 	}
 	if err := reports.EnsureReportCycleDir(s.reportDir, cycle.ID); err != nil {
 		slog.Warn("agent harness ensureReportCycleDir failed",
-			"cmd", logCmd, "operation", "agent.harness.verify.RunPipeline.ensure_err",
+			"cmd", calltrace.LogCmd, "operation", "agent.harness.verify.RunPipeline.ensure_err",
 			"cycle_id", cycle.ID, "report_dir", s.reportDir, "err", err)
 	}
 
@@ -46,7 +47,7 @@ func (s *Service) RunPipeline(
 	phase, err := s.store.StartPhase(parentCtx, cycle.ID, domain.PhaseVerify, domain.ActorAgent)
 	if err != nil {
 		slog.Warn("agent harness StartPhase(verify) failed",
-			"cmd", logCmd, "operation", "agent.harness.verify.RunPipeline.start_err",
+			"cmd", calltrace.LogCmd, "operation", "agent.harness.verify.RunPipeline.start_err",
 			"cycle_id", cycle.ID, "err", err)
 		return nil, "", fmt.Errorf("start verify phase: %w", err)
 	}
@@ -60,7 +61,7 @@ func (s *Service) RunPipeline(
 	pre, preErr := s.captureIntegritySnapshot(parentCtx)
 	if preErr != nil {
 		slog.Warn("agent harness pre-verify integrity snapshot failed",
-			"cmd", logCmd, "operation", "agent.harness.verify.RunPipeline.pre_snapshot_err",
+			"cmd", calltrace.LogCmd, "operation", "agent.harness.verify.RunPipeline.pre_snapshot_err",
 			"cycle_id", cycle.ID, "err", preErr)
 	}
 
@@ -92,7 +93,7 @@ func (s *Service) RunPipeline(
 		By:       domain.ActorAgent,
 	}); err != nil {
 		slog.Warn("agent harness CompletePhase(verify) failed",
-			"cmd", logCmd, "operation", "agent.harness.verify.RunPipeline.complete_err",
+			"cmd", calltrace.LogCmd, "operation", "agent.harness.verify.RunPipeline.complete_err",
 			"cycle_id", cycle.ID, "phase_seq", phase.PhaseSeq, "err", err)
 	}
 	if phaseCB.OnEnded != nil {

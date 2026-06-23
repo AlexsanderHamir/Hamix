@@ -1,5 +1,6 @@
 package cursor
 
+import "github.com/AlexsanderHamir/Hamix/pkgs/tasks/calltrace"
 import (
 	"bytes"
 	"encoding/json"
@@ -33,7 +34,7 @@ type streamEventHead struct {
 }
 
 func parseStdout(stdout []byte) (cursorOutput, error) {
-	slog.Debug("trace", "cmd", cursorLogCmd, "operation", "cursor.parseStdout", "bytes", len(stdout))
+	slog.Debug("trace", "cmd", calltrace.LogCmd, "operation", "cursor.parseStdout", "bytes", len(stdout))
 	stdout = bytes.TrimSpace(stdout)
 	if len(stdout) == 0 {
 		return cursorOutput{}, errors.New("empty stdout")
@@ -118,7 +119,7 @@ func parseStdout(stdout []byte) (cursorOutput, error) {
 }
 
 func updateOpenToolCalls(open map[string]struct{}, openAnonymous *int, head streamEventHead) {
-	slog.Debug("trace", "cmd", cursorLogCmd, "operation", "cursor.updateOpenToolCalls",
+	slog.Debug("trace", "cmd", calltrace.LogCmd, "operation", "cursor.updateOpenToolCalls",
 		"subtype", head.Subtype, "call_id", head.CallID)
 	callID := strings.TrimSpace(head.CallID)
 	switch head.Subtype {
@@ -140,7 +141,7 @@ func updateOpenToolCalls(open map[string]struct{}, openAnonymous *int, head stre
 }
 
 func openToolCallCount(open map[string]struct{}, anonymous int) int {
-	slog.Debug("trace", "cmd", cursorLogCmd, "operation", "cursor.openToolCallCount",
+	slog.Debug("trace", "cmd", calltrace.LogCmd, "operation", "cursor.openToolCallCount",
 		"open", len(open), "anonymous", anonymous)
 	return len(open) + anonymous
 }

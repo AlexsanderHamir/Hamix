@@ -1,5 +1,6 @@
 package stats
 
+import "github.com/AlexsanderHamir/Hamix/pkgs/tasks/calltrace"
 import (
 	"context"
 	"encoding/json"
@@ -46,7 +47,7 @@ type preFeatureMetaProjection struct {
 // SQLite (used in tests). Safe to call on an empty database (returns
 // 0/0/nil).
 func CountPreFeatureCycles(ctx context.Context, db *gorm.DB) (PreFeatureCycleCounts, error) {
-	slog.Debug("trace", "cmd", logCmd, "operation", "tasks.store.stats.CountPreFeatureCycles")
+	slog.Debug("trace", "cmd", calltrace.LogCmd, "operation", "tasks.store.stats.CountPreFeatureCycles")
 	var rows []struct {
 		Meta datatypes.JSON `gorm:"column:meta_json"`
 	}

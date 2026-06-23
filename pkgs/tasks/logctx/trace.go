@@ -1,4 +1,6 @@
 package logctx
 
-// TraceCmd is the "cmd" field on slog.Debug trace lines emitted from this package.
-const TraceCmd = "taskapi"
+import "github.com/AlexsanderHamir/Hamix/pkgs/tasks/calltrace"
+
+// TraceCmd is the slog "cmd" field value shared with pkgs/tasks/calltrace.
+const TraceCmd = calltrace.LogCmd

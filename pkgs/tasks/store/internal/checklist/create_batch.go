@@ -1,5 +1,6 @@
 package checklist
 
+import "github.com/AlexsanderHamir/Hamix/pkgs/tasks/calltrace"
 import (
 	"encoding/json"
 	"fmt"
@@ -16,7 +17,7 @@ import (
 // inside the create transaction. Unlike Add, it does not re-check
 // ValidateCanAddCriterionInTx because the row was just inserted.
 func SeedDefinitionItemsAtCreateInTx(tx *gorm.DB, taskID string, items []CreateChecklistItemInput, by domain.Actor) error {
-	slog.Debug("trace", "cmd", logCmd, "operation", "tasks.store.checklist.SeedDefinitionItemsAtCreateInTx")
+	slog.Debug("trace", "cmd", calltrace.LogCmd, "operation", "tasks.store.checklist.SeedDefinitionItemsAtCreateInTx")
 	if err := kernel.ValidateActor(by); err != nil {
 		return err
 	}

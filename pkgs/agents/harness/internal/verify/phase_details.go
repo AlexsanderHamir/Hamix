@@ -1,5 +1,6 @@
 package verify
 
+import "github.com/AlexsanderHamir/Hamix/pkgs/tasks/calltrace"
 import (
 	"encoding/json"
 	"fmt"
@@ -30,7 +31,7 @@ type verifyPhaseDetailsPayload struct {
 }
 
 func criterionTextIndex(items []store.ChecklistVerifyItem) map[string]string {
-	slog.Debug("trace", "cmd", logCmd, "operation", "agent.harness.verify.criterionTextIndex", "items", len(items))
+	slog.Debug("trace", "cmd", calltrace.LogCmd, "operation", "agent.harness.verify.criterionTextIndex", "items", len(items))
 	out := make(map[string]string, len(items))
 	for _, it := range items {
 		out[it.ID] = it.Text
@@ -39,7 +40,7 @@ func criterionTextIndex(items []store.ChecklistVerifyItem) map[string]string {
 }
 
 func countVerdictOutcome(verdicts []Verdict) (passed, failed int) {
-	slog.Debug("trace", "cmd", logCmd, "operation", "agent.harness.verify.countVerdictOutcome", "verdicts", len(verdicts))
+	slog.Debug("trace", "cmd", calltrace.LogCmd, "operation", "agent.harness.verify.countVerdictOutcome", "verdicts", len(verdicts))
 	for _, v := range verdicts {
 		if v.Passed {
 			passed++
@@ -56,7 +57,7 @@ func FormatPhaseSummary(
 	verdicts []Verdict,
 	succeeded bool,
 ) string {
-	slog.Debug("trace", "cmd", logCmd, "operation", "agent.harness.verify.FormatPhaseSummary",
+	slog.Debug("trace", "cmd", calltrace.LogCmd, "operation", "agent.harness.verify.FormatPhaseSummary",
 		"criteria", len(criteria), "verdicts", len(verdicts), "succeeded", succeeded)
 	textByID := criterionTextIndex(criteria)
 	n := len(verdicts)
@@ -96,7 +97,7 @@ func EncodePhaseDetails(
 	criteria []store.ChecklistVerifyItem,
 	verdicts []Verdict,
 ) []byte {
-	slog.Debug("trace", "cmd", logCmd, "operation", "agent.harness.verify.EncodePhaseDetails",
+	slog.Debug("trace", "cmd", calltrace.LogCmd, "operation", "agent.harness.verify.EncodePhaseDetails",
 		"attempt_seq", attemptSeq, "criteria", len(criteria), "verdicts", len(verdicts))
 	textByID := criterionTextIndex(criteria)
 	passed, failed := countVerdictOutcome(verdicts)

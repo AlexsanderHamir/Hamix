@@ -11,6 +11,7 @@
 // facade.
 package drafts
 
+import "github.com/AlexsanderHamir/Hamix/pkgs/tasks/calltrace"
 import (
 	"context"
 	"encoding/json"
@@ -26,8 +27,6 @@ import (
 	"gorm.io/datatypes"
 	"gorm.io/gorm"
 )
-
-const logCmd = "taskapi"
 
 // Summary is the listing-row shape returned by List and Save. Field
 // tags are part of the HTTP contract (handler writes the value
@@ -57,7 +56,7 @@ type Detail struct {
 // through kernel.NormalizeJSONObject.
 func Save(ctx context.Context, db *gorm.DB, id, name string, payload json.RawMessage) (*Summary, error) {
 	defer kernel.DeferLatency(kernel.OpSaveDraft)()
-	slog.Debug("trace", "cmd", logCmd, "operation", "tasks.store.drafts.Save")
+	slog.Debug("trace", "cmd", calltrace.LogCmd, "operation", "tasks.store.drafts.Save")
 	id = strings.TrimSpace(id)
 	if id == "" {
 		id = uuid.NewString()
@@ -97,7 +96,7 @@ func Save(ctx context.Context, db *gorm.DB, id, name string, payload json.RawMes
 // validation; defense-in-depth).
 func List(ctx context.Context, db *gorm.DB, limit int) ([]Summary, error) {
 	defer kernel.DeferLatency(kernel.OpListDrafts)()
-	slog.Debug("trace", "cmd", logCmd, "operation", "tasks.store.drafts.List")
+	slog.Debug("trace", "cmd", calltrace.LogCmd, "operation", "tasks.store.drafts.List")
 	if limit <= 0 {
 		limit = 50
 	}
@@ -125,7 +124,7 @@ func List(ctx context.Context, db *gorm.DB, limit int) ([]Summary, error) {
 // rows surface as domain.ErrNotFound via mapNotFound.
 func Get(ctx context.Context, db *gorm.DB, id string) (*Detail, error) {
 	defer kernel.DeferLatency(kernel.OpGetDraft)()
-	slog.Debug("trace", "cmd", logCmd, "operation", "tasks.store.drafts.Get")
+	slog.Debug("trace", "cmd", calltrace.LogCmd, "operation", "tasks.store.drafts.Get")
 	id = strings.TrimSpace(id)
 	if id == "" {
 		return nil, fmt.Errorf("%w: id", domain.ErrInvalidInput)
@@ -148,7 +147,7 @@ func Get(ctx context.Context, db *gorm.DB, id string) (*Detail, error) {
 // does not exist (RowsAffected == 0) so the handler can map to 404.
 func Delete(ctx context.Context, db *gorm.DB, id string) error {
 	defer kernel.DeferLatency(kernel.OpDeleteDraft)()
-	slog.Debug("trace", "cmd", logCmd, "operation", "tasks.store.drafts.Delete")
+	slog.Debug("trace", "cmd", calltrace.LogCmd, "operation", "tasks.store.drafts.Delete")
 	id = strings.TrimSpace(id)
 	if id == "" {
 		return fmt.Errorf("%w: id", domain.ErrInvalidInput)
@@ -170,7 +169,7 @@ func Delete(ctx context.Context, db *gorm.DB, id string) error {
 // rows are not treated as an error (the create path may run before
 // any draft was ever saved).
 func DeleteByIDInTx(tx *gorm.DB, id string) error {
-	slog.Debug("trace", "cmd", logCmd, "operation", "tasks.store.drafts.DeleteByIDInTx")
+	slog.Debug("trace", "cmd", calltrace.LogCmd, "operation", "tasks.store.drafts.DeleteByIDInTx")
 	id = strings.TrimSpace(id)
 	if id == "" {
 		return nil
@@ -185,7 +184,7 @@ func DeleteByIDInTx(tx *gorm.DB, id string) error {
 // sentinel domain.ErrNotFound so handlers can use errors.Is without
 // importing gorm.
 func mapNotFound(err error) error {
-	slog.Debug("trace", "cmd", logCmd, "operation", "tasks.store.drafts.mapNotFound")
+	slog.Debug("trace", "cmd", calltrace.LogCmd, "operation", "tasks.store.drafts.mapNotFound")
 	if err == nil {
 		return nil
 	}

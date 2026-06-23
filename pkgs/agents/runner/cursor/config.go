@@ -6,8 +6,6 @@ import (
 	"github.com/AlexsanderHamir/Hamix/pkgs/agents/runner/adapterkit"
 )
 
-const cursorLogCmd = "taskapi"
-
 // Defaults groups the Cursor adapter's stable identity and invocation values.
 type Defaults struct {
 	Name       string

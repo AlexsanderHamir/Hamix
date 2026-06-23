@@ -3,9 +3,11 @@ package main
 import (
 	"os"
 	"time"
+
+	"github.com/AlexsanderHamir/Hamix/pkgs/tasks/calltrace"
 )
 
-const cmdName = "taskapi"
+const cmdName = calltrace.LogCmd
 
 // Server timeouts: WriteTimeout is left unset so long-lived SSE streams are not cut off.
 // ReadHeaderTimeout mitigates slowloris; IdleTimeout limits idle keep-alive connections.

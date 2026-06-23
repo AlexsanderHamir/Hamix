@@ -1,5 +1,6 @@
 package stats
 
+import "github.com/AlexsanderHamir/Hamix/pkgs/tasks/calltrace"
 import (
 	"context"
 	"fmt"
@@ -20,7 +21,7 @@ type cycleStatusCountRow struct {
 }
 
 func scanCyclesByStatus(ctx context.Context, db *gorm.DB) ([]cycleStatusCountRow, error) {
-	slog.Debug("trace", "cmd", logCmd, "operation", "tasks.store.stats.scanCyclesByStatus")
+	slog.Debug("trace", "cmd", calltrace.LogCmd, "operation", "tasks.store.stats.scanCyclesByStatus")
 	var rows []cycleStatusCountRow
 	if err := db.WithContext(ctx).Model(&domain.TaskCycle{}).
 		Select("status, COUNT(*) AS count").
@@ -37,7 +38,7 @@ type cycleActorCountRow struct {
 }
 
 func scanCyclesByTriggeredBy(ctx context.Context, db *gorm.DB) ([]cycleActorCountRow, error) {
-	slog.Debug("trace", "cmd", logCmd, "operation", "tasks.store.stats.scanCyclesByTriggeredBy")
+	slog.Debug("trace", "cmd", calltrace.LogCmd, "operation", "tasks.store.stats.scanCyclesByTriggeredBy")
 	var rows []cycleActorCountRow
 	if err := db.WithContext(ctx).Model(&domain.TaskCycle{}).
 		Select("triggered_by, COUNT(*) AS count").
@@ -60,7 +61,7 @@ type phaseStatusCountRow struct {
 // the wire so a future column rename trips both this scanner and the
 // frontend heatmap in the same PR.
 func scanPhasesByStatus(ctx context.Context, db *gorm.DB) ([]phaseStatusCountRow, error) {
-	slog.Debug("trace", "cmd", logCmd, "operation", "tasks.store.stats.scanPhasesByStatus")
+	slog.Debug("trace", "cmd", calltrace.LogCmd, "operation", "tasks.store.stats.scanPhasesByStatus")
 	var rows []phaseStatusCountRow
 	if err := db.WithContext(ctx).Model(&domain.TaskCyclePhase{}).
 		Select("phase, status, COUNT(*) AS count").

@@ -1,5 +1,6 @@
 package cycles
 
+import "github.com/AlexsanderHamir/Hamix/pkgs/tasks/calltrace"
 import (
 	"context"
 	"encoding/json"
@@ -36,7 +37,7 @@ const maxPhaseEventDetailRunes = 8192
 // one-shot.
 func StartPhase(ctx context.Context, db *gorm.DB, cycleID string, phase domain.Phase, by domain.Actor) (*domain.TaskCyclePhase, error) {
 	defer kernel.DeferLatency(kernel.OpStartCyclePhase)()
-	slog.Debug("trace", "cmd", logCmd, "operation", "tasks.store.cycles.StartPhase")
+	slog.Debug("trace", "cmd", calltrace.LogCmd, "operation", "tasks.store.cycles.StartPhase")
 	if err := kernel.ValidateActor(by); err != nil {
 		return nil, err
 	}
@@ -131,7 +132,7 @@ func StartPhase(ctx context.Context, db *gorm.DB, cycleID string, phase domain.P
 // replacing the EventPhaseStarted pointer set at StartPhase time.
 func CompletePhase(ctx context.Context, db *gorm.DB, in CompletePhaseInput) (*domain.TaskCyclePhase, error) {
 	defer kernel.DeferLatency(kernel.OpCompleteCyclePhase)()
-	slog.Debug("trace", "cmd", logCmd, "operation", "tasks.store.cycles.CompletePhase")
+	slog.Debug("trace", "cmd", calltrace.LogCmd, "operation", "tasks.store.cycles.CompletePhase")
 	if err := kernel.ValidateActor(in.By); err != nil {
 		return nil, err
 	}
@@ -215,7 +216,7 @@ func CompletePhase(ctx context.Context, db *gorm.DB, in CompletePhaseInput) (*do
 // existing cycle (no phases started yet) is not an error.
 func ListPhasesForCycle(ctx context.Context, db *gorm.DB, cycleID string) ([]domain.TaskCyclePhase, error) {
 	defer kernel.DeferLatency(kernel.OpListCyclePhases)()
-	slog.Debug("trace", "cmd", logCmd, "operation", "tasks.store.cycles.ListPhasesForCycle")
+	slog.Debug("trace", "cmd", calltrace.LogCmd, "operation", "tasks.store.cycles.ListPhasesForCycle")
 	cycleID = strings.TrimSpace(cycleID)
 	if cycleID == "" {
 		return nil, fmt.Errorf("%w: cycle_id", domain.ErrInvalidInput)
@@ -240,7 +241,7 @@ func ListPhasesForCycle(ctx context.Context, db *gorm.DB, cycleID string) ([]dom
 // of the given phase type in cycleID. Empty string means no usable id.
 func LastSessionID(ctx context.Context, db *gorm.DB, cycleID string, phase domain.Phase) (string, error) {
 	defer kernel.DeferLatency(kernel.OpListCyclePhases)()
-	slog.Debug("trace", "cmd", logCmd, "operation", "tasks.store.cycles.LastSessionID",
+	slog.Debug("trace", "cmd", calltrace.LogCmd, "operation", "tasks.store.cycles.LastSessionID",
 		"cycle_id", cycleID, "phase", string(phase))
 	phases, err := ListPhasesForCycle(ctx, db, cycleID)
 	if err != nil {
@@ -262,7 +263,7 @@ func LastSessionID(ctx context.Context, db *gorm.DB, cycleID string, phase domai
 }
 
 func loadPhaseByCycleSeqInTx(tx *gorm.DB, cycleID string, phaseSeq int64) (*domain.TaskCyclePhase, error) {
-	slog.Debug("trace", "cmd", logCmd, "operation", "tasks.store.cycles.loadPhaseByCycleSeqInTx")
+	slog.Debug("trace", "cmd", calltrace.LogCmd, "operation", "tasks.store.cycles.loadPhaseByCycleSeqInTx")
 	var p domain.TaskCyclePhase
 	if err := tx.Where("cycle_id = ? AND phase_seq = ?", cycleID, phaseSeq).First(&p).Error; err != nil {
 		if errors.Is(err, gorm.ErrRecordNotFound) {
@@ -307,7 +308,7 @@ func mergePhaseDetailsJSON(existing datatypes.JSON, incoming []byte) ([]byte, er
 }
 
 func assertNoRunningPhaseForCycleInTx(tx *gorm.DB, cycleID string) error {
-	slog.Debug("trace", "cmd", logCmd, "operation", "tasks.store.cycles.assertNoRunningPhaseForCycleInTx")
+	slog.Debug("trace", "cmd", calltrace.LogCmd, "operation", "tasks.store.cycles.assertNoRunningPhaseForCycleInTx")
 	var n int64
 	if err := tx.Model(&domain.TaskCyclePhase{}).Where("cycle_id = ? AND status = ?", cycleID, domain.PhaseStatusRunning).Count(&n).Error; err != nil {
 		return fmt.Errorf("running phase lookup: %w", err)
@@ -319,7 +320,7 @@ func assertNoRunningPhaseForCycleInTx(tx *gorm.DB, cycleID string) error {
 }
 
 func nextPhaseSeqInTx(tx *gorm.DB, cycleID string) (int64, error) {
-	slog.Debug("trace", "cmd", logCmd, "operation", "tasks.store.cycles.nextPhaseSeqInTx")
+	slog.Debug("trace", "cmd", calltrace.LogCmd, "operation", "tasks.store.cycles.nextPhaseSeqInTx")
 	var max int64
 	if err := tx.Raw(`SELECT COALESCE(MAX(phase_seq), 0) FROM task_cycle_phases WHERE cycle_id = ?`, cycleID).Scan(&max).Error; err != nil {
 		return 0, fmt.Errorf("next phase_seq: %w", err)
@@ -330,7 +331,7 @@ func nextPhaseSeqInTx(tx *gorm.DB, cycleID string) (int64, error) {
 // lastPhaseForCycleInTx returns the highest-seq phase row in this cycle,
 // or nil when none exist.
 func lastPhaseForCycleInTx(tx *gorm.DB, cycleID string) (*domain.TaskCyclePhase, error) {
-	slog.Debug("trace", "cmd", logCmd, "operation", "tasks.store.cycles.lastPhaseForCycleInTx")
+	slog.Debug("trace", "cmd", calltrace.LogCmd, "operation", "tasks.store.cycles.lastPhaseForCycleInTx")
 	var p domain.TaskCyclePhase
 	err := tx.Where("cycle_id = ?", cycleID).Order("phase_seq DESC").Limit(1).First(&p).Error
 	if err != nil {
@@ -345,7 +346,7 @@ func lastPhaseForCycleInTx(tx *gorm.DB, cycleID string) (*domain.TaskCyclePhase,
 // phaseStartedPayload builds the data_json payload for the
 // EventPhaseStarted audit mirror.
 func phaseStartedPayload(cycleID string, p *domain.TaskCyclePhase) ([]byte, error) {
-	slog.Debug("trace", "cmd", logCmd, "operation", "tasks.store.cycles.phaseStartedPayload")
+	slog.Debug("trace", "cmd", calltrace.LogCmd, "operation", "tasks.store.cycles.phaseStartedPayload")
 	out := map[string]any{
 		"cycle_id":  cycleID,
 		"phase":     string(p.Phase),
@@ -365,7 +366,7 @@ func phaseStartedPayload(cycleID string, p *domain.TaskCyclePhase) ([]byte, erro
 // EventPhaseCompleted / EventPhaseFailed / EventPhaseSkipped audit
 // mirror.
 func phaseTerminatedPayload(cycleID string, p *domain.TaskCyclePhase) ([]byte, error) {
-	slog.Debug("trace", "cmd", logCmd, "operation", "tasks.store.cycles.phaseTerminatedPayload")
+	slog.Debug("trace", "cmd", calltrace.LogCmd, "operation", "tasks.store.cycles.phaseTerminatedPayload")
 	out := map[string]any{
 		"cycle_id":  cycleID,
 		"phase":     string(p.Phase),
@@ -449,7 +450,7 @@ func truncateStringRunes(s string, maxRunes int) string {
 // mirrorEventTypeForPhaseStatus picks which audit row type to write
 // when a phase reaches the given terminal status.
 func mirrorEventTypeForPhaseStatus(s domain.PhaseStatus) domain.EventType {
-	slog.Debug("trace", "cmd", logCmd, "operation", "tasks.store.cycles.mirrorEventTypeForPhaseStatus")
+	slog.Debug("trace", "cmd", calltrace.LogCmd, "operation", "tasks.store.cycles.mirrorEventTypeForPhaseStatus")
 	switch s {
 	case domain.PhaseStatusSucceeded:
 		return domain.EventPhaseCompleted

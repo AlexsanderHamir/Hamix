@@ -1,5 +1,6 @@
 package runner
 
+import "github.com/AlexsanderHamir/Hamix/pkgs/tasks/calltrace"
 import (
 	"context"
 	"encoding/json"
@@ -11,8 +12,6 @@ import (
 
 	"github.com/AlexsanderHamir/Hamix/pkgs/tasks/domain"
 )
-
-const runnerLogCmd = "taskapi"
 
 // MaxResultRawOutputBytes caps Result.RawOutput at 64 KiB after the adapter
 // has already redacted secrets. Larger blobs are clipped to the trailing
@@ -185,7 +184,7 @@ var (
 // Adapters MUST redact secrets BEFORE calling NewResult. The runner package
 // only enforces shape and size, not content.
 func NewResult(status domain.PhaseStatus, summary string, details json.RawMessage, rawOutput string) Result {
-	slog.Debug("trace", "cmd", runnerLogCmd, "operation", "runner.NewResult",
+	slog.Debug("trace", "cmd", calltrace.LogCmd, "operation", "runner.NewResult",
 		"status", string(status), "summary_runes", utf8.RuneCountInString(summary),
 		"details_bytes", len(details), "raw_output_bytes", len(rawOutput))
 
@@ -205,7 +204,7 @@ func NewResult(status domain.PhaseStatus, summary string, details json.RawMessag
 // clipSummary clips s to the first MaxSummaryRunes runes. Returns the
 // clipped string and whether clipping occurred.
 func clipSummary(s string) (string, bool) {
-	slog.Debug("trace", "cmd", runnerLogCmd, "operation", "runner.clipSummary")
+	slog.Debug("trace", "cmd", calltrace.LogCmd, "operation", "runner.clipSummary")
 	if utf8.RuneCountInString(s) <= MaxSummaryRunes {
 		return s, false
 	}
@@ -217,7 +216,7 @@ func clipSummary(s string) (string, bool) {
 // snapping forward to the next UTF-8 boundary so the result is valid UTF-8.
 // Returns the clipped string and whether clipping occurred.
 func clipRawOutput(s string) (string, bool) {
-	slog.Debug("trace", "cmd", runnerLogCmd, "operation", "runner.clipRawOutput")
+	slog.Debug("trace", "cmd", calltrace.LogCmd, "operation", "runner.clipRawOutput")
 	if len(s) <= MaxResultRawOutputBytes {
 		return s, false
 	}
@@ -236,7 +235,7 @@ func clipRawOutput(s string) (string, bool) {
 // empty slice are passed through unchanged so "no details" stays
 // distinguishable from "had details but they were lost".
 func clipDetails(d json.RawMessage) (json.RawMessage, bool) {
-	slog.Debug("trace", "cmd", runnerLogCmd, "operation", "runner.clipDetails", "bytes", len(d))
+	slog.Debug("trace", "cmd", calltrace.LogCmd, "operation", "runner.clipDetails", "bytes", len(d))
 	if len(d) == 0 {
 		return d, false
 	}

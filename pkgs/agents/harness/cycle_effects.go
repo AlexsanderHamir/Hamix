@@ -1,5 +1,6 @@
 package harness
 
+import "github.com/AlexsanderHamir/Hamix/pkgs/tasks/calltrace"
 import (
 	"context"
 	"log/slog"
@@ -25,7 +26,7 @@ func (h *Harness) applyExecuteEffects(
 	operatorCancelled bool,
 	streamIdleRecovery bool,
 ) bool {
-	slog.Debug("trace", "cmd", harnessLogCmd, "operation", "agent.harness.Harness.applyExecuteEffects",
+	slog.Debug("trace", "cmd", calltrace.LogCmd, "operation", "agent.harness.Harness.applyExecuteEffects",
 		"task_id", task.ID, "cycle_id", cycle.ID, "continue", effects.ContinueToVerify,
 		"terminate", effects.TerminateFailed, "stop", effects.StopLoop)
 	if effects.StopLoop {
@@ -75,7 +76,7 @@ func (h *Harness) applyVerifyEffects(
 	effects orchestration.VerifyEffects,
 	terminalReason string,
 ) (retryLoop, terminalFailure bool) {
-	slog.Debug("trace", "cmd", harnessLogCmd, "operation", "agent.harness.Harness.applyVerifyEffects",
+	slog.Debug("trace", "cmd", calltrace.LogCmd, "operation", "agent.harness.Harness.applyVerifyEffects",
 		"task_id", task.ID, "cycle_id", cycle.ID)
 	if effects.Tampered {
 		if !h.terminateCycle(parentCtx, state, cycle.TaskID, domain.CycleStatusFailed, verifyTamperedReason) {
@@ -105,7 +106,7 @@ func (h *Harness) applyVerifyDisabledLegacyEffects(
 	state *processState,
 	effects orchestration.VerifyEffects,
 ) (retryLoop, terminalFailure bool) {
-	slog.Debug("trace", "cmd", harnessLogCmd, "operation", "agent.harness.Harness.applyVerifyDisabledLegacyEffects",
+	slog.Debug("trace", "cmd", calltrace.LogCmd, "operation", "agent.harness.Harness.applyVerifyDisabledLegacyEffects",
 		"task_id", task.ID, "cycle_id", cycle.ID)
 	if !effects.TerminalFailure {
 		return false, false
@@ -133,7 +134,7 @@ func (h *Harness) applyFinalizeEffects(
 		return true
 	}
 	h.publish(task.ID, cycle.ID)
-	slog.Info("agent harness run complete", "cmd", harnessLogCmd,
+	slog.Info("agent harness run complete", "cmd", calltrace.LogCmd,
 		"operation", "agent.harness.Harness.runCycleLoop.summary",
 		"task_id", task.ID, "cycle_id", cycle.ID, "attempt_seq", cycle.AttemptSeq,
 		"terminal_cycle_status", string(effects.CycleStatus), "task_status", string(effects.TaskStatus),

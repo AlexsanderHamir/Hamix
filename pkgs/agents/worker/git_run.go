@@ -1,5 +1,6 @@
 package worker
 
+import "github.com/AlexsanderHamir/Hamix/pkgs/tasks/calltrace"
 import (
 	"context"
 	"errors"
@@ -39,7 +40,7 @@ func (w *Worker) gitService() gitwork.Service {
 }
 
 func (w *Worker) resolveTaskGitBinding(ctx context.Context, task *domain.Task) (*taskGitBinding, error) {
-	slog.Debug("trace", "cmd", workerLogCmd, "operation", "agent.worker.Worker.resolveTaskGitBinding",
+	slog.Debug("trace", "cmd", calltrace.LogCmd, "operation", "agent.worker.Worker.resolveTaskGitBinding",
 		"task_id", task.ID)
 	if !taskHasBinding(task) {
 		return nil, fmt.Errorf("missing_task_binding")
@@ -72,7 +73,7 @@ func (w *Worker) worktreeMutex(worktreeID string) *sync.Mutex {
 
 // prepareGitRun locks the worktree, checks out the branch, and sets harness WorkingDir.
 func (w *Worker) prepareGitRun(ctx context.Context, binding *taskGitBinding) (release func(), err error) {
-	slog.Debug("trace", "cmd", workerLogCmd, "operation", "agent.worker.Worker.prepareGitRun",
+	slog.Debug("trace", "cmd", calltrace.LogCmd, "operation", "agent.worker.Worker.prepareGitRun",
 		"worktree_id", binding.WorktreeID)
 	mu := w.worktreeMutex(binding.WorktreeID)
 	mu.Lock()
@@ -100,13 +101,13 @@ func mapGitPrepError(err error) error {
 }
 
 func (w *Worker) abortRunningFromGitPrep(ctx context.Context, taskID string, prepErr error) {
-	slog.Warn("agent worker git prep failed", "cmd", workerLogCmd,
+	slog.Warn("agent worker git prep failed", "cmd", calltrace.LogCmd,
 		"operation", "agent.worker.Worker.abortRunningFromGitPrep",
 		"task_id", taskID, "err", prepErr)
 	failed := domain.StatusFailed
 	if _, err := w.store.Update(ctx, taskID, store.UpdateTaskInput{Status: &failed}, domain.ActorAgent); err != nil {
 		if !errors.Is(err, domain.ErrNotFound) {
-			slog.Warn("agent worker git prep task transition failed", "cmd", workerLogCmd,
+			slog.Warn("agent worker git prep task transition failed", "cmd", calltrace.LogCmd,
 				"operation", "agent.worker.Worker.abortRunningFromGitPrep.err",
 				"task_id", taskID, "err", err)
 		}

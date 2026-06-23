@@ -1,5 +1,6 @@
 package devsim
 
+import "github.com/AlexsanderHamir/Hamix/pkgs/tasks/calltrace"
 import (
 	"context"
 	"log/slog"
@@ -29,7 +30,7 @@ func RunTicker(ctx context.Context, st *store.Store, every time.Duration, opts O
 		for {
 			select {
 			case <-ctx.Done():
-				slog.Info("sse dev ticker stopped", "cmd", logCmd, "operation", "devsim.ticker",
+				slog.Info("sse dev ticker stopped", "cmd", calltrace.LogCmd, "operation", "devsim.ticker",
 					"reason", "ctx_done", "err", ctx.Err())
 				return
 			case <-tick.C:
@@ -42,7 +43,7 @@ func RunTicker(ctx context.Context, st *store.Store, every time.Duration, opts O
 			}
 		}
 	}()
-	slog.Info("sse dev ticker started", "cmd", logCmd, "operation", "devsim.ticker", "interval", every.String(),
+	slog.Info("sse dev ticker started", "cmd", calltrace.LogCmd, "operation", "devsim.ticker", "interval", every.String(),
 		"sync_row", opts.SyncTaskRow, "events_per_tick", opts.EventsPerTick,
 		"user_response", opts.UserResponse, "lifecycle", opts.LifecycleEnabled,
 		"lifecycle_every", opts.LifecycleEveryTicks)

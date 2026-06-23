@@ -1,5 +1,6 @@
 package tasks
 
+import "github.com/AlexsanderHamir/Hamix/pkgs/tasks/calltrace"
 import (
 	"context"
 	"encoding/json"
@@ -26,7 +27,7 @@ type RequestRetryInput struct {
 // with the same pending_retry payload.
 func RequestTaskRetry(ctx context.Context, db *gorm.DB, in RequestRetryInput, by domain.Actor) (*domain.Task, domain.Status, error) {
 	defer kernel.DeferLatency(kernel.OpUpdateTask)()
-	slog.Debug("trace", "cmd", logCmd, "operation", "tasks.store.tasks.RequestTaskRetry", "task_id", in.TaskID)
+	slog.Debug("trace", "cmd", calltrace.LogCmd, "operation", "tasks.store.tasks.RequestTaskRetry", "task_id", in.TaskID)
 	if err := kernel.ValidateActor(by); err != nil {
 		return nil, "", err
 	}

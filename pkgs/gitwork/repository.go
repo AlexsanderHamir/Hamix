@@ -1,5 +1,6 @@
 package gitwork
 
+import "github.com/AlexsanderHamir/Hamix/pkgs/tasks/calltrace"
 import (
 	"context"
 	"log/slog"
@@ -8,7 +9,7 @@ import (
 )
 
 func (s *DefaultService) OpenRepository(ctx context.Context, path string) (*Repository, error) {
-	slog.DebugContext(ctx, "trace", "cmd", logCmd, "operation", "gitwork.OpenRepository")
+	slog.DebugContext(ctx, "trace", "cmd", calltrace.LogCmd, "operation", "gitwork.OpenRepository")
 	abs, err := absPath(path)
 	if err != nil {
 		return nil, err

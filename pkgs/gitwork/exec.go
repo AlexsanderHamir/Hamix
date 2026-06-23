@@ -1,5 +1,6 @@
 package gitwork
 
+import "github.com/AlexsanderHamir/Hamix/pkgs/tasks/calltrace"
 import (
 	"bytes"
 	"context"
@@ -11,8 +12,6 @@ import (
 	"strings"
 	"time"
 )
-
-const logCmd = "taskapi"
 
 const stderrCap = 200
 
@@ -45,7 +44,7 @@ func (s *DefaultService) runGit(ctx context.Context, dir string, args ...string)
 	cmd.Stderr = &stderr
 	err := cmd.Run()
 	slog.DebugContext(ctx, "git command",
-		"cmd", logCmd,
+		"cmd", calltrace.LogCmd,
 		"operation", "gitwork.runGit",
 		"dir", dir,
 		"args", args,

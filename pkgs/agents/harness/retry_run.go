@@ -1,5 +1,6 @@
 package harness
 
+import "github.com/AlexsanderHamir/Hamix/pkgs/tasks/calltrace"
 import (
 	"context"
 	"log/slog"
@@ -20,7 +21,7 @@ func (h *Harness) RunWithRetry(parentCtx context.Context, task *domain.Task, int
 		return
 	}
 	if err := intent.Validate(); err != nil {
-		slog.Warn("agent harness retry intent invalid", "cmd", harnessLogCmd,
+		slog.Warn("agent harness retry intent invalid", "cmd", calltrace.LogCmd,
 			"operation", "agent.harness.Harness.RunWithRetry.invalid_intent",
 			"task_id", task.ID, "err", err)
 		h.resumeSvc().FailTaskAfterRetryPrep(parentCtx, task.ID, "retry_invalid_intent")
@@ -42,7 +43,7 @@ func (h *Harness) runFreshRetry(parentCtx context.Context, task *domain.Task, in
 		if strings.Contains(err.Error(), retryResetAnchorMissing) {
 			reason = retryResetAnchorMissing
 		}
-		slog.Warn("agent harness fresh retry git reset failed", "cmd", harnessLogCmd,
+		slog.Warn("agent harness fresh retry git reset failed", "cmd", calltrace.LogCmd,
 			"operation", "agent.harness.Harness.runFreshRetry.reset_err",
 			"task_id", task.ID, "parent_cycle_id", intent.ParentCycleID, "err", err)
 		h.resumeSvc().FailTaskAfterRetryPrep(parentCtx, task.ID, reason)
@@ -58,7 +59,7 @@ func (h *Harness) runFreshRetry(parentCtx context.Context, task *domain.Task, in
 func (h *Harness) runResumeRetry(parentCtx context.Context, task *domain.Task, intent *domain.PendingRetry) {
 	cp, err := h.loadCheckpointFromParent(parentCtx, intent.ParentCycleID)
 	if err != nil {
-		slog.Warn("agent harness resume retry checkpoint failed", "cmd", harnessLogCmd,
+		slog.Warn("agent harness resume retry checkpoint failed", "cmd", calltrace.LogCmd,
 			"operation", "agent.harness.Harness.runResumeRetry.checkpoint_err",
 			"task_id", task.ID, "parent_cycle_id", intent.ParentCycleID, "err", err)
 		h.resumeSvc().FailTaskAfterRetryPrep(parentCtx, task.ID, "retry_checkpoint_failed")
@@ -84,14 +85,14 @@ func (h *Harness) runResumeRetry(parentCtx context.Context, task *domain.Task, i
 	}
 	if cp.Entry == resumeEntryVerifyOnly {
 		if err := h.resumeSvc().SeedCrossCycleExecuteFromParent(parentCtx, cycle, intent.ParentCycleID); err != nil {
-			slog.Warn("agent harness verify-only resume seed execute failed", "cmd", harnessLogCmd,
+			slog.Warn("agent harness verify-only resume seed execute failed", "cmd", calltrace.LogCmd,
 				"operation", "agent.harness.Harness.runResumeRetry.seed_execute_err",
 				"task_id", task.ID, "parent_cycle_id", intent.ParentCycleID, "err", err)
 			h.resumeSvc().FailTaskAfterRetryPrep(parentCtx, task.ID, "retry_verify_only_seed_failed")
 			return
 		}
 		if err := h.resumeSvc().MirrorParentCriteriaForVerifyOnly(parentCtx, cycle.ID, intent.ParentCycleID); err != nil {
-			slog.Warn("agent harness verify-only resume mirror criteria failed", "cmd", harnessLogCmd,
+			slog.Warn("agent harness verify-only resume mirror criteria failed", "cmd", calltrace.LogCmd,
 				"operation", "agent.harness.Harness.runResumeRetry.mirror_criteria_err",
 				"task_id", task.ID, "parent_cycle_id", intent.ParentCycleID, "err", err)
 			h.resumeSvc().FailTaskAfterRetryPrep(parentCtx, task.ID, "retry_verify_only_mirror_failed")

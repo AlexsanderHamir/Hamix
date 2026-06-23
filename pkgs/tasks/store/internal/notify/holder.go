@@ -5,6 +5,7 @@
 // startup wiring, tests) keep compiling unchanged.
 package notify
 
+import "github.com/AlexsanderHamir/Hamix/pkgs/tasks/calltrace"
 import (
 	"context"
 	"log/slog"
@@ -12,8 +13,6 @@ import (
 
 	"github.com/AlexsanderHamir/Hamix/pkgs/tasks/domain"
 )
-
-const logCmd = "taskapi"
 
 // Notifier is invoked after a task row is committed in the ready state
 // (on create, update, or dev row mirror). Implementations should not
@@ -35,7 +34,7 @@ type Holder struct {
 // Safe to call before serving traffic; typical wiring is once at
 // process startup.
 func (h *Holder) Set(n Notifier) {
-	slog.Debug("trace", "cmd", logCmd, "operation", "tasks.store.notify.Holder.Set", "enabled", n != nil)
+	slog.Debug("trace", "cmd", calltrace.LogCmd, "operation", "tasks.store.notify.Holder.Set", "enabled", n != nil)
 	if h == nil {
 		return
 	}
@@ -51,7 +50,7 @@ func (h *Holder) Set(n Notifier) {
 // request cancellation. Errors are logged with slog.Warn and otherwise
 // swallowed so the store caller never fails because of a notifier.
 func (h *Holder) Notify(ctx context.Context, task domain.Task) {
-	slog.Debug("trace", "cmd", logCmd, "operation", "tasks.store.notify.Holder.Notify", "task_id", task.ID)
+	slog.Debug("trace", "cmd", calltrace.LogCmd, "operation", "tasks.store.notify.Holder.Notify", "task_id", task.ID)
 	if h == nil || task.ID == "" {
 		return
 	}
@@ -66,7 +65,7 @@ func (h *Holder) Notify(ctx context.Context, task domain.Task) {
 		notifyCtx = context.WithoutCancel(ctx)
 	}
 	if err := n.NotifyReadyTask(notifyCtx, task); err != nil {
-		slog.Warn("ready task notifier failed", "cmd", logCmd, "operation", "tasks.store.notify.Holder.Notify",
+		slog.Warn("ready task notifier failed", "cmd", calltrace.LogCmd, "operation", "tasks.store.notify.Holder.Notify",
 			"task_id", task.ID, "err", err)
 	}
 }

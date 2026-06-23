@@ -1,5 +1,6 @@
 package verify
 
+import "github.com/AlexsanderHamir/Hamix/pkgs/tasks/calltrace"
 import (
 	"context"
 	"errors"
@@ -34,7 +35,7 @@ func (s *Service) runLLMVerifyAgent(
 	cmdEvidence []CommandEvidence,
 	verifyAttempt int,
 ) error {
-	slog.Debug("trace", "cmd", logCmd, "operation", "agent.harness.verify.runLLMVerifyAgent",
+	slog.Debug("trace", "cmd", calltrace.LogCmd, "operation", "agent.harness.verify.runLLMVerifyAgent",
 		"task_id", task.ID, "cycle_id", cycle.ID, "locked_passes", len(previouslyPassed))
 	promptText := buildVerifyPrompt(ctx, s, task.ID, snap, cycle.ID, previouslyPassed, selfReport, feedback, cmdEvidence)
 	resumeSessionID := ""
@@ -88,7 +89,7 @@ func buildVerifyPrompt(
 	feedback string,
 	cmdEvidence []CommandEvidence,
 ) string {
-	slog.Debug("trace", "cmd", logCmd, "operation", "agent.harness.verify.buildVerifyPrompt",
+	slog.Debug("trace", "cmd", calltrace.LogCmd, "operation", "agent.harness.verify.buildVerifyPrompt",
 		"task_id", taskID, "cycle_id", cycleID, "locked_passes", len(previouslyPassed))
 	commits := s.loadTaskCommits(ctx, taskID)
 	var b strings.Builder
@@ -136,7 +137,7 @@ func (s *Service) runVerifyCursor(
 	promptText string,
 	resumeSessionID string,
 ) (runner.Result, error) {
-	slog.Debug("trace", "cmd", logCmd, "operation", "agent.harness.verify.runVerifyCursor",
+	slog.Debug("trace", "cmd", calltrace.LogCmd, "operation", "agent.harness.verify.runVerifyCursor",
 		"task_id", task.ID, "cycle_id", cycle.ID, "phase_seq", phaseSeq,
 		"run_correlation_id", runCorrelationID)
 	runCtx, cancelCause := context.WithCancelCause(ctx)
@@ -174,7 +175,7 @@ func (s *Service) runVerifyCursor(
 }
 
 func streamIdleProgressEvent(kind runner.StreamIdleKind, stuck time.Duration) runner.ProgressEvent {
-	slog.Debug("trace", "cmd", logCmd, "operation", "agent.harness.verify.streamIdleProgressEvent",
+	slog.Debug("trace", "cmd", calltrace.LogCmd, "operation", "agent.harness.verify.streamIdleProgressEvent",
 		"kind", int(kind), "stuck_ns", int64(stuck))
 	switch kind {
 	case runner.StreamIdleKillPending:
@@ -211,7 +212,7 @@ func (s *Service) assembleVerdictsFromVerifyReport(
 	selfReport map[string]reports.CriteriaEntry,
 	previouslyPassed map[string]Verdict,
 ) ([]Verdict, error) {
-	slog.Debug("trace", "cmd", logCmd, "operation", "agent.harness.verify.assembleVerdictsFromVerifyReport",
+	slog.Debug("trace", "cmd", calltrace.LogCmd, "operation", "agent.harness.verify.assembleVerdictsFromVerifyReport",
 		"cycle_id", cycleID, "expected", len(expected))
 	vrep, err := reports.ParseVerifyReport(s.reportDir, cycleID, expected)
 	if err != nil {
@@ -246,7 +247,7 @@ func (s *Service) assembleVerdictsFromVerifyReport(
 }
 
 func verifyLLMRunError(runErr error, parseErr error) error {
-	slog.Debug("trace", "cmd", logCmd, "operation", "agent.harness.verify.verifyLLMRunError",
+	slog.Debug("trace", "cmd", calltrace.LogCmd, "operation", "agent.harness.verify.verifyLLMRunError",
 		"has_run_err", runErr != nil, "has_parse_err", parseErr != nil)
 	if runErr != nil && !errors.Is(runErr, runner.ErrStale) {
 		return runErr

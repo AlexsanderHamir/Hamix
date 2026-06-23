@@ -12,6 +12,7 @@
 // stay enforceable in a single hot-path helper.
 package events
 
+import "github.com/AlexsanderHamir/Hamix/pkgs/tasks/calltrace"
 import (
 	"context"
 	"errors"
@@ -24,15 +25,13 @@ import (
 	"gorm.io/gorm"
 )
 
-const logCmd = "taskapi"
-
 // Append inserts one task_events row for taskID after asserting that
 // the parent task exists (so we never leak orphan events). Each call
 // runs in its own transaction so the seq allocator and the insert
 // are observed atomically.
 func Append(ctx context.Context, db *gorm.DB, taskID string, typ domain.EventType, by domain.Actor, data []byte) error {
 	defer kernel.DeferLatency(kernel.OpAppendTaskEvent)()
-	slog.Debug("trace", "cmd", logCmd, "operation", "tasks.store.events.Append")
+	slog.Debug("trace", "cmd", calltrace.LogCmd, "operation", "tasks.store.events.Append")
 	if err := kernel.ValidateActor(by); err != nil {
 		return err
 	}

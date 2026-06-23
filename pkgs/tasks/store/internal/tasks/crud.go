@@ -1,5 +1,6 @@
 package tasks
 
+import "github.com/AlexsanderHamir/Hamix/pkgs/tasks/calltrace"
 import (
 	"context"
 	"errors"
@@ -21,7 +22,7 @@ import (
 // domain.ErrNotFound.
 func Get(ctx context.Context, db *gorm.DB, id string) (*domain.Task, error) {
 	defer kernel.DeferLatency(kernel.OpGetTask)()
-	slog.Debug("trace", "cmd", logCmd, "operation", "tasks.store.tasks.Get")
+	slog.Debug("trace", "cmd", calltrace.LogCmd, "operation", "tasks.store.tasks.Get")
 	id = strings.TrimSpace(id)
 	if id == "" {
 		return nil, fmt.Errorf("%w: id", domain.ErrInvalidInput)
@@ -51,7 +52,7 @@ func Get(ctx context.Context, db *gorm.DB, id string) (*domain.Task, error) {
 // task has Status == StatusReady (the facade does this).
 func Create(ctx context.Context, db *gorm.DB, in CreateInput, by domain.Actor) (*domain.Task, error) {
 	defer kernel.DeferLatency(kernel.OpCreateTask)()
-	slog.Debug("trace", "cmd", logCmd, "operation", "tasks.store.tasks.Create")
+	slog.Debug("trace", "cmd", calltrace.LogCmd, "operation", "tasks.store.tasks.Create")
 	t, title, st, err := buildCreateTaskFromInput(in, by)
 	if err != nil {
 		return nil, err
@@ -77,7 +78,7 @@ func Create(ctx context.Context, db *gorm.DB, in CreateInput, by domain.Actor) (
 // to decide whether to notify the ready-task channel.
 func Update(ctx context.Context, db *gorm.DB, id string, in UpdateInput, by domain.Actor) (*domain.Task, domain.Status, error) {
 	defer kernel.DeferLatency(kernel.OpUpdateTask)()
-	slog.Debug("trace", "cmd", logCmd, "operation", "tasks.store.tasks.Update")
+	slog.Debug("trace", "cmd", calltrace.LogCmd, "operation", "tasks.store.tasks.Update")
 	if err := kernel.ValidateActor(by); err != nil {
 		return nil, "", err
 	}
@@ -127,7 +128,7 @@ func Update(ctx context.Context, db *gorm.DB, id string, in UpdateInput, by doma
 // Delete removes the task at id in one transaction.
 func Delete(ctx context.Context, db *gorm.DB, id string, by domain.Actor) (deletedIDs []string, err error) {
 	defer kernel.DeferLatency(kernel.OpDeleteTask)()
-	slog.Debug("trace", "cmd", logCmd, "operation", "tasks.store.tasks.Delete")
+	slog.Debug("trace", "cmd", calltrace.LogCmd, "operation", "tasks.store.tasks.Delete")
 	if err := kernel.ValidateActor(by); err != nil {
 		return nil, err
 	}
@@ -153,7 +154,7 @@ func Delete(ctx context.Context, db *gorm.DB, id string, by domain.Actor) (delet
 }
 
 func buildCreateTaskFromInput(in CreateInput, by domain.Actor) (t *domain.Task, title string, st domain.Status, err error) {
-	slog.Debug("trace", "cmd", logCmd, "operation", "tasks.store.tasks.buildCreateTaskFromInput")
+	slog.Debug("trace", "cmd", calltrace.LogCmd, "operation", "tasks.store.tasks.buildCreateTaskFromInput")
 	if err := kernel.ValidateActor(by); err != nil {
 		return nil, "", "", err
 	}
@@ -225,7 +226,7 @@ func normalizeOptionalID(id *string) *string {
 }
 
 func createTaskInTx(tx *gorm.DB, t *domain.Task, in CreateInput, by domain.Actor, title string, st domain.Status) error {
-	slog.Debug("trace", "cmd", logCmd, "operation", "tasks.store.tasks.createTaskInTx")
+	slog.Debug("trace", "cmd", calltrace.LogCmd, "operation", "tasks.store.tasks.createTaskInTx")
 	if t.ProjectID != nil {
 		var n int64
 		if err := tx.Model(&domain.Project{}).Where("id = ? AND status = ?", *t.ProjectID, domain.ProjectStatusActive).Count(&n).Error; err != nil {
@@ -284,7 +285,7 @@ func createTaskInTx(tx *gorm.DB, t *domain.Task, in CreateInput, by domain.Actor
 // across GORM + SQLite + Postgres drivers. Kept private because it
 // only matters inside Create's transaction.
 func isDuplicatePrimaryKey(err error) bool {
-	slog.Debug("trace", "cmd", logCmd, "operation", "tasks.store.tasks.isDuplicatePrimaryKey")
+	slog.Debug("trace", "cmd", calltrace.LogCmd, "operation", "tasks.store.tasks.isDuplicatePrimaryKey")
 	if err == nil {
 		return false
 	}

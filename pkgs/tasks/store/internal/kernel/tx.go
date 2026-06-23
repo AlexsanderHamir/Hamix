@@ -1,5 +1,6 @@
 package kernel
 
+import "github.com/AlexsanderHamir/Hamix/pkgs/tasks/calltrace"
 import (
 	"errors"
 	"fmt"
@@ -14,7 +15,7 @@ import (
 // cycles, and any future subpackage that needs the task row before
 // branching on its current state.
 func LoadTask(tx *gorm.DB, id string) (*domain.Task, error) {
-	slog.Debug("trace", "cmd", LogCmd, "operation", "tasks.store.kernel.LoadTask")
+	slog.Debug("trace", "cmd", calltrace.LogCmd, "operation", "tasks.store.kernel.LoadTask")
 	var t domain.Task
 	if err := tx.Where("id = ?", id).First(&t).Error; err != nil {
 		if errors.Is(err, gorm.ErrRecordNotFound) {

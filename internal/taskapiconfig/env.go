@@ -8,10 +8,12 @@ import (
 	"strconv"
 	"strings"
 	"time"
+
+	"github.com/AlexsanderHamir/Hamix/pkgs/tasks/calltrace"
 )
 
 const (
-	cmdLog = "taskapi"
+	cmdLog = calltrace.LogCmd
 
 	// EnvUserTaskAgentQueueCap is HAMIX_USER_TASK_AGENT_QUEUE_CAP (bounded ready-task queue depth).
 	EnvUserTaskAgentQueueCap = "HAMIX_USER_TASK_AGENT_QUEUE_CAP"
@@ -51,7 +53,7 @@ const DefaultSSETestTickerInterval = defaultSSETestInterval
 
 // EnvTruthy reports whether key is set to a common “true” value (1, true, yes, on; case-insensitive).
 func EnvTruthy(key string) bool {
-	slog.Debug("trace", "cmd", cmdLog, "operation", "taskapiconfig.EnvTruthy", "key", key)
+	slog.Debug("trace", "cmd", calltrace.LogCmd, "operation", "taskapiconfig.EnvTruthy", "key", key)
 	v := strings.ToLower(strings.TrimSpace(os.Getenv(key)))
 	switch v {
 	case "1", "true", "yes", "on":
@@ -64,7 +66,7 @@ func EnvTruthy(key string) bool {
 // MigrateEnabled reports whether taskapi should run postgres.Migrate at startup.
 // The -migrate flag wins when true; otherwise HAMIX_MIGRATE is consulted.
 func MigrateEnabled(migrateFlag bool) bool {
-	slog.Debug("trace", "cmd", cmdLog, "operation", "taskapiconfig.MigrateEnabled")
+	slog.Debug("trace", "cmd", calltrace.LogCmd, "operation", "taskapiconfig.MigrateEnabled")
 	if migrateFlag {
 		return true
 	}
@@ -74,7 +76,7 @@ func MigrateEnabled(migrateFlag bool) bool {
 // LoggingMinimized returns true when file logging and most slog output should be off:
 // disableFlag, or HAMIX_DISABLE_LOGGING truthy. Only slog.Error is emitted (to stderr) in that mode.
 func LoggingMinimized(disableFlag bool) bool {
-	slog.Debug("trace", "cmd", cmdLog, "operation", "taskapiconfig.LoggingMinimized")
+	slog.Debug("trace", "cmd", calltrace.LogCmd, "operation", "taskapiconfig.LoggingMinimized")
 	if disableFlag {
 		return true
 	}
@@ -85,7 +87,7 @@ func LoggingMinimized(disableFlag bool) bool {
 // If flagLevel is non-empty after TrimSpace, it wins; otherwise HAMIX_LOG_LEVEL is used.
 // When both are empty, the default is info.
 func ResolveLogLevel(flagLevel string) (slog.Level, error) {
-	slog.Debug("trace", "cmd", cmdLog, "operation", "taskapiconfig.ResolveLogLevel")
+	slog.Debug("trace", "cmd", calltrace.LogCmd, "operation", "taskapiconfig.ResolveLogLevel")
 	s := strings.TrimSpace(flagLevel)
 	if s == "" {
 		s = strings.TrimSpace(os.Getenv(EnvLogLevel))
@@ -109,7 +111,7 @@ func ResolveLogLevel(flagLevel string) (slog.Level, error) {
 
 // ListenHost returns the HTTP bind host: flagHost if set, else HAMIX_LISTEN_HOST, else 127.0.0.1.
 func ListenHost(flagHost string) string {
-	slog.Debug("trace", "cmd", cmdLog, "operation", "taskapiconfig.ListenHost")
+	slog.Debug("trace", "cmd", calltrace.LogCmd, "operation", "taskapiconfig.ListenHost")
 	s := strings.TrimSpace(flagHost)
 	if s == "" {
 		s = strings.TrimSpace(os.Getenv(EnvListenHost))
@@ -123,14 +125,14 @@ func ListenHost(flagHost string) string {
 // SSETestTickerInterval returns how often the SSE dev ticker runs (HAMIX_SSE_TEST_INTERVAL).
 // Default is 3s when unset. Set to 0 to disable the ticker. Values below 1s fall back to the default.
 func SSETestTickerInterval() time.Duration {
-	slog.Debug("trace", "cmd", cmdLog, "operation", "taskapiconfig.SSETestTickerInterval")
+	slog.Debug("trace", "cmd", calltrace.LogCmd, "operation", "taskapiconfig.SSETestTickerInterval")
 	raw := strings.TrimSpace(os.Getenv(EnvSSETestInterval))
 	if raw == "" {
 		return defaultSSETestInterval
 	}
 	d, err := time.ParseDuration(raw)
 	if err != nil {
-		slog.Warn("invalid HAMIX_SSE_TEST_INTERVAL, using default", "cmd", cmdLog, "operation", "taskapiconfig.sse_test",
+		slog.Warn("invalid HAMIX_SSE_TEST_INTERVAL, using default", "cmd", calltrace.LogCmd, "operation", "taskapiconfig.sse_test",
 			"default", defaultSSETestInterval.String(), "err", err)
 		return defaultSSETestInterval
 	}
@@ -138,7 +140,7 @@ func SSETestTickerInterval() time.Duration {
 		return 0
 	}
 	if d < time.Second {
-		slog.Warn("HAMIX_SSE_TEST_INTERVAL below 1s, using default", "cmd", cmdLog, "operation", "taskapiconfig.sse_test",
+		slog.Warn("HAMIX_SSE_TEST_INTERVAL below 1s, using default", "cmd", calltrace.LogCmd, "operation", "taskapiconfig.sse_test",
 			"default", defaultSSETestInterval.String(), "value", raw)
 		return defaultSSETestInterval
 	}
@@ -152,7 +154,7 @@ func SSETestTickerInterval() time.Duration {
 // can pass the result straight into worker.Options.ReportDir without
 // a nil/empty guard.
 func WorkerReportDir() string {
-	slog.Debug("trace", "cmd", cmdLog, "operation", "taskapiconfig.WorkerReportDir")
+	slog.Debug("trace", "cmd", calltrace.LogCmd, "operation", "taskapiconfig.WorkerReportDir")
 	s := strings.TrimSpace(os.Getenv(EnvWorkerReportDir))
 	if s != "" {
 		return s
@@ -163,14 +165,14 @@ func WorkerReportDir() string {
 // UserTaskAgentQueueCap returns the in-memory ready-task queue depth.
 // When the env var is unset, invalid, or non-positive, the default (256) is used.
 func UserTaskAgentQueueCap() int {
-	slog.Debug("trace", "cmd", cmdLog, "operation", "taskapiconfig.UserTaskAgentQueueCap")
+	slog.Debug("trace", "cmd", calltrace.LogCmd, "operation", "taskapiconfig.UserTaskAgentQueueCap")
 	s := strings.TrimSpace(os.Getenv(EnvUserTaskAgentQueueCap))
 	if s == "" {
 		return defaultUserTaskAgentQueueCap
 	}
 	n, err := strconv.Atoi(s)
 	if err != nil || n < 1 {
-		slog.Warn("invalid env, using default ready-task queue cap", "cmd", cmdLog, "operation", "taskapiconfig.agent_queue_env",
+		slog.Warn("invalid env, using default ready-task queue cap", "cmd", calltrace.LogCmd, "operation", "taskapiconfig.agent_queue_env",
 			"var", EnvUserTaskAgentQueueCap, "value", s, "default", defaultUserTaskAgentQueueCap)
 		return defaultUserTaskAgentQueueCap
 	}

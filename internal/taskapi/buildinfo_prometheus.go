@@ -1,5 +1,6 @@
 package taskapi
 
+import "github.com/AlexsanderHamir/Hamix/pkgs/tasks/calltrace"
 import (
 	"errors"
 	"log/slog"
@@ -14,7 +15,7 @@ var registerBuildInfo sync.Once
 // RegisterBuildInfoGauge registers taskapi_build_info{version,revision,go_version}=1
 // on the default Prometheus registry. Labels come from version.PrometheusBuildInfoLabels.
 func RegisterBuildInfoGauge() {
-	slog.Debug("trace", "cmd", cmdLog, "operation", "taskapi.RegisterBuildInfoGauge")
+	slog.Debug("trace", "cmd", calltrace.LogCmd, "operation", "taskapi.RegisterBuildInfoGauge")
 	registerBuildInfo.Do(func() {
 		vec := prometheus.NewGaugeVec(
 			prometheus.GaugeOpts{
@@ -29,12 +30,12 @@ func RegisterBuildInfoGauge() {
 			if errors.As(err, &dup) {
 				return
 			}
-			slog.Warn("prometheus build_info register failed", "cmd", cmdLog, "operation", "taskapi.RegisterBuildInfoGauge", "err", err)
+			slog.Warn("prometheus build_info register failed", "cmd", calltrace.LogCmd, "operation", "taskapi.RegisterBuildInfoGauge", "err", err)
 			return
 		}
 		v, r, gv := version.PrometheusBuildInfoLabels()
 		vec.WithLabelValues(v, r, gv).Set(1)
-		slog.Info("prometheus build_info registered", "cmd", cmdLog, "operation", "taskapi.RegisterBuildInfoGauge",
+		slog.Info("prometheus build_info registered", "cmd", calltrace.LogCmd, "operation", "taskapi.RegisterBuildInfoGauge",
 			"version", v, "revision", r, "go_version", gv)
 	})
 }

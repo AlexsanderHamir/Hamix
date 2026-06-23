@@ -1,5 +1,6 @@
 package taskapi
 
+import "github.com/AlexsanderHamir/Hamix/pkgs/tasks/calltrace"
 import (
 	"errors"
 	"fmt"
@@ -14,7 +15,7 @@ var registerAgentQueueMetrics sync.Once
 
 // registerAgentQueueMetricsOn registers depth and capacity gauges on reg (tests may use a dedicated registry).
 func registerAgentQueueMetricsOn(reg prometheus.Registerer, q *agents.MemoryQueue) error {
-	slog.Debug("trace", "cmd", cmdLog, "operation", "taskapi.registerAgentQueueMetricsOn")
+	slog.Debug("trace", "cmd", calltrace.LogCmd, "operation", "taskapi.registerAgentQueueMetricsOn")
 	if q == nil {
 		return fmt.Errorf("taskapi: nil MemoryQueue")
 	}
@@ -43,7 +44,7 @@ func registerAgentQueueMetricsOn(reg prometheus.Registerer, q *agents.MemoryQueu
 // RegisterAgentQueueMetrics registers taskapi_agent_queue_depth and taskapi_agent_queue_capacity
 // on the default Prometheus registry. Safe to call once per process.
 func RegisterAgentQueueMetrics(q *agents.MemoryQueue) {
-	slog.Debug("trace", "cmd", cmdLog, "operation", "taskapi.RegisterAgentQueueMetrics")
+	slog.Debug("trace", "cmd", calltrace.LogCmd, "operation", "taskapi.RegisterAgentQueueMetrics")
 	if q == nil {
 		return
 	}
@@ -53,10 +54,10 @@ func RegisterAgentQueueMetrics(q *agents.MemoryQueue) {
 			if errors.As(err, &dup) {
 				return
 			}
-			slog.Warn("prometheus agent queue metrics register failed", "cmd", cmdLog, "operation", "taskapi.RegisterAgentQueueMetrics", "err", err)
+			slog.Warn("prometheus agent queue metrics register failed", "cmd", calltrace.LogCmd, "operation", "taskapi.RegisterAgentQueueMetrics", "err", err)
 			return
 		}
-		slog.Info("prometheus agent queue metrics registered", "cmd", cmdLog, "operation", "taskapi.RegisterAgentQueueMetrics",
+		slog.Info("prometheus agent queue metrics registered", "cmd", calltrace.LogCmd, "operation", "taskapi.RegisterAgentQueueMetrics",
 			"capacity", q.BufferCap())
 	})
 }

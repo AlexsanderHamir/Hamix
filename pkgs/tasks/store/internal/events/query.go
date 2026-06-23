@@ -1,5 +1,6 @@
 package events
 
+import "github.com/AlexsanderHamir/Hamix/pkgs/tasks/calltrace"
 import (
 	"context"
 	"errors"
@@ -17,7 +18,7 @@ import (
 // ordering reference for tests; pagination should go through PageCursor.
 func List(ctx context.Context, db *gorm.DB, taskID string) ([]domain.TaskEvent, error) {
 	defer kernel.DeferLatency(kernel.OpListTaskEvents)()
-	slog.Debug("trace", "cmd", logCmd, "operation", "tasks.store.events.List")
+	slog.Debug("trace", "cmd", calltrace.LogCmd, "operation", "tasks.store.events.List")
 	taskID = strings.TrimSpace(taskID)
 	if taskID == "" {
 		return nil, fmt.Errorf("%w: id", domain.ErrInvalidInput)
@@ -36,7 +37,7 @@ func List(ctx context.Context, db *gorm.DB, taskID string) ([]domain.TaskEvent, 
 // Count returns how many audit rows exist for taskID.
 func Count(ctx context.Context, db *gorm.DB, taskID string) (int64, error) {
 	defer kernel.DeferLatency(kernel.OpTaskEventCount)()
-	slog.Debug("trace", "cmd", logCmd, "operation", "tasks.store.events.Count")
+	slog.Debug("trace", "cmd", calltrace.LogCmd, "operation", "tasks.store.events.Count")
 	taskID = strings.TrimSpace(taskID)
 	if taskID == "" {
 		return 0, fmt.Errorf("%w: id", domain.ErrInvalidInput)
@@ -53,7 +54,7 @@ func Count(ctx context.Context, db *gorm.DB, taskID string) (int64, error) {
 // Used by the SSE backfill cursor and reconcile to skip already-shipped rows.
 func LastSeq(ctx context.Context, db *gorm.DB, taskID string) (int64, error) {
 	defer kernel.DeferLatency(kernel.OpLastEventSeq)()
-	slog.Debug("trace", "cmd", logCmd, "operation", "tasks.store.events.LastSeq")
+	slog.Debug("trace", "cmd", calltrace.LogCmd, "operation", "tasks.store.events.LastSeq")
 	taskID = strings.TrimSpace(taskID)
 	if taskID == "" {
 		return 0, fmt.Errorf("%w: id", domain.ErrInvalidInput)
@@ -73,7 +74,7 @@ func LastSeq(ctx context.Context, db *gorm.DB, taskID string) (int64, error) {
 // domain.ErrNotFound when the row does not exist.
 func Get(ctx context.Context, db *gorm.DB, taskID string, seq int64) (*domain.TaskEvent, error) {
 	defer kernel.DeferLatency(kernel.OpGetTaskEvent)()
-	slog.Debug("trace", "cmd", logCmd, "operation", "tasks.store.events.Get")
+	slog.Debug("trace", "cmd", calltrace.LogCmd, "operation", "tasks.store.events.Get")
 	taskID = strings.TrimSpace(taskID)
 	if taskID == "" {
 		return nil, fmt.Errorf("%w: id", domain.ErrInvalidInput)

@@ -1,5 +1,6 @@
 package stats
 
+import "github.com/AlexsanderHamir/Hamix/pkgs/tasks/calltrace"
 import (
 	"context"
 	"encoding/json"
@@ -141,7 +142,7 @@ type runnerStatsExecDetailsProjection struct {
 // execute phase still contribute to the first three maps; they
 // simply don't populate ByRunnerModelResolved.
 func scanRunnerStats(ctx context.Context, db *gorm.DB) (RunnerStats, error) {
-	slog.Debug("trace", "cmd", logCmd, "operation", "tasks.store.stats.scanRunnerStats")
+	slog.Debug("trace", "cmd", calltrace.LogCmd, "operation", "tasks.store.stats.scanRunnerStats")
 	rows, err := queryRunnerStatsRows(ctx, db)
 	if err != nil {
 		return RunnerStats{}, err
@@ -189,7 +190,7 @@ func decodeRunnerStatsAttribution(r runnerStatsRow) (runner, model, resolved str
 		var p runnerStatsMetaProjection
 		if err := json.Unmarshal(r.Meta, &p); err != nil {
 			slog.Debug("runner stats meta decode skipped",
-				"cmd", logCmd,
+				"cmd", calltrace.LogCmd,
 				"operation", "tasks.store.stats.scanRunnerStats.decode_skip",
 				"err", err)
 		} else {
@@ -204,7 +205,7 @@ func decodeRunnerStatsAttribution(r runnerStatsRow) (runner, model, resolved str
 		var d runnerStatsExecDetailsProjection
 		if err := json.Unmarshal(r.ExecDetails, &d); err != nil {
 			slog.Debug("runner stats exec details decode skipped",
-				"cmd", logCmd,
+				"cmd", calltrace.LogCmd,
 				"operation", "tasks.store.stats.scanRunnerStats.exec_details_decode_skip",
 				"err", err)
 		} else {
@@ -319,7 +320,7 @@ type bucketAcc struct {
 // slice is sorted in place once at the top so the second call is
 // O(1) on the already-sorted data.
 func bucketFromAcc(b *bucketAcc) RunnerBucket {
-	slog.Debug("trace", "cmd", logCmd, "operation", "tasks.store.stats.bucketFromAcc",
+	slog.Debug("trace", "cmd", calltrace.LogCmd, "operation", "tasks.store.stats.bucketFromAcc",
 		"by_status_keys", len(b.byStatus), "succeeded_samples", len(b.succeededDur))
 	out := RunnerBucket{
 		ByStatus:  b.byStatus,
@@ -339,7 +340,7 @@ func bucketFromAcc(b *bucketAcc) RunnerBucket {
 // "p50/p95 of succeeded runs" mental model operators expect from
 // dashboards. Empty slice returns 0.
 func percentileSorted(sorted []float64, q float64) float64 {
-	slog.Debug("trace", "cmd", logCmd, "operation", "tasks.store.stats.percentileSorted",
+	slog.Debug("trace", "cmd", calltrace.LogCmd, "operation", "tasks.store.stats.percentileSorted",
 		"n", len(sorted), "q", q)
 	n := len(sorted)
 	if n == 0 {

@@ -5,6 +5,7 @@
 // contract — see handler_http_list_stats_contract_test.go.
 package stats
 
+import "github.com/AlexsanderHamir/Hamix/pkgs/tasks/calltrace"
 import (
 	"context"
 	"log/slog"
@@ -14,8 +15,6 @@ import (
 	"github.com/AlexsanderHamir/Hamix/pkgs/tasks/store/internal/kernel"
 	"gorm.io/gorm"
 )
-
-const logCmd = "taskapi"
 
 // TaskStats holds the global task counters. Tests pin the invariant
 // that every map field is non-nil (empty `{}` on empty database, never
@@ -78,7 +77,7 @@ var allPhases = []domain.Phase{
 // handler_http_list_stats_contract_test.go.
 func Get(ctx context.Context, db *gorm.DB) (TaskStats, error) {
 	defer kernel.DeferLatency(kernel.OpTaskStats)()
-	slog.Debug("trace", "cmd", logCmd, "operation", "tasks.store.stats.Get")
+	slog.Debug("trace", "cmd", calltrace.LogCmd, "operation", "tasks.store.stats.Get")
 	r, err := scanTotals(ctx, db, time.Now().UTC())
 	if err != nil {
 		return TaskStats{}, err

@@ -1,5 +1,6 @@
 package agents
 
+import "github.com/AlexsanderHamir/Hamix/pkgs/tasks/calltrace"
 import (
 	"context"
 	"errors"
@@ -9,8 +10,6 @@ import (
 
 	"github.com/AlexsanderHamir/Hamix/pkgs/tasks/domain"
 )
-
-const agentsLogCmd = "taskapi"
 
 // MemoryQueue is a bounded FIFO of full domain.Task snapshots for in-process agent consumers.
 // It tracks task ids currently buffered so reconciliation can skip ids already present.
@@ -24,7 +23,7 @@ type MemoryQueue struct {
 // NewMemoryQueue returns a queue that holds at most cap tasks without blocking producers.
 // cap must be positive.
 func NewMemoryQueue(cap int) *MemoryQueue {
-	slog.Debug("trace", "cmd", agentsLogCmd, "operation", "agents.NewMemoryQueue", "cap", cap)
+	slog.Debug("trace", "cmd", calltrace.LogCmd, "operation", "agents.NewMemoryQueue", "cap", cap)
 	if cap <= 0 {
 		panic("agents: NewMemoryQueue cap must be positive")
 	}
@@ -59,7 +58,7 @@ func (q *MemoryQueue) BufferDepth() int {
 // After reading each task, call AckAfterRecv with the task id so reconciliation
 // can treat the buffer as drained for that id.
 func (q *MemoryQueue) Recv() <-chan domain.Task {
-	slog.Debug("trace", "cmd", agentsLogCmd, "operation", "agents.MemoryQueue.Recv")
+	slog.Debug("trace", "cmd", calltrace.LogCmd, "operation", "agents.MemoryQueue.Recv")
 	if q == nil {
 		return nil
 	}
@@ -68,7 +67,7 @@ func (q *MemoryQueue) Recv() <-chan domain.Task {
 
 // AckAfterRecv drops id from the queue's pending set. Call once after consuming a task from Recv.
 func (q *MemoryQueue) AckAfterRecv(id string) {
-	slog.Debug("trace", "cmd", agentsLogCmd, "operation", "agents.MemoryQueue.AckAfterRecv", "task_id", id)
+	slog.Debug("trace", "cmd", calltrace.LogCmd, "operation", "agents.MemoryQueue.AckAfterRecv", "task_id", id)
 	if q == nil || id == "" {
 		return
 	}
@@ -79,7 +78,7 @@ func (q *MemoryQueue) AckAfterRecv(id string) {
 
 // Receive waits for the next task, removes it from the pending set, and returns it.
 func (q *MemoryQueue) Receive(ctx context.Context) (domain.Task, error) {
-	slog.Debug("trace", "cmd", agentsLogCmd, "operation", "agents.MemoryQueue.Receive")
+	slog.Debug("trace", "cmd", calltrace.LogCmd, "operation", "agents.MemoryQueue.Receive")
 	if q == nil {
 		return domain.Task{}, errors.New("agents: nil MemoryQueue")
 	}
@@ -96,7 +95,7 @@ func (q *MemoryQueue) Receive(ctx context.Context) (domain.Task, error) {
 
 // tryEnqueue adds task to the buffer when there is capacity and the id is not already pending.
 func (q *MemoryQueue) tryEnqueue(task domain.Task) error {
-	slog.Debug("trace", "cmd", agentsLogCmd, "operation", "agents.MemoryQueue.tryEnqueue", "task_id", task.ID)
+	slog.Debug("trace", "cmd", calltrace.LogCmd, "operation", "agents.MemoryQueue.tryEnqueue", "task_id", task.ID)
 	if q == nil {
 		return nil
 	}
@@ -121,7 +120,7 @@ func (q *MemoryQueue) tryEnqueue(task domain.Task) error {
 // It never blocks: if the buffer is full it returns ErrQueueFull. If the task id
 // is already pending it returns ErrAlreadyQueued.
 func (q *MemoryQueue) NotifyReadyTask(ctx context.Context, task domain.Task) error {
-	slog.Debug("trace", "cmd", agentsLogCmd, "operation", "agents.MemoryQueue.NotifyReadyTask", "task_id", task.ID)
+	slog.Debug("trace", "cmd", calltrace.LogCmd, "operation", "agents.MemoryQueue.NotifyReadyTask", "task_id", task.ID)
 	if err := notifyContextErr(ctx); err != nil {
 		return err
 	}
@@ -129,7 +128,7 @@ func (q *MemoryQueue) NotifyReadyTask(ctx context.Context, task domain.Task) err
 }
 
 func notifyContextErr(ctx context.Context) error {
-	slog.Debug("trace", "cmd", agentsLogCmd, "operation", "agents.notifyContextErr")
+	slog.Debug("trace", "cmd", calltrace.LogCmd, "operation", "agents.notifyContextErr")
 	if ctx == nil {
 		return nil
 	}

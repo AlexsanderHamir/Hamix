@@ -1,5 +1,6 @@
 package store
 
+import "github.com/AlexsanderHamir/Hamix/pkgs/tasks/calltrace"
 import (
 	"context"
 	"errors"
@@ -20,7 +21,7 @@ type TaskGitContext struct {
 
 // GetGitWorktreeByID loads a worktree row by primary key.
 func (s *Store) GetGitWorktreeByID(ctx context.Context, worktreeID string) (domain.GitWorktree, error) {
-	slog.Debug("trace", "cmd", storeLogCmd, "operation", "tasks.store.GetGitWorktreeByID")
+	slog.Debug("trace", "cmd", calltrace.LogCmd, "operation", "tasks.store.GetGitWorktreeByID")
 	worktreeID = strings.TrimSpace(worktreeID)
 	if worktreeID == "" {
 		return domain.GitWorktree{}, fmt.Errorf("%w: worktree_id required", domain.ErrInvalidInput)
@@ -38,7 +39,7 @@ func (s *Store) GetGitWorktreeByID(ctx context.Context, worktreeID string) (doma
 
 // GetGitBranchByID loads a branch row by primary key.
 func (s *Store) GetGitBranchByID(ctx context.Context, branchID string) (domain.GitBranch, error) {
-	slog.Debug("trace", "cmd", storeLogCmd, "operation", "tasks.store.GetGitBranchByID")
+	slog.Debug("trace", "cmd", calltrace.LogCmd, "operation", "tasks.store.GetGitBranchByID")
 	branchID = strings.TrimSpace(branchID)
 	if branchID == "" {
 		return domain.GitBranch{}, fmt.Errorf("%w: branch_id required", domain.ErrInvalidInput)
@@ -56,7 +57,7 @@ func (s *Store) GetGitBranchByID(ctx context.Context, branchID string) (domain.G
 
 // GetGitRepositoryByID loads a repository row by primary key.
 func (s *Store) GetGitRepositoryByID(ctx context.Context, repoID string) (domain.GitRepository, error) {
-	slog.Debug("trace", "cmd", storeLogCmd, "operation", "tasks.store.GetGitRepositoryByID")
+	slog.Debug("trace", "cmd", calltrace.LogCmd, "operation", "tasks.store.GetGitRepositoryByID")
 	repoID = strings.TrimSpace(repoID)
 	if repoID == "" {
 		return domain.GitRepository{}, fmt.Errorf("%w: repository_id required", domain.ErrInvalidInput)
@@ -75,7 +76,7 @@ func (s *Store) GetGitRepositoryByID(ctx context.Context, repoID string) (domain
 // ValidateTaskGitBinding checks worktree and branch belong to the same repository
 // and, when projectID is set, that the repository belongs to that project.
 func (s *Store) ValidateTaskGitBinding(ctx context.Context, projectID *string, worktreeID, branchID string) error {
-	slog.Debug("trace", "cmd", storeLogCmd, "operation", "tasks.store.ValidateTaskGitBinding")
+	slog.Debug("trace", "cmd", calltrace.LogCmd, "operation", "tasks.store.ValidateTaskGitBinding")
 	worktreeID = strings.TrimSpace(worktreeID)
 	branchID = strings.TrimSpace(branchID)
 	if worktreeID == "" && branchID == "" {
@@ -110,7 +111,7 @@ func (s *Store) ValidateTaskGitBinding(ctx context.Context, projectID *string, w
 
 // ResolveTaskGitContext loads the worktree path and branch name for a bound task.
 func (s *Store) ResolveTaskGitContext(ctx context.Context, worktreeID, branchID string) (TaskGitContext, error) {
-	slog.Debug("trace", "cmd", storeLogCmd, "operation", "tasks.store.ResolveTaskGitContext")
+	slog.Debug("trace", "cmd", calltrace.LogCmd, "operation", "tasks.store.ResolveTaskGitContext")
 	if err := s.ValidateTaskGitBinding(ctx, nil, worktreeID, branchID); err != nil {
 		return TaskGitContext{}, err
 	}
@@ -127,7 +128,7 @@ func (s *Store) ResolveTaskGitContext(ctx context.Context, worktreeID, branchID 
 
 // AgentWorkerGitIdle reports whether the worker should stay idle for git registration reasons.
 func (s *Store) AgentWorkerGitIdle(ctx context.Context) (idle bool, reason string, err error) {
-	slog.Debug("trace", "cmd", storeLogCmd, "operation", "tasks.store.AgentWorkerGitIdle")
+	slog.Debug("trace", "cmd", calltrace.LogCmd, "operation", "tasks.store.AgentWorkerGitIdle")
 	var repoCount int64
 	if err := s.db.WithContext(ctx).Model(&domain.GitRepository{}).Count(&repoCount).Error; err != nil {
 		return false, "", fmt.Errorf("count git repositories: %w", err)

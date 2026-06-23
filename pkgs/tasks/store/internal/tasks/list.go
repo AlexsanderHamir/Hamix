@@ -1,5 +1,6 @@
 package tasks
 
+import "github.com/AlexsanderHamir/Hamix/pkgs/tasks/calltrace"
 import (
 	"context"
 	"errors"
@@ -17,7 +18,7 @@ import (
 // and offset to [0, +inf).
 func ListFlat(ctx context.Context, db *gorm.DB, limit, offset int, filter *ListFilter) ([]domain.Task, error) {
 	defer kernel.DeferLatency(kernel.OpListFlat)()
-	slog.Debug("trace", "cmd", logCmd, "operation", "tasks.store.tasks.ListFlat")
+	slog.Debug("trace", "cmd", calltrace.LogCmd, "operation", "tasks.store.tasks.ListFlat")
 	if limit <= 0 {
 		limit = 50
 	}
@@ -52,7 +53,7 @@ func ListFlat(ctx context.Context, db *gorm.DB, limit, offset int, filter *ListF
 // desc, id desc).
 func ListFlatAfter(ctx context.Context, db *gorm.DB, limit int, afterID string) ([]domain.Task, bool, error) {
 	defer kernel.DeferLatency(kernel.OpListFlatAfter)()
-	slog.Debug("trace", "cmd", logCmd, "operation", "tasks.store.tasks.ListFlatAfter")
+	slog.Debug("trace", "cmd", calltrace.LogCmd, "operation", "tasks.store.tasks.ListFlatAfter")
 	afterID = strings.TrimSpace(afterID)
 	if afterID == "" {
 		return nil, false, fmt.Errorf("%w: after_id", domain.ErrInvalidInput)
@@ -94,7 +95,7 @@ func ListFlatAfter(ctx context.Context, db *gorm.DB, limit int, afterID string) 
 // ListFlatPage returns a flat page with hasMore using limit+1 fetch.
 // Rows are ordered newest-first by task_created time.
 func ListFlatPage(ctx context.Context, db *gorm.DB, limit, offset int, filter *ListFilter) ([]domain.Task, bool, error) {
-	slog.Debug("trace", "cmd", logCmd, "operation", "tasks.store.tasks.ListFlatPage")
+	slog.Debug("trace", "cmd", calltrace.LogCmd, "operation", "tasks.store.tasks.ListFlatPage")
 	if limit <= 0 {
 		limit = 50
 	}

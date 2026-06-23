@@ -1,5 +1,6 @@
 package systemhealth
 
+import "github.com/AlexsanderHamir/Hamix/pkgs/tasks/calltrace"
 import (
 	"fmt"
 	"log/slog"
@@ -10,8 +11,6 @@ import (
 	"github.com/prometheus/client_golang/prometheus"
 	dto "github.com/prometheus/client_model/go"
 )
-
-const logCmd = "taskapi"
 
 // Build identifies the running binary. Mirrors the labels of the
 // taskapi_build_info gauge so the JSON value matches what scrapers
@@ -110,7 +109,7 @@ type Gather interface {
 // fully-zeroed but still well-formed Snapshot when Gather fails so
 // callers can log+respond rather than 500ing the operator UI.
 func Read(g Gather, now time.Time) Snapshot {
-	slog.Debug("trace", "cmd", logCmd, "operation", "systemhealth.Read")
+	slog.Debug("trace", "cmd", calltrace.LogCmd, "operation", "systemhealth.Read")
 	snap := newZeroSnapshot(now)
 	snap.Build = readBuildFromVersion()
 	if g == nil {
@@ -118,7 +117,7 @@ func Read(g Gather, now time.Time) Snapshot {
 	}
 	mfs, err := g.Gather()
 	if err != nil {
-		slog.Warn("systemhealth gather failed", "cmd", logCmd, "operation", "systemhealth.Read", "err", err)
+		slog.Warn("systemhealth gather failed", "cmd", calltrace.LogCmd, "operation", "systemhealth.Read", "err", err)
 		return snap
 	}
 	for _, mf := range mfs {
@@ -130,7 +129,7 @@ func Read(g Gather, now time.Time) Snapshot {
 // ReadDefault is the production entry point: it scrapes
 // prometheus.DefaultGatherer at the supplied wall clock.
 func ReadDefault(now time.Time) Snapshot {
-	slog.Debug("trace", "cmd", logCmd, "operation", "systemhealth.ReadDefault")
+	slog.Debug("trace", "cmd", calltrace.LogCmd, "operation", "systemhealth.ReadDefault")
 	return Read(prometheus.DefaultGatherer, now)
 }
 

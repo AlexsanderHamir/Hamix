@@ -1,5 +1,6 @@
 package harness
 
+import "github.com/AlexsanderHamir/Hamix/pkgs/tasks/calltrace"
 import (
 	"context"
 	"log/slog"
@@ -14,8 +15,6 @@ import (
 	"github.com/AlexsanderHamir/Hamix/pkgs/agents/harness/internal/verify"
 	"github.com/AlexsanderHamir/Hamix/pkgs/agents/runner"
 )
-
-const harnessLogCmd = "taskapi"
 
 // CancelledByOperatorReason is the cycle/phase termination reason
 // recorded when an operator hits "Cancel current run" from the
@@ -134,7 +133,7 @@ func (h *Harness) CancelCurrentRun() bool {
 	}
 	h.cancelByOperator.Store(true)
 	cancel()
-	slog.Info("agent harness run cancelled by operator", "cmd", harnessLogCmd,
+	slog.Info("agent harness run cancelled by operator", "cmd", calltrace.LogCmd,
 		"operation", "agent.harness.Harness.CancelCurrentRun.fired")
 	return true
 }

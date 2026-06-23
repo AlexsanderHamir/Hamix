@@ -1,5 +1,6 @@
 package taskapi
 
+import "github.com/AlexsanderHamir/Hamix/pkgs/tasks/calltrace"
 import (
 	"errors"
 	"fmt"
@@ -81,7 +82,7 @@ type workerMetricsAdapter struct {
 // only, so a future fan-out of model identifiers cannot blow up the
 // existing runner-only series operators have alerts on.
 func (a *workerMetricsAdapter) RecordRun(runnerName, model, terminalStatus string, d time.Duration) {
-	slog.Debug("trace", "cmd", cmdLog, "operation", "taskapi.workerMetricsAdapter.RecordRun",
+	slog.Debug("trace", "cmd", calltrace.LogCmd, "operation", "taskapi.workerMetricsAdapter.RecordRun",
 		"runner", runnerName, "model", model,
 		"terminal_status", terminalStatus, "duration_ms", d.Milliseconds())
 	if a == nil {
@@ -97,7 +98,7 @@ func (a *workerMetricsAdapter) RecordRun(runnerName, model, terminalStatus strin
 // label is a stable two-value enum ("passed"/"failed") so dashboards
 // can sum across without enumerating the label space.
 func (a *workerMetricsAdapter) RecordVerifyVerdict(kind domain.VerifierKind, passed bool) {
-	slog.Debug("trace", "cmd", cmdLog, "operation", "taskapi.workerMetricsAdapter.RecordVerifyVerdict",
+	slog.Debug("trace", "cmd", calltrace.LogCmd, "operation", "taskapi.workerMetricsAdapter.RecordVerifyVerdict",
 		"verifier_kind", string(kind), "passed", passed)
 	if a == nil {
 		return
@@ -113,7 +114,7 @@ func (a *workerMetricsAdapter) RecordVerifyVerdict(kind domain.VerifierKind, pas
 // verify phase (StartPhase(verify) → CompletePhase). Skipped cycles
 // (verification disabled or no checklist items) do not call this.
 func (a *workerMetricsAdapter) ObserveVerifyDuration(d time.Duration) {
-	slog.Debug("trace", "cmd", cmdLog, "operation", "taskapi.workerMetricsAdapter.ObserveVerifyDuration",
+	slog.Debug("trace", "cmd", calltrace.LogCmd, "operation", "taskapi.workerMetricsAdapter.ObserveVerifyDuration",
 		"duration_ms", d.Milliseconds())
 	if a == nil {
 		return
@@ -126,7 +127,7 @@ func (a *workerMetricsAdapter) ObserveVerifyDuration(d time.Duration) {
 // skipped). Histogram so we can read p99/p95 retries-per-cycle drift
 // over time without standing up a per-cycle gauge.
 func (a *workerMetricsAdapter) ObserveVerifyRetries(n int) {
-	slog.Debug("trace", "cmd", cmdLog, "operation", "taskapi.workerMetricsAdapter.ObserveVerifyRetries",
+	slog.Debug("trace", "cmd", calltrace.LogCmd, "operation", "taskapi.workerMetricsAdapter.ObserveVerifyRetries",
 		"retries", n)
 	if a == nil {
 		return
@@ -139,7 +140,7 @@ func (a *workerMetricsAdapter) ObserveVerifyRetries(n int) {
 // without leaking globals). Returns the adapter ready for
 // worker.Options.Metrics.
 func registerAgentWorkerMetricsOn(reg prometheus.Registerer) (*workerMetricsAdapter, error) {
-	slog.Debug("trace", "cmd", cmdLog, "operation", "taskapi.registerAgentWorkerMetricsOn")
+	slog.Debug("trace", "cmd", calltrace.LogCmd, "operation", "taskapi.registerAgentWorkerMetricsOn")
 	runs := prometheus.NewCounterVec(prometheus.CounterOpts{
 		Namespace: "hamix",
 		Name:      "agent_runs_total",
@@ -233,7 +234,7 @@ func registerAgentWorkerMetricsOn(reg prometheus.Registerer) (*workerMetricsAdap
 // inspect; production callers go through RegisterAgentWorkerMetrics
 // which absorbs that case via sync.Once.
 func RegisterAgentWorkerMetricsOn(reg prometheus.Registerer) (worker.RunMetrics, error) {
-	slog.Debug("trace", "cmd", cmdLog, "operation", "taskapi.RegisterAgentWorkerMetricsOn")
+	slog.Debug("trace", "cmd", calltrace.LogCmd, "operation", "taskapi.RegisterAgentWorkerMetricsOn")
 	a, err := registerAgentWorkerMetricsOn(reg)
 	if err != nil {
 		return nil, err
@@ -252,7 +253,7 @@ func RegisterAgentWorkerMetricsOn(reg prometheus.Registerer) (worker.RunMetrics,
 // re-init in tests) the call is a no-op and returns nil without
 // logging at error level so taskapi can keep running.
 func RegisterAgentWorkerMetrics() worker.RunMetrics {
-	slog.Debug("trace", "cmd", cmdLog, "operation", "taskapi.RegisterAgentWorkerMetrics")
+	slog.Debug("trace", "cmd", calltrace.LogCmd, "operation", "taskapi.RegisterAgentWorkerMetrics")
 	var adapter *workerMetricsAdapter
 	registerAgentWorkerMetrics.Do(func() {
 		a, err := registerAgentWorkerMetricsOn(prometheus.DefaultRegisterer)
@@ -262,12 +263,12 @@ func RegisterAgentWorkerMetrics() worker.RunMetrics {
 				return
 			}
 			slog.Warn("prometheus agent worker metrics register failed",
-				"cmd", cmdLog, "operation", "taskapi.RegisterAgentWorkerMetrics", "err", err)
+				"cmd", calltrace.LogCmd, "operation", "taskapi.RegisterAgentWorkerMetrics", "err", err)
 			return
 		}
 		adapter = a
 		slog.Info("prometheus agent worker metrics registered",
-			"cmd", cmdLog, "operation", "taskapi.RegisterAgentWorkerMetrics")
+			"cmd", calltrace.LogCmd, "operation", "taskapi.RegisterAgentWorkerMetrics")
 	})
 	if adapter == nil {
 		return nil

@@ -1,5 +1,6 @@
 package events
 
+import "github.com/AlexsanderHamir/Hamix/pkgs/tasks/calltrace"
 import (
 	"context"
 	"encoding/json"
@@ -24,7 +25,7 @@ const (
 // nil / empty / "null" all map to a nil slice (legacy rows that pre-date
 // the thread column); a malformed payload is surfaced as an error.
 func parseResponseThreadJSON(raw []byte) ([]domain.ResponseThreadEntry, error) {
-	slog.Debug("trace", "cmd", logCmd, "operation", "tasks.store.events.parseResponseThreadJSON")
+	slog.Debug("trace", "cmd", calltrace.LogCmd, "operation", "tasks.store.events.parseResponseThreadJSON")
 	if len(raw) == 0 || string(raw) == "null" {
 		return nil, nil
 	}
@@ -40,7 +41,7 @@ func parseResponseThreadJSON(raw []byte) ([]domain.ResponseThreadEntry, error) {
 // populated. Re-exported by the public store facade so handlers and
 // devsim tests keep saying store.ThreadEntriesForDisplay unchanged.
 func ThreadEntriesForDisplay(ev *domain.TaskEvent) []domain.ResponseThreadEntry {
-	slog.Debug("trace", "cmd", logCmd, "operation", "tasks.store.events.ThreadEntriesForDisplay")
+	slog.Debug("trace", "cmd", calltrace.LogCmd, "operation", "tasks.store.events.ThreadEntriesForDisplay")
 	if ev == nil {
 		return nil
 	}
@@ -74,7 +75,7 @@ func ThreadEntriesForDisplay(ev *domain.TaskEvent) []domain.ResponseThreadEntry 
 // single-writer model.
 func AppendResponseMessage(ctx context.Context, db *gorm.DB, taskID string, seq int64, text string, by domain.Actor) error {
 	defer kernel.DeferLatency(kernel.OpAppendTaskEventResponse)()
-	slog.Debug("trace", "cmd", logCmd, "operation", "tasks.store.events.AppendResponseMessage")
+	slog.Debug("trace", "cmd", calltrace.LogCmd, "operation", "tasks.store.events.AppendResponseMessage")
 	if by != domain.ActorUser && by != domain.ActorAgent {
 		return fmt.Errorf("%w: by must be user or agent", domain.ErrInvalidInput)
 	}
@@ -99,7 +100,7 @@ func AppendResponseMessage(ctx context.Context, db *gorm.DB, taskID string, seq 
 }
 
 func appendResponseMessageInTx(tx *gorm.DB, tid string, seq int64, text string, by domain.Actor) error {
-	slog.Debug("trace", "cmd", logCmd, "operation", "tasks.store.events.appendResponseMessageInTx")
+	slog.Debug("trace", "cmd", calltrace.LogCmd, "operation", "tasks.store.events.appendResponseMessageInTx")
 	var ev domain.TaskEvent
 	q := tx.Where("task_id = ? AND seq = ?", tid, seq)
 	if tx.Dialector.Name() != "sqlite" {

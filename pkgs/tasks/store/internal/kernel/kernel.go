@@ -17,4 +17,3 @@ package kernel
 // Sub-packages that wrap kernel helpers should set their own cmd label
 // when they wish to differentiate; the kernel itself is considered part
 // of the same operational surface.
-const LogCmd = "taskapi"

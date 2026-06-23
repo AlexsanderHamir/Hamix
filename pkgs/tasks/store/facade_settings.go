@@ -1,5 +1,6 @@
 package store
 
+import "github.com/AlexsanderHamir/Hamix/pkgs/tasks/calltrace"
 import (
 	"context"
 	"log/slog"
@@ -23,7 +24,7 @@ type SettingsPatch = settings.Patch
 // value. There is no env-var fallback — the DB row is the only source
 // of truth.
 func (s *Store) GetSettings(ctx context.Context) (AppSettings, error) {
-	slog.Debug("trace", "cmd", storeLogCmd, "operation", "tasks.store.GetSettings")
+	slog.Debug("trace", "cmd", calltrace.LogCmd, "operation", "tasks.store.GetSettings")
 	return settings.Get(ctx, s.db)
 }
 
@@ -32,6 +33,6 @@ func (s *Store) GetSettings(ctx context.Context) (AppSettings, error) {
 // handler) can echo the canonical row in the PATCH response without an
 // extra round-trip.
 func (s *Store) UpdateSettings(ctx context.Context, patch SettingsPatch) (AppSettings, error) {
-	slog.Debug("trace", "cmd", storeLogCmd, "operation", "tasks.store.UpdateSettings")
+	slog.Debug("trace", "cmd", calltrace.LogCmd, "operation", "tasks.store.UpdateSettings")
 	return settings.Update(ctx, s.db, patch)
 }

@@ -1,5 +1,6 @@
 package tasks
 
+import "github.com/AlexsanderHamir/Hamix/pkgs/tasks/calltrace"
 import (
 	"fmt"
 	"log/slog"
@@ -12,7 +13,7 @@ import (
 )
 
 func applyTaskPatches(tx *gorm.DB, taskID string, cur *domain.Task, in UpdateInput, by domain.Actor, seq int64) error {
-	slog.Debug("trace", "cmd", logCmd, "operation", "tasks.store.tasks.applyTaskPatches")
+	slog.Debug("trace", "cmd", calltrace.LogCmd, "operation", "tasks.store.tasks.applyTaskPatches")
 	seqPtr := seq
 	if err := applyTitlePatch(tx, taskID, cur, in.Title, by, &seqPtr); err != nil {
 		return err
@@ -60,7 +61,7 @@ func applyTaskPatches(tx *gorm.DB, taskID string, cur *domain.Task, in UpdateInp
 }
 
 func applyPendingRetryPatch(cur *domain.Task, set *domain.PendingRetry, clear bool) error {
-	slog.Debug("trace", "cmd", logCmd, "operation", "tasks.store.tasks.applyPendingRetryPatch")
+	slog.Debug("trace", "cmd", calltrace.LogCmd, "operation", "tasks.store.tasks.applyPendingRetryPatch")
 	if set != nil && clear {
 		return fmt.Errorf("%w: pending_retry set and clear", domain.ErrInvalidInput)
 	}
@@ -80,7 +81,7 @@ func applyPendingRetryPatch(cur *domain.Task, set *domain.PendingRetry, clear bo
 }
 
 func applyGitBindingPatch(cur *domain.Task, worktreeID, branchID *string) error {
-	slog.Debug("trace", "cmd", logCmd, "operation", "tasks.store.tasks.applyGitBindingPatch")
+	slog.Debug("trace", "cmd", calltrace.LogCmd, "operation", "tasks.store.tasks.applyGitBindingPatch")
 	if worktreeID == nil && branchID == nil {
 		return nil
 	}
@@ -108,7 +109,7 @@ func applyGitBindingPatch(cur *domain.Task, worktreeID, branchID *string) error 
 }
 
 func applyProjectContextSelectionPatch(tx *gorm.DB, cur *domain.Task, ids *[]string) error {
-	slog.Debug("trace", "cmd", logCmd, "operation", "tasks.store.tasks.applyProjectContextSelectionPatch")
+	slog.Debug("trace", "cmd", calltrace.LogCmd, "operation", "tasks.store.tasks.applyProjectContextSelectionPatch")
 	if ids == nil {
 		return nil
 	}
@@ -129,7 +130,7 @@ func applyProjectContextSelectionPatch(tx *gorm.DB, cur *domain.Task, ids *[]str
 }
 
 func applyProjectPatch(tx *gorm.DB, cur *domain.Task, project *ProjectFieldPatch) error {
-	slog.Debug("trace", "cmd", logCmd, "operation", "tasks.store.tasks.applyProjectPatch")
+	slog.Debug("trace", "cmd", calltrace.LogCmd, "operation", "tasks.store.tasks.applyProjectPatch")
 	if project == nil {
 		return nil
 	}
@@ -157,7 +158,7 @@ func applyProjectPatch(tx *gorm.DB, cur *domain.Task, project *ProjectFieldPatch
 const maxTaskCursorModelLen = 256
 
 func applyCursorModelPatch(cur *domain.Task, p *string) error {
-	slog.Debug("trace", "cmd", logCmd, "operation", "tasks.store.tasks.applyCursorModelPatch")
+	slog.Debug("trace", "cmd", calltrace.LogCmd, "operation", "tasks.store.tasks.applyCursorModelPatch")
 	if p == nil {
 		return nil
 	}
@@ -170,7 +171,7 @@ func applyCursorModelPatch(cur *domain.Task, p *string) error {
 }
 
 func applyPickupNotBeforePatch(cur *domain.Task, p *PickupNotBeforePatch) error {
-	slog.Debug("trace", "cmd", logCmd, "operation", "tasks.store.tasks.applyPickupNotBeforePatch")
+	slog.Debug("trace", "cmd", calltrace.LogCmd, "operation", "tasks.store.tasks.applyPickupNotBeforePatch")
 	if p == nil {
 		return nil
 	}
@@ -184,7 +185,7 @@ func applyPickupNotBeforePatch(cur *domain.Task, p *PickupNotBeforePatch) error 
 }
 
 func applyTitlePatch(tx *gorm.DB, taskID string, cur *domain.Task, title *string, by domain.Actor, seq *int64) error {
-	slog.Debug("trace", "cmd", logCmd, "operation", "tasks.store.tasks.applyTitlePatch")
+	slog.Debug("trace", "cmd", calltrace.LogCmd, "operation", "tasks.store.tasks.applyTitlePatch")
 	if title == nil {
 		return nil
 	}
@@ -208,7 +209,7 @@ func applyTitlePatch(tx *gorm.DB, taskID string, cur *domain.Task, title *string
 }
 
 func applyInitialPromptPatch(tx *gorm.DB, taskID string, cur *domain.Task, prompt *string, by domain.Actor, seq *int64) error {
-	slog.Debug("trace", "cmd", logCmd, "operation", "tasks.store.tasks.applyInitialPromptPatch")
+	slog.Debug("trace", "cmd", calltrace.LogCmd, "operation", "tasks.store.tasks.applyInitialPromptPatch")
 	if prompt == nil {
 		return nil
 	}
@@ -228,7 +229,7 @@ func applyInitialPromptPatch(tx *gorm.DB, taskID string, cur *domain.Task, promp
 }
 
 func applyPriorityPatch(tx *gorm.DB, taskID string, cur *domain.Task, pr *domain.Priority, by domain.Actor, seq *int64) error {
-	slog.Debug("trace", "cmd", logCmd, "operation", "tasks.store.tasks.applyPriorityPatch")
+	slog.Debug("trace", "cmd", calltrace.LogCmd, "operation", "tasks.store.tasks.applyPriorityPatch")
 	if pr == nil {
 		return nil
 	}
@@ -251,7 +252,7 @@ func applyPriorityPatch(tx *gorm.DB, taskID string, cur *domain.Task, pr *domain
 }
 
 func applyStatusPatch(tx *gorm.DB, taskID string, cur *domain.Task, st *domain.Status, by domain.Actor, seq *int64) error {
-	slog.Debug("trace", "cmd", logCmd, "operation", "tasks.store.tasks.applyStatusPatch")
+	slog.Debug("trace", "cmd", calltrace.LogCmd, "operation", "tasks.store.tasks.applyStatusPatch")
 	if st == nil {
 		return nil
 	}

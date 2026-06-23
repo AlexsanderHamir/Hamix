@@ -1,5 +1,6 @@
 package devmirror
 
+import "github.com/AlexsanderHamir/Hamix/pkgs/tasks/calltrace"
 import (
 	"context"
 	"encoding/json"
@@ -14,8 +15,6 @@ import (
 	"gorm.io/gorm"
 )
 
-const logCmd = "taskapi"
-
 // ApplyTaskRowMirror updates the task row to reflect a synthetic
 // audit event without appending further audit rows. Returns the
 // reloaded task and its previous status so the caller can fire the
@@ -24,7 +23,7 @@ const logCmd = "taskapi"
 // pkgs/tasks/devsim).
 func ApplyTaskRowMirror(ctx context.Context, db *gorm.DB, taskID string, typ domain.EventType, data []byte) (*domain.Task, domain.Status, error) {
 	defer kernel.DeferLatency(kernel.OpApplyDevTaskRowMirror)()
-	slog.Debug("trace", "cmd", logCmd, "operation", "tasks.store.devmirror.ApplyTaskRowMirror")
+	slog.Debug("trace", "cmd", calltrace.LogCmd, "operation", "tasks.store.devmirror.ApplyTaskRowMirror")
 	taskID = strings.TrimSpace(taskID)
 	if taskID == "" {
 		return nil, "", fmt.Errorf("%w: id", domain.ErrInvalidInput)
@@ -69,7 +68,7 @@ func ApplyTaskRowMirror(ctx context.Context, db *gorm.DB, taskID string, typ dom
 // callers cannot accidentally enumerate the entire task table.
 func ListDevsimTasks(ctx context.Context, db *gorm.DB, idLikePattern string) ([]domain.Task, error) {
 	defer kernel.DeferLatency(kernel.OpListDevsimTasks)()
-	slog.Debug("trace", "cmd", logCmd, "operation", "tasks.store.devmirror.ListDevsimTasks")
+	slog.Debug("trace", "cmd", calltrace.LogCmd, "operation", "tasks.store.devmirror.ListDevsimTasks")
 	p := strings.TrimSpace(idLikePattern)
 	if p == "" {
 		return nil, fmt.Errorf("%w: pattern", domain.ErrInvalidInput)
@@ -82,7 +81,7 @@ func ListDevsimTasks(ctx context.Context, db *gorm.DB, idLikePattern string) ([]
 }
 
 func rowUpdates(tx *gorm.DB, taskID string, t *domain.Task, typ domain.EventType, data []byte) (map[string]any, error) {
-	slog.Debug("trace", "cmd", logCmd, "operation", "tasks.store.devmirror.rowUpdates")
+	slog.Debug("trace", "cmd", calltrace.LogCmd, "operation", "tasks.store.devmirror.rowUpdates")
 	switch typ {
 	case domain.EventStatusChanged:
 		return statusChanged(tx, taskID, t, data)
@@ -102,7 +101,7 @@ func rowUpdates(tx *gorm.DB, taskID string, t *domain.Task, typ domain.EventType
 }
 
 func statusChanged(tx *gorm.DB, taskID string, t *domain.Task, data []byte) (map[string]any, error) {
-	slog.Debug("trace", "cmd", logCmd, "operation", "tasks.store.devmirror.statusChanged")
+	slog.Debug("trace", "cmd", calltrace.LogCmd, "operation", "tasks.store.devmirror.statusChanged")
 	m, err := pairFromJSON(data)
 	if err != nil {
 		return nil, err
@@ -121,7 +120,7 @@ func statusChanged(tx *gorm.DB, taskID string, t *domain.Task, data []byte) (map
 }
 
 func priorityChanged(t *domain.Task, data []byte) (map[string]any, error) {
-	slog.Debug("trace", "cmd", logCmd, "operation", "tasks.store.devmirror.priorityChanged")
+	slog.Debug("trace", "cmd", calltrace.LogCmd, "operation", "tasks.store.devmirror.priorityChanged")
 	m, err := pairFromJSON(data)
 	if err != nil {
 		return nil, err
@@ -135,7 +134,7 @@ func priorityChanged(t *domain.Task, data []byte) (map[string]any, error) {
 }
 
 func promptOrTitle(t *domain.Task, data []byte, field string) (map[string]any, error) {
-	slog.Debug("trace", "cmd", logCmd, "operation", "tasks.store.devmirror.promptOrTitle")
+	slog.Debug("trace", "cmd", calltrace.LogCmd, "operation", "tasks.store.devmirror.promptOrTitle")
 	m, err := pairFromJSON(data)
 	if err != nil {
 		return nil, err
@@ -156,7 +155,7 @@ func promptOrTitle(t *domain.Task, data []byte, field string) (map[string]any, e
 }
 
 func taskCompleted(tx *gorm.DB, taskID string, t *domain.Task) (map[string]any, error) {
-	slog.Debug("trace", "cmd", logCmd, "operation", "tasks.store.devmirror.taskCompleted")
+	slog.Debug("trace", "cmd", calltrace.LogCmd, "operation", "tasks.store.devmirror.taskCompleted")
 	if err := checklist.ValidateCanMarkDoneInTx(tx, taskID); err != nil {
 		return nil, err
 	}
@@ -168,7 +167,7 @@ func taskCompleted(tx *gorm.DB, taskID string, t *domain.Task) (map[string]any, 
 }
 
 func taskFailed(t *domain.Task) map[string]any {
-	slog.Debug("trace", "cmd", logCmd, "operation", "tasks.store.devmirror.taskFailed")
+	slog.Debug("trace", "cmd", calltrace.LogCmd, "operation", "tasks.store.devmirror.taskFailed")
 	up := map[string]any{}
 	if t.Status != domain.StatusFailed {
 		up["status"] = string(domain.StatusFailed)
@@ -177,7 +176,7 @@ func taskFailed(t *domain.Task) map[string]any {
 }
 
 func pairFromJSON(data []byte) (map[string]string, error) {
-	slog.Debug("trace", "cmd", logCmd, "operation", "tasks.store.devmirror.pairFromJSON")
+	slog.Debug("trace", "cmd", calltrace.LogCmd, "operation", "tasks.store.devmirror.pairFromJSON")
 	var m map[string]string
 	if len(data) == 0 || string(data) == "null" {
 		return m, nil

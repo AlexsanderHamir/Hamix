@@ -1,5 +1,6 @@
 package checklist
 
+import "github.com/AlexsanderHamir/Hamix/pkgs/tasks/calltrace"
 import (
 	"context"
 	"fmt"
@@ -20,7 +21,7 @@ type CriteriaFlagChange struct {
 // IsChecklistCompleteInTx reports whether every checklist item for subjectTaskID
 // has a verified completion row.
 func IsChecklistCompleteInTx(tx *gorm.DB, subjectTaskID string) (bool, error) {
-	slog.Debug("trace", "cmd", logCmd, "operation", "tasks.store.checklist.IsChecklistCompleteInTx")
+	slog.Debug("trace", "cmd", calltrace.LogCmd, "operation", "tasks.store.checklist.IsChecklistCompleteInTx")
 	err := validateChecklistCompleteInTx(tx, subjectTaskID)
 	if err == nil {
 		return true, nil
@@ -31,7 +32,7 @@ func IsChecklistCompleteInTx(tx *gorm.DB, subjectTaskID string) (bool, error) {
 // syncCriteriaSatisfiedAtInTx updates tasks.criteria_satisfied_at when
 // checklist completeness transitions. Called inside checklist completion TX.
 func syncCriteriaSatisfiedAtInTx(tx *gorm.DB, subjectTaskID string, by domain.Actor) (CriteriaFlagChange, error) {
-	slog.Debug("trace", "cmd", logCmd, "operation", "tasks.store.checklist.syncCriteriaSatisfiedAtInTx")
+	slog.Debug("trace", "cmd", calltrace.LogCmd, "operation", "tasks.store.checklist.syncCriteriaSatisfiedAtInTx")
 	var change CriteriaFlagChange
 	var t domain.Task
 	if err := tx.Where("id = ?", subjectTaskID).First(&t).Error; err != nil {
@@ -63,7 +64,7 @@ func syncCriteriaSatisfiedAtInTx(tx *gorm.DB, subjectTaskID string, by domain.Ac
 // BackfillCriteriaSatisfiedAt sets criteria_satisfied_at for tasks whose
 // checklist is already complete. Idempotent migration helper.
 func BackfillCriteriaSatisfiedAt(ctx context.Context, db *gorm.DB) error {
-	slog.Debug("trace", "cmd", logCmd, "operation", "tasks.store.checklist.BackfillCriteriaSatisfiedAt")
+	slog.Debug("trace", "cmd", calltrace.LogCmd, "operation", "tasks.store.checklist.BackfillCriteriaSatisfiedAt")
 	var ids []string
 	if err := db.WithContext(ctx).Model(&domain.Task{}).Where("criteria_satisfied_at IS NULL").Pluck("id", &ids).Error; err != nil {
 		return fmt.Errorf("list tasks for criteria backfill: %w", err)

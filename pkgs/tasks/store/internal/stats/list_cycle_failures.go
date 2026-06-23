@@ -1,5 +1,6 @@
 package stats
 
+import "github.com/AlexsanderHamir/Hamix/pkgs/tasks/calltrace"
 import (
 	"context"
 	"fmt"
@@ -49,7 +50,7 @@ type ListCycleFailuresResult struct {
 // pagination; reason sorts load up to reasonSortFetchCap newest rows,
 // enrich, sort in memory, then slice for offset/limit.
 func ListCycleFailures(ctx context.Context, db *gorm.DB, in ListCycleFailuresInput) (ListCycleFailuresResult, error) {
-	slog.Debug("trace", "cmd", logCmd, "operation", "tasks.store.stats.ListCycleFailures",
+	slog.Debug("trace", "cmd", calltrace.LogCmd, "operation", "tasks.store.stats.ListCycleFailures",
 		"limit", in.Limit, "offset", in.Offset, "sort", in.Sort)
 	limit := in.Limit
 	if limit <= 0 {

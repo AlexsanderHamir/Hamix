@@ -1,5 +1,6 @@
 package agentsmoke
 
+import "github.com/AlexsanderHamir/Hamix/pkgs/tasks/calltrace"
 import (
 	"fmt"
 	"io/fs"
@@ -10,8 +11,6 @@ import (
 	"strings"
 	"testing"
 )
-
-const agentsmokeLogCmd = "taskapi"
 
 // targetFilename is the canonical filename Cursor must create inside
 // Fixture.WorkingDir. Pinned so the prompt and the assertion logic
@@ -45,7 +44,7 @@ type Fixture struct {
 // Fixture is safe to use for the rest of the test; teardown of the
 // underlying directory is owned by the testing package.
 func NewFixture(t *testing.T) *Fixture {
-	slog.Debug("trace", "cmd", agentsmokeLogCmd, "operation", "agentsmoke.NewFixture")
+	slog.Debug("trace", "cmd", calltrace.LogCmd, "operation", "agentsmoke.NewFixture")
 	t.Helper()
 	dir := t.TempDir()
 	target := filepath.Join(dir, targetFilename)
@@ -63,7 +62,7 @@ func NewFixture(t *testing.T) *Fixture {
 // non-deterministic by construction, so the smoke asserts on the
 // outcome (the bytes on disk) rather than on Cursor's process.
 func buildPrompt(target string) string {
-	slog.Debug("trace", "cmd", agentsmokeLogCmd, "operation", "agentsmoke.buildPrompt", "target", target)
+	slog.Debug("trace", "cmd", calltrace.LogCmd, "operation", "agentsmoke.buildPrompt", "target", target)
 	return fmt.Sprintf(`Create a single file at exactly the absolute path:
 
   %s
@@ -87,7 +86,7 @@ the only state that matters is the file on disk.`, target)
 // runner.Request.WorkingDir (Stage 2) or via app_settings.repo_root
 // on the worker process (Stage 3 — see docs/configuration.md).
 func (f *Fixture) WorkingDir() string {
-	slog.Debug("trace", "cmd", agentsmokeLogCmd, "operation", "agentsmoke.Fixture.WorkingDir")
+	slog.Debug("trace", "cmd", calltrace.LogCmd, "operation", "agentsmoke.Fixture.WorkingDir")
 	return f.workingDir
 }
 
@@ -95,7 +94,7 @@ func (f *Fixture) WorkingDir() string {
 // Pass it as runner.Request.Prompt (Stage 2) or as the task's
 // initial_prompt on POST /tasks (Stage 3).
 func (f *Fixture) Prompt() string {
-	slog.Debug("trace", "cmd", agentsmokeLogCmd, "operation", "agentsmoke.Fixture.Prompt")
+	slog.Debug("trace", "cmd", calltrace.LogCmd, "operation", "agentsmoke.Fixture.Prompt")
 	return f.prompt
 }
 
@@ -103,14 +102,14 @@ func (f *Fixture) Prompt() string {
 // Tests assert against this path; nothing else inside WorkingDir is
 // permitted to exist after a successful run.
 func (f *Fixture) TargetPath() string {
-	slog.Debug("trace", "cmd", agentsmokeLogCmd, "operation", "agentsmoke.Fixture.TargetPath")
+	slog.Debug("trace", "cmd", calltrace.LogCmd, "operation", "agentsmoke.Fixture.TargetPath")
 	return f.targetPath
 }
 
 // ExpectedContents is the exact byte sequence TargetPath must hold
 // after a successful run. Three bytes: "OK\n".
 func (f *Fixture) ExpectedContents() string {
-	slog.Debug("trace", "cmd", agentsmokeLogCmd, "operation", "agentsmoke.Fixture.ExpectedContents")
+	slog.Debug("trace", "cmd", calltrace.LogCmd, "operation", "agentsmoke.Fixture.ExpectedContents")
 	return f.expectedContents
 }
 
@@ -126,7 +125,7 @@ func (f *Fixture) ExpectedContents() string {
 // nothing to do with the agent's task. Tests that want to inspect
 // what else landed can call ExtraFiles for an informational list.
 func (f *Fixture) AssertSucceeded(t *testing.T) {
-	slog.Debug("trace", "cmd", agentsmokeLogCmd, "operation", "agentsmoke.Fixture.AssertSucceeded")
+	slog.Debug("trace", "cmd", calltrace.LogCmd, "operation", "agentsmoke.Fixture.AssertSucceeded")
 	t.Helper()
 	if err := f.verifySucceeded(); err != nil {
 		t.Fatalf("agentsmoke: %v", err)
@@ -143,7 +142,7 @@ func (f *Fixture) AssertSucceeded(t *testing.T) {
 // Used by negative tests to prove a failed runner did not touch disk
 // at all.
 func (f *Fixture) AssertNotMutated(t *testing.T) {
-	slog.Debug("trace", "cmd", agentsmokeLogCmd, "operation", "agentsmoke.Fixture.AssertNotMutated")
+	slog.Debug("trace", "cmd", calltrace.LogCmd, "operation", "agentsmoke.Fixture.AssertNotMutated")
 	t.Helper()
 	if err := f.verifyNotMutated(); err != nil {
 		t.Fatalf("agentsmoke: %v", err)
@@ -154,7 +153,7 @@ func (f *Fixture) AssertNotMutated(t *testing.T) {
 // ExpectedContents. Exposed unexported so internal tests can exercise
 // the assertion logic without going through testing.T.Fatalf.
 func (f *Fixture) verifySucceeded() error {
-	slog.Debug("trace", "cmd", agentsmokeLogCmd, "operation", "agentsmoke.Fixture.verifySucceeded")
+	slog.Debug("trace", "cmd", calltrace.LogCmd, "operation", "agentsmoke.Fixture.verifySucceeded")
 	got, err := os.ReadFile(f.targetPath)
 	if err != nil {
 		return fmt.Errorf("read target %s: %w", f.targetPath, err)
@@ -173,7 +172,7 @@ func (f *Fixture) verifySucceeded() error {
 // caches, transient lock files, etc.). Errors walking the directory
 // surface as a single best-effort entry rather than a hard failure.
 func (f *Fixture) ExtraFiles() []string {
-	slog.Debug("trace", "cmd", agentsmokeLogCmd, "operation", "agentsmoke.Fixture.ExtraFiles")
+	slog.Debug("trace", "cmd", calltrace.LogCmd, "operation", "agentsmoke.Fixture.ExtraFiles")
 	extras, err := f.extraFiles()
 	if err != nil {
 		return []string{fmt.Sprintf("[walk error] %v", err)}
@@ -183,7 +182,7 @@ func (f *Fixture) ExtraFiles() []string {
 
 // verifyNotMutated returns nil iff WorkingDir contains zero entries.
 func (f *Fixture) verifyNotMutated() error {
-	slog.Debug("trace", "cmd", agentsmokeLogCmd, "operation", "agentsmoke.Fixture.verifyNotMutated")
+	slog.Debug("trace", "cmd", calltrace.LogCmd, "operation", "agentsmoke.Fixture.verifyNotMutated")
 	entries, err := os.ReadDir(f.workingDir)
 	if err != nil {
 		return fmt.Errorf("read workdir %s: %w", f.workingDir, err)
@@ -205,7 +204,7 @@ func (f *Fixture) verifyNotMutated() error {
 // Detection of "extra" content is rooted at WorkingDir so a sibling
 // file or a nested escape both fail the assertion.
 func (f *Fixture) extraFiles() ([]string, error) {
-	slog.Debug("trace", "cmd", agentsmokeLogCmd, "operation", "agentsmoke.Fixture.extraFiles")
+	slog.Debug("trace", "cmd", calltrace.LogCmd, "operation", "agentsmoke.Fixture.extraFiles")
 	var extras []string
 	walkErr := filepath.WalkDir(f.workingDir, func(p string, d fs.DirEntry, err error) error {
 		if err != nil {

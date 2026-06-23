@@ -1,5 +1,6 @@
 package cursor
 
+import "github.com/AlexsanderHamir/Hamix/pkgs/tasks/calltrace"
 import (
 	"context"
 	"errors"
@@ -32,7 +33,7 @@ type ProbeFn = adapterkit.ProbeFunc
 // failure (the binary either does not understand --version or refused
 // to run for a config reason — either is fail-fast worthy).
 func Probe(ctx context.Context, binaryPath string, timeout time.Duration, probe ProbeFn) (string, error) {
-	slog.Debug("trace", "cmd", cursorLogCmd, "operation", "cursor.Probe",
+	slog.Debug("trace", "cmd", calltrace.LogCmd, "operation", "cursor.Probe",
 		"binary", binaryPath, "timeout_ns", int64(timeout))
 	binaryPath = strings.TrimSpace(binaryPath)
 	if binaryPath == "" {
@@ -70,7 +71,7 @@ func Probe(ctx context.Context, binaryPath string, timeout time.Duration, probe 
 // inject a fake. It mirrors the shape of defaultExecFn but does not
 // scrub env or stream stdin — `--version` invocations need neither.
 func DefaultProbeFn(ctx context.Context, name string, args ...string) ([]byte, []byte, int, error) {
-	slog.Debug("trace", "cmd", cursorLogCmd, "operation", "cursor.DefaultProbeFn",
+	slog.Debug("trace", "cmd", calltrace.LogCmd, "operation", "cursor.DefaultProbeFn",
 		"name", name, "argc", len(args))
 	return adapterkit.DefaultProbeFunc(ctx, name, args...)
 }
@@ -88,7 +89,7 @@ func DefaultProbeFn(ctx context.Context, name string, args ...string) ([]byte, [
 // name and surface the real exec error rather than a preflight LookPath
 // error that would be redundant.
 func ResolveBinaryPath(binaryPath string) string {
-	slog.Debug("trace", "cmd", cursorLogCmd, "operation", "cursor.ResolveBinaryPath",
+	slog.Debug("trace", "cmd", calltrace.LogCmd, "operation", "cursor.ResolveBinaryPath",
 		"binary", binaryPath)
 	return adapterkit.ResolveBinaryPath(binaryPath)
 }
@@ -96,7 +97,7 @@ func ResolveBinaryPath(binaryPath string) string {
 // firstNonEmptyLine returns the first non-empty trimmed line of b, or
 // "" when b is empty / whitespace-only.
 func firstNonEmptyLine(b []byte) string {
-	slog.Debug("trace", "cmd", cursorLogCmd, "operation", "cursor.firstNonEmptyLine",
+	slog.Debug("trace", "cmd", calltrace.LogCmd, "operation", "cursor.firstNonEmptyLine",
 		"bytes", len(b))
 	return adapterkit.FirstNonEmptyLine(b)
 }
@@ -104,7 +105,7 @@ func firstNonEmptyLine(b []byte) string {
 // trimForLog truncates b for inclusion in error messages so a chatty
 // stderr does not blow up the probe error string.
 func trimForLog(b []byte) string {
-	slog.Debug("trace", "cmd", cursorLogCmd, "operation", "cursor.trimForLog",
+	slog.Debug("trace", "cmd", calltrace.LogCmd, "operation", "cursor.trimForLog",
 		"bytes", len(b))
 	return adapterkit.TrimForLog(b, limits.ProbeLogBytes)
 }

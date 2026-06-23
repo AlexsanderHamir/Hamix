@@ -1,5 +1,6 @@
 package resume
 
+import "github.com/AlexsanderHamir/Hamix/pkgs/tasks/calltrace"
 import (
 	"context"
 	"encoding/json"
@@ -13,7 +14,7 @@ import (
 
 // LoadContinuationBundle rehydrates cross-cycle resume context from a parent attempt.
 func (s *Service) LoadContinuationBundle(ctx context.Context, parentCycleID string) (ContinuationBundle, error) {
-	slog.Debug("trace", "cmd", logCmd, "operation", "agent.harness.resume.LoadContinuationBundle",
+	slog.Debug("trace", "cmd", calltrace.LogCmd, "operation", "agent.harness.resume.LoadContinuationBundle",
 		"parent_cycle_id", parentCycleID)
 	var bundle ContinuationBundle
 	bundle.PreviouslyPassed = map[string]CriterionVerdict{}

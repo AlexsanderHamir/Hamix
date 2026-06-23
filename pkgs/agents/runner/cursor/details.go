@@ -1,5 +1,6 @@
 package cursor
 
+import "github.com/AlexsanderHamir/Hamix/pkgs/tasks/calltrace"
 import (
 	"encoding/json"
 	"log/slog"
@@ -11,7 +12,7 @@ import (
 )
 
 func buildDetails(p cursorOutput) json.RawMessage {
-	slog.Debug("trace", "cmd", cursorLogCmd, "operation", "cursor.buildDetails",
+	slog.Debug("trace", "cmd", calltrace.LogCmd, "operation", "cursor.buildDetails",
 		"type", p.Type, "subtype", p.Subtype, "is_error", p.IsError,
 		"session_id", p.SessionID, "request_id", p.RequestID,
 		"resolved_model", p.ResolvedModel)
@@ -46,13 +47,13 @@ func buildDetails(p cursorOutput) json.RawMessage {
 }
 
 func combineStreams(stdout, stderr []byte) string {
-	slog.Debug("trace", "cmd", cursorLogCmd, "operation", "cursor.combineStreams",
+	slog.Debug("trace", "cmd", calltrace.LogCmd, "operation", "cursor.combineStreams",
 		"stdout_bytes", len(stdout), "stderr_bytes", len(stderr))
 	return adapterkit.CombineStreams(stdout, stderr)
 }
 
 func stderrFirstLineHint(stderr []byte, homePaths []string) string {
-	slog.Debug("trace", "cmd", cursorLogCmd, "operation", "cursor.stderrFirstLineHint",
+	slog.Debug("trace", "cmd", calltrace.LogCmd, "operation", "cursor.stderrFirstLineHint",
 		"stderr_bytes", len(stderr))
 	if len(stderr) == 0 {
 		return ""
@@ -69,7 +70,7 @@ func stderrFirstLineHint(stderr []byte, homePaths []string) string {
 }
 
 func timeoutSummary(timeout time.Duration) string {
-	slog.Debug("trace", "cmd", cursorLogCmd, "operation", "cursor.timeoutSummary", "timeout_ns", int64(timeout))
+	slog.Debug("trace", "cmd", calltrace.LogCmd, "operation", "cursor.timeoutSummary", "timeout_ns", int64(timeout))
 	if timeout > 0 {
 		return "cursor: timeout after " + timeout.String()
 	}
@@ -77,7 +78,7 @@ func timeoutSummary(timeout time.Duration) string {
 }
 
 func staleSummary(stuck time.Duration) string {
-	slog.Debug("trace", "cmd", cursorLogCmd, "operation", "cursor.staleSummary", "stuck_ns", int64(stuck))
+	slog.Debug("trace", "cmd", calltrace.LogCmd, "operation", "cursor.staleSummary", "stuck_ns", int64(stuck))
 	if stuck > 0 {
 		return "cursor: stream idle after " + stuck.String()
 	}
@@ -85,7 +86,7 @@ func staleSummary(stuck time.Duration) string {
 }
 
 func mapStreamIdleCallback(fn func(runner.StreamIdleKind)) func(adapterkit.StreamIdleKind) {
-	slog.Debug("trace", "cmd", cursorLogCmd, "operation", "cursor.mapStreamIdleCallback",
+	slog.Debug("trace", "cmd", calltrace.LogCmd, "operation", "cursor.mapStreamIdleCallback",
 		"has_callback", fn != nil)
 	if fn == nil {
 		return nil
@@ -96,7 +97,7 @@ func mapStreamIdleCallback(fn func(runner.StreamIdleKind)) func(adapterkit.Strea
 }
 
 func adapterkitStreamIdleKind(kind adapterkit.StreamIdleKind) runner.StreamIdleKind {
-	slog.Debug("trace", "cmd", cursorLogCmd, "operation", "cursor.adapterkitStreamIdleKind",
+	slog.Debug("trace", "cmd", calltrace.LogCmd, "operation", "cursor.adapterkitStreamIdleKind",
 		"kind", int(kind))
 	switch kind {
 	case adapterkit.StreamIdleKillPending:
@@ -107,7 +108,7 @@ func adapterkitStreamIdleKind(kind adapterkit.StreamIdleKind) runner.StreamIdleK
 }
 
 func execFailedSummary(err error, homePaths []string) string {
-	slog.Debug("trace", "cmd", cursorLogCmd, "operation", "cursor.execFailedSummary")
+	slog.Debug("trace", "cmd", calltrace.LogCmd, "operation", "cursor.execFailedSummary")
 	if err == nil {
 		return "cursor: exec failed"
 	}
@@ -119,7 +120,7 @@ func execFailedSummary(err error, homePaths []string) string {
 }
 
 func invalidOutputSummary(err error, homePaths []string) string {
-	slog.Debug("trace", "cmd", cursorLogCmd, "operation", "cursor.invalidOutputSummary")
+	slog.Debug("trace", "cmd", calltrace.LogCmd, "operation", "cursor.invalidOutputSummary")
 	if err == nil {
 		return "cursor: invalid output"
 	}
@@ -136,7 +137,7 @@ func clipSummaryRunes(s string, maxRunes int) string {
 }
 
 func failureDetails(stage string, err error, stdout, stderr []byte, homePaths []string, extra map[string]any) json.RawMessage {
-	slog.Debug("trace", "cmd", cursorLogCmd, "operation", "cursor.failureDetails",
+	slog.Debug("trace", "cmd", calltrace.LogCmd, "operation", "cursor.failureDetails",
 		"stage", stage, "stdout_bytes", len(stdout), "stderr_bytes", len(stderr))
 	out := map[string]any{
 		"failure_stage": stage,
@@ -161,13 +162,13 @@ func failureDetails(stage string, err error, stdout, stderr []byte, homePaths []
 }
 
 func redactedTail(b []byte, homePaths []string, maxBytes int) string {
-	slog.Debug("trace", "cmd", cursorLogCmd, "operation", "cursor.redactedTail",
+	slog.Debug("trace", "cmd", calltrace.LogCmd, "operation", "cursor.redactedTail",
 		"bytes", len(b), "max_bytes", maxBytes)
 	return adapterkit.RedactedTail(b, redactionPolicy(homePaths), maxBytes)
 }
 
 func stderrTailDetails(stderr []byte, homePaths []string) json.RawMessage {
-	slog.Debug("trace", "cmd", cursorLogCmd, "operation", "cursor.stderrTailDetails",
+	slog.Debug("trace", "cmd", calltrace.LogCmd, "operation", "cursor.stderrTailDetails",
 		"stderr_bytes", len(stderr))
 	tail := stderr
 	if len(tail) > limits.StderrTailBytes {

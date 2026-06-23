@@ -1,5 +1,6 @@
 package runnerfake
 
+import "github.com/AlexsanderHamir/Hamix/pkgs/tasks/calltrace"
 import (
 	"context"
 	"encoding/json"
@@ -13,7 +14,7 @@ import (
 // ConfigSchema implements runner.ConfigSchemaProvider with a minimal
 // test-friendly schema.
 func (r *Runner) ConfigSchema() runner.ConfigSchema {
-	slog.Debug("trace", "cmd", runnerfakeLogCmd, "operation", "runnerfake.Runner.ConfigSchema")
+	slog.Debug("trace", "cmd", calltrace.LogCmd, "operation", "runnerfake.Runner.ConfigSchema")
 	return runner.ConfigSchema{
 		Version: 1,
 		Fields: []runner.ConfigField{
@@ -30,14 +31,14 @@ func (r *Runner) ConfigSchema() runner.ConfigSchema {
 // ValidateConfig implements runner.ConfigValidator. Always returns nil
 // (accepts any blob).
 func (r *Runner) ValidateConfig(blob json.RawMessage) error {
-	slog.Debug("trace", "cmd", runnerfakeLogCmd, "operation", "runnerfake.Runner.ValidateConfig")
+	slog.Debug("trace", "cmd", calltrace.LogCmd, "operation", "runnerfake.Runner.ValidateConfig")
 	return nil
 }
 
 // MetricsLabels implements runner.MetricsLabeler. Returns the same
 // shape as the cursor adapter: {"model": effectiveModel}.
 func (r *Runner) MetricsLabels(req runner.Request) map[string]string {
-	slog.Debug("trace", "cmd", runnerfakeLogCmd, "operation", "runnerfake.Runner.MetricsLabels",
+	slog.Debug("trace", "cmd", calltrace.LogCmd, "operation", "runnerfake.Runner.MetricsLabels",
 		"task_id", req.TaskID)
 	m := r.EffectiveModel(req)
 	return map[string]string{"model": m}
@@ -46,7 +47,7 @@ func (r *Runner) MetricsLabels(req runner.Request) map[string]string {
 // CycleMeta implements runner.CycleMetaProvider. Returns the same
 // audit shape as the cursor adapter for backward-compatible testing.
 func (r *Runner) CycleMeta(req runner.Request) map[string]any {
-	slog.Debug("trace", "cmd", runnerfakeLogCmd, "operation", "runnerfake.Runner.CycleMeta",
+	slog.Debug("trace", "cmd", calltrace.LogCmd, "operation", "runnerfake.Runner.CycleMeta",
 		"task_id", req.TaskID)
 	intent := strings.TrimSpace(req.CursorModel)
 	effective := r.EffectiveModel(req)
@@ -59,7 +60,7 @@ func (r *Runner) CycleMeta(req runner.Request) map[string]any {
 // Probe implements runner.Prober. Returns a static version string from
 // the fake's configured version and name.
 func (r *Runner) Probe(_ context.Context, binaryPath string, _ time.Duration) (version, resolvedBin string, err error) {
-	slog.Debug("trace", "cmd", runnerfakeLogCmd, "operation", "runnerfake.Runner.Probe",
+	slog.Debug("trace", "cmd", calltrace.LogCmd, "operation", "runnerfake.Runner.Probe",
 		"binary", binaryPath)
 	r.mu.Lock()
 	v := r.version
@@ -70,7 +71,7 @@ func (r *Runner) Probe(_ context.Context, binaryPath string, _ time.Duration) (v
 // ListModels implements runner.ModelLister. Returns a single fake
 // model derived from the configured default model.
 func (r *Runner) ListModels(_ context.Context, binaryPath string, _ time.Duration) ([]runner.ModelInfo, string, error) {
-	slog.Debug("trace", "cmd", runnerfakeLogCmd, "operation", "runnerfake.Runner.ListModels",
+	slog.Debug("trace", "cmd", calltrace.LogCmd, "operation", "runnerfake.Runner.ListModels",
 		"binary", binaryPath)
 	r.mu.Lock()
 	m := r.defaultModel
@@ -84,7 +85,7 @@ func (r *Runner) ListModels(_ context.Context, binaryPath string, _ time.Duratio
 // ClassifyFailure implements runner.FailureClassifier. Always returns
 // empty strings (no recognized pattern).
 func (r *Runner) ClassifyFailure(_ string) (kind, standardizedMsg string) {
-	slog.Debug("trace", "cmd", runnerfakeLogCmd, "operation", "runnerfake.Runner.ClassifyFailure")
+	slog.Debug("trace", "cmd", calltrace.LogCmd, "operation", "runnerfake.Runner.ClassifyFailure")
 	return "", ""
 }
 

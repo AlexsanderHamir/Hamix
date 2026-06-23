@@ -1,5 +1,6 @@
 package tasks
 
+import "github.com/AlexsanderHamir/Hamix/pkgs/tasks/calltrace"
 import (
 	"context"
 	"fmt"
@@ -15,7 +16,7 @@ import (
 // AddDependency records that taskID cannot run until dependsOnTaskID satisfies satisfies.
 func AddDependency(ctx context.Context, db *gorm.DB, taskID, dependsOnTaskID string, satisfies domain.DependencySatisfies) error {
 	defer kernel.DeferLatency(kernel.OpUpdateTask)()
-	slog.Debug("trace", "cmd", logCmd, "operation", "tasks.store.tasks.AddDependency")
+	slog.Debug("trace", "cmd", calltrace.LogCmd, "operation", "tasks.store.tasks.AddDependency")
 	taskID = strings.TrimSpace(taskID)
 	dependsOnTaskID = strings.TrimSpace(dependsOnTaskID)
 	if taskID == "" || dependsOnTaskID == "" {
@@ -60,7 +61,7 @@ func AddDependency(ctx context.Context, db *gorm.DB, taskID, dependsOnTaskID str
 
 // RemoveDependency deletes one dependency edge.
 func RemoveDependency(ctx context.Context, db *gorm.DB, taskID, dependsOnTaskID string) error {
-	slog.Debug("trace", "cmd", logCmd, "operation", "tasks.store.tasks.RemoveDependency")
+	slog.Debug("trace", "cmd", calltrace.LogCmd, "operation", "tasks.store.tasks.RemoveDependency")
 	taskID = strings.TrimSpace(taskID)
 	dependsOnTaskID = strings.TrimSpace(dependsOnTaskID)
 	if taskID == "" || dependsOnTaskID == "" {
@@ -80,7 +81,7 @@ func RemoveDependency(ctx context.Context, db *gorm.DB, taskID, dependsOnTaskID 
 
 // ListDependencyEdges returns predecessor edges for taskID.
 func ListDependencyEdges(ctx context.Context, db *gorm.DB, taskID string) ([]domain.DependencyEdge, error) {
-	slog.Debug("trace", "cmd", logCmd, "operation", "tasks.store.tasks.ListDependencyEdges")
+	slog.Debug("trace", "cmd", calltrace.LogCmd, "operation", "tasks.store.tasks.ListDependencyEdges")
 	taskID = strings.TrimSpace(taskID)
 	if taskID == "" {
 		return nil, fmt.Errorf("%w: id", domain.ErrInvalidInput)
@@ -113,7 +114,7 @@ func ListDependencies(ctx context.Context, db *gorm.DB, taskID string) ([]string
 
 // ListDependents returns task ids that depend on dependsOnTaskID.
 func ListDependents(ctx context.Context, db *gorm.DB, dependsOnTaskID string) ([]string, error) {
-	slog.Debug("trace", "cmd", logCmd, "operation", "tasks.store.tasks.ListDependents")
+	slog.Debug("trace", "cmd", calltrace.LogCmd, "operation", "tasks.store.tasks.ListDependents")
 	dependsOnTaskID = strings.TrimSpace(dependsOnTaskID)
 	if dependsOnTaskID == "" {
 		return nil, fmt.Errorf("%w: id", domain.ErrInvalidInput)
@@ -134,7 +135,7 @@ func ListDependents(ctx context.Context, db *gorm.DB, dependsOnTaskID string) ([
 
 // SetDependencies replaces the full depends_on set for taskID.
 func SetDependencies(ctx context.Context, db *gorm.DB, taskID string, dependsOn []domain.DependencyEdge) error {
-	slog.Debug("trace", "cmd", logCmd, "operation", "tasks.store.tasks.SetDependencies")
+	slog.Debug("trace", "cmd", calltrace.LogCmd, "operation", "tasks.store.tasks.SetDependencies")
 	taskID = strings.TrimSpace(taskID)
 	if taskID == "" {
 		return fmt.Errorf("%w: id", domain.ErrInvalidInput)
@@ -201,7 +202,7 @@ func ensureTaskExists(tx *gorm.DB, id string) error {
 }
 
 func wouldCreateDependencyCycle(tx *gorm.DB, taskID, dependsOnTaskID string) (bool, error) {
-	slog.Debug("trace", "cmd", logCmd, "operation", "tasks.store.tasks.wouldCreateDependencyCycle")
+	slog.Debug("trace", "cmd", calltrace.LogCmd, "operation", "tasks.store.tasks.wouldCreateDependencyCycle")
 	if taskID == dependsOnTaskID {
 		return true, nil
 	}

@@ -1,5 +1,6 @@
 package prompt
 
+import "github.com/AlexsanderHamir/Hamix/pkgs/tasks/calltrace"
 import (
 	"fmt"
 	"log/slog"
@@ -8,8 +9,6 @@ import (
 
 	"github.com/AlexsanderHamir/Hamix/pkgs/tasks/domain"
 )
-
-const recoveryLogCmd = "taskapi"
 
 // RecoveryKind selects the structured delta template for a resumed Cursor session.
 type RecoveryKind string
@@ -71,7 +70,7 @@ const (
 //
 //funclogmeasure:skip category=hot-path reason="Pure prompt compose without I/O; caller logs byte metrics."
 func ComposeRecoveryDelta(ctx RecoveryContext) string {
-	slog.Debug("trace", "cmd", recoveryLogCmd, "operation", "prompt.ComposeRecoveryDelta",
+	slog.Debug("trace", "cmd", calltrace.LogCmd, "operation", "prompt.ComposeRecoveryDelta",
 		"kind", string(ctx.Kind), "phase", string(ctx.Phase))
 	var b strings.Builder
 	if ctx.Phase == domain.PhaseVerify {
@@ -80,7 +79,7 @@ func ComposeRecoveryDelta(ctx RecoveryContext) string {
 		composeExecuteRecoveryDelta(&b, ctx)
 	}
 	out := truncateRecoveryBytes(b.String(), recoveryMaxTotalBytes)
-	slog.Debug("trace", "cmd", recoveryLogCmd, "operation", "prompt.ComposeRecoveryDelta.done",
+	slog.Debug("trace", "cmd", calltrace.LogCmd, "operation", "prompt.ComposeRecoveryDelta.done",
 		"recovery_hint_kind", string(ctx.Kind), "recovery_hint_bytes", len(out))
 	return out
 }

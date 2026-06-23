@@ -1,5 +1,6 @@
 package resume
 
+import "github.com/AlexsanderHamir/Hamix/pkgs/tasks/calltrace"
 import (
 	"context"
 	"errors"
@@ -15,7 +16,7 @@ const crossCycleExecuteCarriedForward = "cross_cycle_execute_carried_forward"
 // SeedCrossCycleExecuteFromParent records a succeeded execute phase on a new
 // retry cycle so verify can start when the parent attempt already passed execute.
 func (s *Service) SeedCrossCycleExecuteFromParent(ctx context.Context, cycle *domain.TaskCycle, parentCycleID string) error {
-	slog.Debug("trace", "cmd", logCmd, "operation", "agent.harness.resume.SeedCrossCycleExecuteFromParent",
+	slog.Debug("trace", "cmd", calltrace.LogCmd, "operation", "agent.harness.resume.SeedCrossCycleExecuteFromParent",
 		"cycle_id", cycle.ID, "parent_cycle_id", parentCycleID)
 	phases, err := s.store.ListPhasesForCycle(ctx, parentCycleID)
 	if err != nil {
@@ -53,7 +54,7 @@ func (s *Service) SeedCrossCycleExecuteFromParent(ctx context.Context, cycle *do
 
 // MirrorParentCriteriaForVerifyOnly copies parent execute criteria reports into a child cycle.
 func (s *Service) MirrorParentCriteriaForVerifyOnly(ctx context.Context, childCycleID, parentCycleID string) error {
-	slog.Debug("trace", "cmd", logCmd, "operation", "agent.harness.resume.MirrorParentCriteriaForVerifyOnly",
+	slog.Debug("trace", "cmd", calltrace.LogCmd, "operation", "agent.harness.resume.MirrorParentCriteriaForVerifyOnly",
 		"child_cycle_id", childCycleID, "parent_cycle_id", parentCycleID)
 	rows, err := s.store.ListCriteriaReportsForCycle(ctx, parentCycleID)
 	if err != nil {
@@ -78,7 +79,7 @@ func (s *Service) MirrorParentCriteriaForVerifyOnly(ctx context.Context, childCy
 
 // FailTaskAfterRetryPrep marks the task failed when operator retry preparation fails.
 func (s *Service) FailTaskAfterRetryPrep(ctx context.Context, taskID, reason string) {
-	slog.Debug("trace", "cmd", logCmd, "operation", "agent.harness.resume.FailTaskAfterRetryPrep",
+	slog.Debug("trace", "cmd", calltrace.LogCmd, "operation", "agent.harness.resume.FailTaskAfterRetryPrep",
 		"task_id", taskID, "reason", reason)
 	failed := domain.StatusFailed
 	if _, err := s.store.Update(ctx, taskID, store.UpdateTaskInput{Status: &failed}, domain.ActorAgent); err != nil {
@@ -87,7 +88,7 @@ func (s *Service) FailTaskAfterRetryPrep(ctx context.Context, taskID, reason str
 			level = slog.LevelInfo
 		}
 		slog.Log(ctx, level, "agent harness retry prep task transition failed",
-			"cmd", logCmd, "operation", "agent.harness.resume.FailTaskAfterRetryPrep.err",
+			"cmd", calltrace.LogCmd, "operation", "agent.harness.resume.FailTaskAfterRetryPrep.err",
 			"task_id", taskID, "reason", reason, "err", err)
 	}
 }

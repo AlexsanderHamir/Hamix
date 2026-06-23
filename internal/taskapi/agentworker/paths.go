@@ -1,5 +1,6 @@
 package agentworker
 
+import "github.com/AlexsanderHamir/Hamix/pkgs/tasks/calltrace"
 import (
 	"errors"
 	"fmt"
@@ -7,7 +8,7 @@ import (
 )
 
 func assertWorkingDirExists(dir string) error {
-	slog.Debug("trace", "cmd", logCmd, "operation", "taskapi.assertWorkingDirExists",
+	slog.Debug("trace", "cmd", calltrace.LogCmd, "operation", "taskapi.assertWorkingDirExists",
 		"dir", dir)
 	if dir == "" {
 		return errors.New("working directory is empty")
@@ -23,7 +24,7 @@ func assertWorkingDirExists(dir string) error {
 }
 
 func ensureWorkerReportDirWritable(dir string) error {
-	slog.Debug("trace", "cmd", logCmd, "operation", "taskapi.ensureWorkerReportDirWritable",
+	slog.Debug("trace", "cmd", calltrace.LogCmd, "operation", "taskapi.ensureWorkerReportDirWritable",
 		"dir", dir)
 	if dir == "" {
 		return errors.New("report dir is empty")

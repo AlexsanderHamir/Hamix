@@ -1,5 +1,6 @@
 package harness
 
+import "github.com/AlexsanderHamir/Hamix/pkgs/tasks/calltrace"
 import (
 	"bytes"
 	"crypto/sha256"
@@ -28,7 +29,7 @@ import (
 // When the runner does not implement CycleMetaProvider, the common keys
 // are emitted alone.
 func buildCycleMeta(r runner.Runner, prompt string, req runner.Request) []byte {
-	slog.Debug("trace", "cmd", harnessLogCmd, "operation", "agent.harness.buildCycleMeta",
+	slog.Debug("trace", "cmd", calltrace.LogCmd, "operation", "agent.harness.buildCycleMeta",
 		"runner", r.Name())
 	out := map[string]any{
 		"runner":         r.Name(),
@@ -42,7 +43,7 @@ func buildCycleMeta(r runner.Runner, prompt string, req runner.Request) []byte {
 	}
 	b, err := json.Marshal(out)
 	if err != nil {
-		slog.Warn("agent harness meta marshal failed", "cmd", harnessLogCmd,
+		slog.Warn("agent harness meta marshal failed", "cmd", calltrace.LogCmd,
 			"operation", "agent.harness.buildCycleMeta.err", "err", err)
 		return []byte("{}")
 	}
@@ -89,7 +90,7 @@ func mergeCycleMetaBytes(base []byte, extra map[string]any) []byte {
 // this into MetaJSON.prompt_hash so the audit trail can correlate runs
 // of the same prompt across replays without storing the prompt itself.
 func sha256Hex(s string) string {
-	slog.Debug("trace", "cmd", harnessLogCmd, "operation", "agent.harness.sha256Hex",
+	slog.Debug("trace", "cmd", calltrace.LogCmd, "operation", "agent.harness.sha256Hex",
 		"len", len(s))
 	sum := sha256.Sum256([]byte(s))
 	return hex.EncodeToString(sum[:])
@@ -117,7 +118,7 @@ func sha256Hex(s string) string {
 //   - malformed JSON -> wrapped as {"raw": "<original-bytes-as-string>"}
 //     so the diagnostic bytes are preserved (still parseable JSON)
 func detailsBytes(r runner.Result) []byte {
-	slog.Debug("trace", "cmd", harnessLogCmd, "operation", "agent.harness.detailsBytes",
+	slog.Debug("trace", "cmd", calltrace.LogCmd, "operation", "agent.harness.detailsBytes",
 		"len", len(r.Details))
 	trimmed := bytes.TrimSpace(r.Details)
 	if len(trimmed) == 0 || bytes.Equal(trimmed, []byte("null")) {

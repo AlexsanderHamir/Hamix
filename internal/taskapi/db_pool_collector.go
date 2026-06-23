@@ -1,5 +1,6 @@
 package taskapi
 
+import "github.com/AlexsanderHamir/Hamix/pkgs/tasks/calltrace"
 import (
 	"database/sql"
 	"errors"
@@ -28,7 +29,7 @@ type sqlDBStatsCollector struct {
 // NewSQLDBStatsCollector returns a [prometheus.Collector] for the given [sql.DB] pool.
 // It is intended for the default registry used by GET /metrics.
 func NewSQLDBStatsCollector(db *sql.DB) prometheus.Collector {
-	slog.Debug("trace", "cmd", cmdLog, "operation", "taskapi.NewSQLDBStatsCollector")
+	slog.Debug("trace", "cmd", calltrace.LogCmd, "operation", "taskapi.NewSQLDBStatsCollector")
 	const ns = "taskapi"
 	const sub = "db_pool"
 	labels := []string{}
@@ -118,15 +119,15 @@ var registerDBPoolOnce sync.Once
 // that scrapes pool stats from the [gorm.DB]'s underlying [sql.DB]. Safe to call once
 // per process; further calls are no-ops.
 func RegisterSQLDBPoolCollector(db *gorm.DB) {
-	slog.Debug("trace", "cmd", cmdLog, "operation", "taskapi.RegisterSQLDBPoolCollector")
+	slog.Debug("trace", "cmd", calltrace.LogCmd, "operation", "taskapi.RegisterSQLDBPoolCollector")
 	if db == nil {
-		slog.Warn("skip prometheus db pool collector", "cmd", cmdLog, "operation", "taskapi.RegisterSQLDBPoolCollector", "reason", "nil_gorm_db")
+		slog.Warn("skip prometheus db pool collector", "cmd", calltrace.LogCmd, "operation", "taskapi.RegisterSQLDBPoolCollector", "reason", "nil_gorm_db")
 		return
 	}
 	registerDBPoolOnce.Do(func() {
 		sqldb, err := db.DB()
 		if err != nil {
-			slog.Warn("skip prometheus db pool collector", "cmd", cmdLog, "operation", "taskapi.RegisterSQLDBPoolCollector", "reason", "gorm_db_sql", "err", err)
+			slog.Warn("skip prometheus db pool collector", "cmd", calltrace.LogCmd, "operation", "taskapi.RegisterSQLDBPoolCollector", "reason", "gorm_db_sql", "err", err)
 			return
 		}
 		col := NewSQLDBStatsCollector(sqldb)
@@ -135,9 +136,9 @@ func RegisterSQLDBPoolCollector(db *gorm.DB) {
 			if errors.As(err, &dup) {
 				return
 			}
-			slog.Warn("prometheus db pool collector register failed", "cmd", cmdLog, "operation", "taskapi.RegisterSQLDBPoolCollector", "err", err)
+			slog.Warn("prometheus db pool collector register failed", "cmd", calltrace.LogCmd, "operation", "taskapi.RegisterSQLDBPoolCollector", "err", err)
 			return
 		}
-		slog.Info("prometheus db pool collector registered", "cmd", cmdLog, "operation", "taskapi.RegisterSQLDBPoolCollector")
+		slog.Info("prometheus db pool collector registered", "cmd", calltrace.LogCmd, "operation", "taskapi.RegisterSQLDBPoolCollector")
 	})
 }

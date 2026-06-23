@@ -1,5 +1,6 @@
 package harness
 
+import "github.com/AlexsanderHamir/Hamix/pkgs/tasks/calltrace"
 import (
 	"context"
 	"errors"
@@ -23,7 +24,7 @@ type cycleLoopOpts struct {
 }
 
 func (h *Harness) composeExecutePrompt(ctx context.Context, task *domain.Task, cycle *domain.TaskCycle, state *processState, opts cycleLoopOpts) string {
-	slog.Debug("trace", "cmd", harnessLogCmd, "operation", "agent.harness.Harness.composeExecutePrompt",
+	slog.Debug("trace", "cmd", calltrace.LogCmd, "operation", "agent.harness.Harness.composeExecutePrompt",
 		"task_id", task.ID, "cycle_id", cycle.ID, "resume_notice", opts.resumeNotice)
 	promptText := task.InitialPrompt
 	promptText = prompt.InjectCriteria(
@@ -89,13 +90,13 @@ func (h *Harness) runCycleLoopExecute(
 	}
 	priorBase, err := h.priorCycleBaseSHA(parentCtx, cycle.ID, execPhase.PhaseSeq)
 	if err != nil {
-		slog.Warn("agent harness prior cycle base lookup failed", "cmd", harnessLogCmd,
+		slog.Warn("agent harness prior cycle base lookup failed", "cmd", calltrace.LogCmd,
 			"operation", "agent.harness.Harness.runCycleLoop.prior_cycle_base",
 			"cycle_id", cycle.ID, "err", err)
 	}
 	snap, err := captureExecuteGitSnapshot(parentCtx, h.gitSvc().Repo(), h.repoRootForGit(parentCtx), h.opts.WorkingDir, priorBase)
 	if err != nil {
-		slog.Warn("agent harness git snapshot failed", "cmd", harnessLogCmd,
+		slog.Warn("agent harness git snapshot failed", "cmd", calltrace.LogCmd,
 			"operation", "agent.harness.Harness.runCycleLoop.git_snapshot",
 			"cycle_id", cycle.ID, "err", err)
 		h.bestEffortTerminate(parentCtx, state, task.ID, domain.CycleStatusFailed, "execute_git_snapshot_failed")
@@ -137,7 +138,7 @@ func (h *Harness) runCycleLoopExecute(
 			parentCtx, task.ID, cycle, execPhase.PhaseSeq, snap,
 		)
 		if ingestErr != nil {
-			slog.Warn("agent harness commit ingest error", "cmd", harnessLogCmd,
+			slog.Warn("agent harness commit ingest error", "cmd", calltrace.LogCmd,
 				"operation", "agent.harness.Harness.runCycleLoop.commit_ingest_err",
 				"cycle_id", cycle.ID, "err", ingestErr)
 		}
@@ -177,7 +178,7 @@ func (h *Harness) runCycleLoopVerify(
 		checklistErr := h.completeChecklistLegacy(parentCtx, task.ID)
 		if checklistErr != nil {
 			slog.Warn("agent harness checklist completion failed",
-				"cmd", harnessLogCmd,
+				"cmd", calltrace.LogCmd,
 				"operation", "agent.harness.Harness.runCycleLoop.checklist_err",
 				"task_id", task.ID, "err", checklistErr)
 		}
@@ -215,7 +216,7 @@ func (h *Harness) runCycleLoopVerify(
 	executeStillValid := retryMode == orchestration.RetryModeVerifyOnly
 	effects := orchestration.DecideVerifyRetryWithValidity(state.verifyAttempt, state.verifySnap.MaxRetries, result, executeStillValid)
 	if effects.RetryLoop {
-		slog.Info("agent harness verify retry classified", "cmd", harnessLogCmd,
+		slog.Info("agent harness verify retry classified", "cmd", calltrace.LogCmd,
 			"operation", "agent.harness.Harness.runCycleLoopVerify.retry_mode",
 			"task_id", task.ID, "cycle_id", cycle.ID,
 			"retry_mode", string(retryMode), "reason_code", string(reasonCode),
@@ -237,7 +238,7 @@ func (h *Harness) runCycleLoopFinalizeSuccess(
 	effects := orchestration.DecideFinalizeSuccess(completionErr)
 	if completionErr != nil {
 		slog.Warn("agent harness checklist completion failed",
-			"cmd", harnessLogCmd,
+			"cmd", calltrace.LogCmd,
 			"operation", "agent.harness.Harness.runCycleLoop.finalize_err",
 			"task_id", task.ID, "err", completionErr)
 	}

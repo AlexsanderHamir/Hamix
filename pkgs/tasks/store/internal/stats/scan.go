@@ -1,5 +1,6 @@
 package stats
 
+import "github.com/AlexsanderHamir/Hamix/pkgs/tasks/calltrace"
 import (
 	"context"
 	"fmt"
@@ -18,7 +19,7 @@ type totalsRow struct {
 }
 
 func scanTotals(ctx context.Context, db *gorm.DB, now time.Time) (totalsRow, error) {
-	slog.Debug("trace", "cmd", logCmd, "operation", "tasks.store.stats.scanTotals")
+	slog.Debug("trace", "cmd", calltrace.LogCmd, "operation", "tasks.store.stats.scanTotals")
 	var r totalsRow
 	// We embed the StatusReady literal inline for the `scheduled`
 	// CASE rather than threading another `?` through the Select
@@ -59,7 +60,7 @@ type statusCountRow struct {
 }
 
 func scanByStatus(ctx context.Context, db *gorm.DB) ([]statusCountRow, error) {
-	slog.Debug("trace", "cmd", logCmd, "operation", "tasks.store.stats.scanByStatus")
+	slog.Debug("trace", "cmd", calltrace.LogCmd, "operation", "tasks.store.stats.scanByStatus")
 	var statusRows []statusCountRow
 	if err := db.WithContext(ctx).Model(&domain.Task{}).
 		Select("status, COUNT(*) AS count").
@@ -76,7 +77,7 @@ type priorityCountRow struct {
 }
 
 func scanByPriority(ctx context.Context, db *gorm.DB) ([]priorityCountRow, error) {
-	slog.Debug("trace", "cmd", logCmd, "operation", "tasks.store.stats.scanByPriority")
+	slog.Debug("trace", "cmd", calltrace.LogCmd, "operation", "tasks.store.stats.scanByPriority")
 	var priorityRows []priorityCountRow
 	if err := db.WithContext(ctx).Model(&domain.Task{}).
 		Select("priority, COUNT(*) AS count").

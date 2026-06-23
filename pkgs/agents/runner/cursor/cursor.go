@@ -1,5 +1,6 @@
 package cursor
 
+import "github.com/AlexsanderHamir/Hamix/pkgs/tasks/calltrace"
 import (
 	"bytes"
 	"context"
@@ -65,7 +66,7 @@ type Adapter struct {
 // New returns a configured Adapter. Zero-value Options yields the documented
 // defaults.
 func New(opts Options) *Adapter {
-	slog.Debug("trace", "cmd", cursorLogCmd, "operation", "cursor.New")
+	slog.Debug("trace", "cmd", calltrace.LogCmd, "operation", "cursor.New")
 	a := &Adapter{
 		binaryPath:         opts.BinaryPath,
 		defaultCursorModel: strings.TrimSpace(opts.DefaultCursorModel),
@@ -122,20 +123,20 @@ func (a *Adapter) argvFor(req runner.Request) []string {
 
 // Name implements runner.Runner.
 func (a *Adapter) Name() string {
-	slog.Debug("trace", "cmd", cursorLogCmd, "operation", "cursor.Adapter.Name")
+	slog.Debug("trace", "cmd", calltrace.LogCmd, "operation", "cursor.Adapter.Name")
 	return a.name
 }
 
 // Version implements runner.Runner.
 func (a *Adapter) Version() string {
-	slog.Debug("trace", "cmd", cursorLogCmd, "operation", "cursor.Adapter.Version")
+	slog.Debug("trace", "cmd", calltrace.LogCmd, "operation", "cursor.Adapter.Version")
 	return a.version
 }
 
 // EffectiveModel implements runner.Runner. It mirrors the fallback applied
 // inside argvFor.
 func (a *Adapter) EffectiveModel(req runner.Request) string {
-	slog.Debug("trace", "cmd", cursorLogCmd, "operation", "cursor.Adapter.EffectiveModel",
+	slog.Debug("trace", "cmd", calltrace.LogCmd, "operation", "cursor.Adapter.EffectiveModel",
 		"task_id", req.TaskID)
 	m := strings.TrimSpace(req.CursorModel)
 	if m != "" {
@@ -213,7 +214,7 @@ func clearClosedPipeAfterStdout(
 		return execErr
 	}
 	slog.Debug("ignoring closed stdout pipe after cursor output",
-		"cmd", cursorLogCmd, "operation", "cursor.Adapter.Run.closed_pipe_with_stdout",
+		"cmd", calltrace.LogCmd, "operation", "cursor.Adapter.Run.closed_pipe_with_stdout",
 		"stdout_bytes", len(stdout), "stderr_bytes", len(stderr), "err", execErr)
 	return nil
 }
@@ -316,7 +317,7 @@ func (a *Adapter) resultFromParsedStdout(stdout, stderr []byte, rawOutput string
 // Run implements runner.Runner. See package documentation for the full
 // invocation contract, env policy, redaction guarantees, and error mapping.
 func (a *Adapter) Run(ctx context.Context, req runner.Request) (runner.Result, error) {
-	slog.Debug("trace", "cmd", cursorLogCmd, "operation", "cursor.Adapter.Run",
+	slog.Debug("trace", "cmd", calltrace.LogCmd, "operation", "cursor.Adapter.Run",
 		"task_id", req.TaskID, "phase", string(req.Phase),
 		"attempt_seq", req.AttemptSeq, "working_dir", req.WorkingDir,
 		"run_correlation_id", req.RunCorrelationID,

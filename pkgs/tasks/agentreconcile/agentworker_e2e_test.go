@@ -39,11 +39,14 @@ func TestAgentWorkerE2E_readyTaskRunsThroughReconcileAndWorker(t *testing.T) {
 	st := store.NewStore(tasktestdb.OpenSQLite(t))
 	q := agents.NewMemoryQueue(4)
 
+	worktreeID, branchID := seedAgentReconcileGit(t, st)
 	tsk, err := st.Create(rootCtx, store.CreateTaskInput{
 		Title:         "e2e",
 		InitialPrompt: "do the thing",
 		Status:        domain.StatusReady,
 		Priority:      domain.PriorityMedium,
+		WorktreeID:    &worktreeID,
+		BranchID:      &branchID,
 	}, domain.ActorUser)
 	if err != nil {
 		t.Fatalf("create ready task: %v", err)
@@ -149,11 +152,14 @@ func TestAgentWorkerE2E_dependencyBlocksUntilUpstreamDone(t *testing.T) {
 	st := store.NewStore(tasktestdb.OpenSQLite(t))
 	q := agents.NewMemoryQueue(8)
 
+	worktreeID, branchID := seedAgentReconcileGit(t, st)
 	upstream, err := st.Create(rootCtx, store.CreateTaskInput{
 		Title:         "upstream",
 		InitialPrompt: "first",
 		Status:        domain.StatusReady,
 		Priority:      domain.PriorityMedium,
+		WorktreeID:    &worktreeID,
+		BranchID:      &branchID,
 	}, domain.ActorUser)
 	if err != nil {
 		t.Fatalf("create upstream: %v", err)
@@ -163,6 +169,8 @@ func TestAgentWorkerE2E_dependencyBlocksUntilUpstreamDone(t *testing.T) {
 		InitialPrompt: "after upstream",
 		Status:        domain.StatusReady,
 		Priority:      domain.PriorityMedium,
+		WorktreeID:    &worktreeID,
+		BranchID:      &branchID,
 	}, domain.ActorUser)
 	if err != nil {
 		t.Fatalf("create dependent: %v", err)

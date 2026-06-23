@@ -8,7 +8,7 @@ import (
 	"path/filepath"
 	"testing"
 
-	"github.com/AlexsanderHamir/Hamix/internal/tasktestdb"
+	"github.com/AlexsanderHamir/Hamix/pkgs/agents/harness/storefake"
 	"github.com/AlexsanderHamir/Hamix/pkgs/tasks/domain"
 	"github.com/AlexsanderHamir/Hamix/pkgs/tasks/store"
 )
@@ -17,7 +17,7 @@ func TestIngestExecuteCommits_fromClaims(t *testing.T) {
 	t.Parallel()
 	skipIfNoGit(t)
 	ctx := context.Background()
-	st := store.NewStore(tasktestdb.OpenSQLite(t))
+	st := storefake.New(t).Store
 	tsk, err := st.Create(ctx, store.CreateTaskInput{
 		Title: "t", InitialPrompt: "p", Priority: domain.PriorityMedium, Status: domain.StatusReady,
 	}, domain.ActorUser)
@@ -97,7 +97,7 @@ func TestIngestExecuteCommits_emptyClaimsContinues(t *testing.T) {
 	t.Parallel()
 	skipIfNoGit(t)
 	ctx := context.Background()
-	st := store.NewStore(tasktestdb.OpenSQLite(t))
+	st := storefake.New(t).Store
 	tsk, err := st.Create(ctx, store.CreateTaskInput{
 		Title: "t", InitialPrompt: "p", Priority: domain.PriorityMedium, Status: domain.StatusReady,
 	}, domain.ActorUser)

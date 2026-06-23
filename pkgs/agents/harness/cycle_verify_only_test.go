@@ -9,7 +9,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/AlexsanderHamir/Hamix/internal/tasktestdb"
+	"github.com/AlexsanderHamir/Hamix/pkgs/agents/harness/storefake"
 	"github.com/AlexsanderHamir/Hamix/pkgs/agents/runner"
 	"github.com/AlexsanderHamir/Hamix/pkgs/agents/runner/runnerfake"
 	"github.com/AlexsanderHamir/Hamix/pkgs/tasks/domain"
@@ -97,7 +97,7 @@ func writePartialVerifyReportCycleTest(t *testing.T, reportDir, cycleID string, 
 func startVerifyOnlyTask(t *testing.T, maxRetries int, extraItems ...string) (*store.Store, *domain.Task, []string) {
 	t.Helper()
 	ctx := context.Background()
-	st := store.NewStore(tasktestdb.OpenSQLite(t))
+	st := storefake.New(t).Store
 	tsk, err := st.Create(ctx, store.CreateTaskInput{
 		Title: "verify-only", InitialPrompt: "work", Priority: domain.PriorityMedium, Status: domain.StatusReady,
 	}, domain.ActorUser)

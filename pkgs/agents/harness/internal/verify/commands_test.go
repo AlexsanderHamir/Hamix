@@ -8,7 +8,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/AlexsanderHamir/Hamix/internal/tasktestdb"
+	"github.com/AlexsanderHamir/Hamix/pkgs/agents/harness/storefake"
 	"github.com/AlexsanderHamir/Hamix/pkgs/agents/harness/internal/reports"
 	"github.com/AlexsanderHamir/Hamix/pkgs/agents/runner/runnerfake"
 	"github.com/AlexsanderHamir/Hamix/pkgs/tasks/domain"
@@ -17,7 +17,7 @@ import (
 
 func TestRunCriterionCommands_writesEvidenceAndPromptSection(t *testing.T) {
 	t.Parallel()
-	st := store.NewStore(tasktestdb.OpenSQLite(t))
+	st := storefake.New(t).Store
 	ctx := context.Background()
 
 	task, err := st.Create(ctx, store.CreateTaskInput{

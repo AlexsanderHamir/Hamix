@@ -1,4 +1,4 @@
-// Package storefake provides a harness.Store test double backed by in-memory
+// Package storefake provides a contract.Store test double backed by in-memory
 // SQLite so harness contract tests exercise real store semantics without a
 // worker loop or external database.
 package storefake
@@ -7,7 +7,7 @@ import (
 	"testing"
 
 	"github.com/AlexsanderHamir/Hamix/internal/tasktestdb"
-	"github.com/AlexsanderHamir/Hamix/pkgs/agents/harness"
+	"github.com/AlexsanderHamir/Hamix/pkgs/agents/harness/internal/contract"
 	"github.com/AlexsanderHamir/Hamix/pkgs/tasks/store"
 )
 
@@ -17,11 +17,11 @@ type Fake struct {
 	*store.Store
 }
 
-// New returns a Fake that implements harness.Store.
+// New returns a Fake that implements contract.Store (alias harness.Store).
 func New(t *testing.T) *Fake {
 	t.Helper()
 	st := store.NewStore(tasktestdb.OpenSQLite(t))
 	return &Fake{Store: st}
 }
 
-var _ harness.Store = (*Fake)(nil)
+var _ contract.Store = (*Fake)(nil)

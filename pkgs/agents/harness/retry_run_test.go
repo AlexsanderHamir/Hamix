@@ -9,7 +9,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/AlexsanderHamir/Hamix/internal/tasktestdb"
+	"github.com/AlexsanderHamir/Hamix/pkgs/agents/harness/storefake"
 	"github.com/AlexsanderHamir/Hamix/pkgs/agents/runner"
 	"github.com/AlexsanderHamir/Hamix/pkgs/agents/runner/runnerfake"
 	"github.com/AlexsanderHamir/Hamix/pkgs/tasks/domain"
@@ -18,7 +18,7 @@ import (
 
 func TestRunWithRetry_freshStartsNewCycleWithParent(t *testing.T) {
 	ctx := context.Background()
-	st := store.NewStore(tasktestdb.OpenSQLite(t))
+	st := storefake.New(t).Store
 	tsk, err := st.Create(ctx, store.CreateTaskInput{
 		Title: "fresh-retry", InitialPrompt: "work", Priority: domain.PriorityMedium,
 	}, domain.ActorUser)
@@ -72,7 +72,7 @@ func TestRunWithRetry_freshStartsNewCycleWithParent(t *testing.T) {
 func TestRunWithRetry_resumeCarriesPassedCriteria(t *testing.T) {
 	ctx := context.Background()
 
-	st := store.NewStore(tasktestdb.OpenSQLite(t))
+	st := storefake.New(t).Store
 	tsk, err := st.Create(ctx, store.CreateTaskInput{
 		Title: "resume-retry", InitialPrompt: "work", Priority: domain.PriorityMedium,
 	}, domain.ActorUser)
@@ -158,7 +158,7 @@ func TestRunWithRetry_resumeCarriesPassedCriteria(t *testing.T) {
 
 func TestSeedCrossCycleExecuteFromParent_recordsSucceededExecute(t *testing.T) {
 	ctx := context.Background()
-	st := store.NewStore(tasktestdb.OpenSQLite(t))
+	st := storefake.New(t).Store
 	tsk, err := st.Create(ctx, store.CreateTaskInput{
 		Title: "seed execute", InitialPrompt: "work", Priority: domain.PriorityMedium,
 	}, domain.ActorUser)
@@ -204,7 +204,7 @@ func TestVerifyOnlyCrossCycleResume_runCycleLoopSkipsRunnerExecute(t *testing.T)
 	reportDir := t.TempDir()
 
 	ctx := context.Background()
-	st := store.NewStore(tasktestdb.OpenSQLite(t))
+	st := storefake.New(t).Store
 	tsk, err := st.Create(ctx, store.CreateTaskInput{
 		Title: "verify-only resume", InitialPrompt: "work", Priority: domain.PriorityMedium,
 	}, domain.ActorUser)
@@ -310,7 +310,7 @@ func TestVerifyOnlyCrossCycleResume_runCycleLoopSkipsRunnerExecute(t *testing.T)
 
 func TestLoadCheckpointFromParent_requiresTerminal(t *testing.T) {
 	ctx := context.Background()
-	st := store.NewStore(tasktestdb.OpenSQLite(t))
+	st := storefake.New(t).Store
 	tsk, err := st.Create(ctx, store.CreateTaskInput{
 		Title: "t", InitialPrompt: "p", Priority: domain.PriorityMedium,
 	}, domain.ActorUser)

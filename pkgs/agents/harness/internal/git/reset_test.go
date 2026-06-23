@@ -7,7 +7,7 @@ import (
 	"path/filepath"
 	"testing"
 
-	"github.com/AlexsanderHamir/Hamix/internal/tasktestdb"
+	"github.com/AlexsanderHamir/Hamix/pkgs/agents/harness/storefake"
 	"github.com/AlexsanderHamir/Hamix/pkgs/tasks/domain"
 	"github.com/AlexsanderHamir/Hamix/pkgs/tasks/store"
 )
@@ -36,7 +36,7 @@ func TestResetHardClean_resetsAndCleansUntracked(t *testing.T) {
 
 func TestResolveFreshRetryAnchor_fromExecutePhaseDetails(t *testing.T) {
 	ctx := context.Background()
-	st := store.NewStore(tasktestdb.OpenSQLite(t))
+	st := storefake.New(t).Store
 	tsk, err := st.Create(ctx, store.CreateTaskInput{
 		Title: "t", InitialPrompt: "p", Priority: domain.PriorityMedium, Status: domain.StatusFailed,
 	}, domain.ActorUser)

@@ -6,8 +6,8 @@ import (
 	"testing"
 	"time"
 
-	"github.com/AlexsanderHamir/Hamix/internal/tasktestdb"
 	"github.com/AlexsanderHamir/Hamix/pkgs/agents/harness"
+	"github.com/AlexsanderHamir/Hamix/pkgs/agents/harness/storefake"
 	"github.com/AlexsanderHamir/Hamix/pkgs/agents/runner"
 	"github.com/AlexsanderHamir/Hamix/pkgs/agents/runner/runnerfake"
 	"github.com/AlexsanderHamir/Hamix/pkgs/tasks/domain"
@@ -59,7 +59,7 @@ func TestHarness_Resume_afterInterruptedExecute_composesResumePrompt(t *testing.
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 
-	st := store.NewStore(tasktestdb.OpenSQLite(t))
+	st := storefake.New(t).Store
 	tsk, cycle, criterionID := seedInterruptedExecute(t, st, ctx)
 
 	promptCh := make(chan string, 1)

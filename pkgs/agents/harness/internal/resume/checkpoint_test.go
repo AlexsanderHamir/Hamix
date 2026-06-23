@@ -6,7 +6,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/AlexsanderHamir/Hamix/internal/tasktestdb"
+	"github.com/AlexsanderHamir/Hamix/pkgs/agents/harness/storefake"
 	"github.com/AlexsanderHamir/Hamix/pkgs/agents/harness/internal/git"
 	"github.com/AlexsanderHamir/Hamix/pkgs/tasks/domain"
 	"github.com/AlexsanderHamir/Hamix/pkgs/tasks/store"
@@ -15,7 +15,7 @@ import (
 func TestReconstructCheckpoint_lockedCriteriaAndVerifyAttempt(t *testing.T) {
 	t.Parallel()
 	ctx := context.Background()
-	st := store.NewStore(tasktestdb.OpenSQLite(t))
+	st := storefake.New(t).Store
 	tsk, err := st.Create(ctx, store.CreateTaskInput{
 		Title: "checkpoint", InitialPrompt: "work", Status: domain.StatusReady, Priority: domain.PriorityMedium,
 	}, domain.ActorUser)
@@ -70,7 +70,7 @@ func TestReconstructCheckpoint_lockedCriteriaAndVerifyAttempt(t *testing.T) {
 func TestReconstructCheckpoint_interruptedVerify(t *testing.T) {
 	t.Parallel()
 	ctx := context.Background()
-	st := store.NewStore(tasktestdb.OpenSQLite(t))
+	st := storefake.New(t).Store
 	tsk, err := st.Create(ctx, store.CreateTaskInput{
 		Title: "verify resume", InitialPrompt: "work", Status: domain.StatusReady, Priority: domain.PriorityMedium,
 	}, domain.ActorUser)
@@ -120,7 +120,7 @@ func TestReconstructCheckpoint_interruptedVerify(t *testing.T) {
 func TestLoadContinuationBundle_verifyOnlyWhenExecuteSucceeded(t *testing.T) {
 	t.Parallel()
 	ctx := context.Background()
-	st := store.NewStore(tasktestdb.OpenSQLite(t))
+	st := storefake.New(t).Store
 	tsk, err := st.Create(ctx, store.CreateTaskInput{
 		Title: "verify-only parent", InitialPrompt: "work", Status: domain.StatusReady, Priority: domain.PriorityMedium,
 	}, domain.ActorUser)
@@ -188,7 +188,7 @@ func TestLoadContinuationBundle_verifyOnlyWhenExecuteSucceeded(t *testing.T) {
 func TestLoadContinuationBundle_carriesCriteriaReportProbeErr(t *testing.T) {
 	t.Parallel()
 	ctx := context.Background()
-	st := store.NewStore(tasktestdb.OpenSQLite(t))
+	st := storefake.New(t).Store
 	tsk, err := st.Create(ctx, store.CreateTaskInput{
 		Title: "criteria probe parent", InitialPrompt: "work", Status: domain.StatusReady, Priority: domain.PriorityMedium,
 	}, domain.ActorUser)
@@ -228,7 +228,7 @@ func TestLoadContinuationBundle_carriesCriteriaReportProbeErr(t *testing.T) {
 
 func TestLoadCheckpointFromParent_requiresTerminal(t *testing.T) {
 	ctx := context.Background()
-	st := store.NewStore(tasktestdb.OpenSQLite(t))
+	st := storefake.New(t).Store
 	tsk, err := st.Create(ctx, store.CreateTaskInput{
 		Title: "t", InitialPrompt: "p", Priority: domain.PriorityMedium,
 	}, domain.ActorUser)
@@ -247,7 +247,7 @@ func TestLoadCheckpointFromParent_requiresTerminal(t *testing.T) {
 
 func TestSeedCrossCycleExecuteFromParent_recordsSucceededExecute(t *testing.T) {
 	ctx := context.Background()
-	st := store.NewStore(tasktestdb.OpenSQLite(t))
+	st := storefake.New(t).Store
 	tsk, err := st.Create(ctx, store.CreateTaskInput{
 		Title: "seed execute", InitialPrompt: "work", Priority: domain.PriorityMedium,
 	}, domain.ActorUser)

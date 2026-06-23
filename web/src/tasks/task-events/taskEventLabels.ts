@@ -20,6 +20,7 @@ const LABELS: Record<TaskEventType, string> = {
   approval_requested: "Approval requested",
   approval_granted: "Approval granted",
   task_completed: "Task completed",
+  on_task_done: "Task marked done",
   task_failed: "Task failed",
   task_retry_requested: "Retry requested",
   cycle_started: "Attempt started",

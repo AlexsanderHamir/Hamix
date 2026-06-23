@@ -10,7 +10,8 @@ import type { TaskEventType } from "@/types";
  * | status_changed, priority_changed | no | State updates; status is classified separately (`task-display/taskStatusNeedsUser.ts`) |
  * | prompt_appended | no | Prompt edits; follow in context |
  * | context_added, constraint_added, success_criterion_added, non_goal_added | no | Structured context/planning; informational |
- * | plan_added, subtask_added | no | Plan structure updates |
+ * | plan_added | no | Plan structure updates |
+ * | on_task_done | no | Harness audit when task reaches done; informational (no PR UI in v0.1) |
  * | message_added | no | Audit of message/title updates; treat as FYI unless you later key off `data` |
  * | artifact_added | no | Artifact recorded; review is optional unless workflow adds a dedicated type |
  * | approval_requested | **yes** | Explicit approval step |

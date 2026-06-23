@@ -254,6 +254,8 @@ export const TASK_EVENT_TYPES = [
   "approval_requested",
   "approval_granted",
   "task_completed",
+  /** Harness audit when task reaches done; no PR UI in v0.1 (see docs/data-model.md). */
+  "on_task_done",
   "task_failed",
   "task_retry_requested",
   // Execution-cycle audit mirrors. The backend writes these in the same

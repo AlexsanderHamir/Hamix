@@ -1,4 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { RUM_ENDPOINT } from "@/api/rum";
 import {
   __peekRUMQueueForTests,
   __resetRUMForTests,
@@ -62,7 +63,7 @@ describe("rum module", () => {
     expect(__peekRUMQueueForTests()).toHaveLength(0);
     expect(fetchMock).toHaveBeenCalledTimes(1);
     const [url, init] = fetchMock.mock.calls[0] as [string, RequestInit];
-    expect(url).toBe("/v1/rum");
+    expect(url).toBe(RUM_ENDPOINT);
     expect(init.method).toBe("POST");
     const body = JSON.parse(init.body as string) as { events: unknown[] };
     expect(body.events).toHaveLength(1);

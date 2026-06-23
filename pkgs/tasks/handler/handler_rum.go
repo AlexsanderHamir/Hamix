@@ -37,6 +37,11 @@ import (
 //     one event per metric so we forward the metric name in `name`
 //     and the value in `value`.
 //
+//   - navigation_timing: emitted by the SPA for ADR-0026 Phase 2 gate
+//     measurement (task-detail time_to_task / time_to_interactive).
+//     Intentionally NOT in validRUMTypes yet — parsed and dropped
+//     (forward-compat) until shell/metrics promotion is scoped.
+//
 // Unknown `type` values are accepted by the parser (forward-compat)
 // and dropped server-side so deploying a new SPA event before the
 // server knows about it does not 400 the whole batch.

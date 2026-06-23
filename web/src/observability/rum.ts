@@ -25,7 +25,7 @@
  * deterministically without a transport leak between cases.
  */
 
-import { sendRUMPayload } from "@/api/rum";
+import { RUM_ENDPOINT, sendRUMPayload } from "@/api/rum";
 
 export type RUMMutationKind =
   | "task_create"
@@ -70,7 +70,6 @@ export type RUMNavigationMetric =
 
 const FLUSH_INTERVAL_MS = 10_000;
 const MAX_QUEUE_LENGTH = 200;
-const RUM_ENDPOINT = "/v1/rum";
 
 interface RumState {
   queue: RUMEvent[];
@@ -240,7 +239,9 @@ export function sseResyncReceived(): void {
   enqueue({ type: "sse_resync_received" });
 }
 
-/** Records route-level navigation latency for task detail (ADR-0025). */
+/** Records route-level navigation latency for task detail (ADR-0026 Phase 2
+ * measurement). Server forward-compat drops `navigation_timing` until shell
+ * metrics work lands — see RUM_FORWARD_COMPAT_TYPES in api/rum.ts. */
 export function rumNavigationTiming(
   metric: RUMNavigationMetric,
   durationMs: number,

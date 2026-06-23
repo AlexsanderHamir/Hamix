@@ -44,13 +44,13 @@ func TestRunObserved_successEmitsHelperInThenOut(t *testing.T) {
 	if inLine["msg"] != "helper.io" || outLine["msg"] != "helper.io" {
 		t.Fatalf("msg: %v %v", inLine["msg"], outLine["msg"])
 	}
-	if inLine["phase"] != "helper_in" || outLine["phase"] != "helper_out" {
+	if inLine["phase"] != calltrace.PhaseHelperIn || outLine["phase"] != calltrace.PhaseHelperOut {
 		t.Fatalf("phase: %v %v", inLine["phase"], outLine["phase"])
 	}
 	if inLine["function"] != "unitObserved" || outLine["function"] != "unitObserved" {
 		t.Fatalf("function: %v %v", inLine["function"], outLine["function"])
 	}
-	if inLine["obs_category"] != "helper_io" || outLine["obs_category"] != "helper_io" {
+	if inLine["obs_category"] != calltrace.ObsCategoryHelperIO || outLine["obs_category"] != calltrace.ObsCategoryHelperIO {
 		t.Fatalf("obs_category: %v %v", inLine["obs_category"], outLine["obs_category"])
 	}
 	if inLine["in_k"] != "in_v" {
@@ -89,7 +89,7 @@ func TestRunObserved_errorAppendsErrOnOut(t *testing.T) {
 	if err := json.Unmarshal([]byte(helperLines[1]), &outLine); err != nil {
 		t.Fatal(err)
 	}
-	if outLine["phase"] != "helper_out" {
+	if outLine["phase"] != calltrace.PhaseHelperOut {
 		t.Fatalf("phase: %v", outLine["phase"])
 	}
 	if !strings.Contains(outLine["err"].(string), "boom") {

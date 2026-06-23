@@ -8,7 +8,7 @@ Per-request **call stack** for structured logs (`call_path`, `helper.io`): `Push
 
 | File | Role |
 |------|------|
-| `const.go` | Shared `LogCmd` (`taskapi`) for slog `cmd` field. |
+| `const.go` | Shared `LogCmd` (`taskapi`) for slog `cmd` field; helper.io `obs_category` / `phase` constants. |
 | `stack.go` | `Push`, `Path`, `WithRequestRoot`. |
 | `observe.go` | `RunObserved`, `HelperIOIn`, `HelperIOOut`, internal helper.io emitters. |
 

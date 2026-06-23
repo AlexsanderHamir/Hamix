@@ -39,10 +39,10 @@ func helperDebugIn(ctx context.Context, fn string, kv ...any) {
 	}
 	args := []any{
 		"cmd", LogCmd,
-		"obs_category", "helper_io",
+		"obs_category", ObsCategoryHelperIO,
 		"call_path", Path(ctx),
 		"function", fn,
-		"phase", "helper_in",
+		"phase", PhaseHelperIn,
 	}
 	args = append(args, kv...)
 	slog.Log(ctx, slog.LevelDebug, "helper.io", args...)
@@ -54,10 +54,10 @@ func helperDebugOut(ctx context.Context, fn string, kv ...any) {
 	}
 	args := []any{
 		"cmd", LogCmd,
-		"obs_category", "helper_io",
+		"obs_category", ObsCategoryHelperIO,
 		"call_path", Path(ctx),
 		"function", fn,
-		"phase", "helper_out",
+		"phase", PhaseHelperOut,
 	}
 	args = append(args, kv...)
 	slog.Log(ctx, slog.LevelDebug, "helper.io", args...)

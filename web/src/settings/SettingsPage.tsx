@@ -494,7 +494,7 @@ function SettingsPageLoadedView({
         </aside>
 
         <form className="settings-form" onSubmit={onSubmit}>
-          <WorkspaceSettingsSection form={form} onField={onField} />
+          <WorkspaceSettingsSection />
 
           <RunnerSettingsSection
             form={form}

@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { Link } from "react-router-dom";
 import type { UseQueryResult } from "@tanstack/react-query";
 import { useMemo } from "react";
 import { MutationErrorBanner } from "@/shared/MutationErrorBanner";
@@ -17,7 +17,6 @@ import {
   type SettingsStatus,
 } from "./settingsForm";
 import { DEFAULT_VERIFY_MAX_RETRIES } from "@/types/task";
-import { WorkspaceDirPickerModal } from "./WorkspaceDirPickerModal";
 
 type HandleField = <K extends keyof SettingsFormState>(
   key: K,
@@ -124,9 +123,11 @@ export function WorkspaceWarning() {
           <strong>Agent workspace not configured.</strong>
         </p>
         <p className="settings-banner-text">
-          Choose the project folder agents should work in under{" "}
-          <strong>Agent workspace</strong> below to enable the worker, file
-          mentions, and <code>/repo/*</code> endpoints.
+          Register a git repository on the{" "}
+          <Link to="/worktrees" className="worktrees-settings-card__link">
+            Worktrees
+          </Link>{" "}
+          page so tasks can bind to worktrees and branches.
         </p>
       </div>
     </div>
@@ -165,78 +166,18 @@ function SectionCard({
   );
 }
 
-export function WorkspaceSettingsSection({
-  form,
-  onField,
-}: {
-  form: SettingsFormState;
-  onField: HandleField;
-}) {
-  const [pickerOpen, setPickerOpen] = useState(false);
-  const [advancedOpen, setAdvancedOpen] = useState(false);
-  const repoRoot = form.repoRoot.trim();
-
+export function WorkspaceSettingsSection() {
   return (
     <SectionCard id={SECTION_IDS.workspace} title="Agent workspace">
-      <p className="settings-section-lead">
-        Folder agents edit, commit, and verify against.
-      </p>
-
-      <div className="workspace-picker-control">
-        <button
-          type="button"
-          className="btn-primary workspace-picker-open"
-          onClick={() => setPickerOpen(true)}
-        >
-          Choose project folder
-        </button>
-        {repoRoot !== "" ? (
-          <p className="workspace-selected-path" title={repoRoot}>
-            <span className="workspace-selected-path-label">Selected</span>
-            <code className="workspace-selected-path-value">{repoRoot}</code>
-          </p>
-        ) : (
-          <p className="settings-field-help">No folder selected yet.</p>
-        )}
+      <div className="worktrees-settings-card">
+        <p className="settings-section-lead">
+          Worktrees are configured per task. Manage repositories, worktrees, and branches on
+          the Worktrees page.
+        </p>
+        <Link to="/worktrees" className="worktrees-settings-card__link">
+          Open Worktrees
+        </Link>
       </div>
-
-      <details
-        className="settings-learn-more workspace-advanced-path"
-        open={advancedOpen}
-        onToggle={(e) => setAdvancedOpen(e.currentTarget.open)}
-      >
-        <summary>Advanced: type path manually</summary>
-        <label className="settings-field">
-          <span className="settings-field-label">Repository root path</span>
-          <input
-            type="text"
-            value={form.repoRoot}
-            onChange={(e) => onField("repoRoot", e.target.value)}
-            placeholder="/path/to/your/project"
-            spellCheck={false}
-            autoComplete="off"
-          />
-        </label>
-        <p className="settings-field-help">
-          Absolute path on the machine where taskapi runs. Prefer{" "}
-          <strong>Choose project folder</strong> above.
-        </p>
-      </details>
-
-      <details className="settings-learn-more">
-        <summary>What reads this path?</summary>
-        <p>
-          The agent worker, <code>/repo/*</code> endpoints, and{" "}
-          <code>@file</code> mentions all resolve paths against this root.
-        </p>
-      </details>
-
-      <WorkspaceDirPickerModal
-        open={pickerOpen}
-        currentPath={form.repoRoot}
-        onClose={() => setPickerOpen(false)}
-        onSelect={(path) => onField("repoRoot", path)}
-      />
     </SectionCard>
   );
 }

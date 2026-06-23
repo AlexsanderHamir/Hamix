@@ -48,22 +48,33 @@ Optional — rebuild the toolchain image after [Dockerfile.dev](docker/Dockerfil
 .\scripts\docker-build.ps1       # Windows PowerShell
 ```
 
-Taskapi migrates the schema on startup (same as native dev). See [Schema migrations in docs/configuration.md](docs/configuration.md) and [docs/docker.md](docs/docker.md).
+Taskapi does **not** migrate on dev startup by default. See [Schema migrations in docs/configuration.md](docs/configuration.md) and [docs/docker.md](docs/docker.md).
 
 API: `http://127.0.0.1:8080` · Web: `http://localhost:5173`
 
 ### Native
 
-2. Run API + web (taskapi migrates on startup):
+2. Migrate (once per schema change or first setup):
 
 ```bash
-./scripts/dev.sh        # Unix — chmod +x once if needed
+./scripts/migrate.sh       # Unix — chmod +x once if needed
+.\scripts\migrate.ps1      # Windows
+```
+
+3. Run API + web (servers only):
+
+```bash
+./scripts/dev.sh        # Unix
 .\scripts\dev.ps1       # Windows
 ```
 
+Optional convenience: `./scripts/dev.sh --migrate` / `.\scripts\dev.ps1 -Migrate` runs migrate then servers.
+
+**Cloud Postgres:** remote `DATABASE_URL` adds latency to migrate; daily dev uses step 3 only. Run step 2 after pulls that change schema. If you skip migrate, taskapi stderr and `GET /health/ready` report `schema` pending.
+
 API: `http://127.0.0.1:8080` · Web: `http://localhost:5173`
 
-Optional manual migrate: `go run ./cmd/dbcheck -migrate` — [Schema migrations in configuration.md](docs/configuration.md).
+Manual migrate only: `go run ./cmd/dbcheck -migrate` — [Schema migrations in configuration.md](docs/configuration.md).
 
 ## Before you open a PR
 

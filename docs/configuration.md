@@ -29,6 +29,7 @@ The two surfaces do not overlap. Anything in `app_settings` is **not** driven by
 | `HAMIX_LOG_DIR` | No | `./logs` | Directory for JSON log files. `taskapi -logdir` flag overrides. |
 | `HAMIX_LOG_LEVEL` | No | `info` | Minimum `slog` level (`debug` / `info` / `warn` / `error`). `taskapi -loglevel` flag overrides. |
 | `HAMIX_DISABLE_LOGGING` | No | — | `1`/`true`/`yes`/`on`: no JSONL file; only `slog.Error` to stderr. Same as `taskapi -disable-logging`. |
+| `HAMIX_MIGRATE` | No | — | `1`/`true`/`yes`/`on`: run `postgres.Migrate` at taskapi startup. Same as `taskapi -migrate`. Default: skip migrate. |
 | `HAMIX_GORM_SLOW_QUERY_MS` | No | `200` | Statements slower than this log at `Warn`. `0` disables slow-SQL branch. |
 | `HAMIX_RATE_LIMIT_PER_MIN` | No | `120` | Per-IP token bucket. `0` disables. Key is `RemoteAddr` host (no trusted `X-Forwarded-For`). Exempt: `/health*`, `/metrics`. Over limit: `429 rate limit exceeded` with `Retry-After: 60`. |
 | `HAMIX_IDEMPOTENCY_TTL` | No | `24h` | Idempotency cache TTL for `Idempotency-Key`. `0` disables. In-process only — not shared across replicas. |
@@ -49,6 +50,7 @@ The two surfaces do not overlap. Anything in `app_settings` is **not** driven by
 | `HAMIX_PATH_MAP` | — | Optional JSON object mapping **container prefix → host prefix** (e.g. `{"/host-home":"/Users/me"}`). Git API `host_path` fields and legacy Settings `repo_root` responses show host paths; inbound requests stay container paths. Invalid JSON logs a warn at boot and is ignored. |
 | `HAMIX_BROWSE_ROOTS` | — | Comma-separated absolute paths. When set, **replaces** default picker roots (install + home). For CI or restricted deployments. |
 | `DEV_TASKAPI_PORT` | `8080` | Non-default API port when using `scripts/dev.*`. Set `VITE_TASKAPI_ORIGIN` in `web/.env.local` to match. |
+| `DEV_TASKAPI_STARTUP_TIMEOUT_SEC` | `150` | Port-wait timeout when using `scripts/dev.* -Migrate` sugar (derived from migrate timeout + grace). |
 | `VITE_TASKAPI_ORIGIN` | `http://127.0.0.1:8080` | Vite dev proxy target (`web/` only). See [web.md](./web.md). |
 | `VITE_UI_TEST_MODE` | — | When `true`/`1`, demo JSON for some GET routes (layouts without DB seed). Mutations still hit taskapi. Settings → UI test mode. |
 
@@ -59,11 +61,12 @@ Reconcile tick interval is fixed in code (`pkgs/agents.ReconcileTickInterval`, 2
 1. Resolve `.env` (repo-root or `-env`), overlay logging env vars first so `HAMIX_LOG_*` apply before the log file is opened, then `envload.Load` (requires `DATABASE_URL`).
 2. Open the log file (`taskapi-YYYY-MM-DD-HHMMSS-<nanos>.jsonl` under `HAMIX_LOG_DIR`). When `HAMIX_DISABLE_LOGGING` is set, only `slog.Error` goes to stderr (text handler).
 3. `postgres.Open` — GORM connection. Configures `database/sql` pool (max open/idle, lifetime). No startup `Ping`.
-4. `postgres.Migrate` — `AutoMigrate` for every domain model under `postgres.DefaultMigrateTimeout` (120s).
-5. `store.NewStore`, `(*store.Store).SetReadyTaskNotifier` (in-process queue), `(*store.Store).SetPickupWake` (deferred ready), `handler.NewSSEHub`.
-6. Agent worker supervisor (`cmd/taskapi/run_agentworker.go`) reads `app_settings`, builds the runner via `pkgs/agents/runner/registry`, probes the binary, and starts the worker when conditions are met. Deep dive: [domain/agent-supervisor.md](domain/agent-supervisor.md).
-7. `internal/taskapi.NewHTTPHandler` wires store + hub + repo into `handler.NewHandler`, then applies `pkgs/tasks/middleware.Stack` (recovery, metrics, access logging, rate limit, optional auth, timeouts, body cap, idempotency).
-8. `http.Server` on `-port` (default 8080). `ReadHeaderTimeout` / `ReadTimeout` / `IdleTimeout` / `MaxHeaderBytes` are set; `WriteTimeout` is intentionally **not** set so SSE streams are not cut off.
+4. `postgres.CheckSchemaDrift` — compare code `SchemaRevision` to `schema_meta` row; stderr + log alert when migrate is required.
+5. **Optional** `postgres.Migrate` — only when `taskapi -migrate` or `HAMIX_MIGRATE=1`; otherwise skipped (see [Schema migrations](#schema-migrations)).
+6. `store.NewStore`, `(*store.Store).SetReadyTaskNotifier` (in-process queue), `(*store.Store).SetPickupWake` (deferred ready), `handler.NewSSEHub`.
+7. Agent worker supervisor (`cmd/taskapi/run_agentworker.go`) reads `app_settings`, builds the runner via `pkgs/agents/runner/registry`, probes the binary, and starts the worker when conditions are met. Deep dive: [domain/agent-supervisor.md](domain/agent-supervisor.md).
+8. `internal/taskapi.NewHTTPHandler` wires store + hub + repo into `handler.NewHandler`, then applies `pkgs/tasks/middleware.Stack` (recovery, metrics, access logging, rate limit, optional auth, timeouts, body cap, idempotency).
+9. `http.Server` on `-port` (default 8080). `ReadHeaderTimeout` / `ReadTimeout` / `IdleTimeout` / `MaxHeaderBytes` are set; `WriteTimeout` is intentionally **not** set so SSE streams are not cut off.
 
 ### Graceful shutdown
 
@@ -83,15 +86,25 @@ Every request gets a `request_id` (from `X-Request-ID` or a generated UUID). The
 
 ## Schema migrations
 
-Hamix uses GORM **AutoMigrate** plus idempotent upgrade steps in [`pkgs/tasks/postgres/postgres.go`](../pkgs/tasks/postgres/postgres.go) (`postgres.Migrate`). There are no numbered SQL migration files.
+Hamix uses GORM **AutoMigrate** plus idempotent upgrade steps in [`pkgs/tasks/postgres/postgres.go`](../pkgs/tasks/postgres/postgres.go) (`postgres.Migrate`). There are no numbered SQL migration files. An integer **`SchemaRevision`** in [`schema_revision.go`](../pkgs/tasks/postgres/schema_revision.go) is stored in the `schema_meta` table after migrate; bump it in the same PR as any domain model or migrate-step change (CI enforces).
+
+**Two-step workflow:** migrate first, then start servers.
+
+| Step | Command | When |
+| --- | --- | --- |
+| **1. Migrate** | `.\scripts\migrate.ps1` / `./scripts/migrate.sh` | First-time setup; after `git pull` with schema changes; production deploy before traffic |
+| **2. Dev servers** | `.\scripts\dev.ps1` / `./scripts/dev.sh` | Daily dev — does **not** migrate by default |
 
 | When | Where | What runs |
 | --- | --- | --- |
-| **Every dev session** (native or Docker) | `taskapi` startup — [`cmd/taskapi/run_db.go`](../cmd/taskapi/run_db.go) | `postgres.Migrate` after opening `DATABASE_URL`. Happens when `./scripts/dev.sh`, `.\scripts\dev.ps1`, or `docker compose up` starts taskapi. Idempotent: safe on every start. |
-| **Manual** (optional) | `go run ./cmd/dbcheck -migrate` | Same migrate + backfill as taskapi, without starting HTTP or Vite. Use to verify DB connectivity or update schema only. |
-| **Docker entrypoint** | [`docker/dev-entrypoint.sh`](../docker/dev-entrypoint.sh) | Validates `DATABASE_URL` only — **does not** migrate. |
+| **Explicit migrate** (primary) | `scripts/migrate.*` or `go run ./cmd/dbcheck -migrate` | `postgres.Migrate` + backfill under `postgres.DefaultMigrateTimeout` (120s); updates `schema_meta` |
+| **Dev servers** | `scripts/dev.*` | Starts taskapi (no migrate) + Vite. Optional `-Migrate` sugar runs step 1 first. |
+| **taskapi boot** (optional) | `-migrate` or `HAMIX_MIGRATE=1` | Same migrate as `dbcheck -migrate` when set; default is skip + drift check |
+| **Production deploy** | `dbcheck -migrate` (image includes `/app/dbcheck`) | Release step 1 before rolling out taskapi without migrate |
 
-Dev scripts (`dev.sh` / `dev.ps1`) and the Docker entrypoint do **not** call `dbcheck`. Pull new code and run dev as usual; taskapi applies any new schema on startup.
+If code `SchemaRevision` exceeds the database, taskapi logs an error, prints a stderr banner, and `GET /health/ready` returns `503` with `checks.schema=pending` until migrate runs.
+
+See [ADR-0034](adr/ADR-0034-opt-in-schema-migration.md).
 
 ## App settings (`app_settings` row)
 

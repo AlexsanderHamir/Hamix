@@ -53,7 +53,7 @@ docker compose up
 - API: `http://127.0.0.1:8080`
 - Web: `http://localhost:5173`
 
-Schema migrate runs when **taskapi** starts (same as native dev). See [Schema migrations](#schema-migrations).
+Schema migrate is a **separate step** before dev servers. See [Schema migrations](#schema-migrations).
 
 Press Ctrl+C to stop. Run `docker compose down` to remove the container.
 
@@ -87,12 +87,19 @@ DATABASE_URL=postgres://user:pass@host.docker.internal:5432/hamix?sslmode=disabl
 
 ## Schema migrations
 
-Not in the Docker entrypoint. When `docker compose up` runs `./scripts/dev.sh`, **taskapi** applies `postgres.Migrate` on startup — the same path as `.\scripts\dev.ps1` / `./scripts/dev.sh` on the host.
-
-Optional manual migrate (schema only, no servers):
+Not in the Docker entrypoint. Run migrate explicitly, then start dev:
 
 ```bash
-docker compose run --rm dev go run ./cmd/dbcheck -migrate
+docker compose run --rm dev ./scripts/migrate.sh
+docker compose up
+```
+
+When `docker compose up` runs `./scripts/dev.sh`, **taskapi** does not migrate by default — same as native `.\scripts\dev.ps1` / `./scripts/dev.sh`.
+
+Production image includes `/app/dbcheck`. Release step 1 before traffic:
+
+```bash
+docker compose -f compose.prod.yml run --rm taskapi /app/dbcheck -migrate
 ```
 
 Full detail: [configuration.md — Schema migrations](./configuration.md).

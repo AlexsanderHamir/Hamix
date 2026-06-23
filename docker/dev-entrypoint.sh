@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # Docker dev container entrypoint: require DATABASE_URL, then exec command.
-# Schema migrate runs inside taskapi on startup (same as native dev.ps1 / dev.sh).
+# Schema migrate is a separate step: ./scripts/migrate.sh before ./scripts/dev.sh
 set -euo pipefail
 
 cd /app

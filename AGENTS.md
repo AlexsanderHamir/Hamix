@@ -59,7 +59,7 @@ Intent-based lookup. For subsystem inventory, use [docs/agent-map.md](docs/agent
 | Task drafts API | `handler_task_drafts.go`, [docs/api.md](docs/api.md) |
 | Projects API | `handler_projects.go`, `handler_projects_json.go` |
 | Workspace repo / `@`-mentions | `pkgs/repo/`, [docs/domain/worktrees-and-branches.md](docs/domain/worktrees-and-branches.md) |
-| Schema migration | `pkgs/tasks/postgres/postgres.go` (`postgres.Migrate` on **taskapi** startup); optional manual: `go run ./cmd/dbcheck -migrate` — [docs/configuration.md](docs/configuration.md) (Schema migrations) |
+| Schema migration | `scripts/migrate.*`, `pkgs/tasks/postgres/schema_revision.go`, `go run ./cmd/dbcheck -migrate` — [docs/configuration.md](docs/configuration.md) (Schema migrations), [ADR-0034](docs/adr/ADR-0034-opt-in-schema-migration.md) |
 | Write policy / enriched SSE payload | `writepolicy/`, `handler_writepolicy.go`, [ADR-0026](docs/adr/ADR-0026-backend-data-coherence.md) |
 
 ### Agents and worker

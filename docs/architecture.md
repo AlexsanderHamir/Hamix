@@ -232,7 +232,7 @@ See [domain/sse-hub.md](domain/sse-hub.md) for hub mechanics and coalescing rule
 
 ## Persistence
 
-GORM + Postgres. Schema migration is `AutoMigrate` only — no versioned migration files. The same migration runs against SQLite in tests via `tasktestdb.OpenSQLite`. Deep dive: [domain/persistence.md](domain/persistence.md) (facade, dual-write, verdict vs report files).
+GORM + Postgres. Schema migration is explicit (`scripts/migrate.*` / `dbcheck -migrate`); `SchemaRevision` in code vs `schema_meta` in the DB detects drift at taskapi startup. The same migration runs against SQLite in tests via `tasktestdb.OpenSQLite`. Deep dive: [domain/persistence.md](domain/persistence.md) (facade, dual-write, verdict vs report files).
 
 | Table | Purpose |
 |---|---|
@@ -391,7 +391,7 @@ Idempotent: no-op on a clean DB. Skipped when the worker is disabled.
 4. Per-IP HTTP rate limiting is in-memory per process (`HAMIX_RATE_LIMIT_PER_MIN`); replicas do not share state. `RemoteAddr` is the only client key (no trusted `X-Forwarded-For`).
 5. Request bodies cap at 1 MiB by default (`HAMIX_MAX_REQUEST_BODY_BYTES`).
 6. `Idempotency-Key` is honored only inside a single `taskapi` process.
-7. Schema evolution is `AutoMigrate` only — no versioned migration files.
+7. Schema evolution uses GORM AutoMigrate via explicit migrate step; integer `SchemaRevision` tracks applied schema — see [ADR-0034](adr/ADR-0034-opt-in-schema-migration.md).
 8. List ordering is fixed (`id ASC`); no sort or filter query parameters beyond `after_id` keyset paging.
 9. **Cycles vs audit log:** typed `task_cycles` / `task_cycle_phases` are authoritative for live execution state. Every mutation mirrors into `task_events` in the same SQL transaction. Do not merge those concerns back into a single store.
 10. **Agent worker is single-process.** No retry/backoff; one attempt per task. No per-cycle workspace isolation — sequential runs share the working directory.

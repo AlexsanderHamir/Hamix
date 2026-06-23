@@ -340,6 +340,7 @@ if ($TestsOnly) {
 
 Invoke-CapturedStep "check-brand" { & "$PSScriptRoot\check-brand.ps1" }
 Step-Gofmt
+Invoke-CapturedStep "schema revision" { & "$PSScriptRoot\check-schema-revision.ps1" }
 Invoke-CapturedStep "go vet" { go vet ./... }
 Step-SchedulingBoundary
 

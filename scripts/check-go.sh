@@ -79,15 +79,15 @@ if [[ "$TESTS_ONLY" -eq 1 ]]; then
   fi
 elif [[ "$LINT_ONLY" -eq 1 ]]; then
   if [[ "$SKIP_FUNCLOG" -eq 0 ]]; then
-    TOTAL=6
+    TOTAL=7
   else
-    TOTAL=5
+    TOTAL=6
   fi
 else
   if [[ "$SKIP_FUNCLOG" -eq 0 ]]; then
-    TOTAL=6
+    TOTAL=7
   else
-    TOTAL=5
+    TOTAL=6
   fi
 fi
 
@@ -295,6 +295,7 @@ fi
 
 run_cmd "check-brand" bash "$script_dir/check-brand.sh"
 step_gofmt
+run_cmd "schema revision" bash "$script_dir/check-schema-revision.sh"
 run_cmd "go vet" go vet ./...
 step_scheduling_boundary
 

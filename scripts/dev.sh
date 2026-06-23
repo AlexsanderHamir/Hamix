@@ -1,9 +1,11 @@
 #!/usr/bin/env bash
 # taskapi + Vite from repo root: ./scripts/dev.sh  (needs .env / DATABASE_URL)
+# Schema migrate is a separate step: ./scripts/migrate.sh
 #
-# Usage: ./scripts/dev.sh [--host HOST] [--vite-host HOST]
+# Usage: ./scripts/dev.sh [--migrate] [--host HOST] [--vite-host HOST]
 #
 # Flags:
+#   --migrate         Run ./scripts/migrate.sh first (convenience sugar)
 #   --host HOST       taskapi listen host (taskapi -host; default 127.0.0.1)
 #   --vite-host HOST  Vite dev server --host (default: localhost only)
 #   --help, -h        Show options
@@ -14,13 +16,18 @@ cd "$ROOT"
 
 HOST=""
 VITE_HOST=""
+RUN_MIGRATE=0
 
 show_help() {
-  sed -n '2,10p' "$0" | sed 's/^# \{0,1\}//'
+  sed -n '2,16p' "$0" | sed 's/^# \{0,1\}//'
 }
 
 while [[ $# -gt 0 ]]; do
   case "$1" in
+    --migrate)
+      RUN_MIGRATE=1
+      shift
+      ;;
     --host)
       HOST="$2"
       shift 2
@@ -45,6 +52,16 @@ PORT="${DEV_TASKAPI_PORT:-8080}"
 EXE="$ROOT/taskapi-dev"
 [ "$GOOS" = "windows" ] && EXE="$ROOT/taskapi-dev.exe"
 
+readiness_timeout_sec() {
+  local sec
+  sec="$(go run ./cmd/devconfig -readiness-timeout-sec 2>/dev/null || echo 150)"
+  if [[ "$RUN_MIGRATE" -eq 0 ]]; then
+    echo 30
+  else
+    echo "$sec"
+  fi
+}
+
 stop_listener_on_port() {
   local port="$1"
   if [ "$GOOS" = "windows" ]; then
@@ -58,6 +75,10 @@ stop_listener_on_port() {
   fi
   sleep 0.2
 }
+
+if [[ "$RUN_MIGRATE" -eq 1 ]]; then
+  "$ROOT/scripts/migrate.sh"
+fi
 
 go mod download
 ( cd "$ROOT/web" && npm install )
@@ -77,46 +98,42 @@ if [[ -n "$HOST" ]]; then
   api_args=(-host "$HOST" -port "$PORT")
 fi
 
-for attempt in 1 2; do
-  stop_listener_on_port "$PORT"
-  "$EXE" "${api_args[@]}" &
-  API_PID=$!
+READINESS_SEC="$(readiness_timeout_sec)"
+stop_listener_on_port "$PORT"
+"$EXE" "${api_args[@]}" &
+API_PID=$!
 
-  deadline=$((SECONDS + 90))
-  ready=0
-  while (( SECONDS < deadline )); do
-    kill -0 "$API_PID" 2>/dev/null || break
-    if command -v nc >/dev/null 2>&1 && nc -z 127.0.0.1 "$PORT" 2>/dev/null; then
-      ready=1
-      break
-    fi
-    if (echo >/dev/tcp/127.0.0.1/"$PORT") 2>/dev/null; then
-      ready=1
-      break
-    fi
-    sleep 0.15
-  done
-
-  if (( ready == 1 )) && kill -0 "$API_PID" 2>/dev/null; then
+deadline=$((SECONDS + READINESS_SEC))
+ready=0
+while (( SECONDS < deadline )); do
+  kill -0 "$API_PID" 2>/dev/null || break
+  if command -v nc >/dev/null 2>&1 && nc -z 127.0.0.1 "$PORT" 2>/dev/null; then
+    ready=1
     break
   fi
-
-  if kill -0 "$API_PID" 2>/dev/null; then
-    kill "$API_PID" 2>/dev/null || true
-    wait "$API_PID" 2>/dev/null || true
+  if (echo >/dev/tcp/127.0.0.1/"$PORT") 2>/dev/null; then
+    ready=1
+    break
   fi
-  API_PID=""
-
-  if [ "$attempt" = 1 ]; then
-    continue
-  fi
-  echo "taskapi did not start on :$PORT" >&2
-  exit 1
+  sleep 0.15
 done
 
-cd "$ROOT/web"
-if [[ -n "$VITE_HOST" ]]; then
-  npm run dev -- --host "$VITE_HOST"
-else
-  npm run dev
+if (( ready == 1 )) && kill -0 "$API_PID" 2>/dev/null; then
+  cd "$ROOT/web"
+  if [[ -n "$VITE_HOST" ]]; then
+    npm run dev -- --host "$VITE_HOST"
+  else
+    npm run dev
+  fi
+  exit 0
 fi
+
+if kill -0 "$API_PID" 2>/dev/null; then
+  kill "$API_PID" 2>/dev/null || true
+  wait "$API_PID" 2>/dev/null || true
+  echo "taskapi did not listen on :$PORT within ${READINESS_SEC}s. Try ./scripts/migrate.sh if schema changed." >&2
+  exit 1
+fi
+
+echo "taskapi exited on :$PORT. Check logs/taskapi-*.jsonl or run ./scripts/migrate.sh" >&2
+exit 1

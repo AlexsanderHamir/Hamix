@@ -15,6 +15,7 @@ import (
 	"testing"
 )
 
+// EC-07 (docs/domain/harness.md): verify tamper → terminal failure, no execute retry.
 // TestWorker_VerifyPhase_failsCycleWhenVerifyTampers pins the
 // integrity-check contract. A verify runner that mutates source files
 // MUST cause the cycle to terminate as verify_tampered with no
@@ -302,6 +303,7 @@ func TestWorker_VerifyPhase_terminateReasonIncludesFailingIDs(t *testing.T) {
 	}
 }
 
+// EC-07: repo-root mutation during verify is tamper (terminal).
 // TestWorker_VerifyPhase_repoRootMutationStillTampered pins the
 // strengthened integrity contract: with the report-file allowlist
 // removed in PR1, ANY mutation under RepoRoot during the verify pass

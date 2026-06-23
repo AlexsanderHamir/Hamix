@@ -198,6 +198,7 @@ func TestSeedCrossCycleExecuteFromParent_recordsSucceededExecute(t *testing.T) {
 	}
 }
 
+// EC-10 (docs/domain/harness.md): cross-cycle verify-only resume skips execute.
 func TestVerifyOnlyCrossCycleResume_runCycleLoopSkipsRunnerExecute(t *testing.T) {
 	workDir := t.TempDir()
 	gitInit(t, workDir)

@@ -11,6 +11,8 @@ import (
 	"testing"
 )
 
+// EC-09 (docs/domain/harness.md): locked passes survive infra verify retries.
+// Integration: TestEdgeCase_EC09_partialPass_infraVerifyOnly in cycle_verify_only_test.go.
 // TestWorker_VerifyPhase_carriesPassesAcrossRetries pins PR2's
 // retry-efficiency contract WITHOUT breaking the docs-promised atomic
 // decision: when attempt 1 passes c1 and fails c2, and attempt 2

@@ -416,15 +416,15 @@ The phase ledger allows `verify → verify` when the previous verify row is term
 
 | EC ID | Behavior | Test |
 | --- | --- | --- |
-| EC-01 | Infra verify fail → verify-only retry | `TestEdgeCase_EC01_verifyInfra_skipsExecute` |
+| EC-01 | Infra verify fail → verify-only retry | `TestEdgeCase_EC01_verifyInfra_skipsExecute`; classify: `TestClassify_EC01_verifyInfra_verifyOnly` |
 | EC-02 | Verify-agent reject → full re-execute | `TestEdgeCase_EC02_verifyAgentReject_fullReexecute` |
 | EC-03 | `ClaimedDone=false` → full re-execute | `TestEdgeCase_EC03_claimedNotDone_fullReexecute` |
-| EC-04 | Missing/invalid criteria-report → full re-execute | `TestEdgeCase_EC04_reportMissing_fullReexecute` |
+| EC-04 | Missing/invalid criteria-report → full re-execute | `TestEdgeCase_EC04_reportMissing_fullReexecute`; classify: `TestClassify_EC04_reportInvalid_fullReexecute` |
 | EC-05 | Git HEAD drift → full re-execute | `TestClassify_EC05_headChanged_fullReexecute` |
 | EC-06 | Commit ingest failed → full re-execute | `TestClassify_EC06_ingestFailed_fullReexecute` |
-| EC-07 | Tamper → terminal | existing verify tamper tests |
+| EC-07 | Tamper → terminal | `TestWorker_VerifyPhase_failsCycleWhenVerifyTampers` (`internal/verify`) |
 | EC-08 | Retry budget exhausted → terminal | `TestClassify_EC08_budgetExhausted_terminal` |
-| EC-09 | Locked pass + infra fail on other criterion | `TestEdgeCase_EC09_partialPass_infraVerifyOnly` |
+| EC-09 | Locked pass + infra fail on other criterion | `TestEdgeCase_EC09_partialPass_infraVerifyOnly`; verify phase: `TestWorker_VerifyPhase_carriesPassesAcrossRetries` |
 | EC-10 | Cross-cycle verify-only resume unchanged | `TestVerifyOnlyCrossCycleResume_runCycleLoopSkipsRunnerExecute` |
 | EC-11 | Process restart mid-cycle | out of scope (#5) |
 

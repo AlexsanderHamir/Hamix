@@ -75,8 +75,8 @@ func TestWorker_VerifyPhase_repoRootStaysCleanThroughoutCycle(t *testing.T) {
 		VerifyRunner: verifyHook,
 	})
 	h.waitTaskStatus(ctx, tsk.ID, domain.StatusDone)
-	cancel()
 	<-done
+	cancel()
 	postStatus, postErr := exec.Command("git", "-C", workDir, "status", "--porcelain").CombinedOutput()
 	if postErr != nil {
 		t.Fatalf("post git status: %v\n%s", postErr, postStatus)
@@ -145,8 +145,8 @@ func TestWorker_terminateCycle_cleansReportDir(t *testing.T) {
 		VerifyRunner: verifyHook,
 	})
 	h.waitTaskStatus(ctx, tsk.ID, domain.StatusDone)
-	cancel()
 	<-done
+	cancel()
 	cycles, _ := h.store.ListCyclesForTask(context.Background(), tsk.ID, 1)
 	if len(cycles) != 1 {
 		t.Fatalf("cycle count = %d, want 1", len(cycles))

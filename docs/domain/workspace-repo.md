@@ -31,15 +31,17 @@ How `app_settings.repo_root` gates the agent worker and `/repo/*`, how `pkgs/rep
 
 ## Overview
 
-Hamix treats one filesystem directory as the **workspace repo**: the tree the operator picks in Settings → **Agent workspace**, the tree `@`-mentions in task prompts refer to, and the **working directory** for every execute and verify runner invocation. That path lives in `app_settings.repo_root` (chosen via the folder picker or `PATCH /settings`).
+Hamix scopes workspace access through **registered git worktrees** (`git_worktrees` rows). Each task may carry `worktree_id` and `branch_id`; the agent worker sets **`WorkingDir`** to that worktree path at dequeue, runs `gitwork.Checkout` for the bound branch, and `@`-mention validation resolves paths against the chosen worktree.
 
-When `repo_root` is **empty**, the product deliberately degrades:
+`app_settings.repo_root` remains during the migration window (Plan 7 removes it). Until then, empty `repo_root` no longer gates the worker — supervisor idle reasons are **`no_repository_registered`** and **`all_worktrees_invalid`** instead.
 
-- The agent worker supervisor stays **idle** (`idle_reason=repo_root_not_configured`).
-- Every `GET /repo/*` route returns **409** with `reason: repo_root_not_configured`.
-- `@`-mention validation on task create/patch is **skipped** (prompts may reference paths that cannot be checked yet).
+When no git repository is registered:
 
-When `repo_root` is **set**, `pkgs/repo.OpenRoot` validates the path, handlers and the worker share the same resolved root, and prompt mentions are checked against real files before tasks are saved.
+- The agent worker supervisor stays **idle** (`idle_reason=no_repository_registered`).
+- Every `GET /repo/*` route returns **400** without `worktree_id`, or **404** for unknown worktree.
+- `@`-mention validation on task create/patch is **skipped** when the prompt has no `@`-mentions; prompts with mentions require `worktree_id`.
+
+When worktrees are registered, `RepoProvider.OpenWorktreeRoot` validates paths, `/repo/*` requires `?worktree_id=`, and prompt mentions are checked against that worktree before tasks are saved.
 
 > **Important** — The workspace repo is **read-only over HTTP**. Mutations happen only when the execute agent (or the operator outside Hamix) changes files on disk. Hamix never exposes a write API for the workspace tree.
 
@@ -72,7 +74,7 @@ Schema for `initial_prompt`: [data-model.md](../data-model.md). HTTP routes and 
 | **Repo-relative path** | Slash-separated path under the root (e.g. `pkgs/tasks/handler/handler.go`); what APIs and mentions use |
 | **`@`-mention** | Token in prompt text: `@path` or `@path(start-end)` with 1-based inclusive line numbers |
 | **`RepoProvider`** | Handler indirection that resolves the active `*repo.Root` from settings at request time |
-| **`WorkingDir`** | `runner.Request.WorkingDir` — always `repo_root` for execute and verify CLI runs |
+| **`WorkingDir`** | `runner.Request.WorkingDir` — the task's bound worktree path at dequeue (set via `Harness.SetWorkingDir` after checkout) |
 
 ### Actors and trust
 

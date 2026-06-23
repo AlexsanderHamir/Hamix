@@ -1,7 +1,6 @@
 package handler
 
 import (
-	"context"
 	"encoding/json"
 	"io"
 	"net/http"
@@ -15,18 +14,8 @@ import (
 	"github.com/AlexsanderHamir/Hamix/pkgs/tasks/store"
 )
 
-// TestHTTP_repoRoutes_returnsConflictWhenNotConfigured pins the Gate 4
-// contract: when the production wiring runs without a configured
-// AppSettings.RepoRoot, the /repo/* endpoints must respond
-// 409 Conflict with the documented reason "repo_root_not_configured"
-// and error string "repo root is not configured" (docs/api.md) so
-// the SPA can render a "Pick a workspace" banner with a link to
-// the Settings page (docs/configuration.md). Reading the same store row
-// is exercised across all three /repo/* handlers in one test to make
-// the contract regression-proof.
-func TestHTTP_repoRoutes_returnsConflictWhenNotConfigured(t *testing.T) {
-	const wantRepo409Error = "repo root is not configured" // docs/api.md (409 /repo/* when repo_root empty)
-
+// TestHTTP_repoRoutes_requireWorktreeID pins that /repo/* endpoints require worktree_id.
+func TestHTTP_repoRoutes_requireWorktreeID(t *testing.T) {
 	db := tasktestdb.OpenSQLite(t)
 	st := store.NewStore(db)
 	h := NewHandler(st, NewSSEHub(), nil, WithRepoProvider(NewSettingsRepoProvider(st)))
@@ -46,30 +35,17 @@ func TestHTTP_repoRoutes_returnsConflictWhenNotConfigured(t *testing.T) {
 				t.Fatal(err)
 			}
 			defer res.Body.Close()
-			if res.StatusCode != http.StatusConflict {
+			if res.StatusCode != http.StatusBadRequest {
 				b, _ := io.ReadAll(res.Body)
-				t.Fatalf("status %d want 409 body=%s", res.StatusCode, b)
-			}
-			var body repoUnavailableErrorBody
-			if err := json.NewDecoder(res.Body).Decode(&body); err != nil {
-				t.Fatalf("decode: %v", err)
-			}
-			if body.Reason != RepoReasonNotConfigured {
-				t.Fatalf("reason=%q want %q", body.Reason, RepoReasonNotConfigured)
-			}
-			if body.Error != wantRepo409Error {
-				t.Fatalf("error=%q want %q (see docs/api.md repo 409 JSON)", body.Error, wantRepo409Error)
+				t.Fatalf("status %d want 400 body=%s", res.StatusCode, b)
 			}
 		})
 	}
 }
 
-// TestHTTP_repoRoutes_followAppSettingsRepoRoot pins that PATCHing
-// AppSettings.RepoRoot makes /repo/search start serving from the new
-// path on the very next call (no process restart required). This is
-// the core promise of NewSettingsRepoProvider; if a regression caches
-// the legacy nil root the SPA Settings page would silently break.
-func TestHTTP_repoRoutes_followAppSettingsRepoRoot(t *testing.T) {
+// TestHTTP_repoRoutes_followRegisteredWorktree pins that a registered git worktree
+// makes /repo/search serve from that path on the next call.
+func TestHTTP_repoRoutes_followRegisteredWorktree(t *testing.T) {
 	dir := t.TempDir()
 	if err := os.WriteFile(filepath.Join(dir, "settings_repo.txt"), []byte("ok\n"), 0o644); err != nil {
 		t.Fatal(err)
@@ -77,17 +53,12 @@ func TestHTTP_repoRoutes_followAppSettingsRepoRoot(t *testing.T) {
 
 	db := tasktestdb.OpenSQLite(t)
 	st := store.NewStore(db)
+	worktreeID, _ := seedTestGitWorktree(t, st, dir)
 	h := NewHandler(st, NewSSEHub(), nil, WithRepoProvider(NewSettingsRepoProvider(st)))
 	srv := httptest.NewServer(h)
 	defer srv.Close()
 
-	if _, err := st.UpdateSettings(context.Background(), store.SettingsPatch{
-		RepoRoot: ptrString(dir),
-	}); err != nil {
-		t.Fatalf("UpdateSettings: %v", err)
-	}
-
-	res, err := http.Get(srv.URL + "/repo/search?q=settings_repo")
+	res, err := http.Get(srv.URL + repoSearchWithWorktree(worktreeID, "settings_repo"))
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -107,12 +78,28 @@ func TestHTTP_repoRoutes_followAppSettingsRepoRoot(t *testing.T) {
 	}
 }
 
-// TestHTTP_createTask_skipsMentionValidationWhenRepoNotConfigured pins
-// that POST /tasks accepts an @mention payload even when the active
-// RepoProvider returns "not configured". The agent worker enforces
-// the same check at run-time once the operator wires a workspace, so
-// we don't want to block task drafting from an empty install.
-func TestHTTP_createTask_skipsMentionValidationWhenRepoNotConfigured(t *testing.T) {
+// TestHTTP_createTask_skipsMentionValidationWhenNoWorktree pins that POST /tasks
+// accepts a prompt without @-mentions even when no git worktree is registered.
+func TestHTTP_createTask_skipsMentionValidationWhenNoWorktree(t *testing.T) {
+	db := tasktestdb.OpenSQLite(t)
+	st := store.NewStore(db)
+	h := NewHandler(st, NewSSEHub(), nil, WithRepoProvider(NewSettingsRepoProvider(st)))
+	srv := httptest.NewServer(h)
+	defer srv.Close()
+
+	res, err := http.Post(srv.URL+"/tasks", "application/json",
+		strings.NewReader(withCreateChecklist(`{"title":"t","initial_prompt":"plain prompt","priority":"medium"}`)))
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer res.Body.Close()
+	if res.StatusCode != http.StatusCreated {
+		b, _ := io.ReadAll(res.Body)
+		t.Fatalf("status %d want 201 body=%s", res.StatusCode, b)
+	}
+}
+
+func TestHTTP_createTask_mentionRequiresWorktreeID(t *testing.T) {
 	db := tasktestdb.OpenSQLite(t)
 	st := store.NewStore(db)
 	h := NewHandler(st, NewSSEHub(), nil, WithRepoProvider(NewSettingsRepoProvider(st)))
@@ -125,10 +112,35 @@ func TestHTTP_createTask_skipsMentionValidationWhenRepoNotConfigured(t *testing.
 		t.Fatal(err)
 	}
 	defer res.Body.Close()
-	if res.StatusCode != http.StatusCreated {
+	if res.StatusCode != http.StatusBadRequest {
 		b, _ := io.ReadAll(res.Body)
-		t.Fatalf("status %d want 201 body=%s", res.StatusCode, b)
+		t.Fatalf("status %d want 400 body=%s", res.StatusCode, b)
 	}
 }
 
 func ptrString(s string) *string { return &s }
+
+func TestHTTP_repoRoutes_unknownWorktree_returns404(t *testing.T) {
+	db := tasktestdb.OpenSQLite(t)
+	st := store.NewStore(db)
+	h := NewHandler(st, NewSSEHub(), nil, WithRepoProvider(NewSettingsRepoProvider(st)))
+	srv := httptest.NewServer(h)
+	defer srv.Close()
+
+	res, err := http.Get(srv.URL + repoSearchWithWorktree("00000000-0000-0000-0000-000000000099", "x"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer res.Body.Close()
+	if res.StatusCode != http.StatusNotFound {
+		b, _ := io.ReadAll(res.Body)
+		t.Fatalf("status %d want 404 body=%s", res.StatusCode, b)
+	}
+	var body repoUnavailableErrorBody
+	if err := json.NewDecoder(res.Body).Decode(&body); err != nil {
+		t.Fatal(err)
+	}
+	if body.Reason != RepoReasonWorktreeNotFound {
+		t.Fatalf("reason=%q", body.Reason)
+	}
+}

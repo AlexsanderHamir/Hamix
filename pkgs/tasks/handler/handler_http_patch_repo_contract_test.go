@@ -2,6 +2,7 @@ package handler
 
 import (
 	"encoding/json"
+	"fmt"
 	"io"
 	"net/http"
 	"net/http/httptest"
@@ -16,7 +17,7 @@ import (
 // patchRepoTestSetup wires a workspace-repo-aware test server, a single seed file
 // for valid mentions, and one created task whose id can be patched in subtests.
 // Centralized here so each subtest below is just one PATCH + one assertion.
-func patchRepoTestSetup(t *testing.T) (srv *httptest.Server, dir, taskID string) {
+func patchRepoTestSetup(t *testing.T) (srv *httptest.Server, dir, taskID, worktreeID string) {
 	t.Helper()
 	dir = t.TempDir()
 	if err := os.WriteFile(filepath.Join(dir, "ok.txt"), []byte("l1\nl2\nl3\n"), 0o644); err != nil {
@@ -25,11 +26,14 @@ func patchRepoTestSetup(t *testing.T) (srv *httptest.Server, dir, taskID string)
 	if err := os.MkdirAll(filepath.Join(dir, "subdir"), 0o755); err != nil {
 		t.Fatal(err)
 	}
-	srv = newTaskTestServerWithRepo(t, dir)
+	var branchID string
+	srv, worktreeID, branchID = newTaskTestServerWithRepo(t, dir)
 	t.Cleanup(srv.Close)
 
 	res, err := http.Post(srv.URL+"/tasks", "application/json",
-		strings.NewReader(withCreateChecklist(`{"title":"seed","priority":"medium"}`)))
+		strings.NewReader(withCreateChecklist(fmt.Sprintf(
+			`{"title":"seed","priority":"medium","worktree_id":%q,"branch_id":%q}`,
+			worktreeID, branchID))))
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -42,7 +46,7 @@ func patchRepoTestSetup(t *testing.T) (srv *httptest.Server, dir, taskID string)
 	if err := json.Unmarshal(body, &created); err != nil {
 		t.Fatal(err)
 	}
-	return srv, dir, created.ID
+	return srv, dir, created.ID, worktreeID
 }
 
 // TestHTTP_patchTask_repoMentionValidation pins the documented behavior of
@@ -54,7 +58,7 @@ func patchRepoTestSetup(t *testing.T) (srv *httptest.Server, dir, taskID string)
 // out-of-range line numbers, and directory-not-file.
 func TestHTTP_patchTask_repoMentionValidation(t *testing.T) {
 	t.Run("validMention_returns200", func(t *testing.T) {
-		srv, _, id := patchRepoTestSetup(t)
+		srv, _, id, _ := patchRepoTestSetup(t)
 		res, raw := patchTask(t, srv.URL, id, `{"initial_prompt":"see @ok.txt(1-2)"}`)
 		if res.StatusCode != http.StatusOK {
 			t.Fatalf("status %d body=%s (valid in-range mention should pass)", res.StatusCode, raw)
@@ -67,7 +71,7 @@ func TestHTTP_patchTask_repoMentionValidation(t *testing.T) {
 		// is the documented "no mentions to validate" path; if a future
 		// refactor adds a "non-empty after trim" gate before the repo call,
 		// this subtest catches the regression.
-		srv, _, id := patchRepoTestSetup(t)
+		srv, _, id, _ := patchRepoTestSetup(t)
 		res, raw := patchTask(t, srv.URL, id, `{"initial_prompt":""}`)
 		if res.StatusCode != http.StatusOK {
 			t.Fatalf("status %d body=%s (empty initial_prompt should bypass mention validation)", res.StatusCode, raw)
@@ -78,7 +82,7 @@ func TestHTTP_patchTask_repoMentionValidation(t *testing.T) {
 		// PATCH that doesn't include initial_prompt at all (e.g. {"title":"x"})
 		// must not invoke repo.ValidatePromptMentions. Pins the
 		// `body.InitialPrompt != nil` guard in handler_task_crud.go::patch.
-		srv, _, id := patchRepoTestSetup(t)
+		srv, _, id, _ := patchRepoTestSetup(t)
 		res, raw := patchTask(t, srv.URL, id, `{"title":"renamed"}`)
 		if res.StatusCode != http.StatusOK {
 			t.Fatalf("status %d body=%s (no initial_prompt field should bypass mention validation)", res.StatusCode, raw)
@@ -86,7 +90,7 @@ func TestHTTP_patchTask_repoMentionValidation(t *testing.T) {
 	})
 
 	t.Run("unresolvedPath_returns400", func(t *testing.T) {
-		srv, _, id := patchRepoTestSetup(t)
+		srv, _, id, _ := patchRepoTestSetup(t)
 		res, raw := patchTask(t, srv.URL, id, `{"initial_prompt":"see @nope.txt"}`)
 		if res.StatusCode != http.StatusBadRequest {
 			t.Fatalf("status %d body=%s (unresolved mention should reject)", res.StatusCode, raw)
@@ -95,7 +99,7 @@ func TestHTTP_patchTask_repoMentionValidation(t *testing.T) {
 	})
 
 	t.Run("outOfRangeLines_returns400", func(t *testing.T) {
-		srv, _, id := patchRepoTestSetup(t)
+		srv, _, id, _ := patchRepoTestSetup(t)
 		res, raw := patchTask(t, srv.URL, id, `{"initial_prompt":"see @ok.txt(1-99)"}`)
 		if res.StatusCode != http.StatusBadRequest {
 			t.Fatalf("status %d body=%s (out-of-range mention should reject)", res.StatusCode, raw)
@@ -107,7 +111,7 @@ func TestHTTP_patchTask_repoMentionValidation(t *testing.T) {
 	})
 
 	t.Run("mentionToDirectory_returns400", func(t *testing.T) {
-		srv, _, id := patchRepoTestSetup(t)
+		srv, _, id, _ := patchRepoTestSetup(t)
 		res, raw := patchTask(t, srv.URL, id, `{"initial_prompt":"see @subdir"}`)
 		if res.StatusCode != http.StatusBadRequest {
 			t.Fatalf("status %d body=%s (directory mention should reject)", res.StatusCode, raw)
@@ -120,7 +124,7 @@ func TestHTTP_patchTask_repoMentionValidation(t *testing.T) {
 	})
 
 	t.Run("pathEscape_returns400", func(t *testing.T) {
-		srv, _, id := patchRepoTestSetup(t)
+		srv, _, id, _ := patchRepoTestSetup(t)
 		res, raw := patchTask(t, srv.URL, id, `{"initial_prompt":"see @../escape.txt"}`)
 		if res.StatusCode != http.StatusBadRequest {
 			t.Fatalf("status %d body=%s (path escape should reject)", res.StatusCode, raw)
@@ -131,18 +135,15 @@ func TestHTTP_patchTask_repoMentionValidation(t *testing.T) {
 	})
 }
 
-// TestHTTP_patchTask_noRepoMentionValidationWhenUnconfigured pins that PATCH
-// silently accepts a malformed @mention when the workspace repo is *not*
-// configured (h.repoProv reports no root, e.g. app_settings.repo_root empty).
-// This is the dual of the configured-repo path above and guards the existing
-// newTaskTestServer wiring (no repo -> no validation).
-func TestHTTP_patchTask_noRepoMentionValidationWhenUnconfigured(t *testing.T) {
+// TestHTTP_patchTask_mentionRequiresWorktreeOnTask pins that PATCH with @-mentions
+// requires the task (or patch body) to carry worktree_id once Plan 4 scoping is active.
+func TestHTTP_patchTask_mentionRequiresWorktreeOnTask(t *testing.T) {
 	srv := newTaskTestServer(t)
 	defer srv.Close()
 	id := mustCreateTask(t, srv.URL, `{"title":"x","priority":"medium"}`)
 	res, raw := patchTask(t, srv.URL, id, `{"initial_prompt":"see @nope.txt"}`)
-	if res.StatusCode != http.StatusOK {
-		t.Fatalf("status %d body=%s (no workspace repo -> no mention validation)", res.StatusCode, raw)
+	if res.StatusCode != http.StatusBadRequest {
+		t.Fatalf("status %d body=%s (mention without worktree_id should reject)", res.StatusCode, raw)
 	}
 }
 

@@ -93,11 +93,52 @@ func repoErrUserMessage(err error) string {
 	return err.Error()
 }
 
+// requireWorktreeRepo resolves the workspace for worktree_id and writes
+// the canonical error response when the caller cannot continue.
+func (h *Handler) requireWorktreeRepo(w http.ResponseWriter, r *http.Request, op string) (*repo.Root, bool) {
+	slog.Debug("trace", "cmd", calltrace.LogCmd, "operation", "handler.Handler.requireWorktreeRepo", "http_op", op)
+	worktreeID := strings.TrimSpace(r.URL.Query().Get("worktree_id"))
+	if worktreeID == "" {
+		writeJSONError(w, r, op, http.StatusBadRequest, "worktree_id query parameter is required")
+		return nil, false
+	}
+	if h.repoProv == nil {
+		writeJSON(w, r, op, http.StatusNotFound, repoUnavailableErrorBody{
+			Error:  "worktree not found",
+			Reason: RepoReasonWorktreeNotFound,
+		})
+		return nil, false
+	}
+	root, reason, err := h.repoProv.OpenWorktreeRoot(r.Context(), worktreeID)
+	if err != nil {
+		slog.Log(r.Context(), slog.LevelError, "repo provider failed",
+			"cmd", calltrace.LogCmd, "operation", op, "reason", reason, "err", err)
+		writeJSON(w, r, op, http.StatusInternalServerError, repoUnavailableErrorBody{
+			Error: err.Error(), Reason: reason,
+		})
+		return nil, false
+	}
+	if root == nil {
+		if reason == RepoReasonWorktreeNotFound {
+			writeJSON(w, r, op, http.StatusNotFound, repoUnavailableErrorBody{
+				Error:  "worktree not found",
+				Reason: reason,
+			})
+			return nil, false
+		}
+		writeJSONError(w, r, op, http.StatusBadRequest, "worktree_id query parameter is required")
+		return nil, false
+	}
+	return root, true
+}
+
 // requireRepo resolves the active workspace via the configured
 // RepoProvider and writes the canonical "repo unavailable" response
 // when no usable repo is available. Returns (root, true) when the
 // caller can continue; (nil, false) when an error has already been
 // written and the caller must return.
+//
+// Deprecated: /repo/* routes use requireWorktreeRepo. Retained for legacy mention fallback.
 func (h *Handler) requireRepo(w http.ResponseWriter, r *http.Request, op string) (*repo.Root, bool) {
 	slog.Debug("trace", "cmd", calltrace.LogCmd, "operation", "handler.Handler.requireRepo", "http_op", op)
 	root, reason, err := h.repoProv.Repo(r.Context())
@@ -127,7 +168,7 @@ func (h *Handler) repoSearch(w http.ResponseWriter, r *http.Request) {
 		writeError(w, r, op, errors.New("method not allowed"), http.StatusMethodNotAllowed)
 		return
 	}
-	root, ok := h.requireRepo(w, r, op)
+	root, ok := h.requireWorktreeRepo(w, r, op)
 	if !ok {
 		return
 	}
@@ -159,7 +200,7 @@ func (h *Handler) repoValidateRange(w http.ResponseWriter, r *http.Request) {
 		writeError(w, r, op, errors.New("method not allowed"), http.StatusMethodNotAllowed)
 		return
 	}
-	root, ok := h.requireRepo(w, r, op)
+	root, ok := h.requireWorktreeRepo(w, r, op)
 	if !ok {
 		return
 	}
@@ -223,7 +264,7 @@ func (h *Handler) repoFile(w http.ResponseWriter, r *http.Request) {
 		writeError(w, r, op, errors.New("method not allowed"), http.StatusMethodNotAllowed)
 		return
 	}
-	root, ok := h.requireRepo(w, r, op)
+	root, ok := h.requireWorktreeRepo(w, r, op)
 	if !ok {
 		return
 	}
@@ -281,7 +322,7 @@ func (h *Handler) repoDiff(w http.ResponseWriter, r *http.Request) {
 		writeError(w, r, op, errors.New("method not allowed"), http.StatusMethodNotAllowed)
 		return
 	}
-	root, ok := h.requireRepo(w, r, op)
+	root, ok := h.requireWorktreeRepo(w, r, op)
 	if !ok {
 		return
 	}

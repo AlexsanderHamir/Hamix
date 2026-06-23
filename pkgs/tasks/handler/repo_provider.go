@@ -4,24 +4,25 @@ import (
 	"context"
 	"log/slog"
 	"sync"
+	"strings"
 
 	"github.com/AlexsanderHamir/Hamix/pkgs/repo"
 	"github.com/AlexsanderHamir/Hamix/pkgs/tasks/calltrace"
+	"github.com/AlexsanderHamir/Hamix/pkgs/tasks/domain"
 	"github.com/AlexsanderHamir/Hamix/pkgs/tasks/store"
 )
 
 // RepoProvider returns the *repo.Root that /repo/* handlers and prompt
 // mention validation should consult for the current request. The
-// indirection lets the production wiring read AppSettings.RepoRoot at
-// request time (so PATCH /settings flips behaviour without a restart)
-// while tests can pin a static dir via NewStaticRepoProvider.
+// indirection lets the production wiring read git worktree paths at
+// request time while tests can pin a static dir via NewStaticRepoProvider.
 //
-// The reason string distinguishes "not configured" (operator hasn't
-// picked a repo yet) from "open failed" (path went away or stopped
-// being a directory). Handlers map the former to HTTP 409 and the
-// latter to HTTP 500 so the SPA can render the right banner.
+// The reason string distinguishes configuration problems from open
+// failures. Handlers map missing worktree_id to HTTP 400, unknown
+// worktree to 404, and open failures to HTTP 500.
 type RepoProvider interface {
 	Repo(ctx context.Context) (root *repo.Root, reason string, err error)
+	OpenWorktreeRoot(ctx context.Context, worktreeID string) (root *repo.Root, reason string, err error)
 }
 
 // Sentinel reason strings returned by RepoProvider.Repo. The wire
@@ -38,6 +39,10 @@ const (
 	// loop). Handlers reply 500 with the OpenRoot error so the
 	// operator can fix the path or filesystem.
 	RepoReasonOpenFailed = "repo_root_open_failed"
+	// RepoReasonWorktreeIDRequired: /repo/* called without worktree_id.
+	RepoReasonWorktreeIDRequired = "worktree_id_required"
+	// RepoReasonWorktreeNotFound: unknown worktree_id.
+	RepoReasonWorktreeNotFound = "worktree_not_found"
 )
 
 // staticRepoProvider returns a fixed *repo.Root regardless of context.
@@ -60,6 +65,17 @@ func (p *staticRepoProvider) Repo(_ context.Context) (*repo.Root, string, error)
 	slog.Debug("trace", "cmd", calltrace.LogCmd, "operation", "handler.staticRepoProvider.Repo")
 	if p.root == nil {
 		return nil, RepoReasonNotConfigured, nil
+	}
+	return p.root, "", nil
+}
+
+func (p *staticRepoProvider) OpenWorktreeRoot(_ context.Context, worktreeID string) (*repo.Root, string, error) {
+	slog.Debug("trace", "cmd", calltrace.LogCmd, "operation", "handler.staticRepoProvider.OpenWorktreeRoot")
+	if strings.TrimSpace(worktreeID) == "" {
+		return nil, RepoReasonWorktreeIDRequired, nil
+	}
+	if p.root == nil {
+		return nil, RepoReasonWorktreeNotFound, nil
 	}
 	return p.root, "", nil
 }
@@ -125,4 +141,27 @@ func (p *settingsRepoProvider) invalidate() {
 	defer p.mu.Unlock()
 	p.cached = nil
 	p.source = ""
+}
+
+func (p *settingsRepoProvider) OpenWorktreeRoot(ctx context.Context, worktreeID string) (*repo.Root, string, error) {
+	slog.Debug("trace", "cmd", calltrace.LogCmd, "operation", "handler.settingsRepoProvider.OpenWorktreeRoot")
+	if p == nil || p.store == nil {
+		return nil, RepoReasonWorktreeNotFound, nil
+	}
+	worktreeID = strings.TrimSpace(worktreeID)
+	if worktreeID == "" {
+		return nil, RepoReasonWorktreeIDRequired, nil
+	}
+	wt, err := p.store.GetGitWorktreeByID(ctx, worktreeID)
+	if err != nil {
+		if domain.GitErrCode(err) == domain.GitCodeWorktreeNotFound {
+			return nil, RepoReasonWorktreeNotFound, nil
+		}
+		return nil, "", err
+	}
+	root, openErr := repo.OpenRoot(wt.Path)
+	if openErr != nil {
+		return nil, RepoReasonOpenFailed, openErr
+	}
+	return root, "", nil
 }

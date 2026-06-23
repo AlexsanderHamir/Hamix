@@ -1,7 +1,7 @@
 package policy_test
 
 import (
-	"errors"
+	"context"
 	"testing"
 
 	"github.com/AlexsanderHamir/Hamix/internal/taskapi/agentworker/policy"
@@ -10,41 +10,49 @@ import (
 
 func TestDecideIdle(t *testing.T) {
 	t.Parallel()
-	okRepo := func(string) error { return nil }
-	badRepo := func(string) error { return errors.New("not a directory") }
+	ctx := context.Background()
+	noRepos := func(context.Context) (bool, string, error) {
+		return true, "no_repository_registered", nil
+	}
+	allInvalid := func(context.Context) (bool, string, error) {
+		return true, "all_worktrees_invalid", nil
+	}
+	okGit := func(context.Context) (bool, string, error) {
+		return false, "", nil
+	}
 
 	tests := []struct {
 		name   string
 		cfg    store.AppSettings
-		check  policy.RepoRootChecker
+		check  policy.GitRegistrationChecker
 		idle   bool
 		reason string
 	}{
 		{
 			name:   "paused",
-			cfg:    store.AppSettings{AgentPaused: true, RepoRoot: "/repo"},
-			check:  okRepo,
+			cfg:    store.AppSettings{AgentPaused: true},
+			check:  okGit,
 			idle:   true,
 			reason: "paused_by_operator",
 		},
 		{
-			name:   "empty repo",
-			cfg:    store.AppSettings{RepoRoot: ""},
-			check:  okRepo,
+			name:   "no repositories",
+			cfg:    store.AppSettings{},
+			check:  noRepos,
 			idle:   true,
-			reason: "repo_root_not_configured",
+			reason: "no_repository_registered",
 		},
 		{
-			name:   "invalid repo",
-			cfg:    store.AppSettings{RepoRoot: "/bad"},
-			check:  badRepo,
+			name:   "all worktrees invalid",
+			cfg:    store.AppSettings{},
+			check:  allInvalid,
 			idle:   true,
-			reason: "repo_root_invalid",
+			reason: "all_worktrees_invalid",
 		},
 		{
 			name:   "configured",
-			cfg:    store.AppSettings{RepoRoot: "/repo", Runner: "cursor"},
-			check:  okRepo,
+			cfg:    store.AppSettings{Runner: "cursor"},
+			check:  okGit,
 			idle:   false,
 			reason: "",
 		},
@@ -52,7 +60,7 @@ func TestDecideIdle(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			t.Parallel()
-			idle, reason := policy.DecideIdle(tt.cfg, tt.check)
+			idle, reason := policy.DecideIdle(ctx, tt.cfg, tt.check)
 			if idle != tt.idle || reason != tt.reason {
 				t.Fatalf("DecideIdle() = (%v, %q), want (%v, %q)", idle, reason, tt.idle, tt.reason)
 			}
@@ -79,7 +87,6 @@ func TestInstanceMatchesSettings(t *testing.T) {
 		Runner:                "cursor",
 		CursorBin:             "/bin/cursor",
 		CursorModel:           "gpt",
-		RepoRoot:              "/repo",
 		MaxRunDurationSeconds: 600,
 		VerifyRunnerName:      "cursor",
 		VerifyRunnerModel:     "gpt",
@@ -93,9 +100,9 @@ func TestInstanceMatchesSettings(t *testing.T) {
 		t.Fatal("expected match for identical settings")
 	}
 	changed := base
-	changed.RepoRoot = "/other"
+	changed.CursorModel = "other"
 	if policy.InstanceMatchesSettings(inst, changed, "1.0") {
-		t.Fatal("expected mismatch on repo root")
+		t.Fatal("expected mismatch on cursor model")
 	}
 	if policy.InstanceMatchesSettings(inst, base, "2.0") {
 		t.Fatal("expected mismatch on runner version")

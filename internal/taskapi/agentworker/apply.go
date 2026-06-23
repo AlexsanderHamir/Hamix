@@ -44,13 +44,12 @@ func (s *Supervisor) applySettings(ctx context.Context, phase string) error {
 	}
 
 	slog.Debug("trace", "cmd", logCmd, "operation", "taskapi.decideIdle",
-		"paused", snap.cfg.AgentPaused, "repo_root", snap.cfg.RepoRoot)
-	idle, reason := policy.DecideIdle(snap.cfg, assertWorkingDirExists)
+		"paused", snap.cfg.AgentPaused)
+	idle, reason := policy.DecideIdle(ctx, snap.cfg, s.gitRegistrationChecker)
 	if idle {
-		if reason == "repo_root_invalid" {
-			slog.Warn("agent worker repo root not usable; staying idle",
-				"cmd", logCmd, "operation", "taskapi.agent_worker.repo_root_err",
-				"path", snap.cfg.RepoRoot, "err", assertWorkingDirExists(snap.cfg.RepoRoot))
+		if reason == "all_worktrees_invalid" {
+			slog.Warn("agent worker git worktrees not usable; staying idle",
+				"cmd", logCmd, "operation", "taskapi.agent_worker.worktrees_invalid")
 		}
 		return s.handleApplySettingsIdle(phase, snap.cfg, snap.prev, reason)
 	}
@@ -206,4 +205,8 @@ func (s *Supervisor) publishSettingsChanged() {
 		return
 	}
 	s.publisher.Publish(realtime.Event{Type: realtime.SettingsChanged})
+}
+
+func (s *Supervisor) gitRegistrationChecker(ctx context.Context) (idle bool, reason string, err error) {
+	return s.store.AgentWorkerGitIdle(ctx)
 }

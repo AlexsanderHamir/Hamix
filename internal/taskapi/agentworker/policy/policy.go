@@ -1,6 +1,10 @@
 package policy
 
-import "github.com/AlexsanderHamir/Hamix/pkgs/tasks/store"
+import (
+	"context"
+
+	"github.com/AlexsanderHamir/Hamix/pkgs/tasks/store"
+)
 
 // SchedulingIdleHintReason is the diagnostic idle reason emitted when
 // the worker is fully configured and could run, but the ready queue
@@ -9,8 +13,8 @@ import "github.com/AlexsanderHamir/Hamix/pkgs/tasks/store"
 // docs/domain/agent-supervisor.md.
 const SchedulingIdleHintReason = "awaiting_scheduled_task"
 
-// RepoRootChecker validates AppSettings.RepoRoot before the worker runs.
-type RepoRootChecker func(dir string) error
+// GitRegistrationChecker validates git repository registration before the worker runs.
+type GitRegistrationChecker func(ctx context.Context) (idle bool, reason string, err error)
 
 // DecideSchedulingIdleHint reports the diagnostic hint when the queue
 // is empty but scheduled tasks exist. Errors from probes degrade to "".
@@ -24,23 +28,21 @@ func DecideSchedulingIdleHint(queueEmpty bool, scheduledCount int64) string {
 }
 
 // DecideIdle reports whether the worker should stay idle given settings.
-// checkRepo validates RepoRoot when non-empty; failures yield
-// repo_root_invalid.
+// checkGit inspects registered git repositories and worktree paths.
 //
 //funclogmeasure:skip category=hot-path reason="Pure helper without I/O; operation trace is emitted by the calling chokepoint."
-func DecideIdle(cfg store.AppSettings, checkRepo RepoRootChecker) (idle bool, reason string) {
+func DecideIdle(ctx context.Context, cfg store.AppSettings, checkGit GitRegistrationChecker) (idle bool, reason string) {
 	if cfg.AgentPaused {
 		return true, "paused_by_operator"
 	}
-	if cfg.RepoRoot == "" {
-		return true, "repo_root_not_configured"
+	if checkGit == nil {
+		return false, ""
 	}
-	if checkRepo != nil {
-		if err := checkRepo(cfg.RepoRoot); err != nil {
-			return true, "repo_root_invalid"
-		}
+	idle, reason, err := checkGit(ctx)
+	if err != nil {
+		return true, "git_registration_check_failed"
 	}
-	return false, ""
+	return idle, reason
 }
 
 // InstanceSnapshot captures the running worker state needed for
@@ -66,9 +68,6 @@ func InstanceMatchesSettings(inst *InstanceSnapshot, cfg store.AppSettings, vers
 		return false
 	}
 	if inst.Settings.CursorModel != cfg.CursorModel {
-		return false
-	}
-	if inst.Settings.RepoRoot != cfg.RepoRoot {
 		return false
 	}
 	if inst.Settings.MaxRunDurationSeconds != cfg.MaxRunDurationSeconds {

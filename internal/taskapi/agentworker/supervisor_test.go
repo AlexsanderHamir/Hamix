@@ -99,11 +99,7 @@ func TestSupervisor_ReloadStopsRunningWorkerOnPause(t *testing.T) {
 	rig := newSupervisorTestRig(t, ctx, func(_ context.Context, _, _ string, _ time.Duration) (string, string, error) {
 		return "test-version-1.2.3", "", nil
 	})
-	if _, err := rig.store.UpdateSettings(ctx, store.SettingsPatch{
-		RepoRoot: ptrString(t.TempDir()),
-	}); err != nil {
-		t.Fatalf("seed settings: %v", err)
-	}
+	rig.seedRunnableWorker(t)
 	if err := rig.sup.Start(ctx); err != nil {
 		t.Fatalf("Start: %v", err)
 	}
@@ -133,11 +129,7 @@ func TestSupervisor_ProbeFailureKeepsIdle(t *testing.T) {
 	rig := newSupervisorTestRig(t, ctx, func(_ context.Context, _, _ string, _ time.Duration) (string, string, error) {
 		return "", "", errors.New("cursor not installed")
 	})
-	if _, err := rig.store.UpdateSettings(ctx, store.SettingsPatch{
-		RepoRoot: ptrString(t.TempDir()),
-	}); err != nil {
-		t.Fatalf("seed settings: %v", err)
-	}
+	rig.seedRunnableWorker(t)
 
 	if err := rig.sup.Start(ctx); err != nil {
 		t.Fatalf("Start should not surface probe failure: %v", err)
@@ -155,11 +147,7 @@ func TestSupervisor_StartsWorkerWhenConfigured(t *testing.T) {
 	rig := newSupervisorTestRig(t, ctx, func(_ context.Context, _, _ string, _ time.Duration) (string, string, error) {
 		return "test-version-1.2.3", "", nil
 	})
-	if _, err := rig.store.UpdateSettings(ctx, store.SettingsPatch{
-		RepoRoot: ptrString(t.TempDir()),
-	}); err != nil {
-		t.Fatalf("seed settings: %v", err)
-	}
+	rig.seedRunnableWorker(t)
 
 	if err := rig.sup.Start(ctx); err != nil {
 		t.Fatalf("Start: %v", err)
@@ -173,7 +161,7 @@ func TestSupervisor_StartsWorkerWhenConfigured(t *testing.T) {
 	}
 }
 
-func TestSupervisor_ReloadRespawnsOnRepoRootChange(t *testing.T) {
+func TestSupervisor_ReloadRespawnsOnMaterialSettingsChange(t *testing.T) {
 	t.Parallel()
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
@@ -181,11 +169,11 @@ func TestSupervisor_ReloadRespawnsOnRepoRootChange(t *testing.T) {
 	rig := newSupervisorTestRig(t, ctx, func(_ context.Context, _, _ string, _ time.Duration) (string, string, error) {
 		return "v1", "", nil
 	})
-	dirA := t.TempDir()
+	rig.seedRunnableWorker(t)
 	if _, err := rig.store.UpdateSettings(ctx, store.SettingsPatch{
-		RepoRoot: ptrString(dirA),
+		CursorModel: ptrString("model-a"),
 	}); err != nil {
-		t.Fatalf("seed: %v", err)
+		t.Fatalf("seed cursor model: %v", err)
 	}
 	if err := rig.sup.Start(ctx); err != nil {
 		t.Fatalf("start: %v", err)
@@ -195,9 +183,8 @@ func TestSupervisor_ReloadRespawnsOnRepoRootChange(t *testing.T) {
 		t.Fatal("first start did not spawn worker")
 	}
 
-	dirB := t.TempDir()
 	if _, err := rig.store.UpdateSettings(ctx, store.SettingsPatch{
-		RepoRoot: ptrString(dirB),
+		CursorModel: ptrString("model-b"),
 	}); err != nil {
 		t.Fatalf("update: %v", err)
 	}
@@ -209,11 +196,7 @@ func TestSupervisor_ReloadRespawnsOnRepoRootChange(t *testing.T) {
 		t.Fatal("reload dropped worker for valid config")
 	}
 	if second == first {
-		t.Error("reload did not respawn worker on repo root change")
-	}
-	repoRoot, ok := rig.sup.RunningInstanceRepoRoot()
-	if !ok || repoRoot != dirB {
-		t.Errorf("worker repo root = %q ok=%v, want %q", repoRoot, ok, dirB)
+		t.Error("reload did not respawn worker on cursor model change")
 	}
 }
 
@@ -225,11 +208,7 @@ func TestSupervisor_ReloadSkipsRespawnOnNoMaterialChange(t *testing.T) {
 	rig := newSupervisorTestRig(t, ctx, func(_ context.Context, _, _ string, _ time.Duration) (string, string, error) {
 		return "v1", "", nil
 	})
-	if _, err := rig.store.UpdateSettings(ctx, store.SettingsPatch{
-		RepoRoot: ptrString(t.TempDir()),
-	}); err != nil {
-		t.Fatalf("seed: %v", err)
-	}
+	rig.seedRunnableWorker(t)
 	if err := rig.sup.Start(ctx); err != nil {
 		t.Fatalf("start: %v", err)
 	}
@@ -298,12 +277,7 @@ func TestSupervisor_ConcurrentReloadIsSerialized(t *testing.T) {
 	}
 
 	rig := newSupervisorTestRig(t, ctx, probe)
-	dirA := t.TempDir()
-	if _, err := rig.store.UpdateSettings(ctx, store.SettingsPatch{
-		RepoRoot: ptrString(dirA),
-	}); err != nil {
-		t.Fatalf("seed: %v", err)
-	}
+	rig.seedRunnableWorker(t)
 	if err := rig.sup.Start(ctx); err != nil {
 		t.Fatalf("start: %v", err)
 	}
@@ -317,9 +291,8 @@ func TestSupervisor_ConcurrentReloadIsSerialized(t *testing.T) {
 	atomic.StoreInt32(&concurrentMax, 0)
 	atomic.StoreInt32(&concurrentNow, 0)
 
-	dirB := t.TempDir()
 	if _, err := rig.store.UpdateSettings(ctx, store.SettingsPatch{
-		RepoRoot: ptrString(dirB),
+		CursorModel: ptrString("reload-model-b"),
 	}); err != nil {
 		t.Fatalf("update: %v", err)
 	}
@@ -350,10 +323,6 @@ func TestSupervisor_ConcurrentReloadIsSerialized(t *testing.T) {
 	}
 	if !rig.sup.HasRunningInstance() {
 		t.Fatal("supervisor lost worker after concurrent Reload")
-	}
-	repoRoot, ok := rig.sup.RunningInstanceRepoRoot()
-	if !ok || repoRoot != dirB {
-		t.Errorf("final worker repo root = %q ok=%v, want %q", repoRoot, ok, dirB)
 	}
 }
 

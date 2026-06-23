@@ -3,16 +3,17 @@ package verify_test
 import (
 	"context"
 	"encoding/json"
-	"os"
-	"path/filepath"
-	"strings"
-	"testing"
 	"github.com/AlexsanderHamir/Hamix/pkgs/agents/harness"
 	"github.com/AlexsanderHamir/Hamix/pkgs/agents/runner"
 	"github.com/AlexsanderHamir/Hamix/pkgs/agents/runner/runnerfake"
 	"github.com/AlexsanderHamir/Hamix/pkgs/tasks/domain"
 	"github.com/AlexsanderHamir/Hamix/pkgs/tasks/store"
+	"os"
+	"path/filepath"
+	"strings"
+	"testing"
 )
+
 // TestWorker_VerifyPhase_opensWhileExecuteIsTerminal pins the fix for
 // the bug where the worker called StartPhase(verify) while the execute
 // phase was still in `running`, tripping the cycle's "no running phase"
@@ -126,6 +127,7 @@ func TestWorker_VerifyPhase_opensWhileExecuteIsTerminal(t *testing.T) {
 		t.Fatalf("execute runner calls = %d, want 2 (initial + retry)", executeCalls)
 	}
 }
+
 // TestWorker_VerifyPhase_recordsDisagreementAsAgentSelfFailed pins the
 // disagreement-via-derived-query contract from PR3: when the execute
 // agent does NOT claim a criterion done, that surfaces on

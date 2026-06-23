@@ -4,15 +4,16 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"github.com/AlexsanderHamir/Hamix/pkgs/agents/runner"
+	"github.com/AlexsanderHamir/Hamix/pkgs/agents/runner/runnerfake"
 	"os"
 	"os/exec"
 	"path/filepath"
 	"strings"
 	"testing"
 	"time"
-	"github.com/AlexsanderHamir/Hamix/pkgs/agents/runner"
-	"github.com/AlexsanderHamir/Hamix/pkgs/agents/runner/runnerfake"
 )
+
 // hookRunner wraps a runnerfake so integration tests can script report files.
 type hookRunner struct {
 	*runnerfake.Runner
@@ -147,6 +148,7 @@ func gitInitTestRepo(t *testing.T, dir string) {
 		}
 	}
 }
+
 // writeCriteriaReportFor writes a criteria-report.json containing only
 // the supplied IDs (each marked claimed_done). Used by the carry-across
 // tests to script per-attempt agent behaviour (attempt 1 reports both,

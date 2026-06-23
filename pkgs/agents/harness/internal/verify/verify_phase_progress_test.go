@@ -2,14 +2,15 @@ package verify_test
 
 import (
 	"context"
-	"sync/atomic"
-	"testing"
-	"time"
 	"github.com/AlexsanderHamir/Hamix/pkgs/agents/harness"
 	"github.com/AlexsanderHamir/Hamix/pkgs/agents/runner"
 	"github.com/AlexsanderHamir/Hamix/pkgs/agents/runner/runnerfake"
 	"github.com/AlexsanderHamir/Hamix/pkgs/tasks/domain"
+	"sync/atomic"
+	"testing"
+	"time"
 )
+
 // TestWorker_VerifyPhase_persistsAndPublishesProgressEventsUnderVerifyPhaseSeq
 // pins the SPA Activity-panel P3 visibility property: progress events
 // emitted by the verify runner MUST be persisted under the verify

@@ -6,8 +6,8 @@ import (
 	"testing"
 	"time"
 
-	"github.com/AlexsanderHamir/Hamix/pkgs/agents/harness/storefake"
 	"github.com/AlexsanderHamir/Hamix/pkgs/agents/harness/internal/git"
+	"github.com/AlexsanderHamir/Hamix/pkgs/agents/harness/storefake"
 	"github.com/AlexsanderHamir/Hamix/pkgs/tasks/domain"
 	"github.com/AlexsanderHamir/Hamix/pkgs/tasks/store"
 )

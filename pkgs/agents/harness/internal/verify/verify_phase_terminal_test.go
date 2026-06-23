@@ -3,17 +3,18 @@ package verify_test
 import (
 	"context"
 	"encoding/json"
-	"os"
-	"path/filepath"
-	"strings"
-	"sync/atomic"
-	"testing"
 	"github.com/AlexsanderHamir/Hamix/pkgs/agents/harness"
 	"github.com/AlexsanderHamir/Hamix/pkgs/agents/runner"
 	"github.com/AlexsanderHamir/Hamix/pkgs/agents/runner/runnerfake"
 	"github.com/AlexsanderHamir/Hamix/pkgs/tasks/domain"
 	"github.com/AlexsanderHamir/Hamix/pkgs/tasks/store"
+	"os"
+	"path/filepath"
+	"strings"
+	"sync/atomic"
+	"testing"
 )
+
 // TestWorker_VerifyPhase_failsCycleWhenVerifyTampers pins the
 // integrity-check contract. A verify runner that mutates source files
 // MUST cause the cycle to terminate as verify_tampered with no
@@ -119,6 +120,7 @@ func TestWorker_VerifyPhase_failsCycleWhenVerifyTampers(t *testing.T) {
 		t.Fatalf("verify runner verify calls = %d, want 1 (terminal-not-retryable)", verifyCallCount)
 	}
 }
+
 // TestWorker_VerifyPhase_finalFailureWritesNoCompletions pins the
 // atomic-decision contract: when retries are exhausted with at least
 // one criterion still failing, NO completion rows land in
@@ -202,6 +204,7 @@ func TestWorker_VerifyPhase_finalFailureWritesNoCompletions(t *testing.T) {
 		}
 	}
 }
+
 // TestWorker_VerifyPhase_terminateReasonIncludesFailingIDs pins the
 // SPA-renderable failure detail: when retries exhaust, the cycle's
 // terminate_reason carries the failing criterion IDs after the
@@ -298,6 +301,7 @@ func TestWorker_VerifyPhase_terminateReasonIncludesFailingIDs(t *testing.T) {
 		t.Fatalf("reason must include both failing IDs; got %q (c1=%s c2=%s)", reason, c1.ID, c2.ID)
 	}
 }
+
 // TestWorker_VerifyPhase_repoRootMutationStillTampered pins the
 // strengthened integrity contract: with the report-file allowlist
 // removed in PR1, ANY mutation under RepoRoot during the verify pass

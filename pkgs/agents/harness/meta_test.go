@@ -24,9 +24,9 @@ func TestBuildCycleMeta_promptHashMatchesSha256(t *testing.T) {
 	prompt := "same prompt across runner versions"
 	meta := buildCycleMeta(r, prompt, runner.Request{})
 	var parsed struct {
-		PromptHash     string `json:"prompt_hash"`
-		Runner         string `json:"runner"`
-		RunnerVersion  string `json:"runner_version"`
+		PromptHash    string `json:"prompt_hash"`
+		Runner        string `json:"runner"`
+		RunnerVersion string `json:"runner_version"`
 	}
 	if err := json.Unmarshal(meta, &parsed); err != nil {
 		t.Fatalf("unmarshal meta: %v", err)

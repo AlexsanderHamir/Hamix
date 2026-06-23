@@ -2,16 +2,17 @@ package verify_test
 
 import (
 	"context"
+	"github.com/AlexsanderHamir/Hamix/pkgs/agents/harness"
+	"github.com/AlexsanderHamir/Hamix/pkgs/agents/runner"
+	"github.com/AlexsanderHamir/Hamix/pkgs/agents/runner/runnerfake"
+	"github.com/AlexsanderHamir/Hamix/pkgs/tasks/domain"
 	"os"
 	"os/exec"
 	"path/filepath"
 	"strings"
 	"testing"
-	"github.com/AlexsanderHamir/Hamix/pkgs/agents/harness"
-	"github.com/AlexsanderHamir/Hamix/pkgs/agents/runner"
-	"github.com/AlexsanderHamir/Hamix/pkgs/agents/runner/runnerfake"
-	"github.com/AlexsanderHamir/Hamix/pkgs/tasks/domain"
 )
+
 // TestWorker_VerifyPhase_repoRootStaysCleanThroughoutCycle pins PR1's
 // headline UX promise: customer working trees no longer accumulate
 // `.legacy-scratch/` scratch files. The worker writes scratch outside RepoRoot

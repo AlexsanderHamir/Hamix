@@ -2,12 +2,13 @@ package verify_test
 
 import (
 	"context"
-	"testing"
 	"github.com/AlexsanderHamir/Hamix/pkgs/agents/harness"
 	"github.com/AlexsanderHamir/Hamix/pkgs/agents/runner"
 	"github.com/AlexsanderHamir/Hamix/pkgs/agents/runner/runnerfake"
 	"github.com/AlexsanderHamir/Hamix/pkgs/tasks/domain"
+	"testing"
 )
+
 // TestWorker_VerifyPhase_usesSeparateRunnerWhenConfigured pins the
 // adversarial-separation contract: when Options.VerifyRunner is non-nil
 // the verify pass MUST land on it, not on the execute runner. Without

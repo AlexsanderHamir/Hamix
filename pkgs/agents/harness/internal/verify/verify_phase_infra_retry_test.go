@@ -2,14 +2,15 @@ package verify_test
 
 import (
 	"context"
-	"sync/atomic"
-	"testing"
 	"github.com/AlexsanderHamir/Hamix/pkgs/agents/harness"
 	"github.com/AlexsanderHamir/Hamix/pkgs/agents/runner"
 	"github.com/AlexsanderHamir/Hamix/pkgs/agents/runner/runnerfake"
 	"github.com/AlexsanderHamir/Hamix/pkgs/tasks/domain"
 	"github.com/AlexsanderHamir/Hamix/pkgs/tasks/store"
+	"sync/atomic"
+	"testing"
 )
+
 // TestWorker_VerifyPhase_carriesPassesAcrossRetries pins PR2's
 // retry-efficiency contract WITHOUT breaking the docs-promised atomic
 // decision: when attempt 1 passes c1 and fails c2, and attempt 2

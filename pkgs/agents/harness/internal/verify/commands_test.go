@@ -8,8 +8,8 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/AlexsanderHamir/Hamix/pkgs/agents/harness/storefake"
 	"github.com/AlexsanderHamir/Hamix/pkgs/agents/harness/internal/reports"
+	"github.com/AlexsanderHamir/Hamix/pkgs/agents/harness/storefake"
 	"github.com/AlexsanderHamir/Hamix/pkgs/agents/runner/runnerfake"
 	"github.com/AlexsanderHamir/Hamix/pkgs/tasks/domain"
 	"github.com/AlexsanderHamir/Hamix/pkgs/tasks/store"

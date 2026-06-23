@@ -91,6 +91,7 @@ type PendingProjectChoice = {
 };
 
 type RepoHintFlags = {
+  showSelectWorktreeHint: boolean;
   showRepoMisconfigHint: boolean;
   workspaceBroken: boolean;
   fileSearchFailedWhileAvailable: boolean;
@@ -162,16 +163,28 @@ function computeRepoHintFlags(
   workspaceProbe: RepoWorkspaceProbe | "pending",
   fileSearchUnavailable: boolean,
   showFileSearchSpinner: boolean,
+  worktreeId?: string,
 ): RepoHintFlags {
+  const worktreeScoped = worktreeId !== undefined;
+  const worktreeSelected = worktreeId?.trim() !== "";
   const probeDone = workspaceProbe !== "pending";
+  const showSelectWorktreeHint =
+    worktreeScoped && probeDone && !worktreeSelected;
   const showRepoMisconfigHint =
+    worktreeScoped &&
+    worktreeSelected &&
     probeDone &&
     (workspaceProbe.state === "unavailable" ||
       workspaceProbe.state === "broken" ||
       (workspaceProbe.state === "available" && fileSearchUnavailable));
-  const showRepoUnknownHint = probeDone && workspaceProbe.state === "unknown";
+  const showRepoUnknownHint =
+    worktreeScoped &&
+    worktreeSelected &&
+    probeDone &&
+    workspaceProbe.state === "unknown";
 
   return {
+    showSelectWorktreeHint,
     showRepoMisconfigHint,
     workspaceBroken:
       workspaceProbe !== "pending" && workspaceProbe.state === "broken",
@@ -193,7 +206,7 @@ function useRichPromptEditorController({
   projectContext,
   worktreeId,
 }: Props) {
-  const workspaceProbe = useRepoWorkspaceProbe();
+  const workspaceProbe = useRepoWorkspaceProbe(worktreeId);
   const [fileSearchUnavailable, setFileSearchUnavailable] = useState(false);
   const [fileSuggestBusy, setFileSuggestBusy] = useState(false);
   const [pendingInsert, setPendingInsert] = useState<PendingFileInsert | null>(
@@ -228,6 +241,10 @@ function useRichPromptEditorController({
   const worktreeIdRef = useRef(worktreeId);
   useEffect(() => {
     worktreeIdRef.current = worktreeId;
+  }, [worktreeId]);
+
+  useEffect(() => {
+    setFileSearchUnavailable(false);
   }, [worktreeId]);
 
   const repoOpts = useMemo<RepoFileSuggestionOptions>(
@@ -313,6 +330,7 @@ function useRichPromptEditorController({
     workspaceProbe,
     fileSearchUnavailable,
     showFileSearchSpinner,
+    worktreeId,
   );
 
   const insertPathOnly = useCallback(() => {
@@ -476,7 +494,7 @@ function RichPromptFileReferenceModal({
   );
 }
 
-/** Rich initial prompt (TipTap) with @ file suggestions when the workspace repo (app_settings.repo_root) is set, plus optional `#` project-context mentions. */
+/** Rich initial prompt (TipTap) with @ file suggestions scoped to the task worktree, plus optional `#` project-context mentions. */
 export function RichPromptEditor(props: Props) {
   const { id, disabled } = props;
   const {
@@ -530,6 +548,7 @@ export function RichPromptEditor(props: Props) {
         />
       ) : null}
       <RichPromptRepoHints
+        showSelectWorktreeHint={repoHints.showSelectWorktreeHint}
         showRepoMisconfigHint={repoHints.showRepoMisconfigHint}
         workspaceBroken={repoHints.workspaceBroken}
         fileSearchFailedWhileAvailable={

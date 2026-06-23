@@ -1,4 +1,5 @@
 type Props = {
+  showSelectWorktreeHint: boolean;
   showRepoMisconfigHint: boolean;
   workspaceBroken: boolean;
   fileSearchFailedWhileAvailable: boolean;
@@ -8,6 +9,7 @@ type Props = {
 
 /** Status copy under the rich prompt when repo / @ search is misconfigured or busy. */
 export function RichPromptRepoHints({
+  showSelectWorktreeHint,
   showRepoMisconfigHint,
   workspaceBroken,
   fileSearchFailedWhileAvailable,
@@ -16,35 +18,51 @@ export function RichPromptRepoHints({
 }: Props) {
   return (
     <>
+      {showSelectWorktreeHint ? (
+        <p className="mention-repo-hint" role="status">
+          Select a worktree above to enable <code>@file</code> mentions.
+        </p>
+      ) : null}
       {showRepoMisconfigHint ? (
         <p className="mention-repo-hint" role="status">
           {workspaceBroken ? (
             <>
-              The configured repository root is missing or not a directory.
-              Update it on the <a href="/settings">Settings page</a> to restore{" "}
-              <code>@file</code> mentions.
+              The selected worktree path is missing or not a directory.
+              Update it on the{" "}
+              <a href="/worktrees" target="_blank" rel="noopener noreferrer">
+                Worktrees page
+              </a>{" "}
+              to restore <code>@file</code> mentions.
             </>
           ) : fileSearchFailedWhileAvailable ? (
             <>
-              File search failed even though the server reports a workspace.
-              Check the repository root on the{" "}
-              <a href="/settings">Settings page</a> or inspect the server
-              logs.
+              File search failed for the selected worktree. Check the worktree
+              path on the{" "}
+              <a href="/worktrees" target="_blank" rel="noopener noreferrer">
+                Worktrees page
+              </a>{" "}
+              or inspect the server logs.
             </>
           ) : (
             <>
-              No repository is configured for file search. Set the{" "}
-              <strong>Repository root</strong> on the{" "}
-              <a href="/settings">Settings page</a> to enable{" "}
-              <code>@file</code> mentions.
+              File search is not available for the selected worktree. Check the
+              worktree on the{" "}
+              <a href="/worktrees" target="_blank" rel="noopener noreferrer">
+                Worktrees page
+              </a>{" "}
+              to enable <code>@file</code> mentions.
             </>
           )}
         </p>
       ) : null}
       {showRepoUnknownHint ? (
         <p className="mention-repo-hint" role="status">
-          Could not verify workspace file search. Check the repository root on
-          the <a href="/settings">Settings page</a>.
+          Could not verify file search for the selected worktree. Check the
+          worktree on the{" "}
+          <a href="/worktrees" target="_blank" rel="noopener noreferrer">
+            Worktrees page
+          </a>
+          .
         </p>
       ) : null}
       {showFileSearchSpinner ? (

@@ -40,6 +40,17 @@ func (s *Store) ListGitRepositories(ctx context.Context, projectID string) ([]do
 	return rows, nil
 }
 
+// CountGitRepositories returns the total number of registered git repositories.
+func (s *Store) CountGitRepositories(ctx context.Context) (int64, error) {
+	slog.Debug("trace", "cmd", storeLogCmd, "operation", "tasks.store.CountGitRepositories")
+	var n int64
+	err := s.db.WithContext(ctx).Model(&domain.GitRepository{}).Count(&n).Error
+	if err != nil {
+		return 0, fmt.Errorf("count git repositories: %w", err)
+	}
+	return n, nil
+}
+
 // GetGitRepository returns one repository scoped to a project.
 func (s *Store) GetGitRepository(ctx context.Context, projectID, repoID string) (domain.GitRepository, error) {
 	slog.Debug("trace", "cmd", storeLogCmd, "operation", "tasks.store.GetGitRepository")

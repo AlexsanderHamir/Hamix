@@ -4,6 +4,7 @@ import (
 	"context"
 	"log/slog"
 	"net/http"
+	"os/exec"
 	"time"
 
 	"github.com/AlexsanderHamir/Hamix/pkgs/gitwork"
@@ -47,6 +48,8 @@ type Handler struct {
 	agent          AgentWorkerControl
 	systemHealthFn systemHealthSnapshotter
 	git            gitwork.Service
+	pathMap        *PathMap
+	gitAvailable   bool
 }
 
 // NewHandler returns the task REST API and GET /events (SSE) when hub is non-nil.
@@ -62,7 +65,15 @@ type Handler struct {
 // GET /settings still works without it (read-only).
 func NewHandler(s *store.Store, hub *SSEHub, rep *repo.Root, opts ...HandlerOption) http.Handler {
 	slog.Debug("trace", "cmd", calltrace.LogCmd, "operation", "handler.NewHandler")
-	h := &Handler{store: s, hub: hub, repoProv: NewStaticRepoProvider(rep), git: gitwork.New()}
+	_, gitErr := exec.LookPath("git")
+	h := &Handler{
+		store:        s,
+		hub:          hub,
+		repoProv:     NewStaticRepoProvider(rep),
+		git:          gitwork.New(),
+		pathMap:      &PathMap{},
+		gitAvailable: gitErr == nil,
+	}
 	for _, opt := range opts {
 		opt(h)
 	}

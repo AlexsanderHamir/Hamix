@@ -11,11 +11,12 @@ import (
 )
 
 //funclogmeasure:skip category=hot-path reason="Pure helper without I/O; operation trace is emitted by the calling chokepoint."
-func toGitWorktreeJSON(w domain.GitWorktree) gitWorktreeJSON {
+func (h *Handler) gitWorktreeJSON(w domain.GitWorktree) gitWorktreeJSON {
 	return gitWorktreeJSON{
 		ID:           w.ID,
 		RepositoryID: w.RepositoryID,
 		Path:         w.Path,
+		HostPath:     h.pathMap.DisplayHostPath(w.Path),
 		Name:         w.Name,
 		IsMain:       w.IsMain,
 		CreatedAt:    w.CreatedAt.UTC().Format(time.RFC3339),
@@ -38,7 +39,7 @@ func (h *Handler) listGitWorktrees(w http.ResponseWriter, r *http.Request) {
 	}
 	out := make([]gitWorktreeJSON, 0, len(rows))
 	for _, row := range rows {
-		out = append(out, toGitWorktreeJSON(row))
+		out = append(out, h.gitWorktreeJSON(row))
 	}
 	writeJSON(w, r, op, http.StatusOK, gitWorktreesListResponse{Worktrees: out})
 }
@@ -69,7 +70,7 @@ func (h *Handler) createGitWorktree(w http.ResponseWriter, r *http.Request) {
 		writeGitStoreError(w, r, op, err)
 		return
 	}
-	writeJSON(w, r, op, http.StatusCreated, toGitWorktreeJSON(wt))
+	writeJSON(w, r, op, http.StatusCreated, h.gitWorktreeJSON(wt))
 }
 
 func (h *Handler) deleteGitWorktree(w http.ResponseWriter, r *http.Request) {

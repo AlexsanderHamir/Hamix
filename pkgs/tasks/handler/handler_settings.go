@@ -131,7 +131,7 @@ func (h *Handler) getSettings(w http.ResponseWriter, r *http.Request) {
 		writeStoreError(w, r, op, err)
 		return
 	}
-	writeJSONWithETag(w, r, op, http.StatusOK, settingsResponseFrom(cfg))
+	writeJSONWithETag(w, r, op, http.StatusOK, h.settingsResponseFrom(cfg))
 }
 
 func (h *Handler) patchSettings(w http.ResponseWriter, r *http.Request) {
@@ -185,7 +185,7 @@ func (h *Handler) patchSettings(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	h.hub.Publish(TaskChangeEvent{Type: SettingsChanged})
-	writeJSON(w, r, op, http.StatusOK, settingsResponseFrom(updated))
+	writeJSON(w, r, op, http.StatusOK, h.settingsResponseFrom(updated))
 }
 
 // Deprecated: use POST /runners/{id}/probe instead. Kept for backward
@@ -319,12 +319,12 @@ func (h *Handler) cancelCurrentRun(w http.ResponseWriter, r *http.Request) {
 // settingsResponseFrom translates the persistence row into the wire
 // shape so the handler never leaks GORM-specific quirks (zero-value
 // time, ID column) to clients.
-func settingsResponseFrom(cfg store.AppSettings) settingsResponse {
+func (h *Handler) settingsResponseFrom(cfg store.AppSettings) settingsResponse {
 	slog.Debug("trace", "cmd", calltrace.LogCmd, "operation", "handler.settingsResponseFrom")
 	resp := settingsResponse{
 		AgentPaused:                 cfg.AgentPaused,
 		Runner:                      cfg.Runner,
-		RepoRoot:                    cfg.RepoRoot,
+		RepoRoot:                    h.pathMap.DisplayHostPath(cfg.RepoRoot),
 		CursorBin:                   cfg.CursorBin,
 		CursorModel:                 cfg.CursorModel,
 		MaxRunDurationSeconds:       cfg.MaxRunDurationSeconds,

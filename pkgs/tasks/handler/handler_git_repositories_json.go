@@ -37,6 +37,7 @@ type gitWorktreeJSON struct {
 	ID           string `json:"id"`
 	RepositoryID string `json:"repository_id"`
 	Path         string `json:"path"`
+	HostPath     string `json:"host_path"`
 	Name         string `json:"name"`
 	IsMain       bool   `json:"is_main"`
 	CreatedAt    string `json:"created_at"`

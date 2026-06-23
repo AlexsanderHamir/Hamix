@@ -11,12 +11,12 @@ import (
 )
 
 //funclogmeasure:skip category=hot-path reason="Pure helper without I/O; operation trace is emitted by the calling chokepoint."
-func toGitRepositoryJSON(r domain.GitRepository) gitRepositoryJSON {
+func (h *Handler) gitRepositoryJSON(r domain.GitRepository) gitRepositoryJSON {
 	return gitRepositoryJSON{
 		ID:            r.ID,
 		ProjectID:     r.ProjectID,
 		Path:          r.Path,
-		HostPath:      r.HostPath,
+		HostPath:      h.pathMap.DisplayHostPath(r.Path),
 		DefaultBranch: r.DefaultBranch,
 		CreatedAt:     r.CreatedAt.UTC().Format(time.RFC3339),
 		UpdatedAt:     r.UpdatedAt.UTC().Format(time.RFC3339),
@@ -39,7 +39,7 @@ func (h *Handler) listGitRepositories(w http.ResponseWriter, r *http.Request) {
 	}
 	out := make([]gitRepositoryJSON, 0, len(rows))
 	for _, row := range rows {
-		out = append(out, toGitRepositoryJSON(row))
+		out = append(out, h.gitRepositoryJSON(row))
 	}
 	writeJSON(w, r, op, http.StatusOK, gitRepositoriesListResponse{Repositories: out})
 }
@@ -67,7 +67,7 @@ func (h *Handler) createGitRepository(w http.ResponseWriter, r *http.Request) {
 		writeGitStoreError(w, r, op, err)
 		return
 	}
-	writeJSON(w, r, op, http.StatusCreated, toGitRepositoryJSON(repo))
+	writeJSON(w, r, op, http.StatusCreated, h.gitRepositoryJSON(repo))
 }
 
 func (h *Handler) getGitRepository(w http.ResponseWriter, r *http.Request) {
@@ -85,7 +85,7 @@ func (h *Handler) getGitRepository(w http.ResponseWriter, r *http.Request) {
 		writeGitStoreError(w, r, op, err)
 		return
 	}
-	writeJSON(w, r, op, http.StatusOK, toGitRepositoryJSON(repo))
+	writeJSON(w, r, op, http.StatusOK, h.gitRepositoryJSON(repo))
 }
 
 func (h *Handler) deleteGitRepository(w http.ResponseWriter, r *http.Request) {

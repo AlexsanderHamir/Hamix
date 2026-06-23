@@ -27,7 +27,7 @@ const cmdLog = "taskapi"
 // POST /settings/cancel-current-run); GET /settings still works.
 func NewHTTPHandler(s *store.Store, hub *handler.SSEHub, rep *repo.Root, agent handler.AgentWorkerControl) http.Handler {
 	slog.Debug("trace", "cmd", cmdLog, "operation", "internal.taskapi.NewHTTPHandler")
-	opts := []handler.HandlerOption{}
+	opts := []handler.HandlerOption{handler.WithPathMap(handler.NewPathMapFromEnv())}
 	if agent != nil {
 		opts = append(opts, handler.WithAgentWorkerControl(agent))
 	}

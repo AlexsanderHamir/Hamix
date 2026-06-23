@@ -107,7 +107,7 @@ func (h *Handler) bootstrap(w http.ResponseWriter, r *http.Request) {
 	}
 
 	resp := bootstrapResponse{
-		Settings: settingsResponseFrom(settings),
+		Settings: h.settingsResponseFrom(settings),
 		Tasks:    buildListResponse(taskRows, readpolicy.BootstrapListLimit, 0, hasMore),
 		Stats:    taskStatsResponseFromStore(stats),
 		Projects: projectsListResponse{

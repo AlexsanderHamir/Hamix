@@ -1,6 +1,9 @@
 # Hamix production — taskapi image with host home + CLI bind mounts.
 # Build: docker build -f docker/Dockerfile -t hamix/taskapi:latest .
 # Run:   docker compose -f compose.prod.yml up
+#
+# Schema migrate is a separate release step (not on container start):
+#   docker compose -f compose.prod.yml run --rm taskapi dbcheck -migrate
 services:
   taskapi:
     image: hamix/taskapi:${TAG:-latest}

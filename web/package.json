@@ -28,7 +28,7 @@
     "@tanstack/query-sync-storage-persister": "^5.101.0",
     "@tanstack/react-query": "^5.100.5",
     "@tanstack/react-query-persist-client": "^5.101.0",
-    "@tiptap/core": "3.23.6",
+    "@tiptap/core": "3.27.1",
     "@tiptap/extension-bubble-menu": "3.23.6",
     "@tiptap/extension-floating-menu": "3.23.6",
     "@tiptap/extension-placeholder": "3.23.6",

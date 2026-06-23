@@ -55,6 +55,22 @@ h.Resume(ctx, task, cycle) // task StatusRunning, cycle StatusRunning — same a
 
 Callers outside tests typically use `worker.NewWorker`, which constructs the harness internally and chooses `Run` vs `Resume` at admission.
 
+## Testing
+
+Three tiers (pure, contract, wrapper) are documented in [docs/domain/harness-testing.md](../../docs/domain/harness-testing.md).
+
+| Package / file | Role in tests |
+|----------------|---------------|
+| [`storefake/`](storefake/) | `contract.Store` double (SQLite via `tasktestdb`, isolated per test) |
+| [`notifierfake/`](notifierfake/) | Recording cycle/progress notifiers |
+| [`metricsfake/`](metricsfake/) | Recording `RunMetrics` for verdict/duration assertions |
+| `testhelpers_test.go` | `newHarnessWithFakes`, `runHarness` for `harness_test` package |
+| `internal/verify/integration_testhelpers_test.go` | Same pattern for verify integration tests |
+
+Contract-tier tests call `harness.Run` directly with fakes. They do **not** import `internal/tasktestdb` or start `worker.Worker`.
+
+Local: `go test ./pkgs/agents/harness/... -count=1 -timeout 120s` or `.\scripts\check.ps1 -GoOnly` (`--group=harness` in CI).
+
 ## Checkpoint derivation (resume)
 
 No dedicated checkpoint table. `internal/resume` reconstructs checkpoint from:

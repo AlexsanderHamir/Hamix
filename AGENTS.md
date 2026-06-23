@@ -17,7 +17,7 @@ Human learning path: [docs/guide.md](docs/guide.md). Doc index: [docs/README.md]
 | --- | --- | --- |
 | Changing Go REST / handlers | [docs/api.md](docs/api.md), [pkgs/tasks/handler/README.md](pkgs/tasks/handler/README.md) | harness docs, [docs/web.md](docs/web.md) |
 | Changing Go domain / store | [docs/data-model.md](docs/data-model.md), [pkgs/tasks/store/README.md](pkgs/tasks/store/README.md) | web, harness |
-| Changing agent worker / harness | [docs/domain/harness.md](docs/domain/harness.md), [docs/configuration.md](docs/configuration.md) | [docs/web.md](docs/web.md) |
+| Changing agent worker / harness | [docs/domain/harness.md](docs/domain/harness.md), [docs/domain/harness-testing.md](docs/domain/harness-testing.md), [docs/configuration.md](docs/configuration.md) | [docs/web.md](docs/web.md) |
 | Changing web UI only | [docs/web.md](docs/web.md), `.cursor/rules/frontend_bar.mdc` | architecture, harness |
 | Changing web data (API / sync / mutations) | [docs/web.md](docs/web.md) §Task sync / Query policy, `web/src/api/` | handler split guide |
 | Adding a full-stack feature | [pkgs/tasks/handler/README.md](pkgs/tasks/handler/README.md), [docs/domain/persistence.md](docs/domain/persistence.md), [docs/api.md](docs/api.md) | — |
@@ -65,7 +65,7 @@ Intent-based lookup. For subsystem inventory, use [docs/agent-map.md](docs/agent
 
 | I need to… | Go to |
 | --- | --- |
-| Agent run / verify loop | `pkgs/agents/harness/`, [docs/domain/harness.md](docs/domain/harness.md) |
+| Agent run / verify loop | `pkgs/agents/harness/`, [docs/domain/harness.md](docs/domain/harness.md), [docs/domain/harness-testing.md](docs/domain/harness-testing.md) |
 | Worker queue / pickup | `pkgs/agents/worker/`, [docs/domain/agent-queue.md](docs/domain/agent-queue.md) |
 | Execute agent prompt / criteria report | [docs/domain/execute-agent.md](docs/domain/execute-agent.md), `pkgs/agents/harness/` execute paths |
 | Verify agent / judge pipeline | [docs/domain/verify-agent.md](docs/domain/verify-agent.md), harness verify paths |

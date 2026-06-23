@@ -466,6 +466,7 @@ Structured logs on retry: `retry_mode`, `reason_code`, `skip_next_execute`.
 | [runner-adapters.md](./runner-adapters.md) | Runner registry, capabilities, adding CLI adapters |
 | [execute-agent.md](./execute-agent.md) | Execute phase prompt and self-report |
 | [verify-agent.md](./verify-agent.md) | Verify phase LLM, commands, integrity |
+| [harness-testing.md](./harness-testing.md) | Test tiers, storefake, direct `harness.Run` recipe |
 | [done-criteria.md](./done-criteria.md) | Criteria lifecycle and completion ledger |
 | [architecture.md](../architecture.md) | Worker queue, runner, SSE in `taskapi` |
 | [configuration.md](../configuration.md) | Env vars and `app_settings` |

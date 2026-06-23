@@ -131,7 +131,7 @@ Vertical slice (domain → store → handler → optional web): follow [AGENTS.m
 | No repository for file search | Set **Workspace repository** in SPA Settings — [docs/domain/workspace-repo.md](docs/domain/workspace-repo.md) |
 | Tests fail with database errors | Use `internal/tasktestdb/` (SQLite); gate real Postgres with `//go:build integration` |
 | Match API error to logs | `request_id` in JSON body / `X-Request-ID` header on access logs |
-| Still failing local checks | Re-run `go test ./... -count=1`; compare [CI](.github/workflows/ci.yml); full bar above |
+| Still failing local checks | Use scoped groups: `.\scripts\check-go.ps1 -TestsOnly -Group <core\|tasks\|agents\|harness>` (same as CI). Full bar: `.\scripts\check.ps1 -GoOnly`. Avoid `go test ./...` — it pulls in `web/node_modules` test packages and can flake on parallel SQLite. |
 
 More edit lookups: [AGENTS.md](AGENTS.md#where-to-find-x).
 

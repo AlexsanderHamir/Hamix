@@ -5,15 +5,15 @@ import (
 	"log/slog"
 	"time"
 
+	"github.com/AlexsanderHamir/Hamix/pkgs/agents/harness/internal/contract"
 	"github.com/AlexsanderHamir/Hamix/pkgs/agents/harness/internal/git"
 	"github.com/AlexsanderHamir/Hamix/pkgs/agents/runner"
 	"github.com/AlexsanderHamir/Hamix/pkgs/tasks/domain"
-	"github.com/AlexsanderHamir/Hamix/pkgs/tasks/store"
 )
 
 // Service runs the verify pipeline stages against explicit dependencies.
 type Service struct {
-	store        *store.Store
+	store        contract.Store
 	runner       runner.Runner
 	verifyRunner runner.Runner
 	reportDir    string
@@ -25,7 +25,7 @@ type Service struct {
 
 // Deps bundles Service construction inputs from harness root.
 type Deps struct {
-	Store        *store.Store
+	Store        contract.Store
 	Runner       runner.Runner
 	VerifyRunner runner.Runner
 	ReportDir    string

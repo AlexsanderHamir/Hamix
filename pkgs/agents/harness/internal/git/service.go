@@ -1,12 +1,12 @@
 package git
 
 import (
-	"github.com/AlexsanderHamir/Hamix/pkgs/tasks/store"
+	"github.com/AlexsanderHamir/Hamix/pkgs/agents/harness/internal/contract"
 )
 
 // Service orchestrates harness git operations with explicit dependencies.
 type Service struct {
-	store     *store.Store
+	store     contract.Store
 	gitRepo   GitRepo
 	reportDir string
 }
@@ -14,7 +14,7 @@ type Service struct {
 // NewService constructs a git Service. gitRepo defaults to ExecRepo when nil.
 //
 //funclogmeasure:skip category=hot-path reason="Pure helper without I/O; operation trace is emitted by the calling chokepoint."
-func NewService(st *store.Store, gitRepo GitRepo, reportDir string) *Service {
+func NewService(st contract.Store, gitRepo GitRepo, reportDir string) *Service {
 	if gitRepo == nil {
 		gitRepo = NewExecRepo()
 	}

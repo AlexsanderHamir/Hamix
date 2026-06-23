@@ -13,7 +13,6 @@ import (
 	"github.com/AlexsanderHamir/Hamix/pkgs/agents/harness/internal/resume"
 	"github.com/AlexsanderHamir/Hamix/pkgs/agents/harness/internal/verify"
 	"github.com/AlexsanderHamir/Hamix/pkgs/agents/runner"
-	"github.com/AlexsanderHamir/Hamix/pkgs/tasks/store"
 )
 
 const harnessLogCmd = "taskapi"
@@ -86,7 +85,7 @@ type Options struct {
 // Harness drives one task end-to-end through the execute/verify substrate.
 // Construct with New; call Run from the worker after admission checks pass.
 type Harness struct {
-	store  *store.Store
+	store  Store
 	runner runner.Runner
 	opts   Options
 	git    *git.Service
@@ -102,7 +101,7 @@ type Harness struct {
 // New constructs a Harness with sensible defaults applied to opts.
 //
 //funclogmeasure:skip category=hot-path reason="Pure helper without I/O; operation trace is emitted by the calling chokepoint."
-func New(st *store.Store, r runner.Runner, opts Options) *Harness {
+func New(st Store, r runner.Runner, opts Options) *Harness {
 	if opts.ShutdownAbortTimeout <= 0 {
 		opts.ShutdownAbortTimeout = DefaultShutdownAbortTimeout
 	}

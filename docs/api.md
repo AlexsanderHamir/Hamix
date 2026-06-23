@@ -21,7 +21,7 @@ Data model semantics: [data-model.md](./data-model.md). Configuration: [configur
 |---|---|---|
 | GET | `/health` | Liveness; returns `version` from `runtime/debug.ReadBuildInfo`. No DB probe. |
 | GET | `/health/live` | Same shape as `/health`. |
-| GET | `/health/ready` | Readiness; DB ping + `SELECT 1` + workspace directory stat when `app_settings.repo_root` is set. `503` on failure. |
+| GET | `/health/ready` | Readiness; DB ping + `SELECT 1`; `checks.schema` compares code vs DB `SchemaRevision` (`503` when `pending` or `downgrade`, with `schema.code_revision`, `schema.db_revision`, `schema.remediation`); workspace/repo checks as before. |
 | GET | `/metrics` | Prometheus text. Standard Go / process collectors + `taskapi_build_info` + `taskapi_db_pool_*` + `taskapi_http_*` + `hamix_agent_runs_*` + `taskapi_sse_*` + `taskapi_agent_queue_*`. |
 | GET | `/system/health` | Aggregated JSON for the SPA observability page: build, DB pool gauges, HTTP totals, SSE totals, agent queue + runs + paused. |
 | POST | `/v1/rum` | Browser RUM ingest; one batched line per call, capped fields. |

@@ -10,6 +10,7 @@ import (
 	"github.com/AlexsanderHamir/Hamix/pkgs/gitwork"
 	"github.com/AlexsanderHamir/Hamix/pkgs/repo"
 	"github.com/AlexsanderHamir/Hamix/pkgs/tasks/calltrace"
+	"github.com/AlexsanderHamir/Hamix/pkgs/tasks/postgres"
 	"github.com/AlexsanderHamir/Hamix/pkgs/tasks/store"
 )
 
@@ -50,6 +51,7 @@ type Handler struct {
 	git            gitwork.Service
 	pathMap        *PathMap
 	gitAvailable   bool
+	schemaDrift    postgres.SchemaDriftReport
 }
 
 // NewHandler returns the task REST API and GET /events (SSE) when hub is non-nil.
@@ -204,5 +206,13 @@ func WithRepoProvider(p RepoProvider) HandlerOption {
 		if p != nil {
 			h.repoProv = p
 		}
+	}
+}
+
+// WithSchemaDriftReport wires startup schema revision drift for GET /health/ready.
+func WithSchemaDriftReport(r postgres.SchemaDriftReport) HandlerOption {
+	slog.Debug("trace", "cmd", calltrace.LogCmd, "operation", "handler.WithSchemaDriftReport")
+	return func(h *Handler) {
+		h.schemaDrift = r
 	}
 }

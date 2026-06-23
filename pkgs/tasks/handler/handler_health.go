@@ -8,6 +8,7 @@ import (
 	"time"
 
 	"github.com/AlexsanderHamir/Hamix/pkgs/tasks/calltrace"
+	"github.com/AlexsanderHamir/Hamix/pkgs/tasks/postgres"
 	"github.com/AlexsanderHamir/Hamix/pkgs/tasks/store"
 )
 
@@ -56,6 +57,30 @@ func (h *Handler) healthReady(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	checks["database"] = "ok"
+
+	if h.schemaDrift.FailsReadiness() {
+		schemaCheck := string(h.schemaDrift.Status)
+		if schemaCheck == string(postgres.SchemaDriftPending) {
+			schemaCheck = "pending"
+		}
+		slog.Warn("readiness check failed", "cmd", calltrace.LogCmd, "operation", op, "check", "schema",
+			"status", h.schemaDrift.Status,
+			"code_revision", h.schemaDrift.CodeRevision,
+			"db_revision", h.schemaDrift.DBRevision)
+		checks["schema"] = schemaCheck
+		writeJSON(w, r, op, http.StatusServiceUnavailable, map[string]any{
+			"status": "degraded",
+			"checks": checks,
+			"schema": map[string]any{
+				"code_revision": h.schemaDrift.CodeRevision,
+				"db_revision":   h.schemaDrift.DBRevision,
+				"remediation":   h.schemaDrift.Remediation(),
+			},
+			"version": ServerVersion(),
+		})
+		return
+	}
+	checks["schema"] = "ok"
 
 	if !h.gitAvailable {
 		slog.Warn("readiness check failed", "cmd", calltrace.LogCmd, "operation", op, "check", "git_available")

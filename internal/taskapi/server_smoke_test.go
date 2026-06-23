@@ -9,6 +9,7 @@ import (
 	"github.com/AlexsanderHamir/Hamix/internal/taskapi"
 	"github.com/AlexsanderHamir/Hamix/internal/tasktestdb"
 	"github.com/AlexsanderHamir/Hamix/pkgs/tasks/handler"
+	"github.com/AlexsanderHamir/Hamix/pkgs/tasks/postgres"
 	"github.com/AlexsanderHamir/Hamix/pkgs/tasks/store"
 )
 
@@ -18,7 +19,11 @@ func TestNewHTTPHandler_healthAndBootstrap(t *testing.T) {
 	db := tasktestdb.OpenSQLite(t)
 	st := store.NewStore(db)
 	hub := handler.NewSSEHub()
-	api := taskapi.NewHTTPHandler(st, hub, nil, nil)
+	api := taskapi.NewHTTPHandler(st, hub, nil, nil, postgres.SchemaDriftReport{
+		Status:       postgres.SchemaDriftOK,
+		CodeRevision: postgres.SchemaRevision,
+		DBRevision:   postgres.SchemaRevision,
+	})
 	srv := httptest.NewServer(api)
 	t.Cleanup(srv.Close)
 

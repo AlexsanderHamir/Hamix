@@ -8,6 +8,7 @@ import (
 	"github.com/AlexsanderHamir/Hamix/pkgs/tasks/calltrace"
 	"github.com/AlexsanderHamir/Hamix/pkgs/tasks/handler"
 	"github.com/AlexsanderHamir/Hamix/pkgs/tasks/middleware"
+	"github.com/AlexsanderHamir/Hamix/pkgs/tasks/postgres"
 	"github.com/AlexsanderHamir/Hamix/pkgs/tasks/store"
 )
 
@@ -25,9 +26,12 @@ const cmdLog = "taskapi"
 // Pass a nil agent control to opt out of the supervisor-aware
 // /settings sub-routes (PATCH /settings, POST /settings/probe-cursor,
 // POST /settings/cancel-current-run); GET /settings still works.
-func NewHTTPHandler(s *store.Store, hub *handler.SSEHub, rep *repo.Root, agent handler.AgentWorkerControl) http.Handler {
+func NewHTTPHandler(s *store.Store, hub *handler.SSEHub, rep *repo.Root, agent handler.AgentWorkerControl, drift postgres.SchemaDriftReport) http.Handler {
 	slog.Debug("trace", "cmd", cmdLog, "operation", "internal.taskapi.NewHTTPHandler")
-	opts := []handler.HandlerOption{handler.WithPathMap(handler.NewPathMapFromEnv())}
+	opts := []handler.HandlerOption{
+		handler.WithPathMap(handler.NewPathMapFromEnv()),
+		handler.WithSchemaDriftReport(drift),
+	}
 	if agent != nil {
 		opts = append(opts, handler.WithAgentWorkerControl(agent))
 	}

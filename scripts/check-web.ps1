@@ -7,7 +7,7 @@
 # Flags:
 #   -Verbose           Stream full tool output (CI uses this)
 #   -Install           Run npm ci in web/ before other steps
-#   -Group <name>      Restrict to lint|build|test-fast|test-slow (CI matrix)
+#   -Group <name>      Restrict to lint|build|test-unit|test-components|test-app|test-task-pages|test-task-create|test-settings|test-projects|test-worktrees (CI matrix)
 #   -Help              Show options
 #
 # CI:
@@ -17,7 +17,7 @@ param(
     [switch]$Help,
     [switch]$Verbose,
     [switch]$Install,
-    [ValidateSet("lint", "build", "test-fast", "test-slow", "")]
+    [ValidateSet("lint", "build", "test-unit", "test-components", "test-app", "test-task-pages", "test-task-create", "test-settings", "test-projects", "test-worktrees", "")]
     [string]$Group = ""
 )
 
@@ -45,7 +45,7 @@ function Get-TotalSteps {
     $base = switch ($Scope) {
         "lint" { 3 }
         "build" { 1 }
-        { $_ -in "test-fast", "test-slow" } { 1 }
+        { $_ -in "test-unit", "test-components", "test-app", "test-task-pages", "test-task-create", "test-settings", "test-projects", "test-worktrees" } { 1 }
         default { 5 }
     }
     if ($Install) { return $base + 1 }
@@ -209,21 +209,81 @@ switch ($Group) {
         }
         Complete-Ok
     }
-    "test-fast" {
+    "test-unit" {
         Invoke-MaybeNpmCi
         Push-Location $webDir
         try {
-            Invoke-WebTest "web test (fast)" @("--project=unit", "--project=components")
+            Invoke-WebTest "web test (unit)" @("--project=unit")
         } finally {
             Pop-Location
         }
         Complete-Ok
     }
-    "test-slow" {
+    "test-components" {
         Invoke-MaybeNpmCi
         Push-Location $webDir
         try {
-            Invoke-WebTest "web test (slow)" @("--project=integration")
+            Invoke-WebTest "web test (components)" @("--project=components")
+        } finally {
+            Pop-Location
+        }
+        Complete-Ok
+    }
+    "test-app" {
+        Invoke-MaybeNpmCi
+        Push-Location $webDir
+        try {
+            Invoke-WebTest "web test (app)" @("--project=app")
+        } finally {
+            Pop-Location
+        }
+        Complete-Ok
+    }
+    "test-task-pages" {
+        Invoke-MaybeNpmCi
+        Push-Location $webDir
+        try {
+            Invoke-WebTest "web test (task-pages)" @("--project=task-pages")
+        } finally {
+            Pop-Location
+        }
+        Complete-Ok
+    }
+    "test-task-create" {
+        Invoke-MaybeNpmCi
+        Push-Location $webDir
+        try {
+            Invoke-WebTest "web test (task-create)" @("--project=task-create")
+        } finally {
+            Pop-Location
+        }
+        Complete-Ok
+    }
+    "test-settings" {
+        Invoke-MaybeNpmCi
+        Push-Location $webDir
+        try {
+            Invoke-WebTest "web test (settings)" @("--project=settings")
+        } finally {
+            Pop-Location
+        }
+        Complete-Ok
+    }
+    "test-projects" {
+        Invoke-MaybeNpmCi
+        Push-Location $webDir
+        try {
+            Invoke-WebTest "web test (projects)" @("--project=projects")
+        } finally {
+            Pop-Location
+        }
+        Complete-Ok
+    }
+    "test-worktrees" {
+        Invoke-MaybeNpmCi
+        Push-Location $webDir
+        try {
+            Invoke-WebTest "web test (worktrees)" @("--project=worktrees")
         } finally {
             Pop-Location
         }
@@ -236,7 +296,16 @@ Invoke-MaybeNpmCi
 
 Push-Location $webDir
 try {
-    Invoke-WebTest "web test" @("--project=unit", "--project=components", "--project=integration")
+    Invoke-WebTest "web test" @(
+        "--project=unit",
+        "--project=components",
+        "--project=app",
+        "--project=task-pages",
+        "--project=task-create",
+        "--project=settings",
+        "--project=projects",
+        "--project=worktrees"
+    )
     Invoke-CapturedStep "web lint" { npm run lint } { param($p) Get-WebLintStats $p }
     Invoke-CapturedStep "web standards" { npm run check:standards }
     Invoke-CapturedStep "web build" { npm run build }

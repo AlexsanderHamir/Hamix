@@ -5,15 +5,23 @@ import { defineWorkspace } from "vitest/config";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
-/** Full-page and App-level tests — run in the integration CI cell. */
-const integrationIncludes = [
-  "src/app/**/*.test.tsx",
-  "src/**/pages/**/*.test.tsx",
-  "src/tasks/create/**/*.test.tsx",
-  "src/settings/SettingsPage.test.tsx",
+const appIncludes = ["src/app/**/*.test.tsx"];
+const taskPagesIncludes = ["src/tasks/pages/**/*.test.tsx"];
+const taskCreateIncludes = ["src/tasks/create/**/*.test.tsx"];
+const settingsIncludes = ["src/settings/SettingsPage.test.tsx"];
+const projectsIncludes = [
   "src/projects/ProjectListPage.test.tsx",
   "src/projects/ProjectDetailPage.test.tsx",
-  "src/worktrees/WorktreesPage.test.tsx",
+];
+const worktreesIncludes = ["src/worktrees/WorktreesPage.test.tsx"];
+
+const fullAppIncludes = [
+  ...appIncludes,
+  ...taskPagesIncludes,
+  ...taskCreateIncludes,
+  ...settingsIncludes,
+  ...projectsIncludes,
+  ...worktreesIncludes,
 ];
 
 const sharedTest = {
@@ -32,6 +40,11 @@ const sharedVite = {
   },
 };
 
+const fullAppTest = {
+  ...sharedTest,
+  testTimeout: 15_000,
+};
+
 export default defineWorkspace([
   {
     ...sharedVite,
@@ -47,16 +60,55 @@ export default defineWorkspace([
       ...sharedTest,
       name: "components",
       include: ["src/**/*.test.tsx"],
-      exclude: integrationIncludes,
+      exclude: fullAppIncludes,
     },
   },
   {
     ...sharedVite,
     test: {
-      ...sharedTest,
-      name: "integration",
-      include: integrationIncludes,
-      testTimeout: 15_000,
+      ...fullAppTest,
+      name: "app",
+      include: appIncludes,
+    },
+  },
+  {
+    ...sharedVite,
+    test: {
+      ...fullAppTest,
+      name: "task-pages",
+      include: taskPagesIncludes,
+    },
+  },
+  {
+    ...sharedVite,
+    test: {
+      ...fullAppTest,
+      name: "task-create",
+      include: taskCreateIncludes,
+    },
+  },
+  {
+    ...sharedVite,
+    test: {
+      ...fullAppTest,
+      name: "settings",
+      include: settingsIncludes,
+    },
+  },
+  {
+    ...sharedVite,
+    test: {
+      ...fullAppTest,
+      name: "projects",
+      include: projectsIncludes,
+    },
+  },
+  {
+    ...sharedVite,
+    test: {
+      ...fullAppTest,
+      name: "worktrees",
+      include: worktreesIncludes,
     },
   },
 ]);

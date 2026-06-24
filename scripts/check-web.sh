@@ -8,14 +8,20 @@
 # Flags:
 #   --verbose, -v       Stream full tool output (CI uses this)
 #   --install           Run npm ci in web/ before other steps
-#   --group=<name>      Restrict to lint|build|test-fast|test-slow (CI matrix)
+#   --group=<name>      Restrict to lint|build|test-unit|test-components|test-app|test-task-pages|test-task-create|test-settings|test-projects|test-worktrees (CI matrix)
 #   --help, -h          Show options
 #
 # CI:
 #   ./scripts/check-web.sh --install --verbose --group=lint
 #   ./scripts/check-web.sh --install --verbose --group=build
-#   ./scripts/check-web.sh --install --verbose --group=test-fast
-#   ./scripts/check-web.sh --install --verbose --group=test-slow
+#   ./scripts/check-web.sh --install --verbose --group=test-unit
+#   ./scripts/check-web.sh --install --verbose --group=test-components
+#   ./scripts/check-web.sh --install --verbose --group=test-app
+#   ./scripts/check-web.sh --install --verbose --group=test-task-pages
+#   ./scripts/check-web.sh --install --verbose --group=test-task-create
+#   ./scripts/check-web.sh --install --verbose --group=test-settings
+#   ./scripts/check-web.sh --install --verbose --group=test-projects
+#   ./scripts/check-web.sh --install --verbose --group=test-worktrees
 
 set -uo pipefail
 
@@ -49,9 +55,9 @@ done
 
 if [[ -n "$GROUP" ]]; then
   case "$GROUP" in
-    lint|build|test-fast|test-slow) ;;
+    lint|build|test-unit|test-components|test-app|test-task-pages|test-task-create|test-settings|test-projects|test-worktrees) ;;
     *)
-      echo "unknown web group: $GROUP (valid: lint build test-fast test-slow)" >&2
+      echo "unknown web group: $GROUP (valid: lint build test-unit test-components test-app test-task-pages test-task-create test-settings test-projects test-worktrees)" >&2
       exit 2
       ;;
   esac
@@ -72,7 +78,7 @@ if [[ -n "$GROUP" ]]; then
   case "$GROUP" in
     lint) TOTAL=3 ;;
     build) TOTAL=1 ;;
-    test-fast|test-slow) TOTAL=1 ;;
+    test-unit|test-components|test-app|test-task-pages|test-task-create|test-settings|test-projects|test-worktrees) TOTAL=1 ;;
   esac
   [[ "$INSTALL" -eq 1 ]] && TOTAL=$((TOTAL + 1))
 else
@@ -221,17 +227,59 @@ case "$GROUP" in
     popd >/dev/null
     complete_ok
     ;;
-  test-fast)
+  test-unit)
     maybe_npm_ci
     pushd web >/dev/null
-    run_web_test "web test (fast)" --project=unit --project=components
+    run_web_test "web test (unit)" --project=unit
     popd >/dev/null
     complete_ok
     ;;
-  test-slow)
+  test-components)
     maybe_npm_ci
     pushd web >/dev/null
-    run_web_test "web test (slow)" --project=integration
+    run_web_test "web test (components)" --project=components
+    popd >/dev/null
+    complete_ok
+    ;;
+  test-app)
+    maybe_npm_ci
+    pushd web >/dev/null
+    run_web_test "web test (app)" --project=app
+    popd >/dev/null
+    complete_ok
+    ;;
+  test-task-pages)
+    maybe_npm_ci
+    pushd web >/dev/null
+    run_web_test "web test (task-pages)" --project=task-pages
+    popd >/dev/null
+    complete_ok
+    ;;
+  test-task-create)
+    maybe_npm_ci
+    pushd web >/dev/null
+    run_web_test "web test (task-create)" --project=task-create
+    popd >/dev/null
+    complete_ok
+    ;;
+  test-settings)
+    maybe_npm_ci
+    pushd web >/dev/null
+    run_web_test "web test (settings)" --project=settings
+    popd >/dev/null
+    complete_ok
+    ;;
+  test-projects)
+    maybe_npm_ci
+    pushd web >/dev/null
+    run_web_test "web test (projects)" --project=projects
+    popd >/dev/null
+    complete_ok
+    ;;
+  test-worktrees)
+    maybe_npm_ci
+    pushd web >/dev/null
+    run_web_test "web test (worktrees)" --project=worktrees
     popd >/dev/null
     complete_ok
     ;;
@@ -242,7 +290,15 @@ run_cmd "check-brand" bash "$(dirname "$0")/check-brand.sh"
 maybe_npm_ci
 
 pushd web >/dev/null
-run_web_test "web test" --project=unit --project=components --project=integration
+run_web_test "web test" \
+  --project=unit \
+  --project=components \
+  --project=app \
+  --project=task-pages \
+  --project=task-create \
+  --project=settings \
+  --project=projects \
+  --project=worktrees
 run_web_lint
 run_cmd "web standards" npm run check:standards
 run_cmd "web build" npm run build

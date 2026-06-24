@@ -24,6 +24,7 @@ var xdgUserDirKeys = []struct {
 	{"XDG_VIDEOS_DIR", PlaceCategoryVideos, "Videos", "videos"},
 }
 
+//funclogmeasure:skip category=hot-path reason="Browse sub-step; operation trace is emitted by ResolveBrowseRoots."
 func resolveUserDirPlaces() ([]Place, error) {
 	home, err := os.UserHomeDir()
 	if err != nil {

@@ -4,6 +4,8 @@ package repo
 type HomePlaceProvider struct{}
 
 // Places implements PlaceProvider.
+//
+//funclogmeasure:skip category=hot-path reason="Browse sub-step; operation trace is emitted by ResolveBrowseRoots."
 func (HomePlaceProvider) Places(env BrowseEnvironment, _ string) ([]Place, error) {
 	root, err := resolveHomeBrowseRoot(env)
 	if err != nil {

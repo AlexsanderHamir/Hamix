@@ -9,6 +9,7 @@ import (
 	"golang.org/x/sys/windows"
 )
 
+//funclogmeasure:skip category=hot-path reason="Browse sub-step; operation trace is emitted by ResolveBrowseRoots."
 func resolveUserDirPlaces() ([]Place, error) {
 	specs := []struct {
 		category PlaceCategory

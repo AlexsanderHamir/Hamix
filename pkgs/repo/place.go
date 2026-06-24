@@ -41,11 +41,15 @@ type PlaceRegistry struct {
 }
 
 // NewPlaceRegistry builds a registry from one or more providers.
+//
+//funclogmeasure:skip category=hot-path reason="Pure constructor; operation trace is emitted by ResolveBrowseRoots."
 func NewPlaceRegistry(providers ...PlaceProvider) *PlaceRegistry {
 	return &PlaceRegistry{providers: providers}
 }
 
 // Places returns all unique Places from registered providers.
+//
+//funclogmeasure:skip category=hot-path reason="Browse sub-step; operation trace is emitted by ResolveBrowseRoots."
 func (r *PlaceRegistry) Places(env BrowseEnvironment, startDir string) ([]Place, error) {
 	if r == nil || len(r.providers) == 0 {
 		return nil, fmt.Errorf("no place providers registered")
@@ -75,6 +79,7 @@ func (r *PlaceRegistry) Places(env BrowseEnvironment, startDir string) ([]Place,
 	return out, nil
 }
 
+//funclogmeasure:skip category=hot-path reason="Pure helper without I/O; operation trace is emitted by ResolveBrowseRoots."
 func placeToBrowseRoot(p Place) BrowseRoot {
 	return BrowseRoot{
 		ID:                p.ID,

@@ -62,6 +62,7 @@ func ResolveBrowseRoots(startDir string) ([]BrowseRoot, BrowseEnvironment, error
 	return roots, env, nil
 }
 
+//funclogmeasure:skip category=hot-path reason="Pure helper without I/O; operation trace is emitted by ResolveBrowseRoots."
 func defaultPlaceRegistry() *PlaceRegistry {
 	return NewPlaceRegistry(InstallPlaceProvider{}, HomePlaceProvider{}, UserDirsPlaceProvider{})
 }

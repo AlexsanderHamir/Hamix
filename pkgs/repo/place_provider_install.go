@@ -4,6 +4,8 @@ package repo
 type InstallPlaceProvider struct{}
 
 // Places implements PlaceProvider.
+//
+//funclogmeasure:skip category=hot-path reason="Browse sub-step; operation trace is emitted by ResolveBrowseRoots."
 func (InstallPlaceProvider) Places(env BrowseEnvironment, startDir string) ([]Place, error) {
 	root, err := resolveInstallBrowseRoot(startDir, env)
 	if err != nil {

@@ -10,6 +10,8 @@ import (
 type CustomPlaceProvider struct{}
 
 // Places implements PlaceProvider.
+//
+//funclogmeasure:skip category=hot-path reason="Browse sub-step; operation trace is emitted by ResolveBrowseRoots."
 func (CustomPlaceProvider) Places(_ BrowseEnvironment, _ string) ([]Place, error) {
 	override := strings.TrimSpace(os.Getenv("HAMIX_BROWSE_ROOTS"))
 	if override == "" {
@@ -34,6 +36,8 @@ func (CustomPlaceProvider) Places(_ BrowseEnvironment, _ string) ([]Place, error
 }
 
 // CustomBrowseRootsConfigured reports whether HAMIX_BROWSE_ROOTS replaces defaults.
+//
+//funclogmeasure:skip category=hot-path reason="Pure env read; operation trace is emitted by ResolveBrowseRoots."
 func CustomBrowseRootsConfigured() bool {
 	return strings.TrimSpace(os.Getenv("HAMIX_BROWSE_ROOTS")) != ""
 }

@@ -71,6 +71,18 @@ Web tests prove UI and HTTP contracts given fixture data. They do **not** simula
 
 Hook tests under `src/tasks/create/hooks/` belong in the `components` project, not `task-create`.
 
+## Harness tiers
+
+Use the smallest render helper from [`appHarness.tsx`](../../web/src/test/integration/appHarness.tsx):
+
+| Harness | Use for |
+| --- | --- |
+| `renderApp()` / `renderAppAt()` | Full shell — bootstrap, routing, 404 (`test-app`) |
+| `renderTasksHome()` / `renderTasksAt()` | Home, drafts, create modals — no bootstrap or SSE (`test-task-create`) |
+| Direct page `render()` + MSW | Single page when routing is not under test (`test-task-pages`) |
+
+MSW is configured with `onUnhandledRequest: "error"` in [`setup.ts`](../../web/src/test/setup.ts). Register handlers for every endpoint the test triggers.
+
 ## Five rules
 
 1. **Network via MSW.** New tests use `server.use(...)` with handlers in [`web/src/test/handlers/`](../../web/src/test/handlers/). Do not add `vi.spyOn(globalThis, "fetch")`.

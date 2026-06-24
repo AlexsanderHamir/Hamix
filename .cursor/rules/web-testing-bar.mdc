@@ -11,20 +11,39 @@ Full reference: [docs/domain/web-testing.md](../../docs/domain/web-testing.md).
 ## Rules
 
 1. **MSW only for new tests** — `server.use(handlers)` from `web/src/test/handlers/`. No new `vi.spyOn(globalThis, "fetch")`.
-2. **No bare sleeps** — `vi.useFakeTimers()` or `createDeferred()`; never `setTimeout` or `new Promise(() => {})`.
-3. **Project placement** — `unit` / `components` / `app` / `task-pages` / `task-create` / `settings` / `projects` / `worktrees` per `web/vitest.workspace.ts`. `<App />` and pages belong in the matching full-app project.
-4. **≤ 500 lines** per `*.test.{ts,tsx}`.
-5. **Keep tests fast** — prefer handlers + `renderHook` over full-app renders when the behaviour is local.
+2. **Unhandled requests fail** — `web/src/test/setup.ts` sets `onUnhandledRequest: "error"`. Every fetch in MSW-based tests needs a handler.
+3. **No bare sleeps** — `vi.useFakeTimers()` or `createDeferred()`; never `setTimeout` or `new Promise(() => {})`.
+4. **Project placement** — `unit` / `components` / `app` / `task-pages` / `task-create` / `settings` / `projects` / `worktrees` per `web/vitest.workspace.ts`. `<App />` and pages belong in the matching full-app project.
+5. **≤ 500 lines** per `*.test.{ts,tsx}`.
+6. **Keep tests fast** — prefer handlers + `renderHook` over full-app renders when the behaviour is local.
+
+## Harness tiers
+
+Use the smallest harness that covers the behaviour under test. Defined in [`appHarness.tsx`](../../web/src/test/integration/appHarness.tsx).
+
+| Harness | Mounts | Use for |
+| --- | --- | --- |
+| `renderApp()` / `renderAppAt(entries)` | Full `<App />` — bootstrap, SSE, shell, lazy routes | Routing, bootstrap, 404, cross-feature navigation (`test-app`) |
+| `renderTasksHome()` / `renderTasksAt(entries)` | Tasks shell only — home, drafts, create modals | Create-task flows, drafts page (`test-task-create`, drafts in `test-task-pages`) |
+| Direct `render(<Page />)` + MSW | Single page component | Task detail/cycle/event pages when routing is not under test |
+
+`renderTasksHome` omits `useBootstrap`, `useTaskEventStream`, `AppShell`, and lazy routes. Do not use `renderApp` to test a create modal or drafts list.
+
+Always call `setupAppTest()` in `beforeEach` and `server.use(...appDefaultHandlers(), …)` for the endpoints the test hits.
 
 ## Good
 
 ```ts
-server.use(...appDefaultHandlers(), tasksListEmpty());
-renderApp();
+beforeEach(() => {
+  setupAppTest();
+  server.use(...appDefaultHandlers(), tasksListEmpty());
+});
+renderTasksHome();
 ```
 
 ## Bad
 
 ```ts
 vi.spyOn(globalThis, "fetch").mockImplementation(async (input) => { /* 40 lines */ });
+renderApp(); // full shell to open a modal
 ```

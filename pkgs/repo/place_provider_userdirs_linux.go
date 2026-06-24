@@ -41,7 +41,7 @@ func parseXDGUserDirsFile(path, home string) ([]Place, error) {
 	f, err := os.Open(path)
 	if err != nil {
 		if os.IsNotExist(err) {
-			return defaultLinuxUserDirPlaces(home), nil
+			return defaultLinuxUserDirPlaces(home)
 		}
 		return nil, err
 	}
@@ -90,7 +90,7 @@ func parseXDGUserDirsFile(path, home string) ([]Place, error) {
 		})
 	}
 	if len(out) == 0 {
-		return defaultLinuxUserDirPlaces(home), nil
+		return defaultLinuxUserDirPlaces(home)
 	}
 	return out, nil
 }

@@ -340,33 +340,56 @@ Mental model: project = process, task = thread. Project = shared memory; task = 
 
 Out of scope today: embeddings / vector search, autonomous memory pruning, summarization daemons, tenancy / sharing / billing, automatic migration of legacy tasks into synthetic projects.
 
-## Git workflow (`git_repositories`, `git_worktrees`, `git_branches`)
+## Git workflow (`git_repositories`, `git_worktrees`, `git_branches`, `worktree_branches`)
 
-Per-project git context for Issue #39. See [ADR-0033](./adr/ADR-0033-git-worktrees-and-branches.md) and [domain/worktrees-and-branches.md](./domain/worktrees-and-branches.md).
+Git context is a strict, project-free tree: **repo -> worktree -> branch -> task**, where a "branch on a worktree" is a `worktree_branches` association. A **project** is an optional overlay tied to one repo, not a node in the git chain. See [ADR-0037](./adr/ADR-0037-global-repos-project-tree.md) (current model), [ADR-0033](./adr/ADR-0033-git-worktrees-and-branches.md) (original), and [domain/worktrees-and-branches.md](./domain/worktrees-and-branches.md).
+
+```mermaid
+flowchart TB
+  Repo["git_repositories (GLOBAL)"]
+  Worktree["git_worktrees"]
+  Branch["git_branches (repo-level refs)"]
+  WB["worktree_branches"]
+  Task["tasks (queued)"]
+  Project["projects (optional overlay)"]
+  Repo -->|"1:N"| Worktree
+  Repo -->|"1:N"| Branch
+  Worktree -->|"1:N"| WB
+  Branch -.->|"ref"| WB
+  WB -->|"1:N"| Task
+  Repo -->|"1:N"| Project
+  Project -.->|"optional tag"| Task
+```
 
 ### `git_repositories`
+
+Global. Registered once per canonical path; not owned by a project.
 
 | Column | Type | Notes |
 |---|---|---|
 | `id` | uuid pk | Server-assigned. |
-| `project_id` | string fk | Scoped to a project (default project in v0.1 UI). |
-| `path` | text | Container-visible absolute path to the main checkout. |
+| `path` | text | Container-visible absolute path to the main checkout. **Unique globally.** |
 | `host_path` | text | Optional display path for Docker (`HAMIX_PATH_MAP`). |
 | `default_branch` | string | e.g. `main`. |
 | `created_at` / `updated_at` | timestamptz | |
 
 ### `git_worktrees`
 
+Belong to the repo only (no `project_id`).
+
 | Column | Type | Notes |
 |---|---|---|
 | `id` | uuid pk | |
-| `repository_id` | string fk → `git_repositories.id` | |
+| `repository_id` | string fk -> `git_repositories.id` | |
 | `path` | text | Working directory (main checkout or linked worktree). |
 | `name` | string | Operator label. |
 | `is_main` | bool | True for the registered main checkout row. |
+| `active_branch_id` | string fk -> `git_branches.id`, nullable | Branch currently checked out in this worktree (at most one). |
 | `created_at` | timestamptz | |
 
 ### `git_branches`
+
+Repo-level refs.
 
 | Column | Type | Notes |
 |---|---|---|
@@ -376,7 +399,22 @@ Per-project git context for Issue #39. See [ADR-0033](./adr/ADR-0033-git-worktre
 | `head_sha` | string | Cached tip SHA (reconcile refreshes). |
 | `created_at` | timestamptz | |
 
-Tasks reference `worktree_id` + `branch_id`. Delete returns **409** `has_running_task` when a **running** task targets the worktree or branch.
+### `worktree_branches`
+
+Association linking a repo-level branch to a worktree directory ("this branch, in this directory"). Tasks bind to this row.
+
+| Column | Type | Notes |
+|---|---|---|
+| `id` | uuid pk | |
+| `worktree_id` | string fk -> `git_worktrees.id` | |
+| `branch_id` | string fk -> `git_branches.id` | Must share `repository_id` with the worktree. |
+| `created_at` | timestamptz | |
+
+Tasks reference a single `worktree_branch_id` (FK -> `worktree_branches.id`, required) and an optional `project_id`. When `project_id` is set, `project.repository_id` must equal the association's repo. Delete returns **409** `has_running_task` when a **running** task targets the repo, worktree, branch, or association; binding/run against a branch active in another worktree returns **409** `branch_active_elsewhere`.
+
+### `projects` (git overlay fields)
+
+`projects.repository_id` (nullable fk -> `git_repositories.id`) ties a project to exactly one repo; the repo must exist first. The built-in default project (`DEFAULT_PROJECT_ID`) is legacy with a null `repository_id`. See [ADR-0037](./adr/ADR-0037-global-repos-project-tree.md).
 
 ## Audit log (`task_events`)
 

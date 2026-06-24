@@ -1,6 +1,4 @@
-import { useEffect, useRef } from "react";
-import { Modal } from "../../../shared/Modal";
-import { MutationErrorBanner } from "../../../shared/MutationErrorBanner";
+import { ConfirmDialog } from "@/components/feedback/ConfirmDialog";
 
 export type TaskRetryMode = "fresh" | "resume";
 
@@ -23,12 +21,6 @@ export function TaskRetryConfirmDialog({
   onCancel,
   onConfirm,
 }: Props) {
-  const cancelRef = useRef<HTMLButtonElement>(null);
-
-  useEffect(() => {
-    cancelRef.current?.focus();
-  }, []);
-
   const isFresh = mode === "fresh";
   const title = isFresh ? "Start over?" : "Resume from failure?";
   const body = isFresh
@@ -37,43 +29,20 @@ export function TaskRetryConfirmDialog({
   const confirmLabel = isFresh ? "Start over" : "Resume from failure";
 
   return (
-    <Modal
-      onClose={onCancel}
-      labelledBy="task-retry-dialog-title"
-      describedBy="task-retry-dialog-description"
+    <ConfirmDialog
+      title={title}
+      description={<strong>{taskTitle}</strong>}
+      footnote={body}
+      confirmLabel={confirmLabel}
+      confirmVariant={isFresh ? "primary" : "secondary"}
       busy={pending}
-      dismissibleWhileBusy
-    >
-      <section className="panel confirm-dialog modal-sheet">
-        <h2 id="task-retry-dialog-title">{title}</h2>
-        <p
-          className="confirm-dialog__statement"
-          id="task-retry-dialog-description"
-        >
-          <strong>{taskTitle}</strong>
-        </p>
-        <p className="confirm-dialog__footnote">{body}</p>
-        <MutationErrorBanner error={error} className="confirm-dialog__err" />
-        <div className="row stack-row-actions">
-          <button
-            ref={cancelRef}
-            type="button"
-            className="secondary"
-            disabled={saving}
-            onClick={onCancel}
-          >
-            Cancel
-          </button>
-          <button
-            type="button"
-            className={isFresh ? "primary" : "secondary"}
-            disabled={saving}
-            onClick={() => void onConfirm()}
-          >
-            {confirmLabel}
-          </button>
-        </div>
-      </section>
-    </Modal>
+      cancelDisabled={saving}
+      confirmDisabled={saving}
+      error={error}
+      onCancel={onCancel}
+      onConfirm={onConfirm}
+      titleId="task-retry-dialog-title"
+      descriptionId="task-retry-dialog-description"
+    />
   );
 }

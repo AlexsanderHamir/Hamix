@@ -1,5 +1,4 @@
-import { Modal } from "@/shared/Modal";
-import { MutationErrorBanner } from "@/shared/MutationErrorBanner";
+import { ConfirmDialog } from "@/components/feedback/ConfirmDialog";
 import type { GitDeleteTarget } from "../gitDeleteErrors";
 import { gitDeleteBlocked, gitDeleteErrorMessage } from "../gitDeleteErrors";
 
@@ -35,37 +34,27 @@ export function DeleteConfirmDialog({
   const errorMessage = error != null ? gitDeleteErrorMessage(error) : null;
 
   return (
-    <Modal
-      onClose={onClose}
-      labelledBy="git-delete-dialog-title"
-      describedBy="git-delete-dialog-description"
-      busy={pending}
-      dismissibleWhileBusy
-    >
-      <section className="panel confirm-dialog modal-sheet worktrees-delete-dialog">
-        <h2 id="git-delete-dialog-title">Delete {targetNoun(target.kind)}?</h2>
-        <p className="confirm-dialog__statement" id="git-delete-dialog-description">
+    <ConfirmDialog
+      title={`Delete ${targetNoun(target.kind)}?`}
+      description={
+        <>
           <strong>{target.label}</strong> will be removed from Hamix and from git where
           applicable.
-        </p>
-        <p className="confirm-dialog__footnote">This action cannot be undone.</p>
-        {errorMessage ? (
-          <MutationErrorBanner error={errorMessage} className="confirm-dialog__err" />
-        ) : null}
-        <div className="row stack-row-actions">
-          <button type="button" className="secondary" disabled={pending} onClick={onClose}>
-            Cancel
-          </button>
-          <button
-            type="button"
-            className="danger"
-            disabled={pending || blocked}
-            onClick={() => void onConfirm()}
-          >
-            {pending ? "Deleting…" : "Delete"}
-          </button>
-        </div>
-      </section>
-    </Modal>
+        </>
+      }
+      footnote="This action cannot be undone."
+      confirmLabel={pending ? "Deleting…" : "Delete"}
+      confirmVariant="danger"
+      busy={pending}
+      cancelDisabled={pending}
+      confirmDisabled={pending || blocked}
+      error={errorMessage}
+      onCancel={onClose}
+      onConfirm={onConfirm}
+      titleId="git-delete-dialog-title"
+      descriptionId="git-delete-dialog-description"
+      sectionClassName="worktrees-delete-dialog"
+      focusCancelOnOpen={false}
+    />
   );
 }

@@ -31,7 +31,9 @@ const sharedTest = {
   environment: "jsdom" as const,
   setupFiles: ["./src/test/setup.ts"],
   restoreMocks: true,
-  unstubGlobals: true,
+  // MSW patches global fetch in beforeAll; unstubbing globals after each test
+  // drops interception and leaves integration tests waiting on real network timeouts.
+  unstubGlobals: false,
 };
 
 const sharedVite = {

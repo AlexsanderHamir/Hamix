@@ -78,7 +78,10 @@ describe("draft entry hints", () => {
     await user.click(screen.getByRole("button", { name: /^new task$/i }));
     expect(await screen.findByText(/loading drafts/i)).toBeInTheDocument();
 
-    deferred.resolve(HttpResponse.json({ drafts: [] }));
+    await deferred.resolve(HttpResponse.json({ drafts: [] }));
+    expect(
+      await screen.findByRole("dialog", { name: /^new task$/i }),
+    ).toBeInTheDocument();
   });
 
   it("shows home entry hint when drafts fail and opens fresh create form", async () => {

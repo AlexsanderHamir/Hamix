@@ -3,7 +3,7 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { MemoryRouter, Route, Routes } from "react-router-dom";
-import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { beforeEach, describe, expect, it, vi } from "vitest";
 import type { useTasksApp } from "../hooks/useTasksApp";
 import { TasksAppProvider } from "../app/TasksAppProvider";
 import { stubEventSource } from "../../test/browserMocks";
@@ -20,6 +20,7 @@ import {
   taskEventsListEmpty,
 } from "@/test/handlers/tasks";
 import { server } from "@/test/server";
+import type { Task } from "@/types/task";
 import { TaskDetailPage } from "./TaskDetailPage";
 
 const { mockNavigate } = vi.hoisted(() => ({ mockNavigate: vi.fn() }));
@@ -81,20 +82,12 @@ function renderDetail(
   );
 }
 
-type MockTaskDetailData = {
-  id: string;
-  title: string;
-  initial_prompt: string;
-  status: string;
-  priority: string;
-  runner?: string;
-  cursor_model?: string;
-};
+type MockTaskDetailData = Partial<Task> & Pick<Task, "id" | "title">;
 
 function taskDetail(
   id: string,
   title: string,
-  overrides: Partial<MockTaskDetailData> = {},
+  overrides: Partial<Omit<Task, "id" | "title">> = {},
 ): MockTaskDetailData {
   return {
     id,
@@ -125,11 +118,6 @@ describe("TaskDetailPage", () => {
     stubEventSource();
     mockNavigate.mockClear();
     isUiFeatureOmitted.mockImplementation(() => false);
-  });
-
-  afterEach(() => {
-    vi.restoreAllMocks();
-    vi.unstubAllGlobals();
   });
 
   it("shows a loading skeleton while the task query is pending", () => {

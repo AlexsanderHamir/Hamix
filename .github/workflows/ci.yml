@@ -38,6 +38,10 @@ jobs:
 
   web:
     runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        group: [lint, build, test-fast, test-slow]
     steps:
       - uses: actions/checkout@v4
 
@@ -47,5 +51,5 @@ jobs:
           cache: npm
           cache-dependency-path: web/package-lock.json
 
-      - name: Check (web)
-        run: ./scripts/check-web.sh --install --verbose
+      - name: Check (web - ${{ matrix.group }})
+        run: ./scripts/check-web.sh --install --verbose --group=${{ matrix.group }}

@@ -5,20 +5,24 @@
 # Usage (repo root): .\scripts\check-web.ps1 [flags]
 #
 # Flags:
-#   -Verbose     Stream full tool output (CI uses this)
-#   -Install     Run npm ci in web/ before other steps
-#   -Help        Show options
+#   -Verbose           Stream full tool output (CI uses this)
+#   -Install           Run npm ci in web/ before other steps
+#   -Group <name>      Restrict to lint|build|test-fast|test-slow (CI matrix)
+#   -Help              Show options
 #
-# CI: ./scripts/check-web.sh --install --verbose
+# CI:
+#   ./scripts/check-web.sh --install --verbose --group=lint
 
 param(
     [switch]$Help,
     [switch]$Verbose,
-    [switch]$Install
+    [switch]$Install,
+    [ValidateSet("lint", "build", "test-fast", "test-slow", "")]
+    [string]$Group = ""
 )
 
 if ($Help -or $args -contains '--help' -or $args -contains '-h') {
-    Get-Content $PSCommandPath | Select-Object -Skip 1 -First 13 | ForEach-Object { $_ -replace '^# ?', '' }
+    Get-Content $PSCommandPath | Select-Object -Skip 1 -First 16 | ForEach-Object { $_ -replace '^# ?', '' }
     exit 0
 }
 
@@ -35,7 +39,20 @@ if (-not (Test-Path (Join-Path $webDir "package.json"))) {
 $CheckStart = Get-Date
 $script:Step = 0
 $script:Passed = 0
-$script:Total = if ($Install) { 6 } else { 5 }
+
+function Get-TotalSteps {
+    param([string]$Scope)
+    $base = switch ($Scope) {
+        "lint" { 3 }
+        "build" { 1 }
+        { $_ -in "test-fast", "test-slow" } { 1 }
+        default { 5 }
+    }
+    if ($Install) { return $base + 1 }
+    return $base
+}
+
+$script:Total = Get-TotalSteps $Group
 
 function Format-Duration {
     param([TimeSpan]$Span)
@@ -146,22 +163,80 @@ function Get-WebLintStats {
     return ""
 }
 
+function Invoke-WebTest {
+    param(
+        [string]$Label,
+        [string[]]$ExtraArgs
+    )
+    Invoke-CapturedStep $Label {
+        if ($Verbose) {
+            & npm test -- --run @ExtraArgs
+        } else {
+            & npm test -- --run @ExtraArgs --reporter=basic
+        }
+    } { param($p) Get-WebTestStats $p }
+}
+
+function Invoke-MaybeNpmCi {
+    if ($Install) {
+        Invoke-CapturedStep "npm ci" { Push-Location $webDir; try { npm ci } finally { Pop-Location } }
+    }
+}
+
 Write-Host "Hamix check (web)"
 Write-Host ""
 
-Invoke-CapturedStep "check-brand" { & "$PSScriptRoot\check-brand.ps1" }
-
-if ($Install) {
-    Invoke-CapturedStep "npm ci" { Push-Location $webDir; try { npm ci } finally { Pop-Location } }
+switch ($Group) {
+    "lint" {
+        Invoke-CapturedStep "check-brand" { & "$PSScriptRoot\check-brand.ps1" }
+        Invoke-MaybeNpmCi
+        Push-Location $webDir
+        try {
+            Invoke-CapturedStep "web lint" { npm run lint } { param($p) Get-WebLintStats $p }
+            Invoke-CapturedStep "web standards" { npm run check:standards }
+        } finally {
+            Pop-Location
+        }
+        Complete-Ok
+    }
+    "build" {
+        Invoke-MaybeNpmCi
+        Push-Location $webDir
+        try {
+            Invoke-CapturedStep "web build" { npm run build }
+        } finally {
+            Pop-Location
+        }
+        Complete-Ok
+    }
+    "test-fast" {
+        Invoke-MaybeNpmCi
+        Push-Location $webDir
+        try {
+            Invoke-WebTest "web test (fast)" @("--project=unit", "--project=components")
+        } finally {
+            Pop-Location
+        }
+        Complete-Ok
+    }
+    "test-slow" {
+        Invoke-MaybeNpmCi
+        Push-Location $webDir
+        try {
+            Invoke-WebTest "web test (slow)" @("--project=integration")
+        } finally {
+            Pop-Location
+        }
+        Complete-Ok
+    }
 }
+
+Invoke-CapturedStep "check-brand" { & "$PSScriptRoot\check-brand.ps1" }
+Invoke-MaybeNpmCi
 
 Push-Location $webDir
 try {
-    if ($Verbose) {
-        Invoke-CapturedStep "web test" { npm test -- --run } { param($p) Get-WebTestStats $p }
-    } else {
-        Invoke-CapturedStep "web test" { npm test -- --run --reporter=basic } { param($p) Get-WebTestStats $p }
-    }
+    Invoke-WebTest "web test" @("--project=unit", "--project=components", "--project=integration")
     Invoke-CapturedStep "web lint" { npm run lint } { param($p) Get-WebLintStats $p }
     Invoke-CapturedStep "web standards" { npm run check:standards }
     Invoke-CapturedStep "web build" { npm run build }

@@ -6,11 +6,16 @@
 # Usage (repo root): ./scripts/check-web.sh [flags]
 #
 # Flags:
-#   --verbose, -v   Stream full tool output (CI uses this)
-#   --install       Run npm ci in web/ before other steps
-#   --help, -h      Show options
+#   --verbose, -v       Stream full tool output (CI uses this)
+#   --install           Run npm ci in web/ before other steps
+#   --group=<name>      Restrict to lint|build|test-fast|test-slow (CI matrix)
+#   --help, -h          Show options
 #
-# CI: ./scripts/check-web.sh --install --verbose
+# CI:
+#   ./scripts/check-web.sh --install --verbose --group=lint
+#   ./scripts/check-web.sh --install --verbose --group=build
+#   ./scripts/check-web.sh --install --verbose --group=test-fast
+#   ./scripts/check-web.sh --install --verbose --group=test-slow
 
 set -uo pipefail
 
@@ -19,15 +24,21 @@ cd "$repo"
 
 VERBOSE=0
 INSTALL=0
+GROUP=""
 
 show_help() {
-  sed -n '2,14p' "$0" | sed 's/^# \{0,1\}//'
+  sed -n '2,20p' "$0" | sed 's/^# \{0,1\}//'
 }
 
 while [[ $# -gt 0 ]]; do
   case "$1" in
     --verbose|-v) VERBOSE=1; shift ;;
     --install) INSTALL=1; shift ;;
+    --group=*) GROUP="${1#--group=}"; shift ;;
+    --group)
+      GROUP="${2:-}"
+      shift 2
+      ;;
     --help|-h) show_help; exit 0 ;;
     *)
       echo "unknown flag: $1 (try --help)" >&2
@@ -35,6 +46,16 @@ while [[ $# -gt 0 ]]; do
       ;;
   esac
 done
+
+if [[ -n "$GROUP" ]]; then
+  case "$GROUP" in
+    lint|build|test-fast|test-slow) ;;
+    *)
+      echo "unknown web group: $GROUP (valid: lint build test-fast test-slow)" >&2
+      exit 2
+      ;;
+  esac
+fi
 
 if [[ ! -f web/package.json ]]; then
   echo "web/package.json not found" >&2
@@ -46,8 +67,18 @@ CHECK_SECTION="web"
 CHECK_START=$SECONDS
 STEP=0
 PASSED=0
-TOTAL=5
-[[ "$INSTALL" -eq 1 ]] && TOTAL=6
+
+if [[ -n "$GROUP" ]]; then
+  case "$GROUP" in
+    lint) TOTAL=3 ;;
+    build) TOTAL=1 ;;
+    test-fast|test-slow) TOTAL=1 ;;
+  esac
+  [[ "$INSTALL" -eq 1 ]] && TOTAL=$((TOTAL + 1))
+else
+  TOTAL=5
+  [[ "$INSTALL" -eq 1 ]] && TOTAL=6
+fi
 
 # shellcheck source=check-lib.sh
 source "$(dirname "$0")/check-lib.sh"
@@ -69,11 +100,12 @@ web_lint_stats() {
 }
 
 run_web_test() {
-  local label="web test"
+  local label="$1"
+  shift
   local start=$SECONDS
   local log
   log="$(mktemp "${TMPDIR:-/tmp}/hamix-check.XXXXXX")"
-  local reporter_args=(--run)
+  local reporter_args=(--run "$@")
   if [[ "$VERBOSE" != "1" ]]; then
     reporter_args+=(--reporter=basic)
   fi
@@ -164,15 +196,53 @@ run_web_lint() {
   fail_step "$label" "$code"
 }
 
-print_banner
-run_cmd "check-brand" bash "$(dirname "$0")/check-brand.sh"
+maybe_npm_ci() {
+  if [[ "$INSTALL" -eq 1 ]]; then
+    run_cmd "npm ci" bash -c 'cd web && npm ci'
+  fi
+}
 
-if [[ "$INSTALL" -eq 1 ]]; then
-  run_cmd "npm ci" bash -c 'cd web && npm ci'
-fi
+print_banner
+
+case "$GROUP" in
+  lint)
+    run_cmd "check-brand" bash "$(dirname "$0")/check-brand.sh"
+    maybe_npm_ci
+    pushd web >/dev/null
+    run_web_lint
+    run_cmd "web standards" npm run check:standards
+    popd >/dev/null
+    complete_ok
+    ;;
+  build)
+    maybe_npm_ci
+    pushd web >/dev/null
+    run_cmd "web build" npm run build
+    popd >/dev/null
+    complete_ok
+    ;;
+  test-fast)
+    maybe_npm_ci
+    pushd web >/dev/null
+    run_web_test "web test (fast)" --project=unit --project=components
+    popd >/dev/null
+    complete_ok
+    ;;
+  test-slow)
+    maybe_npm_ci
+    pushd web >/dev/null
+    run_web_test "web test (slow)" --project=integration
+    popd >/dev/null
+    complete_ok
+    ;;
+esac
+
+# Full local bar (no --group)
+run_cmd "check-brand" bash "$(dirname "$0")/check-brand.sh"
+maybe_npm_ci
 
 pushd web >/dev/null
-run_web_test
+run_web_test "web test" --project=unit --project=components --project=integration
 run_web_lint
 run_cmd "web standards" npm run check:standards
 run_cmd "web build" npm run build

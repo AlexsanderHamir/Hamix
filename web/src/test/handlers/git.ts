@@ -1,52 +1,31 @@
 import { DEFAULT_PROJECT_ID } from "@/types";
+import {
+  FACTORY_GIT_BRANCH_ID,
+  FACTORY_GIT_REPO_ID,
+  FACTORY_GIT_WORKTREE_ID,
+  gitBranchFactory,
+  gitRepositoryFactory,
+  gitWorktreeFactory,
+} from "../factories/git";
 
-export const GIT_TEST_REPO_ID = "00000000-0000-4000-8000-000000000010";
-export const GIT_TEST_WORKTREE_ID = "00000000-0000-4000-8000-000000000020";
-export const GIT_TEST_BRANCH_ID = "00000000-0000-4000-8000-000000000030";
+export const GIT_TEST_REPO_ID = FACTORY_GIT_REPO_ID;
+export const GIT_TEST_WORKTREE_ID = FACTORY_GIT_WORKTREE_ID;
+export const GIT_TEST_BRANCH_ID = FACTORY_GIT_BRANCH_ID;
 
 export function gitRepositoriesResponse(): unknown {
   return {
     repositories: [
-      {
-        id: GIT_TEST_REPO_ID,
-        project_id: DEFAULT_PROJECT_ID,
-        path: "/repo/main",
-        host_path: "",
-        default_branch: "main",
-        created_at: "2026-06-22T12:00:00Z",
-        updated_at: "2026-06-22T12:00:00Z",
-      },
+      { ...gitRepositoryFactory(), project_id: DEFAULT_PROJECT_ID },
     ],
   };
 }
 
 export function gitWorktreesResponse(): unknown {
-  return {
-    worktrees: [
-      {
-        id: GIT_TEST_WORKTREE_ID,
-        repository_id: GIT_TEST_REPO_ID,
-        path: "/repo/main",
-        name: "main",
-        is_main: true,
-        created_at: "2026-06-22T12:00:00Z",
-      },
-    ],
-  };
+  return { worktrees: [gitWorktreeFactory()] };
 }
 
 export function gitBranchesResponse(): unknown {
-  return {
-    branches: [
-      {
-        id: GIT_TEST_BRANCH_ID,
-        repository_id: GIT_TEST_REPO_ID,
-        name: "main",
-        head_sha: "abc123",
-        created_at: "2026-06-22T12:00:00Z",
-      },
-    ],
-  };
+  return { branches: [gitBranchFactory()] };
 }
 
 /** Responds to project-scoped git REST paths used by the Worktrees UI and task create modal. */

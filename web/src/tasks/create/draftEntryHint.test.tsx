@@ -11,8 +11,8 @@ import {
 import { listCursorModelsOk } from "@/test/handlers/settings";
 import {
   appDefaultHandlers,
-  renderApp,
-  renderAppAt,
+  renderTasksHome,
+  renderTasksAt,
   setupAppTest,
 } from "@/test/integration/appHarness";
 import { server } from "@/test/server";
@@ -52,7 +52,7 @@ describe("draft entry hints", () => {
       ),
     );
 
-    renderAppAt(["/drafts"]);
+    renderTasksAt(["/drafts"]);
 
     await screen.findByRole("heading", { name: /^task drafts$/i });
     await user.click(
@@ -73,7 +73,7 @@ describe("draft entry hints", () => {
     const [pendingHandler, deferred] = draftsListPending();
     server.use(pendingHandler);
 
-    renderApp();
+    renderTasksHome();
     await screen.findByText("No tasks yet");
     await user.click(screen.getByRole("button", { name: /^new task$/i }));
     expect(await screen.findByText(/loading drafts/i)).toBeInTheDocument();
@@ -90,7 +90,7 @@ describe("draft entry hints", () => {
       ),
     );
 
-    renderApp();
+    renderTasksHome();
     await screen.findByText("No tasks yet");
     await user.click(screen.getByRole("button", { name: /^new task$/i }));
 
@@ -126,7 +126,7 @@ describe("draft entry hints", () => {
       }),
     );
 
-    renderApp();
+    renderTasksHome();
     await screen.findByText("No tasks yet");
     await user.click(screen.getByRole("button", { name: /^new task$/i }));
     await user.click(screen.getByRole("button", { name: /retry loading drafts/i }));

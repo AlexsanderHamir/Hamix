@@ -10,7 +10,7 @@ import { listCursorModelsOk } from "@/test/handlers/settings";
 import { openNewTaskModal } from "@/test/integration/createModalHelpers";
 import {
   appDefaultHandlers,
-  renderApp,
+  renderTasksHome,
   setupAppTest,
 } from "@/test/integration/appHarness";
 import { server } from "@/test/server";
@@ -29,7 +29,7 @@ describe("draft autosave on create modal", () => {
     const user = userEvent.setup();
     server.use(draftCreate(404, { error: "Not Found" }));
 
-    renderApp();
+    renderTasksHome();
     await screen.findByText("No tasks yet");
 
     const dialog = await openNewTaskModal(user);
@@ -53,7 +53,7 @@ describe("draft autosave on create modal", () => {
       ),
     );
 
-    renderApp();
+    renderTasksHome();
     await screen.findByText("No tasks yet");
 
     const dialog = await openNewTaskModal(user);
@@ -72,7 +72,7 @@ describe("draft autosave on create modal", () => {
     const user = userEvent.setup();
     server.use(draftCreate(404, { error: "Not Found" }));
 
-    renderApp();
+    renderTasksHome();
     await screen.findByText("No tasks yet");
 
     const firstDialog = await openNewTaskModal(user);
@@ -102,7 +102,7 @@ describe("draft autosave on create modal", () => {
       ),
     );
 
-    renderApp();
+    renderTasksHome();
     await screen.findByText("No tasks yet");
 
     vi.useFakeTimers();

@@ -16,7 +16,7 @@ import {
 } from "@/test/integration/createModalHelpers";
 import {
   appDefaultHandlers,
-  renderApp,
+  renderTasksHome,
   setupAppTest,
 } from "@/test/integration/appHarness";
 import { server } from "@/test/server";
@@ -31,7 +31,7 @@ describe("create task from home", () => {
     const user = userEvent.setup();
     server.use(...taskCreateFlowHandlers({ taskId: "t1", title: "Ship fix" }));
 
-    renderApp();
+    renderTasksHome();
     await screen.findByText("No tasks yet");
 
     const dialog = await openNewTaskModal(user);
@@ -59,7 +59,7 @@ describe("create task from home", () => {
       }),
     );
 
-    renderApp();
+    renderTasksHome();
     await screen.findByText("No tasks yet");
 
     const dialog = await openNewTaskModal(user);
@@ -103,7 +103,7 @@ describe("create task from home", () => {
       }),
     );
 
-    renderApp();
+    renderTasksHome();
     await screen.findByText("No tasks yet");
 
     const dialog = await openNewTaskModal(user);
@@ -160,7 +160,7 @@ describe("create task from home", () => {
       ]),
     );
 
-    renderApp();
+    renderTasksHome();
     expect(await screen.findByText("Check parent")).toBeInTheDocument();
 
     const dialog = await openNewTaskModal(user);
@@ -195,7 +195,7 @@ describe("create task from home", () => {
       }),
     );
 
-    renderApp();
+    renderTasksHome();
     expect(await screen.findByText("Parent task")).toBeInTheDocument();
 
     const dialog = await openNewTaskModal(user);

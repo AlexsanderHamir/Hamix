@@ -88,7 +88,6 @@ export function WorkspaceDirPickerModal({
   open,
   onClose,
   onSelect,
-  currentPath,
   nested = false,
   title = "Choose folder",
   lead = "Open a folder to browse inside it. Confirm the folder you’re in to register it.",

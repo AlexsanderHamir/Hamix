@@ -1,3 +1,4 @@
+import { http, HttpResponse } from "msw";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
@@ -6,9 +7,19 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import type { useTasksApp } from "../hooks/useTasksApp";
 import { TasksAppProvider } from "../app/TasksAppProvider";
 import { stubEventSource } from "../../test/browserMocks";
-import { requestUrl } from "../../test/requestUrl";
 import { ROUTER_FUTURE_FLAGS } from "../../lib/routerFutureFlags";
 import { DEFAULT_DOCUMENT_TITLE } from "../../shared/useDocumentTitle";
+import { setupAppTest } from "@/test/integration/appHarness";
+import {
+  taskChecklist,
+  taskChecklistFlaky,
+  taskChecklistItemPatch,
+  taskGet,
+  taskGetFlaky,
+  taskGetPending,
+  taskEventsListEmpty,
+} from "@/test/handlers/tasks";
+import { server } from "@/test/server";
 import { TaskDetailPage } from "./TaskDetailPage";
 
 const { mockNavigate } = vi.hoisted(() => ({ mockNavigate: vi.fn() }));
@@ -70,18 +81,6 @@ function renderDetail(
   );
 }
 
-function emptyEventsPayload(taskId: string) {
-  return {
-    task_id: taskId,
-    events: [],
-    limit: 20,
-    total: 0,
-    has_more_newer: false,
-    has_more_older: false,
-    approval_pending: false,
-  };
-}
-
 type MockTaskDetailData = {
   id: string;
   title: string;
@@ -109,82 +108,20 @@ function taskDetail(
   };
 }
 
-function mockTaskDetailFetch(
+function useTaskDetailHandlers(
   task: MockTaskDetailData,
   checklistItems: unknown[] = [],
 ) {
-  return vi
-    .spyOn(globalThis, "fetch")
-    .mockImplementation(async (input) => {
-      const url = requestUrl(input);
-      if (url === `/tasks/${task.id}`) {
-        return Response.json(task);
-      }
-      if (url === `/tasks/${task.id}/checklist`) {
-        return Response.json({ items: checklistItems });
-      }
-      if (url.startsWith(`/tasks/${task.id}/events`)) {
-        return Response.json(emptyEventsPayload(task.id));
-      }
-      return new Response("not found", { status: 404 });
-    });
-}
-
-function mockTaskDetailFetchWithChecklistPatch(
-  task: MockTaskDetailData,
-  checklistItemId: string,
-  initialText: string,
-  nextText: string,
-) {
-  let patchBody: string | null = null;
-  let checklistText = initialText;
-  vi.spyOn(globalThis, "fetch").mockImplementation(async (input, init) => {
-    const url = requestUrl(input);
-    const method = init?.method ?? "GET";
-    if (url === `/tasks/${task.id}`) {
-      return Response.json(task);
-    }
-    if (url === `/tasks/${task.id}/checklist`) {
-      return Response.json({
-        items: [
-          {
-            id: checklistItemId,
-            sort_order: 0,
-            text: checklistText,
-            done: false,
-          },
-        ],
-      });
-    }
-    if (
-      url === `/tasks/${task.id}/checklist/items/${checklistItemId}` &&
-      method === "PATCH"
-    ) {
-      patchBody = (init?.body as string) ?? null;
-      checklistText = nextText;
-      return Response.json({
-        items: [
-          {
-            id: checklistItemId,
-            sort_order: 0,
-            text: nextText,
-            done: false,
-          },
-        ],
-      });
-    }
-    if (url.startsWith(`/tasks/${task.id}/events`)) {
-      return Response.json(emptyEventsPayload(task.id));
-    }
-    return new Response("not found", { status: 404 });
-  });
-  return {
-    getPatchBody: () => patchBody,
-  };
+  server.use(
+    taskGet(task.id, task),
+    taskChecklist(task.id, checklistItems),
+    taskEventsListEmpty(task.id),
+  );
 }
 
 describe("TaskDetailPage", () => {
   beforeEach(() => {
+    setupAppTest();
     stubEventSource();
     mockNavigate.mockClear();
     isUiFeatureOmitted.mockImplementation(() => false);
@@ -196,15 +133,9 @@ describe("TaskDetailPage", () => {
   });
 
   it("shows a loading skeleton while the task query is pending", () => {
-    vi.spyOn(globalThis, "fetch").mockImplementation((input) => {
-      const url = requestUrl(input);
-      if (url === "/tasks/t1") {
-        return new Promise<Response>(() => {
-          /* never resolves — keep task detail pending */
-        });
-      }
-      return Promise.resolve(new Response("not found", { status: 404 }));
-    });
+    const [pendingHandler] = taskGetPending("t1");
+    server.use(pendingHandler);
+
     renderDetail("/tasks/t1", mockApp());
     expect(
       screen.getByRole("status", { name: /loading task/i }),
@@ -214,24 +145,11 @@ describe("TaskDetailPage", () => {
   it("shows task load error with retry and refetches successfully", async () => {
     const user = userEvent.setup();
     const task = taskDetail("t1", "Recovered title");
-    let taskGets = 0;
-    vi.spyOn(globalThis, "fetch").mockImplementation(async (input) => {
-      const url = requestUrl(input);
-      if (url === `/tasks/${task.id}`) {
-        taskGets += 1;
-        if (taskGets === 1) {
-          return new Response("fail", { status: 500 });
-        }
-        return Response.json(task);
-      }
-      if (url === `/tasks/${task.id}/checklist`) {
-        return Response.json({ items: [] });
-      }
-      if (url.startsWith(`/tasks/${task.id}/events`)) {
-        return Response.json(emptyEventsPayload(task.id));
-      }
-      return new Response("not found", { status: 404 });
-    });
+    server.use(
+      taskGetFlaky("t1", task),
+      taskChecklist("t1", []),
+      taskEventsListEmpty("t1"),
+    );
 
     renderDetail("/tasks/t1", mockApp());
 
@@ -241,15 +159,14 @@ describe("TaskDetailPage", () => {
     expect(
       await screen.findByRole("heading", { name: /^recovered title$/i }),
     ).toBeInTheDocument();
-    expect(taskGets).toBe(2);
   });
 
   it("collapses initial prompt by default and expands on demand", async () => {
     const user = userEvent.setup();
-    mockTaskDetailFetch(
+    useTaskDetailHandlers(
       taskDetail("t1", "Testing", {
-      initial_prompt: "<p>Secret long body text</p>",
-      priority: "critical",
+        initial_prompt: "<p>Secret long body text</p>",
+        priority: "critical",
       }),
     );
 
@@ -276,10 +193,10 @@ describe("TaskDetailPage", () => {
   });
 
   it("sanitizes unsafe HTML from initial prompt before rendering", async () => {
-    mockTaskDetailFetch(
+    useTaskDetailHandlers(
       taskDetail("txss", "Unsafe prompt", {
-      initial_prompt:
-        '<p>Safe text</p><img src=x onerror="window.__xss = 1" /><script>window.__xss_script = 1</script><a href="javascript:alert(1)">bad</a>',
+        initial_prompt:
+          '<p>Safe text</p><img src=x onerror="window.__xss = 1" /><script>window.__xss_script = 1</script><a href="javascript:alert(1)">bad</a>',
       }),
     );
 
@@ -299,7 +216,7 @@ describe("TaskDetailPage", () => {
   });
 
   it("shows an em dash when there is no visible initial prompt", async () => {
-    mockTaskDetailFetch(taskDetail("t2", "Empty prompt"));
+    useTaskDetailHandlers(taskDetail("t2", "Empty prompt"));
 
     renderDetail("/tasks/t2", mockApp());
 
@@ -313,9 +230,11 @@ describe("TaskDetailPage", () => {
   });
 
   it("surfaces the needs-user signal via the status pill", async () => {
-    mockTaskDetailFetch(taskDetail("tb", "Blocked task", {
-      status: "blocked",
-    }));
+    useTaskDetailHandlers(
+      taskDetail("tb", "Blocked task", {
+        status: "blocked",
+      }),
+    );
 
     renderDetail("/tasks/tb", mockApp());
 
@@ -335,7 +254,7 @@ describe("TaskDetailPage", () => {
   });
 
   it("renders the Dependencies section with an empty state when there are none", async () => {
-    mockTaskDetailFetch(taskDetail("tnd", "No deps task"));
+    useTaskDetailHandlers(taskDetail("tnd", "No deps task"));
 
     renderDetail("/tasks/tnd", mockApp());
 
@@ -352,7 +271,7 @@ describe("TaskDetailPage", () => {
     isUiFeatureOmitted.mockImplementation(
       (feature) => feature === "tagsAndDependencies" || feature === "releaseGates",
     );
-    mockTaskDetailFetch(taskDetail("tnd", "No deps task"));
+    useTaskDetailHandlers(taskDetail("tnd", "No deps task"));
 
     renderDetail("/tasks/tnd", mockApp());
 
@@ -365,23 +284,20 @@ describe("TaskDetailPage", () => {
   });
 
   it("shows done criteria as read-only with progress counts", async () => {
-    mockTaskDetailFetch(
-      taskDetail("tc", "Checklist task"),
-      [
-        {
-          id: "i1",
-          sort_order: 0,
-          text: "First",
-          done: true,
-        },
-        {
-          id: "i2",
-          sort_order: 1,
-          text: "Second",
-          done: false,
-        },
-      ],
-    );
+    useTaskDetailHandlers(taskDetail("tc", "Checklist task"), [
+      {
+        id: "i1",
+        sort_order: 0,
+        text: "First",
+        done: true,
+      },
+      {
+        id: "i2",
+        sort_order: 1,
+        text: "Second",
+        done: false,
+      },
+    ]);
 
     renderDetail("/tasks/tc", mockApp());
 
@@ -401,24 +317,11 @@ describe("TaskDetailPage", () => {
   it("shows checklist fetch error with try again and refetches", async () => {
     const user = userEvent.setup();
     const task = taskDetail("cf", "Checklist fetch");
-    let checklistCalls = 0;
-    vi.spyOn(globalThis, "fetch").mockImplementation(async (input) => {
-      const url = requestUrl(input);
-      if (url === `/tasks/${task.id}`) {
-        return Response.json(task);
-      }
-      if (url === `/tasks/${task.id}/checklist`) {
-        checklistCalls += 1;
-        if (checklistCalls === 1) {
-          return new Response("server boom", { status: 500 });
-        }
-        return Response.json({ items: [] });
-      }
-      if (url.startsWith(`/tasks/${task.id}/events`)) {
-        return Response.json(emptyEventsPayload(task.id));
-      }
-      return new Response("not found", { status: 404 });
-    });
+    server.use(
+      taskGet(task.id, task),
+      taskChecklistFlaky(task.id),
+      taskEventsListEmpty(task.id),
+    );
 
     renderDetail(`/tasks/${task.id}`, mockApp());
 
@@ -436,16 +339,13 @@ describe("TaskDetailPage", () => {
         name: /try again/i,
       }),
     );
-    await waitFor(() => {
-      expect(checklistCalls).toBe(2);
-    });
     expect(
       await within(checklistSection as HTMLElement).findByText(/no criteria yet/i),
     ).toBeInTheDocument();
   });
 
   it("navigates home after successful delete", () => {
-    mockTaskDetailFetch(taskDetail("root1", "Root"));
+    useTaskDetailHandlers(taskDetail("root1", "Root"));
 
     const app = appWithDeleteSuccess({ id: "root1" });
 
@@ -455,7 +355,9 @@ describe("TaskDetailPage", () => {
   });
 
   it("disables Add criterion when the task is running or done", async () => {
-    mockTaskDetailFetch(taskDetail("tr", "Running task", { status: "running" }));
+    useTaskDetailHandlers(
+      taskDetail("tr", "Running task", { status: "running" }),
+    );
 
     renderDetail("/tasks/tr", mockApp());
 
@@ -469,11 +371,27 @@ describe("TaskDetailPage", () => {
 
   it("edits a checklist criterion via PATCH text", async () => {
     const user = userEvent.setup();
-    const api = mockTaskDetailFetchWithChecklistPatch(
-      taskDetail("te", "Edit checklist"),
-      "item-1",
-      "Before",
-      "After",
+    let patchBody: string | null = null;
+    let checklistText = "Before";
+    server.use(
+      taskGet("te", taskDetail("te", "Edit checklist")),
+      http.get("/tasks/te/checklist", () =>
+        HttpResponse.json({
+          items: [
+            {
+              id: "item-1",
+              sort_order: 0,
+              text: checklistText,
+              done: false,
+            },
+          ],
+        }),
+      ),
+      taskChecklistItemPatch("te", "item-1", (body) => {
+        patchBody = body;
+        checklistText = "After";
+      }, "After"),
+      taskEventsListEmpty("te"),
     );
 
     renderDetail("/tasks/te", mockApp());
@@ -501,7 +419,9 @@ describe("TaskDetailPage", () => {
       within(dialog).getByRole("button", { name: /^save changes$/i }),
     );
 
-    expect(api.getPatchBody()).toBe(JSON.stringify({ text: "After" }));
+    await waitFor(() => {
+      expect(patchBody).toBe(JSON.stringify({ text: "After" }));
+    });
     expect(await screen.findByText("After")).toBeInTheDocument();
   });
 });

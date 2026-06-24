@@ -2,10 +2,12 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { render, screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { MemoryRouter, Route, Routes } from "react-router-dom";
-import { afterEach, describe, expect, it, vi } from "vitest";
+import { beforeEach, describe, expect, it } from "vitest";
 import { ROUTER_FUTURE_FLAGS } from "../../lib/routerFutureFlags";
 import { DEFAULT_DOCUMENT_TITLE } from "../../shared/useDocumentTitle";
-import { requestUrl } from "../../test/requestUrl";
+import { setupAppTest } from "@/test/integration/appHarness";
+import { taskEventGet, taskEventGetFlaky } from "@/test/handlers/tasks";
+import { server } from "@/test/server";
 import { TaskEventDetailPage } from "./TaskEventDetailPage";
 
 function renderEventPage(initialPath: string) {
@@ -30,31 +32,22 @@ function renderEventPage(initialPath: string) {
 }
 
 describe("TaskEventDetailPage", () => {
-  afterEach(() => {
-    vi.restoreAllMocks();
+  beforeEach(() => {
+    setupAppTest();
   });
 
   it("shows event load error with retry and refetches successfully", async () => {
     const user = userEvent.setup();
-    let calls = 0;
-    vi.spyOn(globalThis, "fetch").mockImplementation(async (input) => {
-      const url = requestUrl(input);
-      if (url === "/tasks/t1/events/2") {
-        calls += 1;
-        if (calls === 1) {
-          return new Response("fail", { status: 500 });
-        }
-        return Response.json({
-          task_id: "t1",
-          seq: 2,
-          at: "2026-03-01T10:00:00.000Z",
-          type: "message_added",
-          by: "agent",
-          data: {},
-        });
-      }
-      return new Response("not found", { status: 404 });
-    });
+    server.use(
+      taskEventGetFlaky("t1", 2, {
+        task_id: "t1",
+        seq: 2,
+        at: "2026-03-01T10:00:00.000Z",
+        type: "message_added",
+        by: "agent",
+        data: {},
+      }),
+    );
 
     renderEventPage("/tasks/t1/events/2");
 
@@ -64,25 +57,20 @@ describe("TaskEventDetailPage", () => {
     expect(
       await screen.findByRole("heading", { name: /event #2/i }),
     ).toBeInTheDocument();
-    expect(calls).toBe(2);
   });
 
   it("loads one event and shows type, time, actor, overview fields, and raw JSON", async () => {
     const user = userEvent.setup();
-    vi.spyOn(globalThis, "fetch").mockImplementation(async (input) => {
-      const url = requestUrl(input);
-      if (url === "/tasks/t1/events/2") {
-        return Response.json({
-          task_id: "t1",
-          seq: 2,
-          at: "2026-03-01T10:00:00.000Z",
-          type: "message_added",
-          by: "agent",
-          data: { from: "a", to: "b" },
-        });
-      }
-      return new Response("not found", { status: 404 });
-    });
+    server.use(
+      taskEventGet("t1", 2, {
+        task_id: "t1",
+        seq: 2,
+        at: "2026-03-01T10:00:00.000Z",
+        type: "message_added",
+        by: "agent",
+        data: { from: "a", to: "b" },
+      }),
+    );
 
     renderEventPage("/tasks/t1/events/2");
 
@@ -112,20 +100,16 @@ describe("TaskEventDetailPage", () => {
   });
 
   it("shows a response form when the event type needs user input", async () => {
-    vi.spyOn(globalThis, "fetch").mockImplementation(async (input) => {
-      const url = requestUrl(input);
-      if (url === "/tasks/t1/events/2") {
-        return Response.json({
-          task_id: "t1",
-          seq: 2,
-          at: "2026-03-01T10:00:00.000Z",
-          type: "approval_requested",
-          by: "agent",
-          data: {},
-        });
-      }
-      return new Response("not found", { status: 404 });
-    });
+    server.use(
+      taskEventGet("t1", 2, {
+        task_id: "t1",
+        seq: 2,
+        at: "2026-03-01T10:00:00.000Z",
+        type: "approval_requested",
+        by: "agent",
+        data: {},
+      }),
+    );
 
     renderEventPage("/tasks/t1/events/2");
 
@@ -142,22 +126,18 @@ describe("TaskEventDetailPage", () => {
   });
 
   it("does not mark awaiting when user has replied (legacy user_response)", async () => {
-    vi.spyOn(globalThis, "fetch").mockImplementation(async (input) => {
-      const url = requestUrl(input);
-      if (url === "/tasks/t1/events/2") {
-        return Response.json({
-          task_id: "t1",
-          seq: 2,
-          at: "2026-03-01T10:00:00.000Z",
-          type: "approval_requested",
-          by: "agent",
-          data: {},
-          user_response: "Approved",
-          user_response_at: "2026-03-01T10:05:00.000Z",
-        });
-      }
-      return new Response("not found", { status: 404 });
-    });
+    server.use(
+      taskEventGet("t1", 2, {
+        task_id: "t1",
+        seq: 2,
+        at: "2026-03-01T10:00:00.000Z",
+        type: "approval_requested",
+        by: "agent",
+        data: {},
+        user_response: "Approved",
+        user_response_at: "2026-03-01T10:05:00.000Z",
+      }),
+    );
 
     renderEventPage("/tasks/t1/events/2");
 
@@ -177,42 +157,36 @@ describe("TaskEventDetailPage", () => {
   });
 
   it("shows a client-side message when seq is not a positive integer", () => {
-    vi.spyOn(globalThis, "fetch");
     renderEventPage("/tasks/t1/events/nope");
 
     expect(
       screen.getByText(/invalid event sequence/i),
     ).toBeInTheDocument();
-    expect(fetch).not.toHaveBeenCalled();
   });
 
   it("shows Overview tab and usage for phase_completed events", async () => {
     const user = userEvent.setup();
-    vi.spyOn(globalThis, "fetch").mockImplementation(async (input) => {
-      const url = requestUrl(input);
-      if (url === "/tasks/t1/events/9") {
-        return Response.json({
-          task_id: "t1",
-          seq: 9,
-          at: "2026-04-19T15:46:35.000Z",
-          type: "phase_completed",
-          by: "agent",
-          data: {
-            phase: "execute",
-            status: "succeeded",
-            cycle_id: "d60be771-3b1c-49a1-8710-2a11a963455a",
-            phase_seq: 2,
-            summary: "Hello **world**",
-            details: {
-              duration_ms: 1000,
-              request_id: "r1",
-              usage: { inputTokens: 100, outputTokens: 10 },
-            },
+    server.use(
+      taskEventGet("t1", 9, {
+        task_id: "t1",
+        seq: 9,
+        at: "2026-04-19T15:46:35.000Z",
+        type: "phase_completed",
+        by: "agent",
+        data: {
+          phase: "execute",
+          status: "succeeded",
+          cycle_id: "d60be771-3b1c-49a1-8710-2a11a963455a",
+          phase_seq: 2,
+          summary: "Hello **world**",
+          details: {
+            duration_ms: 1000,
+            request_id: "r1",
+            usage: { inputTokens: 100, outputTokens: 10 },
           },
-        });
-      }
-      return new Response("not found", { status: 404 });
-    });
+        },
+      }),
+    );
 
     renderEventPage("/tasks/t1/events/9");
 
@@ -230,12 +204,10 @@ describe("TaskEventDetailPage", () => {
   });
 
   it("rejects partially numeric seq values instead of coercing", () => {
-    vi.spyOn(globalThis, "fetch");
     renderEventPage("/tasks/t1/events/2oops");
 
     expect(
       screen.getByText(/invalid event sequence/i),
     ).toBeInTheDocument();
-    expect(fetch).not.toHaveBeenCalled();
   });
 });

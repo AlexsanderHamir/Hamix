@@ -61,9 +61,10 @@ export function CreateWorktreeModal({
         >
           <h2 id="create-worktree-title">Add worktree</h2>
           <div className="worktrees-form-modal__picker">
+            <p className="worktrees-form-modal__picker-label">Worktree path</p>
             <button
               type="button"
-              className="btn-primary"
+              className="secondary"
               disabled={pending}
               onClick={() => setPickerOpen(true)}
             >
@@ -123,6 +124,7 @@ export function CreateWorktreeModal({
       </Modal>
       <WorkspaceDirPickerModal
         open={pickerOpen}
+        nested
         currentPath={path}
         onClose={() => setPickerOpen(false)}
         onSelect={(next) => {

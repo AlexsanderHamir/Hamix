@@ -32,6 +32,7 @@ export function RegisterRepositoryModal({
       <Modal
         onClose={onClose}
         labelledBy="register-repo-title"
+        describedBy="register-repo-lead"
         busy={pending}
         dismissibleWhileBusy={false}
       >
@@ -47,15 +48,18 @@ export function RegisterRepositoryModal({
             });
           }}
         >
-          <h2 id="register-repo-title">Register repository</h2>
-          <p className="worktrees-form-modal__lead">
-            Choose the main checkout path for this project. Hamix registers worktrees and
-            branches under it.
-          </p>
+          <header className="worktrees-form-modal__header">
+            <h2 id="register-repo-title">Register repository</h2>
+            <p id="register-repo-lead" className="worktrees-form-modal__lead">
+              Choose the main checkout path for this project. Hamix registers worktrees and
+              branches under it.
+            </p>
+          </header>
           <div className="worktrees-form-modal__picker">
+            <p className="worktrees-form-modal__picker-label">Repository path</p>
             <button
               type="button"
-              className="btn-primary"
+              className="secondary"
               disabled={pending}
               onClick={() => setPickerOpen(true)}
             >
@@ -66,7 +70,7 @@ export function RegisterRepositoryModal({
                 Selected: <code>{path}</code>
               </p>
             ) : (
-              <p className="settings-field-help">No folder selected yet.</p>
+              <p className="worktrees-form-modal__picker-empty">No folder selected yet.</p>
             )}
           </div>
           <label className="field">
@@ -95,6 +99,7 @@ export function RegisterRepositoryModal({
       </Modal>
       <WorkspaceDirPickerModal
         open={pickerOpen}
+        nested
         currentPath={path}
         onClose={() => setPickerOpen(false)}
         onSelect={(next) => {

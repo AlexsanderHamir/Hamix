@@ -37,7 +37,6 @@ func TestMigrateRepoRootToGitRepository_idempotentWhenRepoAlreadyRegistered(t *t
 	now := time.Now().UTC()
 	existing := domain.GitRepository{
 		ID:            "existing-repo",
-		ProjectID:     domain.DefaultProjectID,
 		Path:          opened.Root,
 		DefaultBranch: "main",
 		CreatedAt:     now,

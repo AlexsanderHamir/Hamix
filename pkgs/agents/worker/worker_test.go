@@ -26,13 +26,12 @@ const pollTimeout = 3 * time.Second
 // --- shared harness ------------------------------------------------------
 
 type harness struct {
-	t          *testing.T
-	store      *store.Store
-	queue      *agents.MemoryQueue
-	notifier   *recordingNotifier
-	worktreeID string
-	branchID   string
-	workDir    string
+	t                *testing.T
+	store            *store.Store
+	queue            *agents.MemoryQueue
+	notifier         *recordingNotifier
+	worktreeBranchID string
+	workDir          string
 }
 
 func newHarness(t *testing.T) *harness {
@@ -40,23 +39,22 @@ func newHarness(t *testing.T) *harness {
 	st := store.NewStore(tasktestdb.OpenSQLite(t))
 	q := agents.NewMemoryQueue(8)
 	st.SetReadyTaskNotifier(q)
-	wtID, brID, dir := seedWorkerTestGit(t, st)
+	wbID, dir := seedWorkerTestGit(t, st)
 	return &harness{
 		t: t, store: st, queue: q, notifier: newRecordingNotifier(),
-		worktreeID: wtID, branchID: brID, workDir: dir,
+		worktreeBranchID: wbID, workDir: dir,
 	}
 }
 
 func (h *harness) createReadyTask(ctx context.Context, title string) *domain.Task {
 	h.t.Helper()
-	wt, br := h.gitBinding()
+	wb := h.gitBinding()
 	tsk, err := h.store.Create(ctx, store.CreateTaskInput{
-		Title:         title,
-		InitialPrompt: "do the thing",
-		Status:        domain.StatusReady,
-		Priority:      domain.PriorityMedium,
-		WorktreeID:    wt,
-		BranchID:      br,
+		Title:            title,
+		InitialPrompt:    "do the thing",
+		Status:           domain.StatusReady,
+		Priority:         domain.PriorityMedium,
+		WorktreeBranchID: wb,
 	}, domain.ActorUser)
 	if err != nil {
 		h.t.Fatalf("create task: %v", err)
@@ -69,15 +67,14 @@ func (h *harness) createReadyTask(ctx context.Context, title string) *domain.Tas
 // tests that exercise the buildCycleMeta wiring.
 func (h *harness) createReadyTaskWithModel(ctx context.Context, title, model string) *domain.Task {
 	h.t.Helper()
-	wt, br := h.gitBinding()
+	wb := h.gitBinding()
 	tsk, err := h.store.Create(ctx, store.CreateTaskInput{
-		Title:         title,
-		InitialPrompt: "do the thing",
-		Status:        domain.StatusReady,
-		Priority:      domain.PriorityMedium,
-		CursorModel:   model,
-		WorktreeID:    wt,
-		BranchID:      br,
+		Title:            title,
+		InitialPrompt:    "do the thing",
+		Status:           domain.StatusReady,
+		Priority:         domain.PriorityMedium,
+		CursorModel:      model,
+		WorktreeBranchID: wb,
 	}, domain.ActorUser)
 	if err != nil {
 		h.t.Fatalf("create task: %v", err)
@@ -425,7 +422,7 @@ func TestWorker_SelectedProjectContext_injectsAndSnapshotsOnlySelectedItems(t *t
 	if err != nil {
 		t.Fatalf("create excluded edge: %v", err)
 	}
-	wt, br := h.gitBinding()
+	wb := h.gitBinding()
 	tsk, err := h.store.Create(ctx, store.CreateTaskInput{
 		Title:                 "with selected context",
 		InitialPrompt:         "do the selected thing",
@@ -433,8 +430,7 @@ func TestWorker_SelectedProjectContext_injectsAndSnapshotsOnlySelectedItems(t *t
 		Priority:              domain.PriorityMedium,
 		ProjectID:             &project.ID,
 		ProjectContextItemIDs: []string{selected.ID, selectedConstraint.ID},
-		WorktreeID:            wt,
-		BranchID:              br,
+		WorktreeBranchID:      wb,
 	}, domain.ActorUser)
 	if err != nil {
 		t.Fatalf("create task: %v", err)

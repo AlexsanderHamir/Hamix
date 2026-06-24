@@ -17,8 +17,6 @@ export function buildCreateTaskMutationInput(
     pickup_not_before: fields.newSchedule,
     project_id: fields.newProjectID,
     project_context_item_ids: compose.project_context_item_ids ?? [],
-    worktree_id: fields.newWorktreeID,
-    branch_id: fields.newBranchID,
     worktree_branch_id: fields.newWorktreeBranchID,
     tags: compose.tags ?? [],
     milestone: compose.milestone,

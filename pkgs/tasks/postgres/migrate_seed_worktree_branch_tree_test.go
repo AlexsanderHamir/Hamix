@@ -11,6 +11,35 @@ import (
 	"gorm.io/gorm/logger"
 )
 
+// legacyGitRepo mirrors the pre-Cycle-8 schema with project_id.
+type legacyGitRepo struct {
+	ID            string    `gorm:"primaryKey;column:id"`
+	ProjectID     string    `gorm:"column:project_id;not null"`
+	Path          string    `gorm:"column:path;not null"`
+	DefaultBranch string    `gorm:"column:default_branch;not null;default:main"`
+	HostPath      string    `gorm:"column:host_path;not null;default:''"`
+	CreatedAt     time.Time `gorm:"column:created_at;not null"`
+	UpdatedAt     time.Time `gorm:"column:updated_at;not null"`
+}
+
+func (legacyGitRepo) TableName() string { return "git_repositories" }
+
+// legacySeedTask mirrors the pre-Cycle-8 schema with worktree_id/branch_id columns.
+type legacySeedTask struct {
+	ID               string  `gorm:"primaryKey;column:id"`
+	Title            string  `gorm:"column:title;not null"`
+	InitialPrompt    string  `gorm:"column:initial_prompt"`
+	Status           string  `gorm:"column:status;not null;default:ready"`
+	Priority         string  `gorm:"column:priority;not null;default:medium"`
+	Runner           string  `gorm:"column:runner;not null;default:''"`
+	ProjectID        *string `gorm:"column:project_id"`
+	WorktreeID       *string `gorm:"column:worktree_id"`
+	BranchID         *string `gorm:"column:branch_id"`
+	WorktreeBranchID *string `gorm:"column:worktree_branch_id"`
+}
+
+func (legacySeedTask) TableName() string { return "tasks" }
+
 func openTreeMigrateDB(t *testing.T) *gorm.DB {
 	t.Helper()
 	db, err := gorm.Open(sqlite.Open(":memory:"), &gorm.Config{Logger: logger.Default.LogMode(logger.Silent)})
@@ -22,11 +51,11 @@ func openTreeMigrateDB(t *testing.T) *gorm.DB {
 	}
 	if err := db.AutoMigrate(
 		&domain.Project{},
-		&domain.GitRepository{},
+		&legacyGitRepo{},
 		&domain.GitWorktree{},
 		&domain.GitBranch{},
 		&domain.WorktreeBranch{},
-		&domain.Task{},
+		&legacySeedTask{},
 	); err != nil {
 		t.Fatal(err)
 	}
@@ -42,7 +71,7 @@ func seedLegacyGitTree(ctx context.Context, t *testing.T, db *gorm.DB) (wtID, br
 	if err := db.WithContext(ctx).Create(&proj).Error; err != nil {
 		t.Fatal(err)
 	}
-	repo := domain.GitRepository{ID: "repo-1", ProjectID: proj.ID, Path: "/repos/app", DefaultBranch: "main", CreatedAt: now, UpdatedAt: now}
+	repo := legacyGitRepo{ID: "repo-1", ProjectID: proj.ID, Path: "/repos/app", DefaultBranch: "main", CreatedAt: now, UpdatedAt: now}
 	if err := db.WithContext(ctx).Create(&repo).Error; err != nil {
 		t.Fatal(err)
 	}
@@ -54,12 +83,12 @@ func seedLegacyGitTree(ctx context.Context, t *testing.T, db *gorm.DB) (wtID, br
 	if err := db.WithContext(ctx).Create(&br).Error; err != nil {
 		t.Fatal(err)
 	}
-	task := domain.Task{
+	task := legacySeedTask{
 		ID:            "task-1",
 		Title:         "t",
 		InitialPrompt: "p",
-		Status:        domain.StatusReady,
-		Priority:      domain.PriorityMedium,
+		Status:        string(domain.StatusReady),
+		Priority:      string(domain.PriorityMedium),
 		ProjectID:     &proj.ID,
 		WorktreeID:    &wt.ID,
 		BranchID:      &br.ID,
@@ -92,7 +121,7 @@ func TestMigrateSeedWorktreeBranchTree_backfills(t *testing.T) {
 		t.Fatalf("association not seeded: %v", err)
 	}
 
-	var task domain.Task
+	var task legacySeedTask
 	if err := db.WithContext(ctx).First(&task, "id = ?", taskID).Error; err != nil {
 		t.Fatal(err)
 	}
@@ -130,14 +159,13 @@ func TestMigrateSeedWorktreeBranchTree_skipsOrphanPairs(t *testing.T) {
 	if err := db.WithContext(ctx).Create(&proj).Error; err != nil {
 		t.Fatal(err)
 	}
-	// Task references worktree/branch ids that do not exist; no FK rows seeded.
 	ghostWT, ghostBR := "missing-wt", "missing-br"
-	task := domain.Task{
+	task := legacySeedTask{
 		ID:            "task-orphan",
 		Title:         "t",
 		InitialPrompt: "p",
-		Status:        domain.StatusReady,
-		Priority:      domain.PriorityMedium,
+		Status:        string(domain.StatusReady),
+		Priority:      string(domain.PriorityMedium),
 		ProjectID:     &proj.ID,
 		WorktreeID:    &ghostWT,
 		BranchID:      &ghostBR,

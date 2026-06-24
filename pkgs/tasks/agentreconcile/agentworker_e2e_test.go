@@ -39,14 +39,13 @@ func TestAgentWorkerE2E_readyTaskRunsThroughReconcileAndWorker(t *testing.T) {
 	st := store.NewStore(tasktestdb.OpenSQLite(t))
 	q := agents.NewMemoryQueue(4)
 
-	worktreeID, branchID, _ := seedAgentReconcileGit(t, st)
+	_, _, wbID := seedAgentReconcileGit(t, st)
 	tsk, err := st.Create(rootCtx, store.CreateTaskInput{
-		Title:         "e2e",
-		InitialPrompt: "do the thing",
-		Status:        domain.StatusReady,
-		Priority:      domain.PriorityMedium,
-		WorktreeID:    &worktreeID,
-		BranchID:      &branchID,
+		Title:            "e2e",
+		InitialPrompt:    "do the thing",
+		Status:           domain.StatusReady,
+		Priority:         domain.PriorityMedium,
+		WorktreeBranchID: &wbID,
 	}, domain.ActorUser)
 	if err != nil {
 		t.Fatalf("create ready task: %v", err)
@@ -223,25 +222,23 @@ func TestAgentWorkerE2E_dependencyBlocksUntilUpstreamDone(t *testing.T) {
 	st := store.NewStore(tasktestdb.OpenSQLite(t))
 	q := agents.NewMemoryQueue(8)
 
-	worktreeID, branchID, _ := seedAgentReconcileGit(t, st)
+	_, _, wbID := seedAgentReconcileGit(t, st)
 	upstream, err := st.Create(rootCtx, store.CreateTaskInput{
-		Title:         "upstream",
-		InitialPrompt: "first",
-		Status:        domain.StatusReady,
-		Priority:      domain.PriorityMedium,
-		WorktreeID:    &worktreeID,
-		BranchID:      &branchID,
+		Title:            "upstream",
+		InitialPrompt:    "first",
+		Status:           domain.StatusReady,
+		Priority:         domain.PriorityMedium,
+		WorktreeBranchID: &wbID,
 	}, domain.ActorUser)
 	if err != nil {
 		t.Fatalf("create upstream: %v", err)
 	}
 	dependent, err := st.Create(rootCtx, store.CreateTaskInput{
-		Title:         "dependent",
-		InitialPrompt: "after upstream",
-		Status:        domain.StatusReady,
-		Priority:      domain.PriorityMedium,
-		WorktreeID:    &worktreeID,
-		BranchID:      &branchID,
+		Title:            "dependent",
+		InitialPrompt:    "after upstream",
+		Status:           domain.StatusReady,
+		Priority:         domain.PriorityMedium,
+		WorktreeBranchID: &wbID,
 	}, domain.ActorUser)
 	if err != nil {
 		t.Fatalf("create dependent: %v", err)

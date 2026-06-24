@@ -10,7 +10,7 @@ import (
 	"github.com/AlexsanderHamir/Hamix/pkgs/tasks/store"
 )
 
-func seedWorkerTestGit(t *testing.T, st *store.Store) (worktreeID, branchID, workDir string) {
+func seedWorkerTestGit(t *testing.T, st *store.Store) (worktreeBranchID, workDir string) {
 	t.Helper()
 	dir := t.TempDir()
 	if out, err := exec.Command("git", "init", "-b", "main", dir).CombinedOutput(); err != nil {
@@ -41,11 +41,17 @@ func seedWorkerTestGit(t *testing.T, st *store.Store) (worktreeID, branchID, wor
 	if err != nil || len(branches) == 0 {
 		t.Fatalf("ListGitBranches: %v len=%d", err, len(branches))
 	}
-	return wts[0].ID, branches[0].ID, dir
+	wb, err := st.AssociateWorktreeBranch(ctx, store.AssociateWorktreeBranchInput{
+		WorktreeID: wts[0].ID,
+		BranchID:   branches[0].ID,
+	})
+	if err != nil {
+		t.Fatalf("AssociateWorktreeBranch: %v", err)
+	}
+	return wb.ID, dir
 }
 
-func (h *harness) gitBinding() (*string, *string) {
-	wt := h.worktreeID
-	br := h.branchID
-	return &wt, &br
+func (h *harness) gitBinding() *string {
+	wb := h.worktreeBranchID
+	return &wb
 }

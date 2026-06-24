@@ -51,10 +51,6 @@ export function useTaskCreateMutations(input: {
         ...(mutationInput.depends_on.length > 0
           ? { depends_on: mutationInput.depends_on }
           : {}),
-        ...(mutationInput.worktree_id
-          ? { worktree_id: mutationInput.worktree_id }
-          : {}),
-        ...(mutationInput.branch_id ? { branch_id: mutationInput.branch_id } : {}),
         ...(mutationInput.worktree_branch_id
           ? { worktree_branch_id: mutationInput.worktree_branch_id }
           : {}),

@@ -46,11 +46,7 @@ export type Task = {
   project_id?: string;
   /** User-selected project context items passed to agent runs for this task. */
   project_context_item_ids?: string[];
-  /** Git worktree binding for agent runs (Issue #39). */
-  worktree_id?: string;
-  /** Git branch binding for agent runs (Issue #39). */
-  branch_id?: string;
-  /** Preferred git binding via worktree_branches association (ADR-0037). */
+  /** Git binding via worktree_branches association (ADR-0037). */
   worktree_branch_id?: string;
   tags?: string[];
   milestone?: string | null;
@@ -454,8 +450,6 @@ export type TaskComposePayload = {
   cursor_model?: string;
   project_id?: string;
   project_context_item_ids?: string[];
-  worktree_id?: string;
-  branch_id?: string;
   worktree_branch_id?: string;
   pickup_not_before?: string;
   tags?: string[];

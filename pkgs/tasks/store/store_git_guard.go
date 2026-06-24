@@ -23,17 +23,17 @@ func hasRunningTaskOnGitTarget(ctx context.Context, db *gorm.DB, targetID string
 SELECT COUNT(*) FROM tasks
 WHERE status = ?
   AND (
-        worktree_id = ?
-     OR branch_id = ?
-     OR worktree_branch_id = ?
-     OR worktree_id IN (SELECT id FROM git_worktrees WHERE repository_id = ?)
-     OR branch_id IN (SELECT id FROM git_branches WHERE repository_id = ?)
+        worktree_branch_id = ?
+     OR worktree_branch_id IN (
+          SELECT wb.id FROM worktree_branches wb
+          WHERE wb.worktree_id = ? OR wb.branch_id = ?
+        )
      OR worktree_branch_id IN (
           SELECT wb.id FROM worktree_branches wb
           JOIN git_worktrees wt ON wt.id = wb.worktree_id
           WHERE wt.repository_id = ?
         )
-  )`, domain.StatusRunning, targetID, targetID, targetID, targetID, targetID, targetID).Scan(&n).Error
+  )`, domain.StatusRunning, targetID, targetID, targetID, targetID).Scan(&n).Error
 	if err != nil {
 		return false, err
 	}
@@ -70,9 +70,11 @@ func hasAnyTaskOnWorktree(ctx context.Context, db *gorm.DB, worktreeID string) (
 		return false, nil
 	}
 	var n int64
-	err := db.WithContext(ctx).Model(&domain.Task{}).
-		Where("worktree_id = ?", worktreeID).
-		Count(&n).Error
+	err := db.WithContext(ctx).Raw(`
+SELECT COUNT(*) FROM tasks
+WHERE worktree_branch_id IN (
+  SELECT id FROM worktree_branches WHERE worktree_id = ?
+)`, worktreeID).Scan(&n).Error
 	return n > 0, err
 }
 

@@ -163,8 +163,8 @@ export function useTaskCreateEntryActions(input: {
       input.form.setNewTaskCursorModel(hydrated.cursorModel);
       input.form.setNewProjectID(hydrated.projectID);
       input.form.setNewProjectContextItemIDs(hydrated.projectContextItemIDs);
-      input.form.setNewWorktreeID(hydrated.worktreeID);
-      input.form.setNewBranchID(hydrated.branchID);
+      input.form.setNewWorktreeID("");
+      input.form.setNewBranchID("");
       input.form.setNewSchedule(hydrated.schedule);
       input.form.setNewAutonomyEnabled(hydrated.autonomyEnabled);
       input.form.setNewTagsCsv(hydrated.tagsCsv);

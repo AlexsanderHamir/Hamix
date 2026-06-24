@@ -44,7 +44,7 @@ func migrateRepoRootToGitRepository(ctx context.Context, db *gorm.DB) error {
 	repoRoot := opened.Root
 	var existing int64
 	if err := db.WithContext(ctx).Model(&domain.GitRepository{}).
-		Where("project_id = ? AND path = ?", domain.DefaultProjectID, repoRoot).
+		Where("path = ?", repoRoot).
 		Count(&existing).Error; err != nil {
 		return err
 	}
@@ -59,7 +59,6 @@ func migrateRepoRootToGitRepository(ctx context.Context, db *gorm.DB) error {
 	now := time.Now().UTC()
 	repo := domain.GitRepository{
 		ID:            uuid.NewString(),
-		ProjectID:     domain.DefaultProjectID,
 		Path:          opened.Root,
 		DefaultBranch: "main",
 		CreatedAt:     now,

@@ -23,16 +23,12 @@ type CreateGitRepositoryInput struct {
 	DefaultBranch string
 }
 
-// ListGitRepositories returns repositories for a project ordered by created_at.
+// ListGitRepositories returns all registered repositories ordered by created_at.
+// projectID is accepted for API-route compatibility but ignored (repos are global).
 func (s *Store) ListGitRepositories(ctx context.Context, projectID string) ([]domain.GitRepository, error) {
 	slog.Debug("trace", "cmd", calltrace.LogCmd, "operation", "tasks.store.ListGitRepositories")
-	projectID = strings.TrimSpace(projectID)
-	if projectID == "" {
-		return nil, fmt.Errorf("%w: project_id", domain.ErrInvalidInput)
-	}
 	var rows []domain.GitRepository
 	err := s.db.WithContext(ctx).
-		Where("project_id = ?", projectID).
 		Order("created_at ASC").
 		Find(&rows).Error
 	if err != nil {
@@ -52,12 +48,13 @@ func (s *Store) CountGitRepositories(ctx context.Context) (int64, error) {
 	return n, nil
 }
 
-// GetGitRepository returns one repository scoped to a project.
+// GetGitRepository returns one repository by ID.
+// projectID is accepted for API-route compatibility but ignored (repos are global).
 func (s *Store) GetGitRepository(ctx context.Context, projectID, repoID string) (domain.GitRepository, error) {
 	slog.Debug("trace", "cmd", calltrace.LogCmd, "operation", "tasks.store.GetGitRepository")
 	var row domain.GitRepository
 	err := s.db.WithContext(ctx).
-		Where("id = ? AND project_id = ?", strings.TrimSpace(repoID), strings.TrimSpace(projectID)).
+		Where("id = ?", strings.TrimSpace(repoID)).
 		First(&row).Error
 	if err != nil {
 		if errors.Is(err, gorm.ErrRecordNotFound) {
@@ -69,15 +66,12 @@ func (s *Store) GetGitRepository(ctx context.Context, projectID, repoID string) 
 }
 
 // CreateGitRepository validates path with git, then inserts repository + main worktree + current branch.
+// projectID is accepted for API-route compatibility but not stored (repos are global).
 func (s *Store) CreateGitRepository(ctx context.Context, projectID string, input CreateGitRepositoryInput, gitSvc gitwork.Service) (domain.GitRepository, error) {
 	slog.Debug("trace", "cmd", calltrace.LogCmd, "operation", "tasks.store.CreateGitRepository")
-	projectID = strings.TrimSpace(projectID)
 	path := strings.TrimSpace(input.Path)
-	if projectID == "" || path == "" {
-		return domain.GitRepository{}, fmt.Errorf("%w: project_id and path required", domain.ErrInvalidInput)
-	}
-	if _, err := s.GetProject(ctx, projectID); err != nil {
-		return domain.GitRepository{}, err
+	if path == "" {
+		return domain.GitRepository{}, fmt.Errorf("%w: path required", domain.ErrInvalidInput)
 	}
 	if gitSvc == nil {
 		gitSvc = gitwork.New()
@@ -96,7 +90,6 @@ func (s *Store) CreateGitRepository(ctx context.Context, projectID string, input
 	now := time.Now().UTC()
 	repo := domain.GitRepository{
 		ID:            uuid.NewString(),
-		ProjectID:     projectID,
 		Path:          opened.Root,
 		HostPath:      strings.TrimSpace(input.HostPath),
 		DefaultBranch: defaultBranch,
@@ -157,6 +150,7 @@ func (s *Store) CreateGitRepository(ctx context.Context, projectID string, input
 }
 
 // DeleteGitRepository removes a repository when no running tasks reference it.
+// projectID is accepted for API-route compatibility but ignored (repos are global).
 func (s *Store) DeleteGitRepository(ctx context.Context, projectID, repoID string) error {
 	slog.Debug("trace", "cmd", calltrace.LogCmd, "operation", "tasks.store.DeleteGitRepository")
 	if _, err := s.GetGitRepository(ctx, projectID, repoID); err != nil {
@@ -166,7 +160,7 @@ func (s *Store) DeleteGitRepository(ctx context.Context, projectID, repoID strin
 		return err
 	}
 	res := s.db.WithContext(ctx).
-		Where("id = ? AND project_id = ?", repoID, projectID).
+		Where("id = ?", repoID).
 		Delete(&domain.GitRepository{})
 	if res.Error != nil {
 		return fmt.Errorf("delete git repository: %w", res.Error)

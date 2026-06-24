@@ -18,9 +18,8 @@ Work hierarchy is **Project → Task**. Tasks may have:
 |---|---|---|
 | `id` | string (UUID) | Server-assigned when omitted. |
 | `title` | string | Required after trim. |
-| `initial_prompt` | string (HTML) | TipTap rich text; `@`-mentions validated against the task's `worktree_id` when present. |
-| `worktree_id` | string \| null | Git worktree binding (required on create). |
-| `branch_id` | string \| null | Git branch binding (required on create). |
+| `initial_prompt` | string (HTML) | TipTap rich text; `@`-mentions validated against the task's `worktree_branch_id` when present. |
+| `worktree_branch_id` | string \| null | FK to `worktree_branches.id`; binds the task to a specific worktree+branch pair (ADR-0037). |
 | `status` | enum | `ready` / `running` / `blocked` / `review` / `done` / `failed` / `on_hold`. Default `ready`. `on_hold` is operator-set: pickup is gated on `status = ready` so an `on_hold` task is intentionally kept out of the worker's queue until the operator flips it back to `ready` (PATCH `/tasks/{id}`). |
 | `pending_retry` | JSON \| null | Ephemeral operator intent between `POST /tasks/{id}/retry` and worker pickup. `{ mode: fresh|resume, parent_cycle_id }`. Not exposed on the HTTP task JSON (`json:"-"`); consumed and cleared atomically when the worker transitions `ready→running`. |
 | `priority` | enum | `low` / `medium` / `high` / `critical`. Required at create. |
@@ -420,4 +419,4 @@ Tasks reference a single `worktree_branch_id` (FK -> `worktree_branches.id`, req
 
 Append-only. Event type strings are `domain.EventType` values (`task_created`, `status_changed`, `prompt_appended`, `message_added`, checklist events, `on_task_done`, etc., plus the seven cycle/phase mirror types listed above). Per-task monotonic `seq`. Used for history and debugging; events are not replayed into the SSE hub.
 
-`on_task_done` payload (emitted when the harness marks a task `done`): `{ "worktree_id", "branch_id", "commits": [{ "sha", "message", ... }] }` — foundation for future PR automation; no UI in v0.1.
+`on_task_done` payload (emitted when the harness marks a task `done`): `{ "worktree_branch_id", "commits": [{ "sha", "message", ... }] }` — foundation for future PR automation; no UI in v0.1.

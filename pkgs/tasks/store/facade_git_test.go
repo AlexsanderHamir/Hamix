@@ -128,14 +128,29 @@ func TestStore_GitDeleteGuard_runningTask(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
+	branches, _ := s.ListGitBranches(ctx, domain.DefaultProjectID, repo.ID)
+	var branchID string
+	for _, b := range branches {
+		if b.Name == "guard-branch" {
+			branchID = b.ID
+			break
+		}
+	}
+	if branchID == "" {
+		t.Fatal("guard-branch not found")
+	}
+	wb, err := s.AssociateWorktreeBranch(ctx, AssociateWorktreeBranchInput{WorktreeID: wt.ID, BranchID: branchID})
+	if err != nil {
+		t.Fatal(err)
+	}
 	task := domain.Task{
-		ID:            "task-running-guard",
-		Title:         "running",
-		InitialPrompt: "x",
-		Status:        domain.StatusRunning,
-		Priority:      domain.PriorityMedium,
-		Runner:        "cursor",
-		WorktreeID:    &wt.ID,
+		ID:               "task-running-guard",
+		Title:            "running",
+		InitialPrompt:    "x",
+		Status:           domain.StatusRunning,
+		Priority:         domain.PriorityMedium,
+		Runner:           "cursor",
+		WorktreeBranchID: &wb.ID,
 	}
 	if err := s.db.WithContext(ctx).Create(&task).Error; err != nil {
 		t.Fatal(err)

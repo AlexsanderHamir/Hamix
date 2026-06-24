@@ -23,8 +23,6 @@ type taskComposePayloadJSON struct {
 	Milestone             *string                          `json:"milestone,omitempty"`
 	DependsOn             dependsOnWire                    `json:"depends_on,omitempty"`
 	ChecklistItems        []store.CreateChecklistItemInput `json:"checklist_items"`
-	WorktreeID            *string                          `json:"worktree_id,omitempty"`
-	BranchID              *string                          `json:"branch_id,omitempty"`
 	WorktreeBranchID      *string                          `json:"worktree_branch_id,omitempty"`
 }
 

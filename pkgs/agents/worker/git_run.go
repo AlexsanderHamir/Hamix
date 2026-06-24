@@ -28,12 +28,7 @@ func taskHasBinding(task *domain.Task) bool {
 	if task == nil {
 		return false
 	}
-	if task.WorktreeBranchID != nil && strings.TrimSpace(*task.WorktreeBranchID) != "" {
-		return true
-	}
-	return task.WorktreeID != nil && task.BranchID != nil &&
-		strings.TrimSpace(*task.WorktreeID) != "" &&
-		strings.TrimSpace(*task.BranchID) != ""
+	return task.WorktreeBranchID != nil && strings.TrimSpace(*task.WorktreeBranchID) != ""
 }
 
 //funclogmeasure:skip category=hot-path reason="Pure helper without I/O; operation trace is emitted by the calling chokepoint."
@@ -50,44 +45,26 @@ func (w *Worker) resolveTaskGitBinding(ctx context.Context, task *domain.Task) (
 	if !taskHasBinding(task) {
 		return nil, fmt.Errorf("missing_task_binding")
 	}
-	var (
-		gitCtx  store.TaskGitContext
-		err     error
-		binding taskGitBinding
-	)
-	if task.WorktreeBranchID != nil && strings.TrimSpace(*task.WorktreeBranchID) != "" {
-		wbID := strings.TrimSpace(*task.WorktreeBranchID)
-		gitCtx, err = w.store.ResolveTaskGitContextFromAssociation(ctx, wbID)
-		if err != nil {
-			return nil, mapResolveGitContextError(err)
-		}
-		assoc, assocErr := w.store.GetWorktreeBranchByID(ctx, wbID)
-		if assocErr != nil {
-			return nil, mapResolveGitContextError(assocErr)
-		}
-		binding = taskGitBinding{
-			WorktreeID:       assoc.WorktreeID,
-			BranchID:         assoc.BranchID,
-			WorktreeBranchID: wbID,
-			WorktreePath:     gitCtx.WorktreePath,
-			BranchName:       gitCtx.BranchName,
-		}
-	} else {
-		gitCtx, err = w.store.ResolveTaskGitContext(ctx, *task.WorktreeID, *task.BranchID)
-		if err != nil {
-			return nil, mapResolveGitContextError(err)
-		}
-		binding = taskGitBinding{
-			WorktreeID:   strings.TrimSpace(*task.WorktreeID),
-			BranchID:     strings.TrimSpace(*task.BranchID),
-			WorktreePath: gitCtx.WorktreePath,
-			BranchName:   gitCtx.BranchName,
-		}
+	wbID := strings.TrimSpace(*task.WorktreeBranchID)
+	gitCtx, err := w.store.ResolveTaskGitContextFromAssociation(ctx, wbID)
+	if err != nil {
+		return nil, mapResolveGitContextError(err)
+	}
+	assoc, assocErr := w.store.GetWorktreeBranchByID(ctx, wbID)
+	if assocErr != nil {
+		return nil, mapResolveGitContextError(assocErr)
+	}
+	binding := &taskGitBinding{
+		WorktreeID:       assoc.WorktreeID,
+		BranchID:         assoc.BranchID,
+		WorktreeBranchID: wbID,
+		WorktreePath:     gitCtx.WorktreePath,
+		BranchName:       gitCtx.BranchName,
 	}
 	if _, err := os.Stat(binding.WorktreePath); err != nil {
 		return nil, fmt.Errorf("worktree_missing: %w", err)
 	}
-	return &binding, nil
+	return binding, nil
 }
 
 //funclogmeasure:skip category=hot-path reason="Pure helper without I/O; operation trace is emitted by the calling chokepoint."

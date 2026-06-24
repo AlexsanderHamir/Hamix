@@ -26,14 +26,14 @@ func patchRepoTestSetup(t *testing.T) (srv *httptest.Server, dir, taskID, worktr
 	if err := os.MkdirAll(filepath.Join(dir, "subdir"), 0o755); err != nil {
 		t.Fatal(err)
 	}
-	var branchID string
-	srv, worktreeID, branchID = newTaskTestServerWithRepo(t, dir)
+	var worktreeBranchID string
+	srv, worktreeID, _, worktreeBranchID = newTaskTestServerWithRepo(t, dir)
 	t.Cleanup(srv.Close)
 
 	res, err := http.Post(srv.URL+"/tasks", "application/json",
 		strings.NewReader(withCreateChecklist(fmt.Sprintf(
-			`{"title":"seed","priority":"medium","worktree_id":%q,"branch_id":%q}`,
-			worktreeID, branchID))))
+			`{"title":"seed","priority":"medium","worktree_branch_id":%q}`,
+			worktreeBranchID))))
 	if err != nil {
 		t.Fatal(err)
 	}

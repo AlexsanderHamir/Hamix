@@ -16,10 +16,6 @@ import (
 	"gorm.io/gorm"
 )
 
-// globalRepoScopeID is the legacy project_id placeholder for globally registered
-// repositories during the expand phase (git_repositories.project_id is dropped in C8).
-const globalRepoScopeID = domain.DefaultProjectID
-
 // ListAllGitRepositories returns every registered repository ordered by created_at.
 func (s *Store) ListAllGitRepositories(ctx context.Context) ([]domain.GitRepository, error) {
 	slog.Debug("trace", "cmd", calltrace.LogCmd, "operation", "tasks.store.ListAllGitRepositories")
@@ -32,7 +28,6 @@ func (s *Store) ListAllGitRepositories(ctx context.Context) ([]domain.GitReposit
 }
 
 // CreateGlobalGitRepository registers a main checkout without project scoping.
-// During expand, project_id is set to globalRepoScopeID for schema compatibility.
 func (s *Store) CreateGlobalGitRepository(ctx context.Context, input CreateGitRepositoryInput, gitSvc gitwork.Service) (domain.GitRepository, error) {
 	slog.Debug("trace", "cmd", calltrace.LogCmd, "operation", "tasks.store.CreateGlobalGitRepository")
 	path := strings.TrimSpace(input.Path)
@@ -65,7 +60,6 @@ func (s *Store) CreateGlobalGitRepository(ctx context.Context, input CreateGitRe
 	now := time.Now().UTC()
 	repo := domain.GitRepository{
 		ID:            uuid.NewString(),
-		ProjectID:     globalRepoScopeID,
 		Path:          opened.Root,
 		HostPath:      strings.TrimSpace(input.HostPath),
 		DefaultBranch: defaultBranch,
@@ -309,6 +303,7 @@ func (s *Store) ListProjectsByRepository(ctx context.Context, repoID string) ([]
 	return rows, nil
 }
 
+//funclogmeasure:skip category=hot-path reason="Internal helper; trace emitted by calling chokepoint."
 func (s *Store) createGitWorktreeOnRepo(ctx context.Context, repo domain.GitRepository, input CreateGitWorktreeInput, gitSvc gitwork.Service) (domain.GitWorktree, error) {
 	path := strings.TrimSpace(input.Path)
 	branch := strings.TrimSpace(input.Branch)

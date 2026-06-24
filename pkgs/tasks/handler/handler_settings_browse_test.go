@@ -26,7 +26,6 @@ func TestHTTP_workspaceRoots_returnsRegisteredRepos(t *testing.T) {
 	now := time.Now().UTC()
 	row := domain.GitRepository{
 		ID:            "test-repo-id",
-		ProjectID:     domain.DefaultProjectID,
 		Path:          repoPath,
 		HostPath:      "",
 		DefaultBranch: "main",
@@ -103,7 +102,6 @@ func TestHTTP_workspaceRoots_customOverrideReplacesDB(t *testing.T) {
 	now := time.Now().UTC()
 	row := domain.GitRepository{
 		ID:            "ignored-repo",
-		ProjectID:     domain.DefaultProjectID,
 		Path:          t.TempDir(),
 		DefaultBranch: "main",
 		CreatedAt:     now,

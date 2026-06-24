@@ -142,6 +142,9 @@ func Migrate(ctx context.Context, db *gorm.DB) error {
 	if err := migrateSeedWorktreeBranchTree(ctx, db); err != nil {
 		return fmt.Errorf("seed worktree-branch tree: %w", err)
 	}
+	if err := migrateContractGitTree(ctx, db); err != nil {
+		return fmt.Errorf("contract git tree: %w", err)
+	}
 	if err := RecordSchemaRevision(ctx, db, time.Now().UTC()); err != nil {
 		return fmt.Errorf("record schema revision: %w", err)
 	}
@@ -253,6 +256,15 @@ SELECT COUNT(*) FROM information_schema.columns
 		return false, err
 	}
 	return n > 0, nil
+}
+
+// tableHasColumnPortable checks for a column using GORM's Migrator, works
+// with both Postgres and SQLite. Used by backfill migrations that must
+// become no-ops after contract columns are dropped.
+//
+//funclogmeasure:skip category=hot-path reason="Schema introspection helper; called at boot in Migrate."
+func tableHasColumnPortable(db *gorm.DB, table, column string) bool {
+	return db.Migrator().HasColumn(table, column)
 }
 
 var errEmptyDSN = errors.New("database DSN is empty")

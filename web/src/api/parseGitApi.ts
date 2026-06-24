@@ -12,7 +12,7 @@ function parseGitRepositoryRow(value: unknown, path: string): GitRepository {
   if (!isRecord(value)) {
     throw new Error(`Invalid API response: ${path} must be object`);
   }
-  const row: GitRepository = {
+  return {
     id: parseNonEmptyString(value.id, `${path}.id`),
     path: parseString(value.path, `${path}.path`),
     host_path: parseString(value.host_path, `${path}.host_path`),
@@ -20,11 +20,6 @@ function parseGitRepositoryRow(value: unknown, path: string): GitRepository {
     created_at: parseString(value.created_at, `${path}.created_at`),
     updated_at: parseString(value.updated_at, `${path}.updated_at`),
   };
-  const legacyProjectID = parseOptionalNonEmptyId(value.project_id, `${path}.project_id`);
-  if (legacyProjectID) {
-    row.project_id = legacyProjectID;
-  }
-  return row;
 }
 
 function parseGitWorktreeRow(value: unknown, path: string): GitWorktree {

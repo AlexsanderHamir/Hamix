@@ -43,13 +43,13 @@ func (s *Store) ListGitWorktrees(ctx context.Context, projectID, repoID string) 
 	return rows, nil
 }
 
-// GetGitWorktree returns one worktree scoped through its repository project.
+// GetGitWorktree returns one worktree by ID. The projectID parameter is
+// accepted for API compatibility but ignored — repositories are global.
 func (s *Store) GetGitWorktree(ctx context.Context, projectID, worktreeID string) (domain.GitWorktree, error) {
 	slog.Debug("trace", "cmd", calltrace.LogCmd, "operation", "tasks.store.GetGitWorktree")
 	var row domain.GitWorktree
 	err := s.db.WithContext(ctx).
-		Joins("JOIN git_repositories ON git_repositories.id = git_worktrees.repository_id").
-		Where("git_worktrees.id = ? AND git_repositories.project_id = ?", worktreeID, projectID).
+		Where("id = ?", worktreeID).
 		First(&row).Error
 	if err != nil {
 		if errors.Is(err, gorm.ErrRecordNotFound) {

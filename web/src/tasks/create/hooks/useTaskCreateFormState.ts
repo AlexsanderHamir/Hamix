@@ -93,8 +93,8 @@ export function useTaskCreateFormState(queryClient: QueryClient) {
     setNewTaskCursorModel(t.cursor_model ?? "");
     setNewProjectID(t.project_id || DEFAULT_PROJECT_ID);
     setNewProjectContextItemIDs(t.project_context_item_ids ?? []);
-    setNewWorktreeID(t.worktree_id ?? "");
-    setNewBranchID(t.branch_id ?? "");
+    setNewWorktreeID("");
+    setNewBranchID("");
     setNewWorktreeBranchID(t.worktree_branch_id ?? "");
     setNewSchedule(t.pickup_not_before ?? null);
     setNewAutonomyEnabled(t.status === "ready");

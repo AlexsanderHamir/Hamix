@@ -38,13 +38,13 @@ func (s *Store) ListGitBranches(ctx context.Context, projectID, repoID string) (
 	return rows, nil
 }
 
-// GetGitBranch returns one branch scoped through its repository project.
+// GetGitBranch returns one branch by ID. The projectID parameter is
+// accepted for API compatibility but ignored — repositories are global.
 func (s *Store) GetGitBranch(ctx context.Context, projectID, branchID string) (domain.GitBranch, error) {
 	slog.Debug("trace", "cmd", calltrace.LogCmd, "operation", "tasks.store.GetGitBranch")
 	var row domain.GitBranch
 	err := s.db.WithContext(ctx).
-		Joins("JOIN git_repositories ON git_repositories.id = git_branches.repository_id").
-		Where("git_branches.id = ? AND git_repositories.project_id = ?", branchID, projectID).
+		Where("id = ?", branchID).
 		First(&row).Error
 	if err != nil {
 		if errors.Is(err, gorm.ErrRecordNotFound) {

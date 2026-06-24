@@ -1,7 +1,5 @@
 export type GitRepository = {
   id: string;
-  /** Legacy expand-phase field; omitted after contract migration (C8). */
-  project_id?: string;
   path: string;
   host_path: string;
   default_branch: string;

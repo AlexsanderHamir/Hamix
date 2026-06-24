@@ -17,7 +17,10 @@ import (
 // Rev 2 (ADR-0037 expand phase): adds worktree_branches, git_worktrees
 // .active_branch_id, projects.repository_id, tasks.worktree_branch_id and their
 // idempotent backfill.
-const SchemaRevision = 2
+//
+// Rev 3 (ADR-0037 contract phase / Cycle 8): drops git_repositories.project_id,
+// tasks.worktree_id, tasks.branch_id; nulls default-project ownership on tasks.
+const SchemaRevision = 3
 
 const schemaMetaRowID = 1
 

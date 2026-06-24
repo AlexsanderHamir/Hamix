@@ -44,14 +44,9 @@ type Task struct {
 	// CreatedAt is hydrated from the seq=1 task_created audit row on read;
 	// not a tasks-table column.
 	CreatedAt *time.Time `json:"created_at,omitempty" gorm:"-"`
-	// WorktreeID and BranchID are the legacy two-column git binding. ADR-0037
-	// replaces them with the single WorktreeBranchID association FK; they are
-	// retained through the expand phase and dropped in the contract cycle.
-	WorktreeID *string `json:"worktree_id,omitempty" gorm:"index"`
-	BranchID   *string `json:"branch_id,omitempty" gorm:"index"`
 	// WorktreeBranchID binds the task to a worktree_branches association
-	// ("this branch, in this directory"). Plain indexed nullable column (same
-	// pattern as WorktreeID/BranchID); validated on create from Cycle 4.
+	// ("this branch, in this directory"). Plain indexed nullable column;
+	// validated on create from Cycle 4. See ADR-0037.
 	WorktreeBranchID *string `json:"worktree_branch_id,omitempty" gorm:"index"`
 
 	Project *Project `json:"-" gorm:"foreignKey:ProjectID;references:ID;constraint:OnDelete:SET NULL"`

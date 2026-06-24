@@ -13,7 +13,6 @@ import {
 
 const sampleRepo = {
   id: "00000000-0000-4000-8000-000000000010",
-  project_id: "00000000-0000-4000-8000-000000000001",
   path: "/repo/main",
   host_path: "",
   default_branch: "main",

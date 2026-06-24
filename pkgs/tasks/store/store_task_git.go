@@ -73,61 +73,6 @@ func (s *Store) GetGitRepositoryByID(ctx context.Context, repoID string) (domain
 	return row, nil
 }
 
-// ValidateTaskGitBinding checks worktree and branch belong to the same repository
-// and, when projectID is set, that the repository belongs to that project.
-//
-// Legacy two-column binding — retained until the contract cycle (C8).
-func (s *Store) ValidateTaskGitBinding(ctx context.Context, projectID *string, worktreeID, branchID string) error {
-	slog.Debug("trace", "cmd", calltrace.LogCmd, "operation", "tasks.store.ValidateTaskGitBinding")
-	worktreeID = strings.TrimSpace(worktreeID)
-	branchID = strings.TrimSpace(branchID)
-	if worktreeID == "" && branchID == "" {
-		return nil
-	}
-	if worktreeID == "" || branchID == "" {
-		return fmt.Errorf("%w: worktree_id and branch_id must both be set", domain.ErrInvalidInput)
-	}
-	wt, err := s.GetGitWorktreeByID(ctx, worktreeID)
-	if err != nil {
-		return err
-	}
-	br, err := s.GetGitBranchByID(ctx, branchID)
-	if err != nil {
-		return err
-	}
-	if wt.RepositoryID != br.RepositoryID {
-		return fmt.Errorf("%w: branch_repository_mismatch", domain.ErrInvalidInput)
-	}
-	repo, err := s.GetGitRepositoryByID(ctx, wt.RepositoryID)
-	if err != nil {
-		return err
-	}
-	if projectID != nil {
-		pid := strings.TrimSpace(*projectID)
-		if pid != "" && repo.ProjectID != pid {
-			return fmt.Errorf("%w: wrong_project", domain.ErrInvalidInput)
-		}
-	}
-	return nil
-}
-
-// ResolveTaskGitContext loads the worktree path and branch name for a bound task.
-func (s *Store) ResolveTaskGitContext(ctx context.Context, worktreeID, branchID string) (TaskGitContext, error) {
-	slog.Debug("trace", "cmd", calltrace.LogCmd, "operation", "tasks.store.ResolveTaskGitContext")
-	if err := s.ValidateTaskGitBinding(ctx, nil, worktreeID, branchID); err != nil {
-		return TaskGitContext{}, err
-	}
-	wt, err := s.GetGitWorktreeByID(ctx, worktreeID)
-	if err != nil {
-		return TaskGitContext{}, err
-	}
-	br, err := s.GetGitBranchByID(ctx, branchID)
-	if err != nil {
-		return TaskGitContext{}, err
-	}
-	return TaskGitContext{WorktreePath: wt.Path, BranchName: br.Name}, nil
-}
-
 // ValidateTaskWorktreeBranchBinding checks worktree_branch_id exists and, when
 // projectID is set, that project.repository_id matches the association's repo.
 func (s *Store) ValidateTaskWorktreeBranchBinding(ctx context.Context, projectID *string, worktreeBranchID string) error {

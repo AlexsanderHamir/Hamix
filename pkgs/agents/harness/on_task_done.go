@@ -15,9 +15,8 @@ type onTaskDoneCommit struct {
 }
 
 type onTaskDonePayload struct {
-	WorktreeID string             `json:"worktree_id,omitempty"`
-	BranchID   string             `json:"branch_id,omitempty"`
-	Commits    []onTaskDoneCommit `json:"commits"`
+	WorktreeBranchID string             `json:"worktree_branch_id,omitempty"`
+	Commits          []onTaskDoneCommit `json:"commits"`
 }
 
 func (h *Harness) emitOnTaskDone(ctx context.Context, task *domain.Task, cycleID string) {
@@ -25,11 +24,8 @@ func (h *Harness) emitOnTaskDone(ctx context.Context, task *domain.Task, cycleID
 		return
 	}
 	payload := onTaskDonePayload{Commits: []onTaskDoneCommit{}}
-	if task.WorktreeID != nil {
-		payload.WorktreeID = *task.WorktreeID
-	}
-	if task.BranchID != nil {
-		payload.BranchID = *task.BranchID
+	if task.WorktreeBranchID != nil {
+		payload.WorktreeBranchID = *task.WorktreeBranchID
 	}
 	rows, err := h.store.ListCommitsForCycle(ctx, cycleID)
 	if err != nil {

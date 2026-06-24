@@ -14,7 +14,6 @@ import (
 func (h *Handler) gitRepositoryJSON(r domain.GitRepository) gitRepositoryJSON {
 	return gitRepositoryJSON{
 		ID:            r.ID,
-		ProjectID:     r.ProjectID,
 		Path:          r.Path,
 		HostPath:      h.pathMap.DisplayHostPath(r.Path),
 		DefaultBranch: r.DefaultBranch,

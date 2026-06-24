@@ -54,17 +54,11 @@ func GitErrCode(err error) string {
 	return ""
 }
 
-// GitRepository is a registered main git checkout.
-//
-// ProjectID is legacy: ADR-0037 makes repositories global (one row per
-// canonical path, shared across projects). The column is retained through the
-// expand phase so existing consumers keep compiling; it is dropped in the
-// contract cycle (Cycle 8) along with the per-project unique index, replaced
-// by a global unique index on Path.
+// GitRepository is a registered main git checkout. Globally unique on Path
+// (one row per canonical path, shared across projects). See ADR-0037.
 type GitRepository struct {
 	ID            string    `json:"id" gorm:"primaryKey"`
-	ProjectID     string    `json:"project_id" gorm:"not null;index;uniqueIndex:idx_git_repo_project_path,priority:1"`
-	Path          string    `json:"path" gorm:"not null;uniqueIndex:idx_git_repo_project_path,priority:2"`
+	Path          string    `json:"path" gorm:"not null;uniqueIndex:idx_git_repo_path"`
 	HostPath      string    `json:"host_path" gorm:"not null;default:''"`
 	DefaultBranch string    `json:"default_branch" gorm:"not null;default:main"`
 	CreatedAt     time.Time `json:"created_at" gorm:"not null;index"`

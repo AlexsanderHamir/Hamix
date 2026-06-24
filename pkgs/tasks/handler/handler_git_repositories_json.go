@@ -12,7 +12,6 @@ type gitRepositoriesListResponse struct {
 
 type gitRepositoryJSON struct {
 	ID            string `json:"id"`
-	ProjectID     string `json:"project_id"`
 	Path          string `json:"path"`
 	HostPath      string `json:"host_path"`
 	DefaultBranch string `json:"default_branch"`

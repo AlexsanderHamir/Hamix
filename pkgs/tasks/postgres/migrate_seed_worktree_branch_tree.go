@@ -33,11 +33,14 @@ func migrateSeedWorktreeBranchTree(ctx context.Context, db *gorm.DB) error {
 }
 
 // backfillProjectRepository links each project to one of its legacy
-// per-project repositories. ADR-0037 makes a project belong to exactly one
-// repo; before the contract phase, repos still carry project_id, so the
-// earliest repo for a project is the deterministic choice.
+// per-project repositories. After the C8 contract migration the
+// project_id column on git_repositories is dropped, so this function
+// becomes a no-op on post-C8 databases.
 func backfillProjectRepository(ctx context.Context, db *gorm.DB) error {
 	slog.Debug("trace", "operation", "postgres.backfillProjectRepository")
+	if !tableHasColumnPortable(db, "git_repositories", "project_id") {
+		return nil
+	}
 	var projects []domain.Project
 	if err := db.WithContext(ctx).
 		Where("repository_id IS NULL").
@@ -45,12 +48,12 @@ func backfillProjectRepository(ctx context.Context, db *gorm.DB) error {
 		return err
 	}
 	for i := range projects {
-		var repo domain.GitRepository
-		err := db.WithContext(ctx).
-			Where("project_id = ?", projects[i].ID).
-			Order("created_at asc").
-			First(&repo).Error
-		if errors.Is(err, gorm.ErrRecordNotFound) {
+		var repoID string
+		err := db.WithContext(ctx).Raw(
+			`SELECT id FROM git_repositories WHERE project_id = ? ORDER BY created_at ASC LIMIT 1`,
+			projects[i].ID,
+		).Scan(&repoID).Error
+		if errors.Is(err, gorm.ErrRecordNotFound) || repoID == "" {
 			continue
 		}
 		if err != nil {
@@ -58,7 +61,7 @@ func backfillProjectRepository(ctx context.Context, db *gorm.DB) error {
 		}
 		if err := db.WithContext(ctx).Model(&domain.Project{}).
 			Where("id = ?", projects[i].ID).
-			Update("repository_id", repo.ID).Error; err != nil {
+			Update("repository_id", repoID).Error; err != nil {
 			return err
 		}
 	}
@@ -75,14 +78,18 @@ type worktreeBranchPair struct {
 // and points tasks.worktree_branch_id at the resulting association rows. Pairs
 // whose worktree or branch no longer exist are skipped to respect the
 // association's foreign keys.
+//
+// After the C8 contract migration the legacy columns are dropped, so this
+// function becomes a no-op on fresh databases.
 func backfillTaskWorktreeBranch(ctx context.Context, db *gorm.DB) error {
 	slog.Debug("trace", "operation", "postgres.backfillTaskWorktreeBranch")
+	if !tableHasColumnPortable(db, "tasks", "worktree_id") {
+		return nil
+	}
 	var pairs []worktreeBranchPair
-	if err := db.WithContext(ctx).Model(&domain.Task{}).
-		Select("worktree_id", "branch_id").
-		Where("worktree_id IS NOT NULL AND branch_id IS NOT NULL").
-		Group("worktree_id, branch_id").
-		Scan(&pairs).Error; err != nil {
+	if err := db.WithContext(ctx).Raw(
+		`SELECT worktree_id, branch_id FROM tasks WHERE worktree_id IS NOT NULL AND branch_id IS NOT NULL GROUP BY worktree_id, branch_id`,
+	).Scan(&pairs).Error; err != nil {
 		return err
 	}
 	now := time.Now().UTC()
@@ -98,9 +105,10 @@ func backfillTaskWorktreeBranch(ctx context.Context, db *gorm.DB) error {
 		if err != nil {
 			return err
 		}
-		if err := db.WithContext(ctx).Model(&domain.Task{}).
-			Where("worktree_id = ? AND branch_id = ? AND worktree_branch_id IS NULL", p.WorktreeID, p.BranchID).
-			Update("worktree_branch_id", wbID).Error; err != nil {
+		if err := db.WithContext(ctx).Exec(
+			`UPDATE tasks SET worktree_branch_id = ? WHERE worktree_id = ? AND branch_id = ? AND worktree_branch_id IS NULL`,
+			wbID, p.WorktreeID, p.BranchID,
+		).Error; err != nil {
 			return err
 		}
 	}

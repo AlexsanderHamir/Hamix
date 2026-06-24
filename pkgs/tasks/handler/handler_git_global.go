@@ -11,6 +11,7 @@ import (
 	"github.com/AlexsanderHamir/Hamix/pkgs/tasks/store"
 )
 
+//funclogmeasure:skip category=hot-path reason="Pure DTO mapper without I/O."
 func (h *Handler) worktreeBranchJSON(wb domain.WorktreeBranch) worktreeBranchJSON {
 	return worktreeBranchJSON{
 		ID:         wb.ID,

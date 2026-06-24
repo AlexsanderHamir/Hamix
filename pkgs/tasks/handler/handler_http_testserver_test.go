@@ -48,7 +48,7 @@ func ensureGitRepo(t *testing.T, dir string) {
 	_ = exec.Command("git", "-C", dir, "commit", "-m", "init", "--allow-empty").Run()
 }
 
-func seedTestGitWorktree(t *testing.T, st *store.Store, repoDir string) (worktreeID, branchID string) {
+func seedTestGitWorktree(t *testing.T, st *store.Store, repoDir string) (worktreeID, branchID, worktreeBranchID string) {
 	t.Helper()
 	ensureGitRepo(t, repoDir)
 	ctx := context.Background()
@@ -67,20 +67,27 @@ func seedTestGitWorktree(t *testing.T, st *store.Store, repoDir string) (worktre
 	if err != nil || len(branches) == 0 {
 		t.Fatalf("ListGitBranches: %v len=%d", err, len(branches))
 	}
-	return wts[0].ID, branches[0].ID
+	wb, err := st.AssociateWorktreeBranch(ctx, store.AssociateWorktreeBranchInput{
+		WorktreeID: wts[0].ID,
+		BranchID:   branches[0].ID,
+	})
+	if err != nil {
+		t.Fatalf("AssociateWorktreeBranch: %v", err)
+	}
+	return wts[0].ID, branches[0].ID, wb.ID
 }
 
-func newTaskTestServerWithRepo(t *testing.T, repoDir string) (*httptest.Server, string, string) {
+func newTaskTestServerWithRepo(t *testing.T, repoDir string) (*httptest.Server, string, string, string) {
 	t.Helper()
 	db := tasktestdb.OpenSQLite(t)
 	st := store.NewStore(db)
-	worktreeID, branchID := seedTestGitWorktree(t, st, repoDir)
+	worktreeID, branchID, worktreeBranchID := seedTestGitWorktree(t, st, repoDir)
 	r, err := repo.OpenRoot(repoDir)
 	if err != nil {
 		t.Fatal(err)
 	}
 	h := NewHandler(st, NewSSEHub(), r, WithRepoProvider(NewSettingsRepoProvider(st)))
-	return httptest.NewServer(h), worktreeID, branchID
+	return httptest.NewServer(h), worktreeID, branchID, worktreeBranchID
 }
 
 func repoPathWithWorktree(worktreeID, path string) string {

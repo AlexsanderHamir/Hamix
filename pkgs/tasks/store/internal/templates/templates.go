@@ -2,124 +2,37 @@
 // /task-templates. Payload writes use kernel.NormalizeJSONObject like drafts.
 package templates
 
-import "github.com/AlexsanderHamir/Hamix/pkgs/tasks/calltrace"
 import (
 	"context"
 	"encoding/json"
-	"errors"
 	"fmt"
 	"log/slog"
 	"strings"
 	"time"
 
+	"github.com/AlexsanderHamir/Hamix/pkgs/tasks/calltrace"
 	"github.com/AlexsanderHamir/Hamix/pkgs/tasks/domain"
 	"github.com/AlexsanderHamir/Hamix/pkgs/tasks/store/internal/kernel"
-	"github.com/google/uuid"
-	"gorm.io/datatypes"
+	"github.com/AlexsanderHamir/Hamix/pkgs/tasks/store/internal/namedpayload"
 	"gorm.io/gorm"
 )
 
-type Summary struct {
-	ID        string    `json:"id"`
-	Name      string    `json:"name"`
-	UpdatedAt time.Time `json:"updated_at"`
-	CreatedAt time.Time `json:"created_at"`
-}
+type Summary = namedpayload.Summary
+type Detail = namedpayload.Detail
 
-type Detail struct {
-	ID        string          `json:"id"`
-	Name      string          `json:"name"`
-	Payload   json.RawMessage `json:"payload"`
-	UpdatedAt time.Time       `json:"updated_at"`
-	CreatedAt time.Time       `json:"created_at"`
-}
-
+//funclogmeasure:skip category=hot-path reason="Thin delegate to namedpayload; operation trace is emitted there."
 func Save(ctx context.Context, db *gorm.DB, id, name string, payload json.RawMessage) (*Summary, error) {
-	defer kernel.DeferLatency(kernel.OpSaveTemplate)()
-	slog.Debug("trace", "cmd", calltrace.LogCmd, "operation", "tasks.store.templates.Save")
-	id = strings.TrimSpace(id)
-	if id == "" {
-		id = uuid.NewString()
-	}
-	name = strings.TrimSpace(name)
-	if name == "" {
-		return nil, fmt.Errorf("%w: template name required", domain.ErrInvalidInput)
-	}
-	normalized, err := kernel.NormalizeJSONObject(payload, "payload")
-	if err != nil {
-		return nil, err
-	}
-	payload = normalized
-	now := time.Now().UTC()
-	row := domain.TaskTemplate{
-		ID:          id,
-		Name:        name,
-		PayloadJSON: datatypes.JSON(payload),
-		CreatedAt:   now,
-		UpdatedAt:   now,
-	}
-	if err := db.WithContext(ctx).Where("id = ?", id).FirstOrCreate(&row).Error; err != nil {
-		return nil, fmt.Errorf("save template: %w", err)
-	}
-	if err := db.WithContext(ctx).Model(&domain.TaskTemplate{}).Where("id = ?", id).Updates(map[string]any{
-		"name":         name,
-		"payload_json": payload,
-		"updated_at":   now,
-	}).Error; err != nil {
-		return nil, fmt.Errorf("update template: %w", err)
-	}
-	return &Summary{ID: id, Name: name, UpdatedAt: now, CreatedAt: row.CreatedAt}, nil
+	return namedpayload.SaveTemplate(ctx, db, id, name, payload)
 }
 
+//funclogmeasure:skip category=hot-path reason="Thin delegate to namedpayload; operation trace is emitted there."
 func List(ctx context.Context, db *gorm.DB, limit int, q string) ([]Summary, error) {
-	defer kernel.DeferLatency(kernel.OpListTemplates)()
-	slog.Debug("trace", "cmd", calltrace.LogCmd, "operation", "tasks.store.templates.List")
-	if limit <= 0 {
-		limit = 50
-	}
-	if limit > 100 {
-		limit = 100
-	}
-	query := db.WithContext(ctx).Model(&domain.TaskTemplate{}).Order("updated_at DESC").Limit(limit)
-	q = strings.TrimSpace(q)
-	if q != "" {
-		like := "%" + escapeLike(strings.ToLower(q)) + "%"
-		query = query.Where("LOWER(name) LIKE ?", like)
-	}
-	var rows []domain.TaskTemplate
-	if err := query.Find(&rows).Error; err != nil {
-		return nil, fmt.Errorf("list templates: %w", err)
-	}
-	out := make([]Summary, 0, len(rows))
-	for _, r := range rows {
-		out = append(out, Summary{
-			ID:        r.ID,
-			Name:      r.Name,
-			UpdatedAt: r.UpdatedAt,
-			CreatedAt: r.CreatedAt,
-		})
-	}
-	return out, nil
+	return namedpayload.ListTemplates(ctx, db, limit, q)
 }
 
+//funclogmeasure:skip category=hot-path reason="Thin delegate to namedpayload; operation trace is emitted there."
 func Get(ctx context.Context, db *gorm.DB, id string) (*Detail, error) {
-	defer kernel.DeferLatency(kernel.OpGetTemplate)()
-	slog.Debug("trace", "cmd", calltrace.LogCmd, "operation", "tasks.store.templates.Get")
-	id = strings.TrimSpace(id)
-	if id == "" {
-		return nil, fmt.Errorf("%w: id", domain.ErrInvalidInput)
-	}
-	var row domain.TaskTemplate
-	if err := db.WithContext(ctx).Where("id = ?", id).First(&row).Error; err != nil {
-		return nil, mapNotFound(err)
-	}
-	return &Detail{
-		ID:        row.ID,
-		Name:      row.Name,
-		Payload:   json.RawMessage(row.PayloadJSON),
-		UpdatedAt: row.UpdatedAt,
-		CreatedAt: row.CreatedAt,
-	}, nil
+	return namedpayload.GetTemplate(ctx, db, id)
 }
 
 func Patch(ctx context.Context, db *gorm.DB, id string, name *string, payload json.RawMessage) (*Detail, error) {
@@ -134,7 +47,7 @@ func Patch(ctx context.Context, db *gorm.DB, id string, name *string, payload js
 	}
 	var row domain.TaskTemplate
 	if err := db.WithContext(ctx).Where("id = ?", id).First(&row).Error; err != nil {
-		return nil, mapNotFound(err)
+		return nil, kernel.MapNotFound(err)
 	}
 	updates := map[string]any{"updated_at": time.Now().UTC()}
 	if name != nil {
@@ -157,38 +70,7 @@ func Patch(ctx context.Context, db *gorm.DB, id string, name *string, payload js
 	return Get(ctx, db, id)
 }
 
+//funclogmeasure:skip category=hot-path reason="Thin delegate to namedpayload; operation trace is emitted there."
 func Delete(ctx context.Context, db *gorm.DB, id string) error {
-	defer kernel.DeferLatency(kernel.OpDeleteTemplate)()
-	slog.Debug("trace", "cmd", calltrace.LogCmd, "operation", "tasks.store.templates.Delete")
-	id = strings.TrimSpace(id)
-	if id == "" {
-		return fmt.Errorf("%w: id", domain.ErrInvalidInput)
-	}
-	res := db.WithContext(ctx).Where("id = ?", id).Delete(&domain.TaskTemplate{})
-	if res.Error != nil {
-		return fmt.Errorf("delete template: %w", res.Error)
-	}
-	if res.RowsAffected == 0 {
-		return domain.ErrNotFound
-	}
-	return nil
-}
-
-//funclogmeasure:skip category=hot-path reason="Pure helper without I/O; operation trace is emitted by the calling chokepoint."
-func escapeLike(s string) string {
-	s = strings.ReplaceAll(s, `\`, `\\`)
-	s = strings.ReplaceAll(s, `%`, `\%`)
-	s = strings.ReplaceAll(s, `_`, `\_`)
-	return s
-}
-
-//funclogmeasure:skip category=hot-path reason="Pure helper without I/O; operation trace is emitted by the calling chokepoint."
-func mapNotFound(err error) error {
-	if err == nil {
-		return nil
-	}
-	if errors.Is(err, gorm.ErrRecordNotFound) {
-		return domain.ErrNotFound
-	}
-	return fmt.Errorf("db: %w", err)
+	return namedpayload.DeleteTemplate(ctx, db, id)
 }

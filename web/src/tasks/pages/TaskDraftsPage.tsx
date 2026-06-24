@@ -1,52 +1,23 @@
-import { useEffect, useRef, useState } from "react";
 import { TASK_TIMINGS } from "@/constants/tasks";
 import { useDelayedTrue } from "@/lib/useDelayedTrue";
 import { EmptyState } from "@/shared/EmptyState";
 import { useDocumentTitle } from "@/shared/useDocumentTitle";
-import { formatRelativeTime } from "@/shared/time/relativeTime";
 import { useNavigate } from "react-router-dom";
-import { TaskListDeleteGlyph } from "../components/task-list/table/TaskListRowActionIcons";
 import { TaskDraftsListSkeleton } from "../components/skeletons";
+import { SavedEntityRow } from "../components/saved-entities/SavedEntityRow";
+import { useDeleteWithExitAnimation } from "../hooks/useDeleteWithExitAnimation";
 import { useTasksAppContext } from "../app/TasksAppProvider";
-
-function isDraftRowActionExcluded(target: EventTarget | null): boolean {
-  if (!(target instanceof Element)) return true;
-  return Boolean(target.closest("button"));
-}
 
 export function TaskDraftsPage() {
   const app = useTasksAppContext();
   useDocumentTitle("Task drafts");
   const navigate = useNavigate();
-  const [deletingDraftId, setDeletingDraftId] = useState<string | null>(null);
-  const [exitingDraftIds, setExitingDraftIds] = useState<string[]>([]);
-  const deleteTimerRef = useRef<number | null>(null);
   const openDraftInCreateForm = async (draftId: string) => {
     try {
       await app.resumeDraftByID(draftId);
       navigate("/");
     } catch {
       // Error state is exposed by the hook and rendered inline on this page.
-    }
-  };
-  const deleteDraft = async (draftId: string) => {
-    setDeletingDraftId(draftId);
-    setExitingDraftIds((current) =>
-      current.includes(draftId) ? current : [...current, draftId],
-    );
-    await new Promise<void>((resolve) => {
-      deleteTimerRef.current = window.setTimeout(() => {
-        deleteTimerRef.current = null;
-        resolve();
-      }, TASK_TIMINGS.draftDeleteExitMs);
-    });
-    try {
-      await app.deleteDraftByID(draftId);
-    } catch {
-      // Error state is exposed by the hook and rendered inline on this page.
-      setExitingDraftIds((current) => current.filter((id) => id !== draftId));
-    } finally {
-      setDeletingDraftId((current) => (current === draftId ? null : current));
     }
   };
   const loading = app.draftListLoading;
@@ -56,6 +27,10 @@ export function TaskDraftsPage() {
   const resumeError = app.resumeDraftError;
   const deletePending = app.deleteDraftPending;
   const deleteError = app.deleteDraftError;
+  const { deletingId, exitingIds, deleteWithExit } = useDeleteWithExitAnimation({
+    entityIds: drafts.map((d) => d.id),
+    onDelete: app.deleteDraftByID,
+  });
   const showDraftsSkeleton = useDelayedTrue(
     loading,
     TASK_TIMINGS.draftResumeMinLoadingMs,
@@ -66,19 +41,6 @@ export function TaskDraftsPage() {
      the page re-renders and `now` updates naturally — no manual interval
      required. */
   const renderNow = new Date();
-
-  useEffect(() => {
-    const draftIds = new Set(drafts.map((d) => d.id));
-    setExitingDraftIds((current) => current.filter((id) => draftIds.has(id)));
-  }, [drafts]);
-
-  useEffect(() => {
-    return () => {
-      if (deleteTimerRef.current !== null) {
-        window.clearTimeout(deleteTimerRef.current);
-      }
-    };
-  }, []);
 
   const draftCount = drafts.length;
   const hasDrafts = draftCount > 0;
@@ -148,74 +110,26 @@ export function TaskDraftsPage() {
               <ul className="draft-row-list" aria-label="Saved drafts">
                 {drafts.map((d) => {
                   const lastEdited = d.updated_at || d.created_at;
-                  const relative = formatRelativeTime(lastEdited, renderNow);
-                  const isDeleting = deletingDraftId === d.id;
+                  const isDeleting = deletingId === d.id;
                   const rowDisabled =
                     resumePending ||
                     deletePending ||
-                    exitingDraftIds.includes(d.id);
+                    exitingIds.includes(d.id);
                   return (
-                    <li
+                    <SavedEntityRow
                       key={d.id}
-                      className={[
-                        "draft-row",
-                        rowDisabled ? "" : "draft-row--interactive",
-                        exitingDraftIds.includes(d.id) ? "draft-row--exit" : "",
-                      ]
-                        .filter(Boolean)
-                        .join(" ")}
-                      onClick={(e) => {
-                        if (rowDisabled || isDraftRowActionExcluded(e.target)) {
-                          return;
-                        }
-                        void openDraftInCreateForm(d.id);
-                      }}
-                      onKeyDown={(e) => {
-                        if (rowDisabled || isDraftRowActionExcluded(e.target)) {
-                          return;
-                        }
-                        if (e.key === "Enter" || e.key === " ") {
-                          e.preventDefault();
-                          void openDraftInCreateForm(d.id);
-                        }
-                      }}
-                      tabIndex={rowDisabled ? undefined : 0}
-                      aria-label={`Resume draft: ${d.name}`}
-                      aria-busy={resumePending || undefined}
-                    >
-                      <div className="draft-row__meta">
-                        <span className="draft-row__name" title={d.name}>
-                          {d.name}
-                        </span>
-                        {lastEdited && relative ? (
-                          <time
-                            className="draft-row__time"
-                            dateTime={lastEdited}
-                            title={lastEdited}
-                          >
-                            Edited {relative}
-                          </time>
-                        ) : null}
-                      </div>
-                      <div className="draft-row__actions">
-                        <div className="task-list-row-actions">
-                          <button
-                            type="button"
-                            className="task-list-icon-btn task-list-icon-btn--delete"
-                            aria-label={
-                              isDeleting
-                                ? `Deleting draft "${d.name}"`
-                                : `Delete draft "${d.name}"`
-                            }
-                            onClick={() => void deleteDraft(d.id)}
-                            disabled={rowDisabled}
-                            aria-busy={isDeleting || undefined}
-                          >
-                            <TaskListDeleteGlyph />
-                          </button>
-                        </div>
-                      </div>
-                    </li>
+                      name={d.name}
+                      lastEdited={lastEdited}
+                      renderNow={renderNow}
+                      isDeleting={isDeleting}
+                      rowDisabled={rowDisabled}
+                      isExiting={exitingIds.includes(d.id)}
+                      resumeLabel={`Resume draft: ${d.name}`}
+                      deleteLabel={`Delete draft "${d.name}"`}
+                      deletingLabel={`Deleting draft "${d.name}"`}
+                      onOpen={() => void openDraftInCreateForm(d.id)}
+                      onDelete={() => void deleteWithExit(d.id)}
+                    />
                   );
                 })}
               </ul>

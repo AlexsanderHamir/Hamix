@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { listTaskTemplates, maxTemplateInstantiateCountPerItem } from "@/api";
 import { TASK_TIMINGS } from "@/constants/tasks";
@@ -9,6 +9,7 @@ import { formatRelativeTime } from "@/shared/time/relativeTime";
 import { useNavigate } from "react-router-dom";
 import { TaskListDeleteGlyph, TaskListEditGlyph } from "../components/task-list/table/TaskListRowActionIcons";
 import { TaskDraftsListSkeleton } from "../components/skeletons";
+import { useDeleteWithExitAnimation } from "../hooks/useDeleteWithExitAnimation";
 import { useTasksAppContext } from "../app/TasksAppProvider";
 import { taskQueryKeys } from "../task-query";
 import type { Task, TaskTemplateSummary } from "@/types";
@@ -453,17 +454,14 @@ function useTaskTemplatesPageModel(app: TaskTemplatesApp, navigate: ReturnType<t
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
   const [batchDefaultCount, setBatchDefaultCount] = useState(1);
   const [instanceCounts, setInstanceCounts] = useState<Record<string, number>>({});
-  const [deletingTemplateId, setDeletingTemplateId] = useState<string | null>(null);
-  const [exitingTemplateIds, setExitingTemplateIds] = useState<string[]>([]);
   const [batchError, setBatchError] = useState<string | null>(null);
-  const deleteTimerRef = useRef<number | null>(null);
 
   const templatesQuery = useQuery({
     queryKey: taskQueryKeys.templates(debouncedQ ? { q: debouncedQ } : undefined),
     queryFn: ({ signal }) => listTaskTemplates({ q: debouncedQ || undefined, signal }),
   });
 
-  const templates = templatesQuery.data ?? [];
+  const templates = useMemo(() => templatesQuery.data ?? [], [templatesQuery.data]);
   const loading = templatesQuery.isPending;
   const error = templatesQuery.isError
     ? templatesQuery.error instanceof Error
@@ -473,10 +471,18 @@ function useTaskTemplatesPageModel(app: TaskTemplatesApp, navigate: ReturnType<t
   const showSkeleton = useDelayedTrue(loading, TASK_TIMINGS.draftResumeMinLoadingMs);
   const renderNow = new Date();
 
+  const { deletingId: deletingTemplateId, exitingIds: exitingTemplateIds, deleteWithExit } =
+    useDeleteWithExitAnimation({
+      entityIds: templates.map((t) => t.id),
+      onDelete: async (templateId) => {
+        await app.deleteTemplateByID(templateId);
+        setSelectedIds((current) => current.filter((id) => id !== templateId));
+      },
+    });
+
   useEffect(() => {
     const ids = new Set(templates.map((t) => t.id));
     setSelectedIds((current) => current.filter((id) => ids.has(id)));
-    setExitingTemplateIds((current) => current.filter((id) => ids.has(id)));
     setInstanceCounts((current) => {
       const next: Record<string, number> = {};
       for (const [id, count] of Object.entries(current)) {
@@ -485,14 +491,6 @@ function useTaskTemplatesPageModel(app: TaskTemplatesApp, navigate: ReturnType<t
       return next;
     });
   }, [templates]);
-
-  useEffect(() => {
-    return () => {
-      if (deleteTimerRef.current !== null) {
-        window.clearTimeout(deleteTimerRef.current);
-      }
-    };
-  }, []);
 
   const allSelected = templates.length > 0 && selectedIds.length === templates.length;
   const selectedCount = selectedIds.length;
@@ -546,27 +544,6 @@ function useTaskTemplatesPageModel(app: TaskTemplatesApp, navigate: ReturnType<t
     });
   };
 
-  const deleteTemplate = async (templateId: string) => {
-    setDeletingTemplateId(templateId);
-    setExitingTemplateIds((current) =>
-      current.includes(templateId) ? current : [...current, templateId],
-    );
-    await new Promise<void>((resolve) => {
-      deleteTimerRef.current = window.setTimeout(() => {
-        deleteTimerRef.current = null;
-        resolve();
-      }, TASK_TIMINGS.draftDeleteExitMs);
-    });
-    try {
-      await app.deleteTemplateByID(templateId);
-      setSelectedIds((current) => current.filter((id) => id !== templateId));
-    } catch {
-      setExitingTemplateIds((current) => current.filter((id) => id !== templateId));
-    } finally {
-      setDeletingTemplateId((current) => (current === templateId ? null : current));
-    }
-  };
-
   const runBatchCreate = async () => {
     if (selectedIds.length === 0) return;
     setBatchError(null);
@@ -616,7 +593,7 @@ function useTaskTemplatesPageModel(app: TaskTemplatesApp, navigate: ReturnType<t
     toggleSelectAll,
     setInstanceCountForTemplate,
     applyBatchDefaultToSelected,
-    deleteTemplate,
+    deleteTemplate: deleteWithExit,
     runBatchCreate,
   };
 }

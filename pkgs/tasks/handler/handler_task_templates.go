@@ -5,7 +5,6 @@ import (
 	"fmt"
 	"log/slog"
 	"net/http"
-	"strconv"
 	"strings"
 
 	"github.com/AlexsanderHamir/Hamix/pkgs/tasks/calltrace"
@@ -16,21 +15,10 @@ func (h *Handler) listTaskTemplates(w http.ResponseWriter, r *http.Request) {
 	slog.Debug("trace", "cmd", calltrace.LogCmd, "operation", "handler.Handler.listTaskTemplates")
 	const op = "task_templates.list"
 	r = calltrace.WithRequestRoot(r, op)
-	limit := 50
-	if raw := strings.TrimSpace(r.URL.Query().Get("limit")); raw != "" {
-		if len(raw) > maxListIntQueryParamBytes {
-			writeJSONError(w, r, op, http.StatusBadRequest, "limit value too long")
-			return
-		}
-		n, err := strconv.Atoi(raw)
-		if err != nil || n < 0 || n > 100 {
-			writeJSONError(w, r, op, http.StatusBadRequest, "limit must be integer 0..100")
-			return
-		}
-		limit = n
-	}
-	if limit <= 0 {
-		limit = 50
+	limit, err := parseBoundedLimit(r.URL.Query(), 50, 100)
+	if err != nil {
+		writeStoreError(w, r, op, err)
+		return
 	}
 	q := strings.TrimSpace(r.URL.Query().Get("q"))
 	rows, err := h.store.ListTemplates(r.Context(), limit, q)

@@ -18,43 +18,31 @@ const maxTaskPathIDBytes = 128
 // 32-byte cap matches the documented event-seq cap.
 const maxPhaseSeqParamBytes = 32
 
-func parseTaskPathID(id string) (string, error) {
-	slog.Debug("trace", "cmd", calltrace.LogCmd, "operation", "handler.parseTaskPathID")
-	id = strings.TrimSpace(id)
+func parseBoundedPathID(op, raw, field string) (string, error) {
+	slog.Debug("trace", "cmd", calltrace.LogCmd, "operation", op)
+	id := strings.TrimSpace(raw)
 	if id == "" {
-		return "", fmt.Errorf("%w: id", domain.ErrInvalidInput)
+		return "", fmt.Errorf("%w: %s", domain.ErrInvalidInput, field)
 	}
 	if len(id) > maxTaskPathIDBytes {
-		return "", fmt.Errorf("%w: id too long", domain.ErrInvalidInput)
+		return "", fmt.Errorf("%w: %s too long", domain.ErrInvalidInput, field)
 	}
 	return id, nil
 }
 
+func parseTaskPathID(id string) (string, error) {
+	return parseBoundedPathID("handler.parseTaskPathID", id, "id")
+}
+
 func parseTaskPathItemID(id string) (string, error) {
-	slog.Debug("trace", "cmd", calltrace.LogCmd, "operation", "handler.parseTaskPathItemID")
-	id = strings.TrimSpace(id)
-	if id == "" {
-		return "", fmt.Errorf("%w: item id", domain.ErrInvalidInput)
-	}
-	if len(id) > maxTaskPathIDBytes {
-		return "", fmt.Errorf("%w: item id too long", domain.ErrInvalidInput)
-	}
-	return id, nil
+	return parseBoundedPathID("handler.parseTaskPathItemID", id, "item id")
 }
 
 // parseTaskPathCycleID validates the {cycleId} path segment for the cycles
 // resource family (same UUID-shape and 128-byte cap as task ids; the bare
 // field name "cycle id" surfaces in the 400 message).
 func parseTaskPathCycleID(id string) (string, error) {
-	slog.Debug("trace", "cmd", calltrace.LogCmd, "operation", "handler.parseTaskPathCycleID")
-	id = strings.TrimSpace(id)
-	if id == "" {
-		return "", fmt.Errorf("%w: cycle id", domain.ErrInvalidInput)
-	}
-	if len(id) > maxTaskPathIDBytes {
-		return "", fmt.Errorf("%w: cycle id too long", domain.ErrInvalidInput)
-	}
-	return id, nil
+	return parseBoundedPathID("handler.parseTaskPathCycleID", id, "cycle id")
 }
 
 // parseTaskPathPhaseSeq validates the {phaseSeq} path segment. Sequences

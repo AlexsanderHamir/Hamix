@@ -171,9 +171,6 @@ func readBrowseSubdirs(dir string) ([]BrowseDirEntry, error) {
 			continue
 		}
 		child := filepath.Join(dir, name)
-		if resolved := resolveKnownBrowseSubdirPath(dir, name); resolved != "" {
-			child = resolved
-		}
 		hasChildren, _ := dirHasBrowsableChildren(child)
 		out = append(out, BrowseDirEntry{
 			Name:        name,

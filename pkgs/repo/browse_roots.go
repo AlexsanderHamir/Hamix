@@ -63,7 +63,7 @@ func ResolveBrowseRoots(startDir string) ([]BrowseRoot, BrowseEnvironment, error
 }
 
 func defaultPlaceRegistry() *PlaceRegistry {
-	return NewPlaceRegistry(InstallPlaceProvider{}, HomePlaceProvider{})
+	return NewPlaceRegistry(InstallPlaceProvider{}, HomePlaceProvider{}, UserDirsPlaceProvider{})
 }
 
 //funclogmeasure:skip category=hot-path reason="Browse sub-step; operation trace is emitted by ResolveBrowseRoots."

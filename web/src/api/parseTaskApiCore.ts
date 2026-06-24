@@ -141,3 +141,36 @@ export function parseOptionalNonEmptyId(
   if (v === undefined || v === null) return undefined;
   return parseNonEmptyString(v, field);
 }
+
+export type NamedEntitySummary = {
+  id: string;
+  name: string;
+  created_at: string;
+  updated_at: string;
+};
+
+/** Validates list responses shaped like `{ drafts: [...] }` or `{ templates: [...] }`. */
+export function parseNamedEntitySummaryList(
+  value: unknown,
+  arrayKey: string,
+  entityLabel: string,
+): NamedEntitySummary[] {
+  if (!isRecord(value)) {
+    throw new Error(`Invalid API response: ${entityLabel} list must be object`);
+  }
+  const raw = value[arrayKey];
+  if (!Array.isArray(raw)) {
+    throw new Error(`Invalid API response: ${arrayKey} must be array`);
+  }
+  return raw.map((item, i) => {
+    if (!isRecord(item)) {
+      throw new Error(`Invalid API response: ${arrayKey}[${i}] must be object`);
+    }
+    return {
+      id: parseNonEmptyString(item.id, `${arrayKey}[${i}].id`),
+      name: parseString(item.name, `${arrayKey}[${i}].name`),
+      created_at: parseString(item.created_at, `${arrayKey}[${i}].created_at`),
+      updated_at: parseString(item.updated_at, `${arrayKey}[${i}].updated_at`),
+    };
+  });
+}

@@ -441,6 +441,39 @@ export function parseChecklistVerifyCommand(
   };
 }
 
+export type ChecklistItemWire = {
+  text: string;
+  verify_commands?: ChecklistVerifyCommandInput[];
+};
+
+/** Validates a draft/template checklist row (string or object with optional verify_commands). */
+export function parseChecklistItemWire(
+  value: unknown,
+  path: string,
+): ChecklistItemWire {
+  if (typeof value === "string") {
+    return { text: parseString(value, path) };
+  }
+  if (!isRecord(value)) {
+    throw new Error(`Invalid API response: ${path} must be string or object`);
+  }
+  let verify_commands: ChecklistItemWire["verify_commands"];
+  if (value.verify_commands !== undefined && value.verify_commands !== null) {
+    if (!Array.isArray(value.verify_commands)) {
+      throw new Error(`Invalid API response: ${path}.verify_commands must be an array`);
+    }
+    verify_commands = value.verify_commands.map((cmd, j) =>
+      parseChecklistVerifyCommand(cmd, `${path}.verify_commands[${j}]`),
+    );
+  }
+  return {
+    text: parseString(value.text, `${path}.text`),
+    ...(verify_commands !== undefined && verify_commands.length > 0
+      ? { verify_commands }
+      : {}),
+  };
+}
+
 /** Validates GET /tasks/{id}/checklist JSON. */
 export function parseTaskChecklistResponse(value: unknown): TaskChecklistResponse {
   if (!isRecord(value)) {

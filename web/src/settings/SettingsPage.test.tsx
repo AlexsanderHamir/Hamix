@@ -120,8 +120,7 @@ describe("SettingsPage", () => {
     }));
 
     renderPage();
-    expect(await screen.findByRole("link", { name: /^Open Worktrees$/i })).toBeInTheDocument();
-    expect(screen.getByLabelText(/^CLI path$/)).toHaveValue(
+    expect(await screen.findByLabelText(/^CLI path$/)).toHaveValue(
       "/usr/local/bin/cursor-agent",
     );
     expect(screen.getByLabelText(/Max execute duration/)).toHaveValue(0);
@@ -221,17 +220,6 @@ describe("SettingsPage", () => {
       });
       expect(patches.length).toBe(1);
     });
-  });
-
-  it("links to the Worktrees page from the Agent workspace section", async () => {
-    vi.spyOn(globalThis, "fetch").mockImplementation(stubListCursorModelsFetch(async () =>
-      jsonResponse(defaultSettings()),
-    ));
-
-    renderPage();
-    const links = await screen.findAllByRole("link", { name: /^Open Worktrees$/i });
-    expect(links.length).toBeGreaterThan(0);
-    expect(links[0]).toHaveAttribute("href", "/worktrees");
   });
 
   it("PATCHes only the changed fields and updates form state on success", async () => {

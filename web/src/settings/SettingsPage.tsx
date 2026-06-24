@@ -24,7 +24,6 @@ import {
   SettingsHeader,
   SettingsLoadingState,
   SettingsStatusMessage,
-  WorkspaceSettingsSection,
 } from "./SettingsSections";
 import { UiTestModeSettingsSection } from "./UiTestModeSettingsSection";
 import { SettingsNav, type SettingsNavItem } from "./SettingsNav";
@@ -39,13 +38,12 @@ import "./settings.css";
 
 /**
  * In-page navigation rail entries. Order matches the form below
- * (workspace → runner config → phases → cosmetic → dev) so
+ * (runner config → phases → cosmetic → dev) so
  * the operator's vertical scroll path matches the rail's top-to-bottom
  * reading order. Keep ids in sync with `SECTION_IDS` exported from
  * SettingsSections.tsx.
  */
 const SETTINGS_NAV_ITEMS: SettingsNavItem[] = [
-  { id: SECTION_IDS.workspace, label: "Agent workspace" },
   { id: SECTION_IDS.cursorAgent, label: "Runner" },
   { id: SECTION_IDS.phases, label: "Phases" },
   { id: SECTION_IDS.display, label: "Display" },
@@ -487,8 +485,6 @@ function SettingsPageLoadedView({
         </aside>
 
         <form className="settings-form" onSubmit={onSubmit}>
-          <WorkspaceSettingsSection />
-
           <RunnerSettingsSection
             form={form}
             resolvedDefaultBin={resolvedDefaultBin}

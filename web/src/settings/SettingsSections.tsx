@@ -1,5 +1,4 @@
-import { Link } from "react-router-dom";
-import type { UseQueryResult } from "@tanstack/react-query";
+import { type UseQueryResult } from "@tanstack/react-query";
 import { useMemo } from "react";
 import { MutationErrorBanner } from "@/shared/MutationErrorBanner";
 import {
@@ -35,7 +34,6 @@ type HandleField = <K extends keyof SettingsFormState>(
  * `#verification` → Verify phase block.
  */
 export const SECTION_IDS = {
-  workspace: "workspace",
   agentWorker: "agent-worker",
   cursorAgent: "cursor-agent",
   phases: "phases",
@@ -77,7 +75,7 @@ export function SettingsHeader({
       <div className="settings-page-heading">
         <h2 className="settings-page-title">Settings</h2>
         <p className="settings-page-subtitle">
-          Runtime and workspace configuration for this installation.
+          Runtime configuration for this installation.
         </p>
       </div>
       {lastUpdated ? (
@@ -95,45 +93,6 @@ export function SettingsHeader({
   );
 }
 
-export function WorkspaceWarning() {
-  return (
-    <div role="alert" className="settings-banner settings-banner--warn">
-      <svg
-        className="settings-banner-icon"
-        viewBox="0 0 24 24"
-        fill="none"
-        aria-hidden="true"
-      >
-        <path
-          d="M12 3.5 2.75 19.5h18.5L12 3.5Z"
-          stroke="currentColor"
-          strokeWidth="1.7"
-          strokeLinejoin="round"
-        />
-        <path
-          d="M12 10v4"
-          stroke="currentColor"
-          strokeWidth="1.7"
-          strokeLinecap="round"
-        />
-        <circle cx="12" cy="17" r="1" fill="currentColor" />
-      </svg>
-      <div className="settings-banner-body">
-        <p className="settings-banner-title">
-          <strong>Agent workspace not configured.</strong>
-        </p>
-        <p className="settings-banner-text">
-          Register a git repository on the{" "}
-          <Link to="/worktrees" className="worktrees-settings-card__link">
-            Worktrees
-          </Link>{" "}
-          page so tasks can bind to worktrees and branches.
-        </p>
-      </div>
-    </div>
-  );
-}
-
 /**
  * Section card scaffold. Renders a real `<h2>` heading inside an
  * accessible region so the page has proper outline structure for
@@ -141,7 +100,6 @@ export function WorkspaceWarning() {
  * pattern was visually decorative chrome; promoting it to an h2
  * gives the section a real anchor a sighted operator can scan and
  * an assistive-tech user can land on.
- *
  */
 function SectionCard({
   id,
@@ -163,22 +121,6 @@ function SectionCard({
       </h2>
       <div className="settings-section-body">{children}</div>
     </section>
-  );
-}
-
-export function WorkspaceSettingsSection() {
-  return (
-    <SectionCard id={SECTION_IDS.workspace} title="Agent workspace">
-      <div className="worktrees-settings-card">
-        <p className="settings-section-lead">
-          Worktrees are configured per task. Manage repositories, worktrees, and branches on
-          the Worktrees page.
-        </p>
-        <Link to="/worktrees" className="worktrees-settings-card__link">
-          Open Worktrees
-        </Link>
-      </div>
-    </SectionCard>
   );
 }
 

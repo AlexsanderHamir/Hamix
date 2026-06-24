@@ -55,6 +55,14 @@ export default defineConfig(
           varsIgnorePattern: "^_",
         },
       ],
+      "max-lines": ["error", { max: 500, skipBlankLines: true, skipComments: true }],
+      "no-restricted-syntax": [
+        "error",
+        {
+          selector: "CallExpression[callee.name='setTimeout']",
+          message: "Use vi.useFakeTimers() in tests — see docs/domain/web-testing.md",
+        },
+      ],
     },
   },
 );

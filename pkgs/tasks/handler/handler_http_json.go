@@ -313,6 +313,10 @@ func storeErrHTTPResponse(ctx context.Context, err error) (code int, msg string)
 
 func writeStoreError(w http.ResponseWriter, r *http.Request, op string, err error, logExtras ...any) {
 	slog.Debug("trace", "cmd", calltrace.LogCmd, "operation", "handler.writeStoreError", "http_op", op)
+	if domain.GitErrCode(err) != "" {
+		writeGitStoreError(w, r, op, err)
+		return
+	}
 	ctxErr := calltrace.Push(requestCtx(r), "writeStoreError")
 	calltrace.HelperIOIn(ctxErr, "writeStoreError", "http_op", op, "err", err)
 	code, msg := storeErrHTTPResponse(ctxErr, err)

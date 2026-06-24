@@ -78,6 +78,11 @@ func seedTestGitWorktree(t *testing.T, st *store.Store, repoDir string) (worktre
 }
 
 func newTaskTestServerWithRepo(t *testing.T, repoDir string) (*httptest.Server, string, string, string) {
+	srv, _, wt, br, wb := newTaskTestServerWithRepoStore(t, repoDir)
+	return srv, wt, br, wb
+}
+
+func newTaskTestServerWithRepoStore(t *testing.T, repoDir string) (*httptest.Server, *store.Store, string, string, string) {
 	t.Helper()
 	db := tasktestdb.OpenSQLite(t)
 	st := store.NewStore(db)
@@ -87,7 +92,7 @@ func newTaskTestServerWithRepo(t *testing.T, repoDir string) (*httptest.Server, 
 		t.Fatal(err)
 	}
 	h := NewHandler(st, NewSSEHub(), r, WithRepoProvider(NewSettingsRepoProvider(st)))
-	return httptest.NewServer(h), worktreeID, branchID, worktreeBranchID
+	return httptest.NewServer(h), st, worktreeID, branchID, worktreeBranchID
 }
 
 func repoPathWithWorktree(worktreeID, path string) string {

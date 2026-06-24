@@ -10,7 +10,7 @@ import {
 } from "@/test/handlers/drafts";
 import {
   appDefaultHandlers,
-  renderAppAt,
+  renderTasksAt,
   setupAppTest,
 } from "@/test/integration/appHarness";
 import { server } from "@/test/server";
@@ -25,7 +25,7 @@ describe("task drafts page", () => {
     const [pendingHandler, deferred] = draftsListPending();
     server.use(pendingHandler);
 
-    renderAppAt(["/drafts"]);
+    renderTasksAt(["/drafts"]);
 
     expect(await screen.findByRole("heading", { name: /^task drafts$/i })).toBeInTheDocument();
     expect(
@@ -42,7 +42,7 @@ describe("task drafts page", () => {
       ),
     );
 
-    renderAppAt(["/drafts"]);
+    renderTasksAt(["/drafts"]);
 
     expect(await screen.findByRole("alert")).toHaveTextContent(/drafts unavailable/i);
     expect(
@@ -72,7 +72,7 @@ describe("task drafts page", () => {
       }),
     );
 
-    renderAppAt(["/drafts"]);
+    renderTasksAt(["/drafts"]);
 
     expect(await screen.findByRole("alert")).toHaveTextContent(/drafts unavailable/i);
     await user.click(screen.getByRole("button", { name: /^try again$/i }));
@@ -87,7 +87,7 @@ describe("task drafts page", () => {
     const user = userEvent.setup();
     server.use(draftsList([]));
 
-    renderAppAt(["/drafts"]);
+    renderTasksAt(["/drafts"]);
 
     await screen.findByRole("heading", { name: /^task drafts$/i });
     await user.click(
@@ -114,7 +114,7 @@ describe("task drafts page", () => {
       ),
     );
 
-    renderAppAt(["/drafts"]);
+    renderTasksAt(["/drafts"]);
 
     await screen.findByRole("heading", { name: /^task drafts$/i });
     await user.click(
@@ -139,7 +139,7 @@ describe("task drafts page", () => {
       draftDelete("d1", 500, { error: "delete failed" }),
     );
 
-    renderAppAt(["/drafts"]);
+    renderTasksAt(["/drafts"]);
 
     await screen.findByRole("heading", { name: /^task drafts$/i });
     await user.click(
@@ -171,7 +171,7 @@ describe("task drafts page", () => {
       deleteHandler,
     );
 
-    renderAppAt(["/drafts"]);
+    renderTasksAt(["/drafts"]);
 
     await screen.findByRole("heading", { name: /^task drafts$/i });
     const firstRow = await screen.findByRole("listitem", {

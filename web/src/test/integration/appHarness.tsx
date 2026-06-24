@@ -1,8 +1,16 @@
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { render } from "@testing-library/react";
-import { BrowserRouter, MemoryRouter } from "react-router-dom";
+import { BrowserRouter, MemoryRouter, Route, Routes } from "react-router-dom";
 import { ROUTER_FUTURE_FLAGS } from "@/lib/routerFutureFlags";
 import App from "@/app/App";
+import {
+  TaskCreateModalsLayer,
+  TaskDraftsPage,
+  TaskHome,
+} from "@/tasks";
+import { TasksAppProvider } from "@/tasks/app/TasksAppProvider";
+import { useTasksApp } from "@/tasks/hooks/useTasksApp";
+import { ModalStackProvider } from "@/shared/ModalStackContext";
 import { bootstrapUnavailable } from "@/test/handlers/bootstrap";
 import { stubEventSource } from "@/test/browserMocks";
 import { repoNotConfigured } from "@/test/handlers/repo";
@@ -57,4 +65,38 @@ export function renderAppAt(initialEntries: string[]) {
       </MemoryRouter>
     </QueryClientProvider>,
   );
+}
+
+function TasksShellRoutes() {
+  const app = useTasksApp({ sseLive: false, dataEnabled: true });
+  return (
+    <TasksAppProvider value={app}>
+      <ModalStackProvider>
+        <Routes>
+          <Route path="/" element={<TaskHome />} />
+          <Route path="/drafts" element={<TaskDraftsPage />} />
+        </Routes>
+        <TaskCreateModalsLayer />
+      </ModalStackProvider>
+    </TasksAppProvider>
+  );
+}
+
+function renderTasksShell(initialEntries: string[]) {
+  const queryClient = createTestQueryClient();
+  return render(
+    <QueryClientProvider client={queryClient}>
+      <MemoryRouter future={ROUTER_FUTURE_FLAGS} initialEntries={initialEntries}>
+        <TasksShellRoutes />
+      </MemoryRouter>
+    </QueryClientProvider>,
+  );
+}
+
+export function renderTasksHome() {
+  return renderTasksShell(["/"]);
+}
+
+export function renderTasksAt(initialEntries: string[]) {
+  return renderTasksShell(initialEntries);
 }

@@ -41,7 +41,7 @@ describe("WorkspaceDirPickerModal", () => {
       if (url.endsWith("/settings/workspace-roots")) {
         return jsonResponse({
           environment: "native",
-          roots: [{ id: "home", path: "/roots", label: "Home", available: true }],
+          roots: [{ id: "home", path: "/roots", label: "Home", category: "home", available: true }],
         });
       }
       if (url.includes("/settings/browse-dirs")) {
@@ -100,7 +100,7 @@ describe("WorkspaceDirPickerModal", () => {
       if (url.endsWith("/settings/workspace-roots")) {
         return jsonResponse({
           environment: "native",
-          roots: [{ id: "home", path: "/roots", label: "Home", available: true }],
+          roots: [{ id: "home", path: "/roots", label: "Home", category: "home", available: true }],
         });
       }
       if (url.includes("/settings/browse-dirs")) {
@@ -133,13 +133,51 @@ describe("WorkspaceDirPickerModal", () => {
     fetchMock.mockRestore();
   });
 
+  it("groups roots into workspace and user folder sections", async () => {
+    const fetchMock = vi.spyOn(globalThis, "fetch").mockImplementation(async (input) => {
+      const url = String(input);
+      if (url.endsWith("/settings/workspace-roots")) {
+        return jsonResponse({
+          environment: "native",
+          roots: [
+            { id: "install", path: "/app", label: "Hamix checkout", category: "install", available: true },
+            { id: "home", path: "/roots", label: "Home", category: "home", available: true },
+            {
+              id: "documents",
+              path: "/roots/Documents",
+              label: "Documents",
+              category: "documents",
+              available: true,
+            },
+          ],
+        });
+      }
+      return new Response("not found", { status: 404 });
+    });
+
+    render(
+      <WorkspaceDirPickerModal
+        open
+        currentPath=""
+        onClose={() => {}}
+        onSelect={() => {}}
+      />,
+    );
+
+    expect(await screen.findByText("Workspace")).toBeInTheDocument();
+    expect(screen.getByText("User folders")).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: /Hamix checkout/ })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: /^Documents/ })).toBeInTheDocument();
+    fetchMock.mockRestore();
+  });
+
   it("disables the confirm button when no folder is open yet", async () => {
     const fetchMock = vi.spyOn(globalThis, "fetch").mockImplementation(async (input) => {
       const url = String(input);
       if (url.endsWith("/settings/workspace-roots")) {
         return jsonResponse({
           environment: "native",
-          roots: [{ id: "home", path: "/roots", label: "Home", available: true }],
+          roots: [{ id: "home", path: "/roots", label: "Home", category: "home", available: true }],
         });
       }
       return new Response("not found", { status: 404 });

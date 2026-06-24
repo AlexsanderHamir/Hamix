@@ -11,6 +11,7 @@ import (
 	"testing"
 
 	"github.com/AlexsanderHamir/Hamix/internal/tasktestdb"
+	"github.com/AlexsanderHamir/Hamix/pkgs/repo"
 	"github.com/AlexsanderHamir/Hamix/pkgs/tasks/store"
 )
 
@@ -54,6 +55,9 @@ func TestHTTP_workspaceRoots_returnsBrowseRoots(t *testing.T) {
 	}
 	if len(body.Roots) != 1 || body.Roots[0].Path != root {
 		t.Fatalf("roots=%+v", body.Roots)
+	}
+	if body.Roots[0].Category != repo.PlaceCategoryCustom {
+		t.Fatalf("category=%q want custom", body.Roots[0].Category)
 	}
 }
 

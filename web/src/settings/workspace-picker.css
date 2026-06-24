@@ -57,6 +57,22 @@
   color: var(--text-tertiary);
 }
 
+.workspace-picker-root-group {
+  list-style: none;
+}
+
+.workspace-picker-root-group + .workspace-picker-root-group {
+  margin-top: var(--space-4);
+  padding-top: var(--space-4);
+  border-top: 1px solid var(--border-hairline);
+}
+
+.workspace-picker-root-group-list {
+  list-style: none;
+  margin: var(--space-2) 0 0;
+  padding: 0;
+}
+
 /* Breadcrumb bar: persistent context for "where am I." Back + the full
    crumb chain live together so the user can either step up one or jump
    to any ancestor without re-clicking through folders. */

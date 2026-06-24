@@ -1,9 +1,21 @@
 import { fetchWithTimeout, apiErrorFromResponse } from "./shared";
 
+export type WorkspaceBrowseCategory =
+  | "install"
+  | "home"
+  | "documents"
+  | "desktop"
+  | "downloads"
+  | "pictures"
+  | "music"
+  | "videos"
+  | "custom";
+
 export type WorkspaceBrowseRoot = {
   id: string;
   path: string;
   label: string;
+  category?: WorkspaceBrowseCategory;
   available: boolean;
   unavailable_reason?: string;
 };
@@ -26,6 +38,26 @@ export type BrowseDirsResponse = {
   entries: BrowseDirEntry[];
 };
 
+function parseBrowseCategory(raw: unknown): WorkspaceBrowseCategory | undefined {
+  if (typeof raw !== "string" || raw === "") {
+    return undefined;
+  }
+  const allowed: WorkspaceBrowseCategory[] = [
+    "install",
+    "home",
+    "documents",
+    "desktop",
+    "downloads",
+    "pictures",
+    "music",
+    "videos",
+    "custom",
+  ];
+  return allowed.includes(raw as WorkspaceBrowseCategory)
+    ? (raw as WorkspaceBrowseCategory)
+    : undefined;
+}
+
 function parseBrowseRoot(raw: unknown): WorkspaceBrowseRoot {
   if (typeof raw !== "object" || raw === null) {
     throw new Error("invalid browse root");
@@ -35,6 +67,7 @@ function parseBrowseRoot(raw: unknown): WorkspaceBrowseRoot {
     id: typeof value.id === "string" ? value.id : "",
     path: typeof value.path === "string" ? value.path : "",
     label: typeof value.label === "string" ? value.label : "",
+    category: parseBrowseCategory(value.category),
     available: value.available === true,
     unavailable_reason:
       typeof value.unavailable_reason === "string"

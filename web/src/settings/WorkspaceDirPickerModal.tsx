@@ -27,6 +27,31 @@ type LoadState =
 
 type Crumb = { label: string; path: string };
 
+const USER_FOLDER_CATEGORIES = new Set([
+  "documents",
+  "desktop",
+  "downloads",
+  "pictures",
+  "music",
+  "videos",
+]);
+
+function partitionBrowseRoots(roots: WorkspaceBrowseRoot[]): {
+  workspace: WorkspaceBrowseRoot[];
+  userFolders: WorkspaceBrowseRoot[];
+} {
+  const workspace: WorkspaceBrowseRoot[] = [];
+  const userFolders: WorkspaceBrowseRoot[] = [];
+  for (const root of roots) {
+    if (root.category && USER_FOLDER_CATEGORIES.has(root.category)) {
+      userFolders.push(root);
+    } else {
+      workspace.push(root);
+    }
+  }
+  return { workspace, userFolders };
+}
+
 // Splits the current path into breadcrumb segments anchored to whichever
 // starting location contains it. Without anchoring to a root, deep paths
 // like /Users/x/code/proj would surface every system folder as a crumb,
@@ -149,9 +174,12 @@ export function WorkspaceDirPickerModal({
     onClose();
   }
 
-  if (!open) return null;
-
   const canConfirm = !atRoots && !listingPending && currentBrowsePath.trim() !== "";
+
+  const rootGroups =
+    loadState.kind === "ready" ? partitionBrowseRoots(loadState.roots) : null;
+
+  if (!open) return null;
 
   return (
     <Modal
@@ -217,23 +245,28 @@ export function WorkspaceDirPickerModal({
             ) : null}
 
             <ul className="workspace-picker-list" aria-busy={listingPending}>
-              {atRoots
-                ? loadState.roots.map((root) => (
-                    <li key={root.id}>
-                      <FolderRow
-                        name={root.label}
-                        sublabel={root.path}
-                        disabled={listingPending || !root.available}
-                        onClick={() => void loadListing(root.path)}
-                      />
-                      {!root.available && root.unavailable_reason ? (
-                        <p className="workspace-picker-row-note">
-                          {root.unavailable_reason}
-                        </p>
-                      ) : null}
-                    </li>
-                  ))
-                : entries.map((entry) => (
+              {atRoots && rootGroups ? (
+                <>
+                  {rootGroups.workspace.length > 0 ? (
+                    <RootGroup
+                      label="Workspace"
+                      roots={rootGroups.workspace}
+                      listingPending={listingPending}
+                      onOpen={(path) => void loadListing(path)}
+                    />
+                  ) : null}
+                  {rootGroups.userFolders.length > 0 ? (
+                    <RootGroup
+                      label="User folders"
+                      roots={rootGroups.userFolders}
+                      listingPending={listingPending}
+                      onOpen={(path) => void loadListing(path)}
+                    />
+                  ) : null}
+                </>
+              ) : null}
+              {!atRoots
+                ? entries.map((entry) => (
                     <li key={entry.path}>
                       <FolderRow
                         name={entry.name}
@@ -243,7 +276,8 @@ export function WorkspaceDirPickerModal({
                         onClick={() => void loadListing(entry.path)}
                       />
                     </li>
-                  ))}
+                  ))
+                : null}
               {!atRoots && !listingPending && entries.length === 0 ? (
                 <li className="workspace-picker-empty">
                   <p className="workspace-picker-empty-title">
@@ -286,6 +320,36 @@ export function WorkspaceDirPickerModal({
         ) : null}
       </div>
     </Modal>
+  );
+}
+
+type RootGroupProps = {
+  label: string;
+  roots: WorkspaceBrowseRoot[];
+  listingPending: boolean;
+  onOpen: (path: string) => void;
+};
+
+function RootGroup({ label, roots, listingPending, onOpen }: RootGroupProps) {
+  return (
+    <li className="workspace-picker-root-group">
+      <p className="workspace-picker-section-label">{label}</p>
+      <ul className="workspace-picker-root-group-list">
+        {roots.map((root) => (
+          <li key={root.id}>
+            <FolderRow
+              name={root.label}
+              sublabel={root.path}
+              disabled={listingPending || !root.available}
+              onClick={() => onOpen(root.path)}
+            />
+            {!root.available && root.unavailable_reason ? (
+              <p className="workspace-picker-row-note">{root.unavailable_reason}</p>
+            ) : null}
+          </li>
+        ))}
+      </ul>
+    </li>
   );
 }
 

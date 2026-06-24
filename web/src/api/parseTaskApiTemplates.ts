@@ -4,9 +4,10 @@ import {
   type TaskTemplateDetail,
   type TaskTemplateSummary,
 } from "@/types";
-import { parseChecklistVerifyCommand, parseTask } from "./parseTaskApiTasks";
+import { parseChecklistItemWire, parseTask } from "./parseTaskApiTasks";
 import {
   isRecord,
+  parseNamedEntitySummaryList,
   parseNonEmptyString,
   parsePriorityChoice,
   parseStatus,
@@ -17,27 +18,7 @@ function parseComposeChecklistItem(
   value: unknown,
   path: string,
 ): TaskComposePayload["checklist_items"][number] {
-  if (typeof value === "string") {
-    return { text: parseString(value, path) };
-  }
-  if (!isRecord(value)) {
-    throw new Error(`Invalid API response: ${path} must be string or object`);
-  }
-  let verify_commands: TaskComposePayload["checklist_items"][number]["verify_commands"];
-  if (value.verify_commands !== undefined && value.verify_commands !== null) {
-    if (!Array.isArray(value.verify_commands)) {
-      throw new Error(`Invalid API response: ${path}.verify_commands must be an array`);
-    }
-    verify_commands = value.verify_commands.map((cmd, j) =>
-      parseChecklistVerifyCommand(cmd, `${path}.verify_commands[${j}]`),
-    );
-  }
-  return {
-    text: parseString(value.text, `${path}.text`),
-    ...(verify_commands !== undefined && verify_commands.length > 0
-      ? { verify_commands }
-      : {}),
-  };
+  return parseChecklistItemWire(value, path);
 }
 
 function parseDependsOnWire(value: unknown): TaskComposePayload["depends_on"] {
@@ -110,18 +91,7 @@ export function parseTaskComposePayload(value: unknown): TaskComposePayload {
 }
 
 export function parseTaskTemplateSummaryList(value: unknown): TaskTemplateSummary[] {
-  if (!isRecord(value)) throw new Error("Invalid API response: template list must be object");
-  const raw = value.templates;
-  if (!Array.isArray(raw)) throw new Error("Invalid API response: templates must be array");
-  return raw.map((item, i) => {
-    if (!isRecord(item)) throw new Error(`Invalid API response: templates[${i}] must be object`);
-    return {
-      id: parseNonEmptyString(item.id, `templates[${i}].id`),
-      name: parseString(item.name, `templates[${i}].name`),
-      created_at: parseString(item.created_at, `templates[${i}].created_at`),
-      updated_at: parseString(item.updated_at, `templates[${i}].updated_at`),
-    };
-  });
+  return parseNamedEntitySummaryList(value, "templates", "template");
 }
 
 export function parseTaskTemplateDetail(value: unknown): TaskTemplateDetail {

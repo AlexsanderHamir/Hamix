@@ -100,6 +100,7 @@ export function RegisterRepositoryModal({
       <WorkspaceDirPickerModal
         open={pickerOpen}
         nested
+        requireGitRepository
         currentPath={path}
         onClose={() => setPickerOpen(false)}
         onSelect={(next) => {

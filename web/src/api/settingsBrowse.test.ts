@@ -38,6 +38,7 @@ describe("parseBrowseDirsResponse", () => {
     expect(
       parseBrowseDirsResponse({
         path: "/home/me",
+        is_git_repo: true,
         entries: [
           {
             name: "my-app",
@@ -50,6 +51,7 @@ describe("parseBrowseDirsResponse", () => {
     ).toEqual({
       path: "/home/me",
       parent_path: undefined,
+      is_git_repo: true,
       entries: [
         {
           name: "my-app",

@@ -13,6 +13,7 @@ function jsonResponse(body: unknown): Response {
 type BrowseFixture = {
   path: string;
   parent_path: string;
+  is_git_repo?: boolean;
   entries: Array<{
     name: string;
     path: string;
@@ -61,6 +62,7 @@ describe("WorkspaceDirPickerModal", () => {
           "/roots/my-app": {
             path: "/roots/my-app",
             parent_path: "/roots",
+            is_git_repo: true,
             entries: [],
           },
         })(url);
@@ -228,6 +230,72 @@ describe("WorkspaceDirPickerModal", () => {
     );
 
     expect(await screen.findByRole("button", { name: /Use this folder/ })).toBeDisabled();
+    fetchMock.mockRestore();
+  });
+
+  it("blocks confirmation when requireGitRepository and folder is not a git checkout", async () => {
+    const onSelect = vi.fn();
+    const fetchMock = vi.spyOn(globalThis, "fetch").mockImplementation(async (input) => {
+      const url = String(input);
+      if (url.endsWith("/settings/workspace-roots")) {
+        return jsonResponse({
+          environment: "native",
+          roots: [{ id: "home", path: "/roots", label: "Home", category: "home", available: true }],
+        });
+      }
+      if (url.includes("/settings/browse-dirs")) {
+        return browseRouter({
+          "/roots": {
+            path: "/roots",
+            parent_path: "",
+            is_git_repo: false,
+            entries: [
+              {
+                name: "my-app",
+                path: "/roots/my-app",
+                has_children: false,
+                is_git_repo: true,
+              },
+            ],
+          },
+          "/roots/my-app": {
+            path: "/roots/my-app",
+            parent_path: "/roots",
+            is_git_repo: true,
+            entries: [],
+          },
+        })(url);
+      }
+      return new Response("not found", { status: 404 });
+    });
+
+    render(
+      <WorkspaceDirPickerModal
+        open
+        requireGitRepository
+        currentPath=""
+        onClose={() => {}}
+        onSelect={onSelect}
+      />,
+    );
+
+    await userEvent.click(await screen.findByRole("button", { name: /Home/ }));
+
+    await waitFor(() => {
+      expect(screen.getByRole("button", { name: /Use this folder/ })).toBeDisabled();
+    });
+    expect(
+      screen.getByText(/This folder is not a git checkout/i),
+    ).toBeInTheDocument();
+
+    await userEvent.click(screen.getByRole("button", { name: /my-app/ }));
+
+    await waitFor(() => {
+      expect(screen.getByRole("button", { name: /Use this folder/ })).toBeEnabled();
+    });
+
+    await userEvent.click(screen.getByRole("button", { name: /Use this folder/ }));
+    expect(onSelect).toHaveBeenCalledWith("/roots/my-app");
     fetchMock.mockRestore();
   });
 });

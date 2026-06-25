@@ -1,4 +1,5 @@
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
+import { useQueryClient } from "@tanstack/react-query";
 import { useSearchParams } from "react-router-dom";
 import type { GitRepository } from "@/types";
 import { Button } from "@/components/ui";
@@ -8,6 +9,7 @@ import { useDelayedTrue } from "@/lib/useDelayedTrue";
 import { TASK_TIMINGS } from "@/constants/tasks";
 import { TaskDraftsListSkeleton } from "@/tasks/components/skeletons";
 import { useGlobalRepositories } from "./hooks/useGlobalRepositories";
+import { prefetchWorktreesPageShell } from "./hooks/useGlobalGitPrefetch";
 import { useGlobalGitMutations } from "./hooks/useGlobalGitMutations";
 import { RepositoryCard } from "./components/RepositoryCard";
 import { DeleteConfirmDialog } from "./components/DeleteConfirmDialog";
@@ -27,6 +29,7 @@ type ActiveRepoModal =
   | null;
 
 export function WorktreesPage() {
+  const queryClient = useQueryClient();
   const repositoriesQuery = useGlobalRepositories();
   const mutations = useGlobalGitMutations();
   const [searchParams, setSearchParams] = useSearchParams();
@@ -37,6 +40,10 @@ export function WorktreesPage() {
   const [deleteError, setDeleteError] = useState<unknown>(null);
 
   const repositories = repositoriesQuery.data ?? [];
+  const repositoryIds = useMemo(
+    () => repositories.map((repository) => repository.id),
+    [repositories],
+  );
   const pageMode = deriveWorktreesPageMode({
     isLoading: repositoriesQuery.isLoading && !repositoriesQuery.data,
     isError: repositoriesQuery.isError,
@@ -55,6 +62,11 @@ export function WorktreesPage() {
     setRegisterOpen(true);
     setSearchParams({}, { replace: true });
   }, [searchParams, setSearchParams]);
+
+  useEffect(() => {
+    if (repositoryIds.length === 0) return;
+    prefetchWorktreesPageShell(queryClient, repositoryIds);
+  }, [queryClient, repositoryIds]);
 
   const closeDelete = () => {
     setDeleteTarget(null);
@@ -208,6 +220,9 @@ export function WorktreesPage() {
 
       <CreateWorktreeModal
         open={activeRepoModal?.kind === "worktree"}
+        repositoryId={
+          activeRepoModal?.kind === "worktree" ? activeRepoModal.repository.id : ""
+        }
         pending={mutations.createWorktree.isPending}
         error={mutations.createWorktree.error}
         defaultBranch={activeRepoModal?.repository.default_branch}

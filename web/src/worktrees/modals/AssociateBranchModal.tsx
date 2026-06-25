@@ -1,8 +1,10 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
+import { useQueryClient } from "@tanstack/react-query";
 import { Modal } from "@/shared/Modal";
 import { MutationErrorBanner } from "@/shared/MutationErrorBanner";
 import { CustomSelect } from "@/tasks/components/custom-select/CustomSelect";
 import { useGlobalLiveBranches } from "../hooks/useGlobalBranches";
+import { prefetchLiveBranches } from "../hooks/useGlobalGitPrefetch";
 import { gitDeleteErrorMessage } from "../gitDeleteErrors";
 
 type Props = {
@@ -22,6 +24,7 @@ export function AssociateBranchModal({
   onClose,
   onSubmit,
 }: Props) {
+  const queryClient = useQueryClient();
   const [selectedBranchName, setSelectedBranchName] = useState("");
   const [newBranchName, setNewBranchName] = useState("");
   const [createNew, setCreateNew] = useState(false);
@@ -31,13 +34,16 @@ export function AssociateBranchModal({
   });
   const liveBranches = liveBranchesQuery.data ?? [];
 
-  if (!open) return null;
+  useEffect(() => {
+    if (!open || repositoryId.trim() === "") return;
+    prefetchLiveBranches(queryClient, repositoryId);
+  }, [open, queryClient, repositoryId]);
 
   const errorMessage = error != null ? gitDeleteErrorMessage(error) : null;
-
   const branchOptions = liveBranches.map((b) => ({ value: b.name, label: b.name }));
-
   const canSubmit = createNew ? newBranchName.trim() !== "" : selectedBranchName !== "";
+
+  if (!open) return null;
 
   return (
     <Modal

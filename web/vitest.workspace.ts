@@ -16,7 +16,10 @@ const projectsIncludes = [
   "src/projects/ProjectListPage.test.tsx",
   "src/projects/ProjectDetailPage.test.tsx",
 ];
-const worktreesIncludes = ["src/worktrees/WorktreesPage.test.tsx"];
+const worktreesIncludes = [
+  "src/worktrees/WorktreesPage.test.tsx",
+  "src/worktrees/hooks/useGlobalGitPrefetch.test.ts",
+];
 
 const fullAppIncludes = [
   ...appIncludes,

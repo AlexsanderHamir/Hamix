@@ -284,8 +284,13 @@ export function WorkspaceDirPickerModal({
                     <li key={entry.path}>
                       <FolderRow
                         name={entry.name}
-                        sublabel={entry.is_git_repo ? "Git repository" : undefined}
-                        badge={entry.is_git_repo ? "Git" : undefined}
+                        gitRepoStatus={
+                          requireGitRepository
+                            ? entry.is_git_repo
+                            : entry.is_git_repo
+                              ? true
+                              : undefined
+                        }
                         disabled={listingPending}
                         onClick={() => void loadListing(entry.path)}
                       />
@@ -434,12 +439,13 @@ function PickerBreadcrumb({
 type FolderRowProps = {
   name: string;
   sublabel?: string;
-  badge?: string;
+  /** When set, shows git status before the chevron. */
+  gitRepoStatus?: boolean;
   disabled?: boolean;
   onClick: () => void;
 };
 
-function FolderRow({ name, sublabel, badge, disabled, onClick }: FolderRowProps) {
+function FolderRow({ name, sublabel, gitRepoStatus, disabled, onClick }: FolderRowProps) {
   return (
     <button
       type="button"
@@ -454,9 +460,27 @@ function FolderRow({ name, sublabel, badge, disabled, onClick }: FolderRowProps)
           <span className="workspace-picker-row-sub">{sublabel}</span>
         ) : null}
       </span>
-      {badge ? <span className="workspace-picker-badge">{badge}</span> : null}
+      {gitRepoStatus !== undefined ? (
+        <GitRepoStatusIcon isGitRepo={gitRepoStatus} />
+      ) : null}
       <ChevronIcon />
     </button>
+  );
+}
+
+function GitRepoStatusIcon({ isGitRepo }: { isGitRepo: boolean }) {
+  return (
+    <span
+      className={
+        isGitRepo
+          ? "workspace-picker-git-icon workspace-picker-git-icon--yes"
+          : "workspace-picker-git-icon workspace-picker-git-icon--no"
+      }
+      title={isGitRepo ? "Git repository" : "Not a git repository"}
+      aria-label={isGitRepo ? "Git repository" : "Not a git repository"}
+    >
+      {isGitRepo ? <GitRepoBadge /> : <NoGitRepoIcon />}
+    </span>
   );
 }
 
@@ -511,6 +535,32 @@ function BackIcon() {
         strokeWidth="1.6"
         strokeLinecap="round"
         strokeLinejoin="round"
+      />
+    </svg>
+  );
+}
+
+function GitRepoBadge() {
+  return <span className="workspace-picker-git-badge">git</span>;
+}
+
+function NoGitRepoIcon() {
+  return (
+    <svg viewBox="0 0 16 16" width="16" height="16" aria-hidden="true">
+      <circle
+        cx="8"
+        cy="8"
+        r="5.75"
+        fill="none"
+        stroke="currentColor"
+        strokeWidth="1.25"
+      />
+      <path
+        d="M5.25 5.25 10.75 10.75"
+        fill="none"
+        stroke="currentColor"
+        strokeWidth="1.25"
+        strokeLinecap="round"
       />
     </svg>
   );

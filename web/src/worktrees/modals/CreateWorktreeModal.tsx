@@ -5,12 +5,14 @@ import { MutationErrorBanner } from "@/shared/MutationErrorBanner";
 import { WorkspaceDirPickerModal } from "@/settings/WorkspaceDirPickerModal";
 import { prefetchWorkspacePickerShell } from "@/settings/hooks/useWorkspaceBrowse";
 import { usePrefetchOnIntent } from "@/app/hooks/usePrefetchOnIntent";
+import { prefetchRepositoryCardData } from "../hooks/useGlobalGitPrefetch";
 import { gitDeleteErrorMessage } from "../gitDeleteErrors";
 
 type Props = {
   open: boolean;
   pending: boolean;
   error: unknown;
+  repositoryId?: string;
   defaultBranch?: string;
   onClose: () => void;
   onSubmit: (input: {
@@ -25,6 +27,7 @@ export function CreateWorktreeModal({
   open,
   pending,
   error,
+  repositoryId = "",
   defaultBranch = "main",
   onClose,
   onSubmit,
@@ -37,14 +40,17 @@ export function CreateWorktreeModal({
   const [pickerOpen, setPickerOpen] = useState(false);
 
   const prefetchPickerShell = useCallback(() => {
-    void prefetchWorkspacePickerShell(queryClient);
+    prefetchWorkspacePickerShell(queryClient);
   }, [queryClient]);
   const browseIntent = usePrefetchOnIntent(prefetchPickerShell);
 
   useEffect(() => {
     if (!open) return;
     prefetchPickerShell();
-  }, [open, prefetchPickerShell]);
+    if (repositoryId.trim() !== "") {
+      prefetchRepositoryCardData(queryClient, repositoryId);
+    }
+  }, [open, prefetchPickerShell, queryClient, repositoryId]);
 
   if (!open) return null;
 

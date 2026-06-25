@@ -1,9 +1,14 @@
 import type { GitBranch, GitWorktree } from "@/types/git";
+import { useQueryClient } from "@tanstack/react-query";
+import { useCallback } from "react";
+import { usePrefetchOnIntent } from "@/app/hooks/usePrefetchOnIntent";
 import { useWorktreeBranchAssociations } from "../hooks/useWorktreeBranchAssociations";
+import { prefetchLiveBranches } from "../hooks/useGlobalGitPrefetch";
 import { BranchPill } from "./BranchPill";
 
 type Props = {
   worktree: GitWorktree;
+  repositoryId: string;
   branches: GitBranch[];
   onDelete: () => void;
   deleteDisabled?: boolean;
@@ -13,12 +18,19 @@ type Props = {
 
 export function WorktreeRow({
   worktree,
+  repositoryId,
   branches,
   onDelete,
   deleteDisabled = false,
   onAssociateBranch,
   onDeleteAssociation,
 }: Props) {
+  const queryClient = useQueryClient();
+  const prefetchAssociateBranch = useCallback(() => {
+    prefetchLiveBranches(queryClient, repositoryId);
+  }, [queryClient, repositoryId]);
+  const associateIntent = usePrefetchOnIntent(prefetchAssociateBranch);
+
   const displayName = worktree.name.trim() || worktree.path;
   const hostHint = worktree.path;
 
@@ -70,6 +82,7 @@ export function WorktreeRow({
           <button
             type="button"
             className="secondary worktrees-row__add-branch"
+            {...associateIntent}
             onClick={onAssociateBranch}
           >
             Associate branch

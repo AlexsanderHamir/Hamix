@@ -72,7 +72,7 @@ import { NotFoundPage } from "./NotFoundPage";
 import { RouteAnnouncer } from "./RouteAnnouncer";
 import { RoutedMainOutlet } from "./RoutedMainOutlet";
 import { useBootstrap } from "./hooks/useBootstrap";
-import { useSettingsRoutePrefetch } from "./hooks/usePrefetchOnIntent";
+import { useSettingsRoutePrefetch, useRouteChunkPrefetch, useWorktreesRoutePrefetch } from "./hooks/usePrefetchOnIntent";
 import "./App.css";
 
 function AppShell() {
@@ -89,6 +89,10 @@ function AppShell() {
   // Settings chunk is small but the icon is the most prominent
   // header affordance; prefetching on hover is a free win.
   const settingsIntent = useSettingsRoutePrefetch();
+  const worktreesIntent = useWorktreesRoutePrefetch();
+  const projectsIntent = useRouteChunkPrefetch(() =>
+    import("@/projects/ProjectListPage").then((m) => ({ default: m.ProjectListPage })),
+  );
 
   return (
     <ModalStackProvider>
@@ -136,6 +140,8 @@ function AppShell() {
               <Link
                 to="/worktrees"
                 className="app-nav__link"
+                onPointerEnter={worktreesIntent.onPointerEnter}
+                onFocus={worktreesIntent.onFocus}
                 {...(worktreesIsCurrent
                   ? { "aria-current": "page" as const }
                   : {})}
@@ -155,6 +161,8 @@ function AppShell() {
                 <Link
                   to="/projects"
                   className="app-nav__link"
+                  onPointerEnter={projectsIntent.onPointerEnter}
+                  onFocus={projectsIntent.onFocus}
                   {...(projectsIsCurrent
                     ? { "aria-current": "page" as const }
                     : {})}

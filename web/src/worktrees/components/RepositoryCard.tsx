@@ -93,6 +93,7 @@ export function RepositoryCard({
               <WorktreeRow
                 key={worktree.id}
                 worktree={worktree}
+                repositoryId={repository.id}
                 branches={branches}
                 onDelete={() =>
                   onDeleteWorktree(

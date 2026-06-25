@@ -1,9 +1,12 @@
 import type { QueryClient } from "@tanstack/react-query";
 import { useQueryClient } from "@tanstack/react-query";
 import { useCallback, useMemo, useRef } from "react";
-import { taskQueryKeys } from "@/tasks/task-query";
+import { fetchRepoCommitDiff, repoQueryKeys } from "@/api/repo";
+import { prefetchWorktreesRoute } from "@/worktrees/hooks/useGlobalGitPrefetch";
+import { taskQueryKeys, settingsQueryKeys } from "@/tasks/task-query";
 import { QUERY_POLICY } from "@/tasks/queryPolicy";
 import { projectQueryKeys } from "@/projects/queryKeys";
+import { createModalCursorModelsQueryOptions } from "@/tasks/components/task-create-modal/hooks/useCreateModalCursorModels";
 
 /**
  * "Intent" event handlers fired on the kinds of events that signal a
@@ -114,6 +117,55 @@ export function useSettingsRoutePrefetch(): IntentHandlers {
   return usePrefetchOnIntent(() => {
     void import("@/settings/SettingsPage");
   });
+}
+
+export function useWorktreesRoutePrefetch(): IntentHandlers {
+  const queryClient = useQueryClient();
+  return usePrefetchOnIntent(() => {
+    prefetchWorktreesRoute(queryClient);
+  });
+}
+
+export function useRouteChunkPrefetch(importFn: () => Promise<unknown>): IntentHandlers {
+  return usePrefetchOnIntent(() => {
+    void importFn();
+  });
+}
+
+export function prefetchCommitDiff(queryClient: QueryClient, sha: string): void {
+  if (!sha.trim()) return;
+  void import("@/tasks/pages/TaskCommitDiffPage");
+  void queryClient.prefetchQuery({
+    queryKey: repoQueryKeys.diff(sha),
+    queryFn: ({ signal }) => fetchRepoCommitDiff(sha, { signal }),
+    staleTime: Number.POSITIVE_INFINITY,
+  });
+}
+
+export function prefetchCreateModalModels(queryClient: QueryClient): void {
+  const settings = queryClient.getQueryData<{ cursor_bin?: string }>(
+    settingsQueryKeys.app(),
+  );
+  const cursorBinKey = (settings?.cursor_bin ?? "").trim();
+  void queryClient.prefetchQuery(
+    createModalCursorModelsQueryOptions("cursor", cursorBinKey),
+  );
+}
+
+export function useCommitDiffPrefetcher(): (sha: string) => void {
+  const queryClient = useQueryClient();
+  return useCallback(
+    (sha: string) => prefetchCommitDiff(queryClient, sha),
+    [queryClient],
+  );
+}
+
+export function useCreateModalModelsPrefetcher(): () => void {
+  const queryClient = useQueryClient();
+  return useCallback(
+    () => prefetchCreateModalModels(queryClient),
+    [queryClient],
+  );
 }
 
 /**

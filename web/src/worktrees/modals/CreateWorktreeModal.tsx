@@ -1,7 +1,10 @@
-import { useState } from "react";
+import { useCallback, useEffect, useState } from "react";
+import { useQueryClient } from "@tanstack/react-query";
 import { Modal } from "@/shared/Modal";
 import { MutationErrorBanner } from "@/shared/MutationErrorBanner";
 import { WorkspaceDirPickerModal } from "@/settings/WorkspaceDirPickerModal";
+import { prefetchWorkspacePickerShell } from "@/settings/hooks/useWorkspaceBrowse";
+import { usePrefetchOnIntent } from "@/app/hooks/usePrefetchOnIntent";
 import { gitDeleteErrorMessage } from "../gitDeleteErrors";
 
 type Props = {
@@ -26,11 +29,22 @@ export function CreateWorktreeModal({
   onClose,
   onSubmit,
 }: Props) {
+  const queryClient = useQueryClient();
   const [path, setPath] = useState("");
   const [name, setName] = useState("");
   const [branch, setBranch] = useState(defaultBranch);
   const [createBranch, setCreateBranch] = useState(false);
   const [pickerOpen, setPickerOpen] = useState(false);
+
+  const prefetchPickerShell = useCallback(() => {
+    void prefetchWorkspacePickerShell(queryClient);
+  }, [queryClient]);
+  const browseIntent = usePrefetchOnIntent(prefetchPickerShell);
+
+  useEffect(() => {
+    if (!open) return;
+    prefetchPickerShell();
+  }, [open, prefetchPickerShell]);
 
   if (!open) return null;
 
@@ -66,6 +80,7 @@ export function CreateWorktreeModal({
               type="button"
               className="secondary"
               disabled={pending}
+              {...browseIntent}
               onClick={() => setPickerOpen(true)}
             >
               Choose worktree path

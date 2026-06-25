@@ -1,11 +1,14 @@
 import { Fragment, useCallback, useEffect, useMemo, useState } from "react";
+import { useQueryClient } from "@tanstack/react-query";
 import { Modal } from "@/shared/Modal";
 import {
-  browseWorkspaceDirs,
-  fetchWorkspaceRoots,
   type BrowseDirEntry,
   type WorkspaceBrowseRoot,
 } from "@/api/settingsBrowse";
+import {
+  browseDirsQueryOptions,
+  useWorkspaceRoots,
+} from "./hooks/useWorkspaceBrowse";
 import "./workspace-picker.css";
 
 type Props = {
@@ -100,7 +103,6 @@ export function WorkspaceDirPickerModal({
     (requireGitRepository
       ? "Navigate to a git repository checkout. Hamix needs a .git folder at the path you register."
       : "Open a folder to browse inside it. Confirm the folder you’re in to register it.");
-  const [loadState, setLoadState] = useState<LoadState>({ kind: "idle" });
   const [entries, setEntries] = useState<BrowseDirEntry[]>([]);
   const [currentBrowsePath, setCurrentBrowsePath] = useState("");
   const [parentPath, setParentPath] = useState("");
@@ -108,54 +110,59 @@ export function WorkspaceDirPickerModal({
   const [listingError, setListingError] = useState<string | null>(null);
   const [listingPending, setListingPending] = useState(false);
 
+  const queryClient = useQueryClient();
+  const rootsQuery = useWorkspaceRoots({ enabled: open });
+
   const atRoots = currentBrowsePath.trim() === "";
 
-  const loadListing = useCallback(async (path: string) => {
-    setListingPending(true);
-    setListingError(null);
-    try {
-      const listing = await browseWorkspaceDirs(path);
-      setEntries(listing.entries);
-      setCurrentBrowsePath(listing.path ?? path);
-      setParentPath(listing.parent_path ?? "");
-      setCurrentPathIsGitRepo(listing.is_git_repo === true);
-    } catch (err) {
-      setListingError(err instanceof Error ? err.message : "Could not list folders");
-      setEntries([]);
-    } finally {
-      setListingPending(false);
-    }
-  }, []);
+  const loadListing = useCallback(
+    async (path: string) => {
+      setListingPending(true);
+      setListingError(null);
+      try {
+        const listing = await queryClient.fetchQuery(browseDirsQueryOptions(path));
+        setEntries(listing.entries);
+        setCurrentBrowsePath(listing.path ?? path);
+        setParentPath(listing.parent_path ?? "");
+        setCurrentPathIsGitRepo(listing.is_git_repo === true);
+      } catch (err) {
+        setListingError(err instanceof Error ? err.message : "Could not list folders");
+        setEntries([]);
+      } finally {
+        setListingPending(false);
+      }
+    },
+    [queryClient],
+  );
 
   useEffect(() => {
     if (!open) return;
-    let cancelled = false;
-    setLoadState({ kind: "loading" });
     setEntries([]);
     setCurrentBrowsePath("");
     setParentPath("");
     setCurrentPathIsGitRepo(false);
     setListingError(null);
-    void fetchWorkspaceRoots()
-      .then((roots) => {
-        if (cancelled) return;
-        setLoadState({
-          kind: "ready",
-          roots: roots.roots,
-          environment: roots.environment,
-        });
-      })
-      .catch((err) => {
-        if (cancelled) return;
-        setLoadState({
-          kind: "error",
-          message: err instanceof Error ? err.message : "Could not load locations",
-        });
-      });
-    return () => {
-      cancelled = true;
-    };
   }, [open]);
+
+  const loadState: LoadState = useMemo(() => {
+    if (!open) return { kind: "idle" };
+    if (rootsQuery.isPending) return { kind: "loading" };
+    if (rootsQuery.isError) {
+      const err = rootsQuery.error;
+      return {
+        kind: "error",
+        message: err instanceof Error ? err.message : "Could not load locations",
+      };
+    }
+    if (rootsQuery.data) {
+      return {
+        kind: "ready",
+        roots: rootsQuery.data.roots,
+        environment: rootsQuery.data.environment,
+      };
+    }
+    return { kind: "idle" };
+  }, [open, rootsQuery.isPending, rootsQuery.isError, rootsQuery.error, rootsQuery.data]);
 
   const crumbs = useMemo(() => {
     if (loadState.kind !== "ready") return [];

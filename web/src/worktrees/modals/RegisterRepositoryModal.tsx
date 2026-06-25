@@ -1,8 +1,11 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useState, useCallback } from "react";
+import { useQueryClient } from "@tanstack/react-query";
 import { Button } from "@/components/ui";
 import { Modal } from "@/shared/Modal";
 import { MutationErrorBanner } from "@/shared/MutationErrorBanner";
 import { WorkspaceDirPickerModal } from "@/settings/WorkspaceDirPickerModal";
+import { prefetchWorkspacePickerShell } from "@/settings/hooks/useWorkspaceBrowse";
+import { usePrefetchOnIntent } from "@/app/hooks/usePrefetchOnIntent";
 import { CustomSelect } from "@/tasks/components/custom-select/CustomSelect";
 import { useGitRepositoryProbe } from "../hooks/useGitRepositoryProbe";
 import { gitDeleteErrorMessage } from "../gitDeleteErrors";
@@ -22,9 +25,20 @@ export function RegisterRepositoryModal({
   onClose,
   onSubmit,
 }: Props) {
+  const queryClient = useQueryClient();
   const [path, setPath] = useState("");
   const [defaultBranch, setDefaultBranch] = useState("");
   const [pickerOpen, setPickerOpen] = useState(false);
+
+  const prefetchPickerShell = useCallback(() => {
+    void prefetchWorkspacePickerShell(queryClient);
+  }, [queryClient]);
+  const browseIntent = usePrefetchOnIntent(prefetchPickerShell);
+
+  useEffect(() => {
+    if (!open) return;
+    prefetchPickerShell();
+  }, [open, prefetchPickerShell]);
 
   const trimmedPath = path.trim();
   const hasPath = trimmedPath !== "";
@@ -146,6 +160,7 @@ export function RegisterRepositoryModal({
                 variant="secondary"
                 className="worktrees-form-modal__browse-btn"
                 disabled={pending}
+                {...browseIntent}
                 onClick={() => setPickerOpen(true)}
               >
                 {hasPath ? "Change" : "Choose folder"}

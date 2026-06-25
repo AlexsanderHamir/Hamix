@@ -1,7 +1,19 @@
+import type { ReactElement } from "react";
 import { render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
+import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { describe, expect, it, vi } from "vitest";
 import { WorkspaceDirPickerModal } from "./WorkspaceDirPickerModal";
+import { settingsQueryKeys } from "./queryKeys";
+
+function renderPicker(ui: ReactElement) {
+  const queryClient = new QueryClient({
+    defaultOptions: { queries: { retry: false } },
+  });
+  return render(
+    <QueryClientProvider client={queryClient}>{ui}</QueryClientProvider>,
+  );
+}
 
 function jsonResponse(body: unknown): Response {
   return new Response(JSON.stringify(body), {
@@ -70,7 +82,7 @@ describe("WorkspaceDirPickerModal", () => {
       return new Response("not found", { status: 404 });
     });
 
-    render(
+    renderPicker(
       <WorkspaceDirPickerModal
         open
         currentPath=""
@@ -113,7 +125,7 @@ describe("WorkspaceDirPickerModal", () => {
       return new Response("not found", { status: 404 });
     });
 
-    render(
+    renderPicker(
       <WorkspaceDirPickerModal
         open
         currentPath=""
@@ -157,7 +169,7 @@ describe("WorkspaceDirPickerModal", () => {
       return new Response("not found", { status: 404 });
     });
 
-    render(
+    renderPicker(
       <WorkspaceDirPickerModal
         open
         currentPath=""
@@ -194,7 +206,7 @@ describe("WorkspaceDirPickerModal", () => {
       return new Response("not found", { status: 404 });
     });
 
-    render(
+    renderPicker(
       <WorkspaceDirPickerModal
         open
         currentPath=""
@@ -220,7 +232,7 @@ describe("WorkspaceDirPickerModal", () => {
       return new Response("not found", { status: 404 });
     });
 
-    render(
+    renderPicker(
       <WorkspaceDirPickerModal
         open
         currentPath=""
@@ -256,7 +268,7 @@ describe("WorkspaceDirPickerModal", () => {
       return new Response("not found", { status: 404 });
     });
 
-    render(
+    renderPicker(
       <WorkspaceDirPickerModal
         open
         requireGitRepository
@@ -299,7 +311,7 @@ describe("WorkspaceDirPickerModal", () => {
       return new Response("not found", { status: 404 });
     });
 
-    render(
+    renderPicker(
       <WorkspaceDirPickerModal
         open
         requireGitRepository
@@ -355,7 +367,7 @@ describe("WorkspaceDirPickerModal", () => {
       return new Response("not found", { status: 404 });
     });
 
-    render(
+    renderPicker(
       <WorkspaceDirPickerModal
         open
         requireGitRepository
@@ -369,6 +381,41 @@ describe("WorkspaceDirPickerModal", () => {
 
     expect(await screen.findByLabelText("Git repository")).toBeInTheDocument();
     expect(screen.getByLabelText("Not a git repository")).toBeInTheDocument();
+    fetchMock.mockRestore();
+  });
+
+  it("shows roots immediately when workspace-roots is already cached", async () => {
+    const queryClient = new QueryClient({
+      defaultOptions: { queries: { retry: false } },
+    });
+    queryClient.setQueryData(settingsQueryKeys.workspaceRoots(), {
+      environment: "native" as const,
+      roots: [
+        {
+          id: "home",
+          path: "/roots",
+          label: "Home",
+          category: "home",
+          available: true,
+        },
+      ],
+    });
+    const fetchMock = vi.spyOn(globalThis, "fetch");
+
+    render(
+      <QueryClientProvider client={queryClient}>
+        <WorkspaceDirPickerModal
+          open
+          currentPath=""
+          onClose={() => {}}
+          onSelect={() => {}}
+        />
+      </QueryClientProvider>,
+    );
+
+    expect(screen.getByRole("button", { name: /Home/ })).toBeInTheDocument();
+    expect(screen.queryByText(/Loading locations/)).not.toBeInTheDocument();
+    expect(fetchMock).not.toHaveBeenCalled();
     fetchMock.mockRestore();
   });
 });

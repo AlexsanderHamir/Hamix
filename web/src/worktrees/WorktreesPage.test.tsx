@@ -101,16 +101,21 @@ describe("WorktreesPage", () => {
   });
 
   it("renders register repository modal when open", () => {
+    const client = new QueryClient({
+      defaultOptions: { queries: { retry: false, gcTime: 0 } },
+    });
     render(
-      <ModalStackProvider>
-        <RegisterRepositoryModal
-          open
-          pending={false}
-          error={null}
-          onClose={() => {}}
-          onSubmit={() => {}}
-        />
-      </ModalStackProvider>,
+      <QueryClientProvider client={client}>
+        <ModalStackProvider>
+          <RegisterRepositoryModal
+            open
+            pending={false}
+            error={null}
+            onClose={() => {}}
+            onSubmit={() => {}}
+          />
+        </ModalStackProvider>
+      </QueryClientProvider>,
     );
     expect(screen.getByRole("button", { name: /Choose folder/i })).toBeInTheDocument();
   });

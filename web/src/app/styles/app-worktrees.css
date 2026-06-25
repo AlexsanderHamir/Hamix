@@ -290,6 +290,20 @@
   align-self: flex-start;
 }
 
+.worktrees-form-modal__git-status {
+  margin: 0;
+  font-size: var(--text-sm);
+  line-height: 1.45;
+}
+
+.worktrees-form-modal__git-status--ok {
+  color: var(--success);
+}
+
+.worktrees-form-modal__git-status--missing {
+  color: var(--danger);
+}
+
 .worktrees-form-modal__selected {
   margin: 0;
   padding: var(--space-3) var(--space-4);

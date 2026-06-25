@@ -1,8 +1,10 @@
-import { useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { Button } from "@/components/ui";
 import { Modal } from "@/shared/Modal";
 import { MutationErrorBanner } from "@/shared/MutationErrorBanner";
 import { WorkspaceDirPickerModal } from "@/settings/WorkspaceDirPickerModal";
+import { CustomSelect } from "@/tasks/components/custom-select/CustomSelect";
+import { useGitRepositoryProbe } from "../hooks/useGitRepositoryProbe";
 import { gitDeleteErrorMessage } from "../gitDeleteErrors";
 
 type Props = {
@@ -21,14 +23,60 @@ export function RegisterRepositoryModal({
   onSubmit,
 }: Props) {
   const [path, setPath] = useState("");
-  const [defaultBranch, setDefaultBranch] = useState("main");
+  const [defaultBranch, setDefaultBranch] = useState("");
   const [pickerOpen, setPickerOpen] = useState(false);
+
+  const trimmedPath = path.trim();
+  const hasPath = trimmedPath !== "";
+
+  const probeQuery = useGitRepositoryProbe(trimmedPath, {
+    enabled: open && hasPath,
+  });
+  const probe = probeQuery.data;
+  const isGitRepo = probe?.is_git_repository === true;
+  const branches = probe?.branches ?? [];
+
+  const branchOptions = useMemo(
+    () =>
+      branches.map((b) => ({
+        value: b.name,
+        label:
+          b.name === probe?.current_branch ? `${b.name} (checked out)` : b.name,
+      })),
+    [branches, probe?.current_branch],
+  );
+
+  useEffect(() => {
+    if (!open) {
+      setPath("");
+      setDefaultBranch("");
+      setPickerOpen(false);
+      return;
+    }
+    if (!hasPath) {
+      setDefaultBranch("");
+      return;
+    }
+    if (!isGitRepo || branches.length === 0) {
+      setDefaultBranch("");
+      return;
+    }
+    const preferred =
+      probe?.current_branch &&
+      branches.some((b) => b.name === probe.current_branch)
+        ? probe.current_branch
+        : branches[0]?.name ?? "";
+    setDefaultBranch((prev) =>
+      prev !== "" && branches.some((b) => b.name === prev) ? prev : preferred,
+    );
+  }, [open, hasPath, isGitRepo, branches, probe?.current_branch]);
 
   if (!open) return null;
 
   const errorMessage = error != null ? gitDeleteErrorMessage(error) : null;
-  const trimmedPath = path.trim();
-  const hasPath = trimmedPath !== "";
+  const branchesLoading = hasPath && (probeQuery.isLoading || probeQuery.isFetching);
+  const canRegister =
+    hasPath && isGitRepo && defaultBranch.trim() !== "" && !branchesLoading && !pending;
 
   return (
     <>
@@ -43,17 +91,17 @@ export function RegisterRepositoryModal({
           className="panel modal-sheet worktrees-form-modal"
           onSubmit={(e) => {
             e.preventDefault();
-            if (!hasPath) return;
+            if (!canRegister) return;
             onSubmit({
               path: trimmedPath,
-              default_branch: defaultBranch.trim() || undefined,
+              default_branch: defaultBranch.trim(),
             });
           }}
         >
           <header className="worktrees-form-modal__header">
             <h2 id="register-repo-title">Register repository</h2>
             <p id="register-repo-lead" className="worktrees-form-modal__lead">
-              Choose the main checkout path for this project. Hamix registers worktrees and
+              Choose a folder that contains a git checkout. Hamix registers worktrees and
               branches under it.
             </p>
           </header>
@@ -70,6 +118,20 @@ export function RegisterRepositoryModal({
             >
               {hasPath ? trimmedPath : "No folder selected yet"}
             </p>
+            {hasPath && probeQuery.isSuccess ? (
+              <p
+                className={
+                  isGitRepo
+                    ? "worktrees-form-modal__git-status worktrees-form-modal__git-status--ok"
+                    : "worktrees-form-modal__git-status worktrees-form-modal__git-status--missing"
+                }
+                role="status"
+              >
+                {isGitRepo
+                  ? "Git repository detected"
+                  : "This path is not a git checkout — choose a folder with a .git directory"}
+              </p>
+            ) : null}
             <Button
               type="button"
               variant="secondary"
@@ -81,17 +143,33 @@ export function RegisterRepositoryModal({
             </Button>
           </div>
 
-          <label className="field">
-            <span className="settings-field-label">Default branch</span>
-            <input
-              type="text"
-              value={defaultBranch}
-              disabled={pending}
-              onChange={(e) => setDefaultBranch(e.target.value)}
-              spellCheck={false}
-              autoComplete="off"
-            />
-          </label>
+          {hasPath && isGitRepo ? (
+            <>
+              {branchesLoading ? (
+                <p className="settings-field-help" role="status">
+                  Loading branches…
+                </p>
+              ) : branches.length === 0 ? (
+                <p className="settings-field-help" role="status">
+                  No branches found in this repository.
+                </p>
+              ) : (
+                <CustomSelect
+                  id="register-repo-default-branch"
+                  label="Default branch"
+                  value={defaultBranch}
+                  options={branchOptions}
+                  disabled={pending}
+                  requirement="required"
+                  onChange={setDefaultBranch}
+                />
+              )}
+              <p className="settings-field-help">
+                Pick an existing branch from this checkout. Hamix stores it as the repository
+                default — registration does not create a new branch.
+              </p>
+            </>
+          ) : null}
 
           {errorMessage ? (
             <MutationErrorBanner error={errorMessage} className="worktrees-form-modal__error" />
@@ -101,7 +179,7 @@ export function RegisterRepositoryModal({
             <Button type="button" variant="secondary" disabled={pending} onClick={onClose}>
               Cancel
             </Button>
-            <Button type="submit" variant="primary" loading={pending} disabled={!hasPath}>
+            <Button type="submit" variant="primary" loading={pending} disabled={!canRegister}>
               Register
             </Button>
           </div>
@@ -110,6 +188,7 @@ export function RegisterRepositoryModal({
       <WorkspaceDirPickerModal
         open={pickerOpen}
         nested
+        requireGitRepository
         currentPath={path}
         onClose={() => setPickerOpen(false)}
         onSelect={(next) => {

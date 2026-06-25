@@ -36,6 +36,8 @@ export type BrowseDirEntry = {
 export type BrowseDirsResponse = {
   path?: string;
   parent_path?: string;
+  /** True when the listed path itself is a git checkout root. */
+  is_git_repo?: boolean;
   entries: BrowseDirEntry[];
 };
 
@@ -123,6 +125,7 @@ export function parseBrowseDirsResponse(raw: unknown): BrowseDirsResponse {
     path: typeof value.path === "string" ? value.path : undefined,
     parent_path:
       typeof value.parent_path === "string" ? value.parent_path : undefined,
+    is_git_repo: value.is_git_repo === true,
     entries: entriesRaw.map(parseBrowseDirEntry),
   };
 }

@@ -12,6 +12,7 @@ import (
 
 	"github.com/AlexsanderHamir/Hamix/pkgs/gitwork"
 	"github.com/AlexsanderHamir/Hamix/pkgs/tasks/domain"
+	"github.com/AlexsanderHamir/Hamix/pkgs/tasks/store/internal/kernel"
 	"github.com/google/uuid"
 	"gorm.io/gorm"
 )
@@ -102,7 +103,7 @@ func (s *Store) CreateGitWorktree(ctx context.Context, projectID, repoID string,
 	}
 	err = s.db.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
 		if err := tx.Create(&row).Error; err != nil {
-			if isDuplicateKey(err) {
+			if kernel.IsDuplicateKey(err) {
 				return domain.NewGitErr(domain.GitCodePathExists, "worktree path already registered")
 			}
 			return err

@@ -10,6 +10,7 @@ import (
 	"time"
 
 	"github.com/AlexsanderHamir/Hamix/pkgs/tasks/domain"
+	"github.com/AlexsanderHamir/Hamix/pkgs/tasks/store/internal/kernel"
 	"github.com/google/uuid"
 	"gorm.io/gorm"
 )
@@ -79,7 +80,7 @@ func (s *Store) AssociateWorktreeBranch(ctx context.Context, input AssociateWork
 		CreatedAt:  now,
 	}
 	if err := s.db.WithContext(ctx).Create(&row).Error; err != nil {
-		if isDuplicateKey(err) {
+		if kernel.IsDuplicateKey(err) {
 			var existing domain.WorktreeBranch
 			if findErr := s.db.WithContext(ctx).
 				Where("worktree_id = ? AND branch_id = ?", wt.ID, br.ID).

@@ -12,6 +12,7 @@ import (
 
 	"github.com/AlexsanderHamir/Hamix/pkgs/gitwork"
 	"github.com/AlexsanderHamir/Hamix/pkgs/tasks/domain"
+	"github.com/AlexsanderHamir/Hamix/pkgs/tasks/store/internal/kernel"
 	"github.com/google/uuid"
 	"gorm.io/gorm"
 )
@@ -68,7 +69,7 @@ func (s *Store) CreateGlobalGitRepository(ctx context.Context, input CreateGitRe
 	}
 	return repo, s.db.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
 		if err := tx.Create(&repo).Error; err != nil {
-			if isDuplicateKey(err) {
+			if kernel.IsDuplicateKey(err) {
 				return domain.NewGitErr(domain.GitCodeDuplicate, "repository already registered for this path")
 			}
 			return err
@@ -178,7 +179,7 @@ func (s *Store) RegisterExistingGitWorktree(ctx context.Context, repoID string, 
 		CreatedAt:    now,
 	}
 	if err := s.db.WithContext(ctx).Create(&row).Error; err != nil {
-		if isDuplicateKey(err) {
+		if kernel.IsDuplicateKey(err) {
 			return domain.GitWorktree{}, domain.NewGitErr(domain.GitCodePathExists, "worktree path already registered")
 		}
 		return domain.GitWorktree{}, fmt.Errorf("register git worktree: %w", err)
@@ -274,7 +275,7 @@ func (s *Store) CreateGitBranchForRepo(ctx context.Context, repoID string, input
 		CreatedAt:    time.Now().UTC(),
 	}
 	if err := s.db.WithContext(ctx).Create(&row).Error; err != nil {
-		if isDuplicateKey(err) {
+		if kernel.IsDuplicateKey(err) {
 			return domain.GitBranch{}, domain.NewGitErr(domain.GitCodeBranchExists, "branch already exists")
 		}
 		return domain.GitBranch{}, fmt.Errorf("create git branch row: %w", err)
@@ -340,7 +341,7 @@ func (s *Store) createGitWorktreeOnRepo(ctx context.Context, repo domain.GitRepo
 	}
 	err = s.db.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
 		if err := tx.Create(&row).Error; err != nil {
-			if isDuplicateKey(err) {
+			if kernel.IsDuplicateKey(err) {
 				return domain.NewGitErr(domain.GitCodePathExists, "worktree path already registered")
 			}
 			return err

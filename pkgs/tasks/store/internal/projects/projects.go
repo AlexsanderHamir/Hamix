@@ -13,7 +13,6 @@ import (
 
 	"github.com/AlexsanderHamir/Hamix/pkgs/tasks/domain"
 	"github.com/AlexsanderHamir/Hamix/pkgs/tasks/store/internal/kernel"
-	"github.com/google/uuid"
 	"gorm.io/datatypes"
 	"gorm.io/gorm"
 	"gorm.io/gorm/clause"
@@ -71,10 +70,7 @@ type CreateSnapshotInput struct {
 func CreateProject(ctx context.Context, db *gorm.DB, input CreateProjectInput) (domain.Project, error) {
 	defer kernel.DeferLatency(kernel.OpCreateProject)()
 	slog.Debug("trace", "cmd", calltrace.LogCmd, "operation", "tasks.store.projects.CreateProject")
-	id := strings.TrimSpace(input.ID)
-	if id == "" {
-		id = uuid.NewString()
-	}
+	id := kernel.ResolveID(input.ID)
 	name := strings.TrimSpace(input.Name)
 	if name == "" {
 		return domain.Project{}, fmt.Errorf("%w: project name required", domain.ErrInvalidInput)
@@ -98,7 +94,7 @@ func CreateProject(ctx context.Context, db *gorm.DB, input CreateProjectInput) (
 		UpdatedAt:      now,
 	}
 	if err := db.WithContext(ctx).Create(&row).Error; err != nil {
-		return domain.Project{}, mapWriteError(err)
+		return domain.Project{}, kernel.MapWriteError(err, "duplicate project row")
 	}
 	return row, nil
 }
@@ -162,7 +158,7 @@ func UpdateProject(ctx context.Context, db *gorm.DB, id string, input UpdateProj
 		applyProjectPatch(&row, input)
 		row.UpdatedAt = time.Now().UTC()
 		if err := tx.Save(&row).Error; err != nil {
-			return mapWriteError(err)
+			return kernel.MapWriteError(err, "duplicate project row")
 		}
 		out = row
 		return nil
@@ -187,7 +183,7 @@ func DeleteProject(ctx context.Context, db *gorm.DB, id string) error {
 	}
 	res := db.WithContext(ctx).Delete(&domain.Project{}, "id = ?", id)
 	if res.Error != nil {
-		return mapWriteError(res.Error)
+		return kernel.MapWriteError(res.Error, "duplicate project row")
 	}
 	if res.RowsAffected == 0 {
 		return domain.ErrNotFound
@@ -203,10 +199,7 @@ func CreateContext(ctx context.Context, db *gorm.DB, projectID string, input Cre
 	if projectID == "" {
 		return domain.ProjectContextItem{}, fmt.Errorf("%w: project id required", domain.ErrInvalidInput)
 	}
-	id := strings.TrimSpace(input.ID)
-	if id == "" {
-		id = uuid.NewString()
-	}
+	id := kernel.ResolveID(input.ID)
 	kind := domain.ProjectContextKind(strings.TrimSpace(string(input.Kind)))
 	if kind == "" {
 		kind = domain.ProjectContextKindNote
@@ -243,7 +236,7 @@ func CreateContext(ctx context.Context, db *gorm.DB, projectID string, input Cre
 		UpdatedAt:     now,
 	}
 	if err := db.WithContext(ctx).Create(&row).Error; err != nil {
-		return domain.ProjectContextItem{}, mapWriteError(err)
+		return domain.ProjectContextItem{}, kernel.MapWriteError(err, "duplicate project row")
 	}
 	return row, nil
 }
@@ -324,7 +317,7 @@ func UpdateContext(ctx context.Context, db *gorm.DB, projectID, itemID string, i
 		applyContextPatch(&row, input)
 		row.UpdatedAt = time.Now().UTC()
 		if err := tx.Save(&row).Error; err != nil {
-			return mapWriteError(err)
+			return kernel.MapWriteError(err, "duplicate project row")
 		}
 		out = row
 		return nil
@@ -346,11 +339,11 @@ func DeleteContext(ctx context.Context, db *gorm.DB, projectID, itemID string) e
 	}
 	return db.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
 		if err := tx.Where("project_id = ? AND (source_context_id = ? OR target_context_id = ?)", projectID, itemID, itemID).Delete(&domain.ProjectContextEdge{}).Error; err != nil {
-			return mapWriteError(err)
+			return kernel.MapWriteError(err, "duplicate project row")
 		}
 		res := tx.Where("id = ? AND project_id = ?", itemID, projectID).Delete(&domain.ProjectContextItem{})
 		if res.Error != nil {
-			return mapWriteError(res.Error)
+			return kernel.MapWriteError(res.Error, "duplicate project row")
 		}
 		if res.RowsAffected == 0 {
 			return domain.ErrNotFound
@@ -363,10 +356,7 @@ func DeleteContext(ctx context.Context, db *gorm.DB, projectID, itemID string) e
 func CreateSnapshot(ctx context.Context, db *gorm.DB, input CreateSnapshotInput) (domain.TaskContextSnapshot, error) {
 	defer kernel.DeferLatency(kernel.OpCreateContextSnapshot)()
 	slog.Debug("trace", "cmd", calltrace.LogCmd, "operation", "tasks.store.projects.CreateSnapshot")
-	id := strings.TrimSpace(input.ID)
-	if id == "" {
-		id = uuid.NewString()
-	}
+	id := kernel.ResolveID(input.ID)
 	if strings.TrimSpace(input.TaskID) == "" || strings.TrimSpace(input.CycleID) == "" || strings.TrimSpace(input.ProjectID) == "" {
 		return domain.TaskContextSnapshot{}, fmt.Errorf("%w: task_id, cycle_id, and project_id required", domain.ErrInvalidInput)
 	}
@@ -388,7 +378,7 @@ func CreateSnapshot(ctx context.Context, db *gorm.DB, input CreateSnapshotInput)
 		CreatedAt:       time.Now().UTC(),
 	}
 	if err := db.WithContext(ctx).Create(&row).Error; err != nil {
-		return domain.TaskContextSnapshot{}, mapWriteError(err)
+		return domain.TaskContextSnapshot{}, kernel.MapWriteError(err, "duplicate project row")
 	}
 	return row, nil
 }
@@ -507,19 +497,4 @@ func trimOptional(value *string) *string {
 		return nil
 	}
 	return &trimmed
-}
-
-//funclogmeasure:skip category=hot-path reason="Pure helper without I/O; operation trace is emitted by the calling chokepoint."
-func mapWriteError(err error) error {
-	if err == nil {
-		return nil
-	}
-	msg := strings.ToLower(err.Error())
-	if strings.Contains(msg, "duplicate") || strings.Contains(msg, "unique constraint") {
-		return fmt.Errorf("%w: duplicate project row", domain.ErrConflict)
-	}
-	if strings.Contains(msg, "constraint failed") || strings.Contains(msg, "foreign key") || strings.Contains(msg, "violates check constraint") {
-		return fmt.Errorf("%w: %v", domain.ErrInvalidInput, err)
-	}
-	return fmt.Errorf("db: %w", err)
 }

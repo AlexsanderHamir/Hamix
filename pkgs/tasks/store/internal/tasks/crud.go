@@ -12,7 +12,6 @@ import (
 	"github.com/AlexsanderHamir/Hamix/pkgs/tasks/store/internal/checklist"
 	"github.com/AlexsanderHamir/Hamix/pkgs/tasks/store/internal/drafts"
 	"github.com/AlexsanderHamir/Hamix/pkgs/tasks/store/internal/kernel"
-	"github.com/google/uuid"
 	"gorm.io/gorm"
 	"gorm.io/gorm/clause"
 )
@@ -176,10 +175,7 @@ func buildCreateTaskFromInput(in CreateInput, by domain.Actor) (t *domain.Task, 
 	if !kernel.ValidPriority(pr) {
 		return nil, "", "", fmt.Errorf("%w: priority", domain.ErrInvalidInput)
 	}
-	id := strings.TrimSpace(in.ID)
-	if id == "" {
-		id = uuid.NewString()
-	}
+	id := kernel.ResolveID(in.ID)
 	projectID := in.ProjectID
 	if projectID != nil {
 		p := strings.TrimSpace(*projectID)
@@ -249,7 +245,7 @@ func createTaskInTx(tx *gorm.DB, t *domain.Task, in CreateInput, by domain.Actor
 	}
 	t.ProjectContextItemIDs = contextIDs
 	if err := tx.Create(t).Error; err != nil {
-		if isDuplicatePrimaryKey(err) {
+		if kernel.IsDuplicatePrimaryKey(err, "tasks") {
 			return fmt.Errorf("%w: task id already exists", domain.ErrConflict)
 		}
 		return fmt.Errorf("insert task: %w", err)
@@ -278,25 +274,4 @@ func createTaskInTx(tx *gorm.DB, t *domain.Task, in CreateInput, by domain.Actor
 		}
 	}
 	return nil
-}
-
-// isDuplicatePrimaryKey detects unique/PK violations on task insert
-// across GORM + SQLite + Postgres drivers. Kept private because it
-// only matters inside Create's transaction.
-func isDuplicatePrimaryKey(err error) bool {
-	slog.Debug("trace", "cmd", calltrace.LogCmd, "operation", "tasks.store.tasks.isDuplicatePrimaryKey")
-	if err == nil {
-		return false
-	}
-	if errors.Is(err, gorm.ErrDuplicatedKey) {
-		return true
-	}
-	msg := strings.ToLower(err.Error())
-	if strings.Contains(msg, "unique constraint failed") {
-		return strings.Contains(msg, "tasks") && strings.Contains(msg, "id")
-	}
-	if strings.Contains(msg, "duplicate key value violates unique constraint") {
-		return strings.Contains(msg, "tasks_pkey")
-	}
-	return false
 }

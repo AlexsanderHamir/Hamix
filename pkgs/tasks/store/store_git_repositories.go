@@ -12,6 +12,7 @@ import (
 
 	"github.com/AlexsanderHamir/Hamix/pkgs/gitwork"
 	"github.com/AlexsanderHamir/Hamix/pkgs/tasks/domain"
+	"github.com/AlexsanderHamir/Hamix/pkgs/tasks/store/internal/kernel"
 	"github.com/google/uuid"
 	"gorm.io/gorm"
 )
@@ -128,7 +129,7 @@ func (s *Store) CreateGitRepository(ctx context.Context, projectID string, input
 	}
 	err = s.db.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
 		if err := tx.Create(&repo).Error; err != nil {
-			if isDuplicateKey(err) {
+			if kernel.IsDuplicateKey(err) {
 				return domain.NewGitErr(domain.GitCodeDuplicate, "repository already registered for this path")
 			}
 			return err

@@ -26,8 +26,8 @@ Ready-task notifications (`(*Store).notifyReadyTask`) are intentionally only fir
 | Agent ready queue | `facade_ready.go` | `facade_ready_test.go`, `scheduling_parity_test.go` | `internal/ready` | `ListReadyTaskQueueCandidates`, `ListReadyTasksUserCreated`, `DefaultReadyTimeout`. SQL dequeuable predicates mirror [`scheduling/`](../scheduling/). |
 | Health | `facade_health.go` | `facade_health_test.go` | `internal/health` | `Ping`, `Ready`. |
 | Dev simulation | `facade_devmirror.go` | `facade_devmirror_test.go` | `internal/devmirror` | `ApplyDevTaskRowMirror`, `ListDevsimTasks`. |
-| Shared kernel | — | — | `internal/kernel` | `Op*` Prometheus labels, `DeferLatency`, `AppendEvent`, `NextEventSeq`, `EventPairJSON`, `Valid*` validators, `ValidateActor`, `LoadTask`, `NormalizeJSONObject`. The only place `promauto` registers metrics. |
+| Shared kernel | — | `internal/kernel/*_test.go` | `internal/kernel` | `Op*` Prometheus labels, `DeferLatency`, `AppendEvent`, `NextEventSeq`, `EventPairJSON`, `Valid*` validators, `ValidateActor`, `LoadTask`, `NormalizeJSONObject`, `ResolveID`, `IsDuplicateKey`, `IsDuplicatePrimaryKey`, `MapWriteError`. The only place `promauto` registers metrics. |
 
-Each `facade_<domain>_test.go` exercises the public API end-to-end against the SQLite test harness, mirroring its production sibling 1:1. Strictly internal helpers (e.g. `isDuplicatePrimaryKey`) keep their white-box test in the corresponding `internal/<domain>/` package.
+Each `facade_<domain>_test.go` exercises the public API end-to-end against the SQLite test harness, mirroring its production sibling 1:1. Store-level DB constraint and ID helpers live in `internal/kernel` with unit tests there.
 
 When adding a **new** store method, extend the table above in the same PR and place the implementation in the matching `internal/<domain>/` package, with a thin `(*Store)` delegation in `facade_<domain>.go` and tests in `facade_<domain>_test.go`.

@@ -107,17 +107,35 @@ export function RegisterRepositoryModal({
           </header>
 
           <div className="worktrees-form-modal__picker">
-            <p className="worktrees-form-modal__picker-label" id="register-repo-path-label">
-              Repository path
-            </p>
-            <p
-              className="worktrees-form-modal__path-display"
-              data-empty={hasPath ? "false" : "true"}
-              aria-labelledby="register-repo-path-label"
-              aria-live="polite"
-            >
-              {hasPath ? trimmedPath : "No folder selected yet"}
-            </p>
+            <div className="worktrees-form-modal__picker-head">
+              <p className="worktrees-form-modal__picker-label" id="register-repo-path-label">
+                Repository path
+              </p>
+              <Button
+                type="button"
+                variant="secondary"
+                className="worktrees-form-modal__browse-btn"
+                disabled={pending}
+                onClick={() => setPickerOpen(true)}
+              >
+                Choose folder
+              </Button>
+            </div>
+            {hasPath ? (
+              <code
+                className="worktrees-form-modal__path-display"
+                aria-labelledby="register-repo-path-label"
+              >
+                {trimmedPath}
+              </code>
+            ) : (
+              <p
+                className="worktrees-form-modal__path-display worktrees-form-modal__path-display--empty"
+                aria-labelledby="register-repo-path-label"
+              >
+                No folder selected yet
+              </p>
+            )}
             {hasPath && probeQuery.isSuccess && !isGitRepo ? (
               <p
                 className="worktrees-form-modal__git-status worktrees-form-modal__git-status--missing"
@@ -126,15 +144,6 @@ export function RegisterRepositoryModal({
                 This path is not a git checkout — choose a folder with a .git directory
               </p>
             ) : null}
-            <Button
-              type="button"
-              variant="secondary"
-              className="worktrees-form-modal__browse-btn"
-              disabled={pending}
-              onClick={() => setPickerOpen(true)}
-            >
-              Choose folder
-            </Button>
           </div>
 
           {hasPath && isGitRepo ? (

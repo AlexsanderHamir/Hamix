@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import {
   parseBrowseDirsResponse,
+  parseGitRepositoryProbeResponse,
   parseWorkspaceRootsResponse,
 } from "./settingsBrowse";
 
@@ -50,6 +51,7 @@ describe("parseBrowseDirsResponse", () => {
     ).toEqual({
       path: "/home/me",
       parent_path: undefined,
+      is_git_repo: false,
       entries: [
         {
           name: "my-app",
@@ -58,6 +60,24 @@ describe("parseBrowseDirsResponse", () => {
           is_git_repo: true,
         },
       ],
+    });
+  });
+});
+
+describe("parseGitRepositoryProbeResponse", () => {
+  it("parses git probe response", () => {
+    expect(
+      parseGitRepositoryProbeResponse({
+        path: "/repo",
+        is_git_repository: true,
+        current_branch: "main",
+        branches: [{ name: "main", head_sha: "abc" }],
+      }),
+    ).toEqual({
+      path: "/repo",
+      is_git_repository: true,
+      current_branch: "main",
+      branches: [{ name: "main", head_sha: "abc" }],
     });
   });
 });

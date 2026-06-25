@@ -36,7 +36,20 @@ export type BrowseDirEntry = {
 export type BrowseDirsResponse = {
   path?: string;
   parent_path?: string;
+  is_git_repo?: boolean;
   entries: BrowseDirEntry[];
+};
+
+export type GitProbeBranch = {
+  name: string;
+  head_sha: string;
+};
+
+export type GitRepositoryProbeResponse = {
+  path: string;
+  is_git_repository: boolean;
+  current_branch?: string;
+  branches: GitProbeBranch[];
 };
 
 function parseBrowseCategory(raw: unknown): WorkspaceBrowseCategory | undefined {
@@ -123,7 +136,39 @@ export function parseBrowseDirsResponse(raw: unknown): BrowseDirsResponse {
     path: typeof value.path === "string" ? value.path : undefined,
     parent_path:
       typeof value.parent_path === "string" ? value.parent_path : undefined,
+    is_git_repo: value.is_git_repo === true,
     entries: entriesRaw.map(parseBrowseDirEntry),
+  };
+}
+
+function parseGitProbeBranch(raw: unknown): GitProbeBranch {
+  if (typeof raw !== "object" || raw === null) {
+    throw new Error("invalid git probe branch");
+  }
+  const value = raw as Record<string, unknown>;
+  return {
+    name: typeof value.name === "string" ? value.name : "",
+    head_sha: typeof value.head_sha === "string" ? value.head_sha : "",
+  };
+}
+
+export function parseGitRepositoryProbeResponse(
+  raw: unknown,
+): GitRepositoryProbeResponse {
+  if (typeof raw !== "object" || raw === null) {
+    throw new Error("invalid git probe response");
+  }
+  const value = raw as Record<string, unknown>;
+  const branchesRaw = value.branches;
+  if (!Array.isArray(branchesRaw)) {
+    throw new Error("git probe missing branches array");
+  }
+  return {
+    path: typeof value.path === "string" ? value.path : "",
+    is_git_repository: value.is_git_repository === true,
+    current_branch:
+      typeof value.current_branch === "string" ? value.current_branch : undefined,
+    branches: branchesRaw.map(parseGitProbeBranch),
   };
 }
 
@@ -158,4 +203,19 @@ export async function browseWorkspaceDirs(
     throw await apiErrorFromResponse(res);
   }
   return parseBrowseDirsResponse(await res.json());
+}
+
+export async function fetchGitRepositoryProbe(
+  path: string,
+  init?: RequestInit,
+): Promise<GitRepositoryProbeResponse> {
+  const params = new URLSearchParams({ path });
+  const res = await fetchWithTimeout(`/settings/git-probe?${params}`, {
+    ...init,
+    headers: { Accept: "application/json", ...(init?.headers ?? {}) },
+  });
+  if (!res.ok) {
+    throw await apiErrorFromResponse(res);
+  }
+  return parseGitRepositoryProbeResponse(await res.json());
 }

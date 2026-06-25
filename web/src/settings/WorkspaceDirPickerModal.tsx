@@ -1,11 +1,14 @@
 import { Fragment, useCallback, useEffect, useMemo, useState } from "react";
+import { useQueryClient } from "@tanstack/react-query";
 import { Modal } from "@/shared/Modal";
 import {
-  browseWorkspaceDirs,
-  fetchWorkspaceRoots,
   type BrowseDirEntry,
   type WorkspaceBrowseRoot,
 } from "@/api/settingsBrowse";
+import {
+  browseDirsQueryOptions,
+  useWorkspaceRoots,
+} from "./hooks/useWorkspaceBrowse";
 import "./workspace-picker.css";
 
 type Props = {
@@ -17,6 +20,8 @@ type Props = {
   nested?: boolean;
   title?: string;
   lead?: string;
+  /** When true, only git checkouts can be confirmed; folders stay visible. */
+  requireGitRepository?: boolean;
 };
 
 type LoadState =
@@ -90,61 +95,74 @@ export function WorkspaceDirPickerModal({
   onSelect,
   nested = false,
   title = "Choose folder",
-  lead = "Open a folder to browse inside it. Confirm the folder you’re in to register it.",
+  lead,
+  requireGitRepository = false,
 }: Props) {
-  const [loadState, setLoadState] = useState<LoadState>({ kind: "idle" });
+  const resolvedLead =
+    lead ??
+    (requireGitRepository
+      ? "Navigate to a git repository checkout. Hamix needs a .git folder at the path you register."
+      : "Open a folder to browse inside it. Confirm the folder you’re in to register it.");
   const [entries, setEntries] = useState<BrowseDirEntry[]>([]);
   const [currentBrowsePath, setCurrentBrowsePath] = useState("");
   const [parentPath, setParentPath] = useState("");
+  const [currentPathIsGitRepo, setCurrentPathIsGitRepo] = useState(false);
   const [listingError, setListingError] = useState<string | null>(null);
   const [listingPending, setListingPending] = useState(false);
 
+  const queryClient = useQueryClient();
+  const rootsQuery = useWorkspaceRoots({ enabled: open });
+
   const atRoots = currentBrowsePath.trim() === "";
 
-  const loadListing = useCallback(async (path: string) => {
-    setListingPending(true);
-    setListingError(null);
-    try {
-      const listing = await browseWorkspaceDirs(path);
-      setEntries(listing.entries);
-      setCurrentBrowsePath(listing.path ?? path);
-      setParentPath(listing.parent_path ?? "");
-    } catch (err) {
-      setListingError(err instanceof Error ? err.message : "Could not list folders");
-      setEntries([]);
-    } finally {
-      setListingPending(false);
-    }
-  }, []);
+  const loadListing = useCallback(
+    async (path: string) => {
+      setListingPending(true);
+      setListingError(null);
+      try {
+        const listing = await queryClient.fetchQuery(browseDirsQueryOptions(path));
+        setEntries(listing.entries);
+        setCurrentBrowsePath(listing.path ?? path);
+        setParentPath(listing.parent_path ?? "");
+        setCurrentPathIsGitRepo(listing.is_git_repo === true);
+      } catch (err) {
+        setListingError(err instanceof Error ? err.message : "Could not list folders");
+        setEntries([]);
+      } finally {
+        setListingPending(false);
+      }
+    },
+    [queryClient],
+  );
 
   useEffect(() => {
     if (!open) return;
-    let cancelled = false;
-    setLoadState({ kind: "loading" });
     setEntries([]);
     setCurrentBrowsePath("");
     setParentPath("");
+    setCurrentPathIsGitRepo(false);
     setListingError(null);
-    void fetchWorkspaceRoots()
-      .then((roots) => {
-        if (cancelled) return;
-        setLoadState({
-          kind: "ready",
-          roots: roots.roots,
-          environment: roots.environment,
-        });
-      })
-      .catch((err) => {
-        if (cancelled) return;
-        setLoadState({
-          kind: "error",
-          message: err instanceof Error ? err.message : "Could not load locations",
-        });
-      });
-    return () => {
-      cancelled = true;
-    };
   }, [open]);
+
+  const loadState: LoadState = useMemo(() => {
+    if (!open) return { kind: "idle" };
+    if (rootsQuery.isPending) return { kind: "loading" };
+    if (rootsQuery.isError) {
+      const err = rootsQuery.error;
+      return {
+        kind: "error",
+        message: err instanceof Error ? err.message : "Could not load locations",
+      };
+    }
+    if (rootsQuery.data) {
+      return {
+        kind: "ready",
+        roots: rootsQuery.data.roots,
+        environment: rootsQuery.data.environment,
+      };
+    }
+    return { kind: "idle" };
+  }, [open, rootsQuery.isPending, rootsQuery.isError, rootsQuery.error, rootsQuery.data]);
 
   const crumbs = useMemo(() => {
     if (loadState.kind !== "ready") return [];
@@ -155,6 +173,7 @@ export function WorkspaceDirPickerModal({
     setEntries([]);
     setCurrentBrowsePath("");
     setParentPath("");
+    setCurrentPathIsGitRepo(false);
     setListingError(null);
   }
 
@@ -169,11 +188,14 @@ export function WorkspaceDirPickerModal({
 
   function confirmSelection() {
     if (atRoots || listingPending || currentBrowsePath.trim() === "") return;
+    if (requireGitRepository && !currentPathIsGitRepo) return;
     onSelect(currentBrowsePath);
     onClose();
   }
 
-  const canConfirm = !atRoots && !listingPending && currentBrowsePath.trim() !== "";
+  const hasOpenFolder = !atRoots && currentBrowsePath.trim() !== "";
+  const gitRequirementMet = !requireGitRepository || currentPathIsGitRepo;
+  const canConfirm = hasOpenFolder && !listingPending && gitRequirementMet;
 
   const rootGroups =
     loadState.kind === "ready" ? partitionBrowseRoots(loadState.roots) : null;
@@ -195,7 +217,7 @@ export function WorkspaceDirPickerModal({
             {title}
           </h2>
           <p id="workspace-dir-picker-lead" className="workspace-picker-lead">
-            {lead}
+            {resolvedLead}
           </p>
         </header>
 
@@ -269,8 +291,13 @@ export function WorkspaceDirPickerModal({
                     <li key={entry.path}>
                       <FolderRow
                         name={entry.name}
-                        sublabel={entry.is_git_repo ? "Git repository" : undefined}
-                        badge={entry.is_git_repo ? "Git" : undefined}
+                        gitRepoStatus={
+                          requireGitRepository
+                            ? entry.is_git_repo
+                            : entry.is_git_repo
+                              ? true
+                              : undefined
+                        }
                         disabled={listingPending}
                         onClick={() => void loadListing(entry.path)}
                       />
@@ -283,8 +310,11 @@ export function WorkspaceDirPickerModal({
                     No subfolders inside this folder.
                   </p>
                   <p className="workspace-picker-empty-hint">
-                    Use the button below to register this folder, or go back to pick a
-                    different one.
+                    {requireGitRepository && !currentPathIsGitRepo
+                      ? "This folder is not a git checkout. Go back and open a folder that contains a .git directory."
+                      : requireGitRepository
+                        ? "Use the button below to register this git checkout, or go back to pick a different folder."
+                        : "Use the button below to register this folder, or go back to pick a different one."}
                   </p>
                 </li>
               ) : null}
@@ -293,13 +323,13 @@ export function WorkspaceDirPickerModal({
             <footer className="workspace-picker-footer">
               <div className="workspace-picker-selection" aria-live="polite">
                 <span className="workspace-picker-selection-label">
-                  Folder to register
+                  {requireGitRepository ? "Repository checkout" : "Folder to register"}
                 </span>
                 <code
                   className="workspace-picker-selection-path"
-                  data-empty={!canConfirm}
+                  data-empty={!hasOpenFolder}
                 >
-                  {canConfirm ? currentBrowsePath : "Open a folder to register it"}
+                  {hasOpenFolder ? currentBrowsePath : "Open a folder to register it"}
                 </code>
               </div>
               <div className="workspace-picker-footer-actions">
@@ -410,12 +440,13 @@ function PickerBreadcrumb({
 type FolderRowProps = {
   name: string;
   sublabel?: string;
-  badge?: string;
+  /** When set, shows a git-status icon before the chevron. */
+  gitRepoStatus?: boolean;
   disabled?: boolean;
   onClick: () => void;
 };
 
-function FolderRow({ name, sublabel, badge, disabled, onClick }: FolderRowProps) {
+function FolderRow({ name, sublabel, gitRepoStatus, disabled, onClick }: FolderRowProps) {
   return (
     <button
       type="button"
@@ -430,9 +461,27 @@ function FolderRow({ name, sublabel, badge, disabled, onClick }: FolderRowProps)
           <span className="workspace-picker-row-sub">{sublabel}</span>
         ) : null}
       </span>
-      {badge ? <span className="workspace-picker-badge">{badge}</span> : null}
+      {gitRepoStatus !== undefined ? (
+        <GitRepoStatusIcon isGitRepo={gitRepoStatus} />
+      ) : null}
       <ChevronIcon />
     </button>
+  );
+}
+
+function GitRepoStatusIcon({ isGitRepo }: { isGitRepo: boolean }) {
+  return (
+    <span
+      className={
+        isGitRepo
+          ? "workspace-picker-git-icon workspace-picker-git-icon--yes"
+          : "workspace-picker-git-icon workspace-picker-git-icon--no"
+      }
+      title={isGitRepo ? "Git repository" : "Not a git repository"}
+      aria-label={isGitRepo ? "Git repository" : "Not a git repository"}
+    >
+      {isGitRepo ? <GitRepoBadge /> : <NoGitRepoIcon />}
+    </span>
   );
 }
 
@@ -487,6 +536,32 @@ function BackIcon() {
         strokeWidth="1.6"
         strokeLinecap="round"
         strokeLinejoin="round"
+      />
+    </svg>
+  );
+}
+
+function GitRepoBadge() {
+  return <span className="workspace-picker-git-badge">git</span>;
+}
+
+function NoGitRepoIcon() {
+  return (
+    <svg viewBox="0 0 16 16" width="16" height="16" aria-hidden="true">
+      <circle
+        cx="8"
+        cy="8"
+        r="5.75"
+        fill="none"
+        stroke="currentColor"
+        strokeWidth="1.25"
+      />
+      <path
+        d="M5.25 5.25 10.75 10.75"
+        fill="none"
+        stroke="currentColor"
+        strokeWidth="1.25"
+        strokeLinecap="round"
       />
     </svg>
   );

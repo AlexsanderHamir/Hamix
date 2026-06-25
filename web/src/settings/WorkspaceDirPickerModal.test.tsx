@@ -1,7 +1,19 @@
+import type { ReactElement } from "react";
 import { render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
+import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { describe, expect, it, vi } from "vitest";
 import { WorkspaceDirPickerModal } from "./WorkspaceDirPickerModal";
+import { settingsQueryKeys } from "./queryKeys";
+
+function renderPicker(ui: ReactElement) {
+  const queryClient = new QueryClient({
+    defaultOptions: { queries: { retry: false } },
+  });
+  return render(
+    <QueryClientProvider client={queryClient}>{ui}</QueryClientProvider>,
+  );
+}
 
 function jsonResponse(body: unknown): Response {
   return new Response(JSON.stringify(body), {
@@ -13,6 +25,7 @@ function jsonResponse(body: unknown): Response {
 type BrowseFixture = {
   path: string;
   parent_path: string;
+  is_git_repo?: boolean;
   entries: Array<{
     name: string;
     path: string;
@@ -61,6 +74,7 @@ describe("WorkspaceDirPickerModal", () => {
           "/roots/my-app": {
             path: "/roots/my-app",
             parent_path: "/roots",
+            is_git_repo: true,
             entries: [],
           },
         })(url);
@@ -68,7 +82,7 @@ describe("WorkspaceDirPickerModal", () => {
       return new Response("not found", { status: 404 });
     });
 
-    render(
+    renderPicker(
       <WorkspaceDirPickerModal
         open
         currentPath=""
@@ -105,13 +119,13 @@ describe("WorkspaceDirPickerModal", () => {
       }
       if (url.includes("/settings/browse-dirs")) {
         return browseRouter({
-          "/roots": { path: "/roots", parent_path: "", entries: [] },
+          "/roots": { path: "/roots", parent_path: "", is_git_repo: false, entries: [] },
         })(url);
       }
       return new Response("not found", { status: 404 });
     });
 
-    render(
+    renderPicker(
       <WorkspaceDirPickerModal
         open
         currentPath=""
@@ -155,7 +169,7 @@ describe("WorkspaceDirPickerModal", () => {
       return new Response("not found", { status: 404 });
     });
 
-    render(
+    renderPicker(
       <WorkspaceDirPickerModal
         open
         currentPath=""
@@ -192,7 +206,7 @@ describe("WorkspaceDirPickerModal", () => {
       return new Response("not found", { status: 404 });
     });
 
-    render(
+    renderPicker(
       <WorkspaceDirPickerModal
         open
         currentPath=""
@@ -218,7 +232,7 @@ describe("WorkspaceDirPickerModal", () => {
       return new Response("not found", { status: 404 });
     });
 
-    render(
+    renderPicker(
       <WorkspaceDirPickerModal
         open
         currentPath=""
@@ -228,6 +242,180 @@ describe("WorkspaceDirPickerModal", () => {
     );
 
     expect(await screen.findByRole("button", { name: /Use this folder/ })).toBeDisabled();
+    fetchMock.mockRestore();
+  });
+
+  it("blocks confirmation when requireGitRepository and folder is not a git checkout", async () => {
+    const onSelect = vi.fn();
+    const fetchMock = vi.spyOn(globalThis, "fetch").mockImplementation(async (input) => {
+      const url = String(input);
+      if (url.endsWith("/settings/workspace-roots")) {
+        return jsonResponse({
+          environment: "native",
+          roots: [{ id: "home", path: "/roots", label: "Home", category: "home", available: true }],
+        });
+      }
+      if (url.includes("/settings/browse-dirs")) {
+        return browseRouter({
+          "/roots": {
+            path: "/roots",
+            parent_path: "",
+            is_git_repo: false,
+            entries: [],
+          },
+        })(url);
+      }
+      return new Response("not found", { status: 404 });
+    });
+
+    renderPicker(
+      <WorkspaceDirPickerModal
+        open
+        requireGitRepository
+        currentPath=""
+        onClose={() => {}}
+        onSelect={onSelect}
+      />,
+    );
+
+    await userEvent.click(await screen.findByRole("button", { name: /Home/ }));
+
+    await waitFor(() => {
+      expect(screen.getByRole("button", { name: /Use this folder/ })).toBeDisabled();
+    });
+
+    expect(onSelect).not.toHaveBeenCalled();
+    fetchMock.mockRestore();
+  });
+
+  it("allows confirmation when requireGitRepository and folder is a git checkout", async () => {
+    const onSelect = vi.fn();
+    const fetchMock = vi.spyOn(globalThis, "fetch").mockImplementation(async (input) => {
+      const url = String(input);
+      if (url.endsWith("/settings/workspace-roots")) {
+        return jsonResponse({
+          environment: "native",
+          roots: [{ id: "home", path: "/roots", label: "Home", category: "home", available: true }],
+        });
+      }
+      if (url.includes("/settings/browse-dirs")) {
+        return browseRouter({
+          "/roots": {
+            path: "/roots",
+            parent_path: "",
+            is_git_repo: true,
+            entries: [],
+          },
+        })(url);
+      }
+      return new Response("not found", { status: 404 });
+    });
+
+    renderPicker(
+      <WorkspaceDirPickerModal
+        open
+        requireGitRepository
+        currentPath=""
+        onClose={() => {}}
+        onSelect={onSelect}
+      />,
+    );
+
+    await userEvent.click(await screen.findByRole("button", { name: /Home/ }));
+
+    await waitFor(() => {
+      expect(screen.getByRole("button", { name: /Use this folder/ })).toBeEnabled();
+    });
+
+    await userEvent.click(screen.getByRole("button", { name: /Use this folder/ }));
+    expect(onSelect).toHaveBeenCalledWith("/roots");
+    fetchMock.mockRestore();
+  });
+
+  it("shows git status icons on folder rows when requireGitRepository", async () => {
+    const fetchMock = vi.spyOn(globalThis, "fetch").mockImplementation(async (input) => {
+      const url = String(input);
+      if (url.endsWith("/settings/workspace-roots")) {
+        return jsonResponse({
+          environment: "native",
+          roots: [{ id: "home", path: "/roots", label: "Home", category: "home", available: true }],
+        });
+      }
+      if (url.includes("/settings/browse-dirs")) {
+        return browseRouter({
+          "/roots": {
+            path: "/roots",
+            parent_path: "",
+            is_git_repo: false,
+            entries: [
+              {
+                name: "repo",
+                path: "/roots/repo",
+                has_children: false,
+                is_git_repo: true,
+              },
+              {
+                name: "plain",
+                path: "/roots/plain",
+                has_children: false,
+                is_git_repo: false,
+              },
+            ],
+          },
+        })(url);
+      }
+      return new Response("not found", { status: 404 });
+    });
+
+    renderPicker(
+      <WorkspaceDirPickerModal
+        open
+        requireGitRepository
+        currentPath=""
+        onClose={() => {}}
+        onSelect={() => {}}
+      />,
+    );
+
+    await userEvent.click(await screen.findByRole("button", { name: /Home/ }));
+
+    expect(await screen.findByLabelText("Git repository")).toBeInTheDocument();
+    expect(screen.getByLabelText("Not a git repository")).toBeInTheDocument();
+    fetchMock.mockRestore();
+  });
+
+  it("shows roots immediately when workspace-roots is already cached", async () => {
+    const queryClient = new QueryClient({
+      defaultOptions: { queries: { retry: false } },
+    });
+    queryClient.setQueryData(settingsQueryKeys.workspaceRoots(), {
+      environment: "native" as const,
+      roots: [
+        {
+          id: "home",
+          path: "/roots",
+          label: "Home",
+          category: "home",
+          available: true,
+        },
+      ],
+    });
+    const fetchMock = vi.spyOn(globalThis, "fetch");
+
+    render(
+      <QueryClientProvider client={queryClient}>
+        <WorkspaceDirPickerModal
+          open
+          currentPath=""
+          onClose={() => {}}
+          onSelect={() => {}}
+        />
+      </QueryClientProvider>,
+    );
+
+    expect(screen.getByRole("button", { name: /Home/ })).toBeInTheDocument();
+    expect(screen.queryByText(/Loading locations/)).not.toBeInTheDocument();
+    expect(fetchMock).not.toHaveBeenCalled();
     fetchMock.mockRestore();
   });
 });

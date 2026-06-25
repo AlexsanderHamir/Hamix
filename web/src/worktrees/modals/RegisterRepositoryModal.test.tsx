@@ -73,12 +73,12 @@ describe("RegisterRepositoryModal", () => {
     await userEvent.click(await screen.findByRole("button", { name: /Home/ }));
     await userEvent.click(screen.getByRole("button", { name: /Use this folder/ }));
 
-    expect(await screen.findByText(/Git repository detected/i)).toBeInTheDocument();
     expect(
       await screen.findByText(/Pick an existing branch from this checkout/i),
     ).toBeInTheDocument();
+    expect(screen.queryByText(/Git repository detected/i)).not.toBeInTheDocument();
     expect(screen.getByRole("combobox", { name: /Default branch/i })).toHaveTextContent(
-      "main (checked out)",
+      "main (current)",
     );
 
     fetchMock.mockRestore();

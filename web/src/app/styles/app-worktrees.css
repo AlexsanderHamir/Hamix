@@ -296,10 +296,6 @@
   line-height: 1.45;
 }
 
-.worktrees-form-modal__git-status--ok {
-  color: var(--success);
-}
-
 .worktrees-form-modal__git-status--missing {
   color: var(--danger);
 }

@@ -41,7 +41,7 @@ export function RegisterRepositoryModal({
       branches.map((b) => ({
         value: b.name,
         label:
-          b.name === probe?.current_branch ? `${b.name} (checked out)` : b.name,
+          b.name === probe?.current_branch ? `${b.name} (current)` : b.name,
       })),
     [branches, probe?.current_branch],
   );
@@ -118,18 +118,12 @@ export function RegisterRepositoryModal({
             >
               {hasPath ? trimmedPath : "No folder selected yet"}
             </p>
-            {hasPath && probeQuery.isSuccess ? (
+            {hasPath && probeQuery.isSuccess && !isGitRepo ? (
               <p
-                className={
-                  isGitRepo
-                    ? "worktrees-form-modal__git-status worktrees-form-modal__git-status--ok"
-                    : "worktrees-form-modal__git-status worktrees-form-modal__git-status--missing"
-                }
+                className="worktrees-form-modal__git-status worktrees-form-modal__git-status--missing"
                 role="status"
               >
-                {isGitRepo
-                  ? "Git repository detected"
-                  : "This path is not a git checkout — choose a folder with a .git directory"}
+                This path is not a git checkout — choose a folder with a .git directory
               </p>
             ) : null}
             <Button

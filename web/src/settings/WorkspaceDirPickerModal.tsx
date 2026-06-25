@@ -17,6 +17,8 @@ type Props = {
   nested?: boolean;
   title?: string;
   lead?: string;
+  /** When true, only git checkouts can be confirmed; folders stay visible. */
+  requireGitRepository?: boolean;
 };
 
 type LoadState =
@@ -90,12 +92,19 @@ export function WorkspaceDirPickerModal({
   onSelect,
   nested = false,
   title = "Choose folder",
-  lead = "Open a folder to browse inside it. Confirm the folder you’re in to register it.",
+  lead,
+  requireGitRepository = false,
 }: Props) {
+  const resolvedLead =
+    lead ??
+    (requireGitRepository
+      ? "Navigate to a git repository checkout. Hamix needs a .git folder at the path you register."
+      : "Open a folder to browse inside it. Confirm the folder you’re in to register it.");
   const [loadState, setLoadState] = useState<LoadState>({ kind: "idle" });
   const [entries, setEntries] = useState<BrowseDirEntry[]>([]);
   const [currentBrowsePath, setCurrentBrowsePath] = useState("");
   const [parentPath, setParentPath] = useState("");
+  const [currentPathIsGitRepo, setCurrentPathIsGitRepo] = useState(false);
   const [listingError, setListingError] = useState<string | null>(null);
   const [listingPending, setListingPending] = useState(false);
 
@@ -109,6 +118,7 @@ export function WorkspaceDirPickerModal({
       setEntries(listing.entries);
       setCurrentBrowsePath(listing.path ?? path);
       setParentPath(listing.parent_path ?? "");
+      setCurrentPathIsGitRepo(listing.is_git_repo === true);
     } catch (err) {
       setListingError(err instanceof Error ? err.message : "Could not list folders");
       setEntries([]);
@@ -124,6 +134,7 @@ export function WorkspaceDirPickerModal({
     setEntries([]);
     setCurrentBrowsePath("");
     setParentPath("");
+    setCurrentPathIsGitRepo(false);
     setListingError(null);
     void fetchWorkspaceRoots()
       .then((roots) => {
@@ -155,6 +166,7 @@ export function WorkspaceDirPickerModal({
     setEntries([]);
     setCurrentBrowsePath("");
     setParentPath("");
+    setCurrentPathIsGitRepo(false);
     setListingError(null);
   }
 
@@ -169,11 +181,14 @@ export function WorkspaceDirPickerModal({
 
   function confirmSelection() {
     if (atRoots || listingPending || currentBrowsePath.trim() === "") return;
+    if (requireGitRepository && !currentPathIsGitRepo) return;
     onSelect(currentBrowsePath);
     onClose();
   }
 
-  const canConfirm = !atRoots && !listingPending && currentBrowsePath.trim() !== "";
+  const hasOpenFolder = !atRoots && currentBrowsePath.trim() !== "";
+  const gitRequirementMet = !requireGitRepository || currentPathIsGitRepo;
+  const canConfirm = hasOpenFolder && !listingPending && gitRequirementMet;
 
   const rootGroups =
     loadState.kind === "ready" ? partitionBrowseRoots(loadState.roots) : null;
@@ -195,7 +210,7 @@ export function WorkspaceDirPickerModal({
             {title}
           </h2>
           <p id="workspace-dir-picker-lead" className="workspace-picker-lead">
-            {lead}
+            {resolvedLead}
           </p>
         </header>
 
@@ -269,7 +284,13 @@ export function WorkspaceDirPickerModal({
                     <li key={entry.path}>
                       <FolderRow
                         name={entry.name}
-                        sublabel={entry.is_git_repo ? "Git repository" : undefined}
+                        sublabel={
+                          entry.is_git_repo
+                            ? "Git repository"
+                            : requireGitRepository
+                              ? "Not a git repository"
+                              : undefined
+                        }
                         badge={entry.is_git_repo ? "Git" : undefined}
                         disabled={listingPending}
                         onClick={() => void loadListing(entry.path)}
@@ -283,8 +304,11 @@ export function WorkspaceDirPickerModal({
                     No subfolders inside this folder.
                   </p>
                   <p className="workspace-picker-empty-hint">
-                    Use the button below to register this folder, or go back to pick a
-                    different one.
+                    {requireGitRepository && !currentPathIsGitRepo
+                      ? "This folder is not a git checkout. Go back and open a folder that contains a .git directory."
+                      : requireGitRepository
+                        ? "Use the button below to register this git checkout, or go back to pick a different folder."
+                        : "Use the button below to register this folder, or go back to pick a different one."}
                   </p>
                 </li>
               ) : null}
@@ -293,14 +317,28 @@ export function WorkspaceDirPickerModal({
             <footer className="workspace-picker-footer">
               <div className="workspace-picker-selection" aria-live="polite">
                 <span className="workspace-picker-selection-label">
-                  Folder to register
+                  {requireGitRepository ? "Repository checkout" : "Folder to register"}
                 </span>
                 <code
                   className="workspace-picker-selection-path"
-                  data-empty={!canConfirm}
+                  data-empty={!hasOpenFolder}
                 >
-                  {canConfirm ? currentBrowsePath : "Open a folder to register it"}
+                  {hasOpenFolder ? currentBrowsePath : "Open a folder to register it"}
                 </code>
+                {requireGitRepository && hasOpenFolder ? (
+                  <span
+                    className={
+                      currentPathIsGitRepo
+                        ? "workspace-picker-git-status workspace-picker-git-status--ok"
+                        : "workspace-picker-git-status workspace-picker-git-status--missing"
+                    }
+                    role="status"
+                  >
+                    {currentPathIsGitRepo
+                      ? "Git repository detected"
+                      : "No git repository — choose a checkout with a .git folder"}
+                  </span>
+                ) : null}
               </div>
               <div className="workspace-picker-footer-actions">
                 <button type="button" className="secondary" onClick={onClose}>

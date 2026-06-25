@@ -375,6 +375,19 @@
   font-style: italic;
 }
 
+.workspace-picker-git-status {
+  font-size: var(--text-sm);
+  line-height: 1.45;
+}
+
+.workspace-picker-git-status--ok {
+  color: var(--color-success, #00a96e);
+}
+
+.workspace-picker-git-status--missing {
+  color: var(--color-error, #ef4444);
+}
+
 .workspace-picker-footer-actions {
   display: flex;
   gap: var(--space-3);

@@ -50,6 +50,7 @@ describe("parseBrowseDirsResponse", () => {
     ).toEqual({
       path: "/home/me",
       parent_path: undefined,
+      is_git_repo: false,
       entries: [
         {
           name: "my-app",

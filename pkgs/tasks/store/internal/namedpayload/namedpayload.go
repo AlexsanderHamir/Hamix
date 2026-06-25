@@ -13,7 +13,6 @@ import (
 	"github.com/AlexsanderHamir/Hamix/pkgs/tasks/calltrace"
 	"github.com/AlexsanderHamir/Hamix/pkgs/tasks/domain"
 	"github.com/AlexsanderHamir/Hamix/pkgs/tasks/store/internal/kernel"
-	"github.com/google/uuid"
 	"gorm.io/datatypes"
 	"gorm.io/gorm"
 )
@@ -61,10 +60,7 @@ func saveRow(
 ) (*Summary, error) {
 	defer kernel.DeferLatency(opSave)()
 	slog.Debug("trace", "cmd", calltrace.LogCmd, "operation", logOp)
-	id = strings.TrimSpace(id)
-	if id == "" {
-		id = uuid.NewString()
-	}
+	id = kernel.ResolveID(id)
 	name = strings.TrimSpace(name)
 	if name == "" {
 		return nil, fmt.Errorf("%w: %s", domain.ErrInvalidInput, nameRequiredMsg)

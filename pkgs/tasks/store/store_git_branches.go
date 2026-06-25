@@ -11,6 +11,7 @@ import (
 
 	"github.com/AlexsanderHamir/Hamix/pkgs/gitwork"
 	"github.com/AlexsanderHamir/Hamix/pkgs/tasks/domain"
+	"github.com/AlexsanderHamir/Hamix/pkgs/tasks/store/internal/kernel"
 	"github.com/google/uuid"
 	"gorm.io/gorm"
 )
@@ -88,7 +89,7 @@ func (s *Store) CreateGitBranch(ctx context.Context, projectID, repoID string, i
 		CreatedAt:    time.Now().UTC(),
 	}
 	if err := s.db.WithContext(ctx).Create(&row).Error; err != nil {
-		if isDuplicateKey(err) {
+		if kernel.IsDuplicateKey(err) {
 			return domain.GitBranch{}, domain.NewGitErr(domain.GitCodeBranchExists, "branch already exists")
 		}
 		return domain.GitBranch{}, fmt.Errorf("create git branch row: %w", err)

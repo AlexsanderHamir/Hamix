@@ -10,7 +10,6 @@ import (
 
 	"github.com/AlexsanderHamir/Hamix/pkgs/tasks/domain"
 	"github.com/AlexsanderHamir/Hamix/pkgs/tasks/store/internal/kernel"
-	"github.com/google/uuid"
 	"gorm.io/gorm"
 	"gorm.io/gorm/clause"
 )
@@ -40,10 +39,7 @@ func CreateContextEdge(ctx context.Context, db *gorm.DB, projectID string, input
 	if projectID == "" {
 		return domain.ProjectContextEdge{}, fmt.Errorf("%w: project id required", domain.ErrInvalidInput)
 	}
-	id := strings.TrimSpace(input.ID)
-	if id == "" {
-		id = uuid.NewString()
-	}
+	id := kernel.ResolveID(input.ID)
 	relation := input.Relation
 	if relation == "" {
 		relation = domain.ProjectContextRelationRelated
@@ -72,7 +68,7 @@ func CreateContextEdge(ctx context.Context, db *gorm.DB, projectID string, input
 			return err
 		}
 		if err := tx.Create(&row).Error; err != nil {
-			return mapWriteError(err)
+			return kernel.MapWriteError(err, "duplicate project row")
 		}
 		return nil
 	})
@@ -126,7 +122,7 @@ func UpdateContextEdge(ctx context.Context, db *gorm.DB, projectID, edgeID strin
 		applyContextEdgePatch(&row, input)
 		row.UpdatedAt = time.Now().UTC()
 		if err := tx.Save(&row).Error; err != nil {
-			return mapWriteError(err)
+			return kernel.MapWriteError(err, "duplicate project row")
 		}
 		out = row
 		return nil
@@ -148,7 +144,7 @@ func DeleteContextEdge(ctx context.Context, db *gorm.DB, projectID, edgeID strin
 	}
 	res := db.WithContext(ctx).Where("id = ? AND project_id = ?", edgeID, projectID).Delete(&domain.ProjectContextEdge{})
 	if res.Error != nil {
-		return mapWriteError(res.Error)
+		return kernel.MapWriteError(res.Error, "duplicate project row")
 	}
 	if res.RowsAffected == 0 {
 		return domain.ErrNotFound

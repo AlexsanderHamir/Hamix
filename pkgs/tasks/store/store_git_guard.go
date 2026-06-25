@@ -2,8 +2,6 @@ package store
 
 import (
 	"context"
-	"errors"
-	"strings"
 
 	"github.com/AlexsanderHamir/Hamix/pkgs/tasks/domain"
 	"gorm.io/gorm"
@@ -76,15 +74,4 @@ WHERE worktree_branch_id IN (
   SELECT id FROM worktree_branches WHERE worktree_id = ?
 )`, worktreeID).Scan(&n).Error
 	return n > 0, err
-}
-
-//funclogmeasure:skip category=hot-path reason="Pure helper without I/O; operation trace is emitted by the calling chokepoint."
-func isDuplicateKey(err error) bool {
-	if err == nil {
-		return false
-	}
-	msg := strings.ToLower(err.Error())
-	return errors.Is(err, gorm.ErrDuplicatedKey) ||
-		strings.Contains(msg, "unique constraint") ||
-		strings.Contains(msg, "unique constraint failed")
 }

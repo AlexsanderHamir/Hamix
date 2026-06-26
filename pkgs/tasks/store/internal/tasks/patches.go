@@ -9,6 +9,7 @@ import (
 	"github.com/AlexsanderHamir/Hamix/pkgs/tasks/domain"
 	"github.com/AlexsanderHamir/Hamix/pkgs/tasks/store/internal/checklist"
 	"github.com/AlexsanderHamir/Hamix/pkgs/tasks/store/internal/kernel"
+	"github.com/AlexsanderHamir/Hamix/pkgs/tasks/store/model"
 	"gorm.io/gorm"
 )
 
@@ -125,7 +126,7 @@ func applyProjectPatch(tx *gorm.DB, cur *domain.Task, project *ProjectFieldPatch
 		return fmt.Errorf("%w: project_id", domain.ErrInvalidInput)
 	}
 	var n int64
-	if err := tx.Model(&domain.Project{}).Where("id = ? AND status = ?", pid, domain.ProjectStatusActive).Count(&n).Error; err != nil {
+	if err := tx.Model(&model.Project{}).Where("id = ? AND status = ?", pid, domain.ProjectStatusActive).Count(&n).Error; err != nil {
 		return fmt.Errorf("project lookup: %w", err)
 	}
 	if n == 0 {

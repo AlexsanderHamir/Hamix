@@ -35,4 +35,28 @@ var ParityPairs = []ParityPair{
 			&domain.Task{},
 		},
 	},
+	{
+		Name:   "Task",
+		Domain: &domain.Task{},
+		Model:  &Task{},
+		Table:  "tasks",
+		DomainMigrateExtra: []any{
+			&domain.Project{},
+		},
+	},
+	{
+		Name:   "TaskDependency",
+		Domain: &domain.TaskDependency{},
+		Model:  &TaskDependency{},
+		Table:  "task_dependencies",
+		DomainMigrateExtra: []any{
+			&domain.Task{},
+		},
+	},
+	{
+		Name:   "Project",
+		Domain: &domain.Project{},
+		Model:  &Project{},
+		Table:  "projects",
+	},
 }

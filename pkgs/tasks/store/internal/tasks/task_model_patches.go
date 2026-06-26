@@ -8,6 +8,7 @@ import (
 	"time"
 
 	"github.com/AlexsanderHamir/Hamix/pkgs/tasks/domain"
+	"github.com/AlexsanderHamir/Hamix/pkgs/tasks/store/model"
 	"gorm.io/gorm"
 )
 
@@ -68,7 +69,7 @@ func applyDependsOnPatch(tx *gorm.DB, taskID string, cur *domain.Task, dependsOn
 
 //funclogmeasure:skip category=hot-path reason="Pure helper without I/O; operation trace is emitted by the calling chokepoint."
 func listDependencyEdgesInTx(tx *gorm.DB, taskID string) ([]domain.DependencyEdge, error) {
-	var rows []domain.TaskDependency
+	var rows []model.TaskDependency
 	err := tx.Where("task_id = ?", taskID).Order("created_at ASC").Find(&rows).Error
 	if err != nil {
 		return nil, err
@@ -110,16 +111,11 @@ func setDependenciesInTx(tx *gorm.DB, taskID string, dependsOn []domain.Dependen
 			return fmt.Errorf("%w: dependency would create a cycle", domain.ErrInvalidInput)
 		}
 	}
-	if err := tx.Where("task_id = ?", taskID).Delete(&domain.TaskDependency{}).Error; err != nil {
+	if err := tx.Where("task_id = ?", taskID).Delete(&model.TaskDependency{}).Error; err != nil {
 		return fmt.Errorf("clear dependencies: %w", err)
 	}
 	for _, e := range normalized {
-		row := domain.TaskDependency{
-			TaskID:          taskID,
-			DependsOnTaskID: e.TaskID,
-			Satisfies:       e.Satisfies,
-			CreatedAt:       time.Now().UTC(),
-		}
+		row := model.NewTaskDependencyRow(taskID, e.TaskID, e.Satisfies, time.Now().UTC())
 		if err := tx.Create(&row).Error; err != nil {
 			return fmt.Errorf("create dependency: %w", err)
 		}

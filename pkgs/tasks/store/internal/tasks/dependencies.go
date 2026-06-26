@@ -10,6 +10,7 @@ import (
 
 	"github.com/AlexsanderHamir/Hamix/pkgs/tasks/domain"
 	"github.com/AlexsanderHamir/Hamix/pkgs/tasks/store/internal/kernel"
+	"github.com/AlexsanderHamir/Hamix/pkgs/tasks/store/model"
 	"gorm.io/gorm"
 )
 
@@ -43,12 +44,7 @@ func AddDependency(ctx context.Context, db *gorm.DB, taskID, dependsOnTaskID str
 		if cycle {
 			return fmt.Errorf("%w: dependency would create a cycle", domain.ErrInvalidInput)
 		}
-		row := domain.TaskDependency{
-			TaskID:          taskID,
-			DependsOnTaskID: dependsOnTaskID,
-			Satisfies:       satisfies,
-			CreatedAt:       time.Now().UTC(),
-		}
+		row := model.NewTaskDependencyRow(taskID, dependsOnTaskID, satisfies, time.Now().UTC())
 		if err := tx.Create(&row).Error; err != nil {
 			if kernel.IsDuplicateKey(err) {
 				return nil
@@ -69,7 +65,7 @@ func RemoveDependency(ctx context.Context, db *gorm.DB, taskID, dependsOnTaskID 
 	}
 	res := db.WithContext(ctx).
 		Where("task_id = ? AND depends_on_task_id = ?", taskID, dependsOnTaskID).
-		Delete(&domain.TaskDependency{})
+		Delete(&model.TaskDependency{})
 	if res.Error != nil {
 		return fmt.Errorf("delete dependency: %w", res.Error)
 	}
@@ -86,7 +82,7 @@ func ListDependencyEdges(ctx context.Context, db *gorm.DB, taskID string) ([]dom
 	if taskID == "" {
 		return nil, fmt.Errorf("%w: id", domain.ErrInvalidInput)
 	}
-	var rows []domain.TaskDependency
+	var rows []model.TaskDependency
 	err := db.WithContext(ctx).Where("task_id = ?", taskID).Order("created_at ASC").Find(&rows).Error
 	if err != nil {
 		return nil, fmt.Errorf("list dependencies: %w", err)
@@ -120,7 +116,7 @@ func ListDependents(ctx context.Context, db *gorm.DB, dependsOnTaskID string) ([
 		return nil, fmt.Errorf("%w: id", domain.ErrInvalidInput)
 	}
 	var ids []string
-	err := db.WithContext(ctx).Model(&domain.TaskDependency{}).
+	err := db.WithContext(ctx).Model(&model.TaskDependency{}).
 		Where("depends_on_task_id = ?", dependsOnTaskID).
 		Order("created_at ASC").
 		Pluck("task_id", &ids).Error
@@ -160,17 +156,12 @@ func SetDependencies(ctx context.Context, db *gorm.DB, taskID string, dependsOn 
 				return fmt.Errorf("%w: dependency would create a cycle", domain.ErrInvalidInput)
 			}
 		}
-		if err := tx.Where("task_id = ?", taskID).Delete(&domain.TaskDependency{}).Error; err != nil {
+		if err := tx.Where("task_id = ?", taskID).Delete(&model.TaskDependency{}).Error; err != nil {
 			return fmt.Errorf("clear dependencies: %w", err)
 		}
 		now := time.Now().UTC()
 		for _, e := range normalized {
-			row := domain.TaskDependency{
-				TaskID:          taskID,
-				DependsOnTaskID: e.TaskID,
-				Satisfies:       e.Satisfies,
-				CreatedAt:       now,
-			}
+			row := model.NewTaskDependencyRow(taskID, e.TaskID, e.Satisfies, now)
 			if err := tx.Create(&row).Error; err != nil {
 				return fmt.Errorf("create dependency: %w", err)
 			}
@@ -192,7 +183,7 @@ func hydrateDependsOn(ctx context.Context, db *gorm.DB, t *domain.Task) error {
 //funclogmeasure:skip category=hot-path reason="Pure helper without I/O; operation trace is emitted by the calling chokepoint."
 func ensureTaskExists(tx *gorm.DB, id string) error {
 	var n int64
-	if err := tx.Model(&domain.Task{}).Where("id = ?", id).Count(&n).Error; err != nil {
+	if err := tx.Model(&model.Task{}).Where("id = ?", id).Count(&n).Error; err != nil {
 		return fmt.Errorf("task lookup: %w", err)
 	}
 	if n == 0 {
@@ -212,7 +203,7 @@ func wouldCreateDependencyCycle(tx *gorm.DB, taskID, dependsOnTaskID string) (bo
 		cur := queue[0]
 		queue = queue[1:]
 		var next []string
-		if err := tx.Model(&domain.TaskDependency{}).Where("task_id = ?", cur).Pluck("depends_on_task_id", &next).Error; err != nil {
+		if err := tx.Model(&model.TaskDependency{}).Where("task_id = ?", cur).Pluck("depends_on_task_id", &next).Error; err != nil {
 			return false, fmt.Errorf("walk dependencies: %w", err)
 		}
 		for _, id := range next {

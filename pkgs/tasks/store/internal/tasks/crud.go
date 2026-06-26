@@ -12,6 +12,7 @@ import (
 	"github.com/AlexsanderHamir/Hamix/pkgs/tasks/store/internal/checklist"
 	"github.com/AlexsanderHamir/Hamix/pkgs/tasks/store/internal/drafts"
 	"github.com/AlexsanderHamir/Hamix/pkgs/tasks/store/internal/kernel"
+	"github.com/AlexsanderHamir/Hamix/pkgs/tasks/store/model"
 	"gorm.io/gorm"
 	"gorm.io/gorm/clause"
 )
@@ -26,14 +27,15 @@ func Get(ctx context.Context, db *gorm.DB, id string) (*domain.Task, error) {
 	if id == "" {
 		return nil, fmt.Errorf("%w: id", domain.ErrInvalidInput)
 	}
-	var t domain.Task
-	err := db.WithContext(ctx).Where("id = ?", id).First(&t).Error
+	var row model.Task
+	err := db.WithContext(ctx).Where("id = ?", id).First(&row).Error
 	if err != nil {
 		if errors.Is(err, gorm.ErrRecordNotFound) {
 			return nil, domain.ErrNotFound
 		}
 		return nil, fmt.Errorf("get task: %w", err)
 	}
+	t := model.ToDomainTask(row)
 	if err := hydrateDependsOn(ctx, db, &t); err != nil {
 		return nil, err
 	}
@@ -91,28 +93,30 @@ func Update(ctx context.Context, db *gorm.DB, id string, in UpdateInput, by doma
 	var updated *domain.Task
 	var origStatus domain.Status
 	err := db.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
-		var cur domain.Task
+		var cur model.Task
 		if err := tx.Clauses(clause.Locking{Strength: "UPDATE"}).Where("id = ?", id).First(&cur).Error; err != nil {
 			if errors.Is(err, gorm.ErrRecordNotFound) {
 				return domain.ErrNotFound
 			}
 			return fmt.Errorf("load task: %w", err)
 		}
-		origStatus = cur.Status
+		dcur := model.ToDomainTask(cur)
+		origStatus = dcur.Status
 		nextSeq, err := kernel.NextEventSeq(tx, id)
 		if err != nil {
 			return err
 		}
-		if err := applyTaskPatches(tx, id, &cur, in, by, nextSeq); err != nil {
+		if err := applyTaskPatches(tx, id, &dcur, in, by, nextSeq); err != nil {
 			return err
 		}
+		cur = model.FromDomainTask(dcur)
 		if err := tx.Save(&cur).Error; err != nil {
 			return fmt.Errorf("save task: %w", err)
 		}
-		if err := hydrateDependsOn(ctx, tx, &cur); err != nil {
+		if err := hydrateDependsOn(ctx, tx, &dcur); err != nil {
 			return err
 		}
-		updated = &cur
+		updated = &dcur
 		return nil
 	})
 	if err != nil {
@@ -136,7 +140,7 @@ func Delete(ctx context.Context, db *gorm.DB, id string, by domain.Actor) (delet
 		return nil, fmt.Errorf("%w: id", domain.ErrInvalidInput)
 	}
 	err = db.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
-		res := tx.Where("id = ?", id).Delete(&domain.Task{})
+		res := tx.Where("id = ?", id).Delete(&model.Task{})
 		if res.Error != nil {
 			return fmt.Errorf("delete task: %w", res.Error)
 		}
@@ -224,7 +228,7 @@ func createTaskInTx(tx *gorm.DB, t *domain.Task, in CreateInput, by domain.Actor
 	slog.Debug("trace", "cmd", calltrace.LogCmd, "operation", "tasks.store.tasks.createTaskInTx")
 	if t.ProjectID != nil {
 		var n int64
-		if err := tx.Model(&domain.Project{}).Where("id = ? AND status = ?", *t.ProjectID, domain.ProjectStatusActive).Count(&n).Error; err != nil {
+		if err := tx.Model(&model.Project{}).Where("id = ? AND status = ?", *t.ProjectID, domain.ProjectStatusActive).Count(&n).Error; err != nil {
 			return fmt.Errorf("project lookup: %w", err)
 		}
 		if n == 0 {
@@ -244,7 +248,7 @@ func createTaskInTx(tx *gorm.DB, t *domain.Task, in CreateInput, by domain.Actor
 		}
 	}
 	t.ProjectContextItemIDs = contextIDs
-	if err := tx.Create(t).Error; err != nil {
+	if err := tx.Create(model.FromDomainTaskPtr(t)).Error; err != nil {
 		if kernel.IsDuplicatePrimaryKey(err, "tasks") {
 			return fmt.Errorf("%w: task id already exists", domain.ErrConflict)
 		}

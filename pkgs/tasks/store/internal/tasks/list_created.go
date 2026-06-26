@@ -9,6 +9,7 @@ import (
 	"time"
 
 	"github.com/AlexsanderHamir/Hamix/pkgs/tasks/domain"
+	"github.com/AlexsanderHamir/Hamix/pkgs/tasks/store/model"
 	"gorm.io/gorm"
 )
 
@@ -18,7 +19,7 @@ const (
 )
 
 type listRowScan struct {
-	domain.Task
+	model.Task
 	TaskCreatedAt time.Time `gorm:"column:task_created_at"`
 }
 
@@ -34,7 +35,7 @@ func applyTaskCreatedJoin(q *gorm.DB) *gorm.DB {
 func tasksFromListRows(rows []listRowScan) []domain.Task {
 	out := make([]domain.Task, len(rows))
 	for i, r := range rows {
-		t := r.Task
+		t := model.ToDomainTask(r.Task)
 		if !r.TaskCreatedAt.IsZero() {
 			at := r.TaskCreatedAt.UTC()
 			t.CreatedAt = &at
@@ -50,7 +51,7 @@ func hydrateCreatedAt(ctx context.Context, db *gorm.DB, t *domain.Task) error {
 		return nil
 	}
 	var at time.Time
-	err := db.WithContext(ctx).Model(&domain.TaskEvent{}).
+	err := db.WithContext(ctx).Model(&model.TaskEvent{}).
 		Where("task_id = ? AND seq = ? AND type = ?", t.ID, taskCreatedEventSeq, domain.EventTaskCreated).
 		Select("at").
 		Scan(&at).Error
@@ -67,7 +68,7 @@ func hydrateCreatedAt(ctx context.Context, db *gorm.DB, t *domain.Task) error {
 func loadCreatedAtCursor(ctx context.Context, db *gorm.DB, afterID string) (time.Time, error) {
 	slog.Debug("trace", "cmd", calltrace.LogCmd, "operation", "tasks.store.tasks.loadCreatedAtCursor")
 	var at time.Time
-	err := db.WithContext(ctx).Model(&domain.TaskEvent{}).
+	err := db.WithContext(ctx).Model(&model.TaskEvent{}).
 		Where("task_id = ? AND seq = ? AND type = ?", afterID, taskCreatedEventSeq, domain.EventTaskCreated).
 		Select("at").
 		Scan(&at).Error

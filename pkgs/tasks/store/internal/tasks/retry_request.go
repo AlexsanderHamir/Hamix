@@ -11,6 +11,7 @@ import (
 
 	"github.com/AlexsanderHamir/Hamix/pkgs/tasks/domain"
 	"github.com/AlexsanderHamir/Hamix/pkgs/tasks/store/internal/kernel"
+	"github.com/AlexsanderHamir/Hamix/pkgs/tasks/store/model"
 	"gorm.io/gorm"
 	"gorm.io/gorm/clause"
 )
@@ -42,14 +43,15 @@ func RequestTaskRetry(ctx context.Context, db *gorm.DB, in RequestRetryInput, by
 	var updated *domain.Task
 	var origStatus domain.Status
 	err := db.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
-		var cur domain.Task
+		var cur model.Task
 		if err := tx.Clauses(clause.Locking{Strength: "UPDATE"}).Where("id = ?", taskID).First(&cur).Error; err != nil {
 			if errors.Is(err, gorm.ErrRecordNotFound) {
 				return domain.ErrNotFound
 			}
 			return fmt.Errorf("load task: %w", err)
 		}
-		origStatus = cur.Status
+		dcur := model.ToDomainTask(cur)
+		origStatus = dcur.Status
 		parentID, err := resolveRetryParentCycleInTx(tx, taskID, intent.ParentCycleID)
 		if err != nil {
 			return err
@@ -58,15 +60,15 @@ func RequestTaskRetry(ctx context.Context, db *gorm.DB, in RequestRetryInput, by
 		if err := intent.Validate(); err != nil {
 			return err
 		}
-		if cur.Status == domain.StatusReady && cur.PendingRetry != nil {
-			if cur.PendingRetry.Equal(&intent) {
-				updated = &cur
+		if dcur.Status == domain.StatusReady && dcur.PendingRetry != nil {
+			if dcur.PendingRetry.Equal(&intent) {
+				updated = &dcur
 				return nil
 			}
 			return fmt.Errorf("%w: task already queued with different retry intent", domain.ErrConflict)
 		}
-		if cur.Status != domain.StatusFailed {
-			return fmt.Errorf("%w: task status is %q, want failed", domain.ErrInvalidInput, cur.Status)
+		if dcur.Status != domain.StatusFailed {
+			return fmt.Errorf("%w: task status is %q, want failed", domain.ErrInvalidInput, dcur.Status)
 		}
 		nextSeq, err := kernel.NextEventSeq(tx, taskID)
 		if err != nil {
@@ -83,18 +85,19 @@ func RequestTaskRetry(ctx context.Context, db *gorm.DB, in RequestRetryInput, by
 			return err
 		}
 		nextSeq++
-		cur.PendingRetry = &intent
+		dcur.PendingRetry = &intent
 		ready := domain.StatusReady
-		if err := applyStatusPatch(tx, taskID, &cur, &ready, by, &nextSeq); err != nil {
+		if err := applyStatusPatch(tx, taskID, &dcur, &ready, by, &nextSeq); err != nil {
 			return err
 		}
+		cur = model.FromDomainTask(dcur)
 		if err := tx.Save(&cur).Error; err != nil {
 			return fmt.Errorf("save task: %w", err)
 		}
-		if err := hydrateDependsOn(ctx, tx, &cur); err != nil {
+		if err := hydrateDependsOn(ctx, tx, &dcur); err != nil {
 			return err
 		}
-		updated = &cur
+		updated = &dcur
 		return nil
 	})
 	if err != nil {
@@ -110,28 +113,30 @@ func RequestTaskRetry(ctx context.Context, db *gorm.DB, in RequestRetryInput, by
 func resolveRetryParentCycleInTx(tx *gorm.DB, taskID, explicit string) (string, error) {
 	explicit = strings.TrimSpace(explicit)
 	if explicit != "" {
-		var c domain.TaskCycle
+		var c model.TaskCycle
 		if err := tx.Where("id = ?", explicit).First(&c).Error; err != nil {
 			if errors.Is(err, gorm.ErrRecordNotFound) {
 				return "", domain.ErrNotFound
 			}
 			return "", fmt.Errorf("load parent cycle: %w", err)
 		}
-		if c.TaskID != taskID {
+		dc := model.ToDomainTaskCycle(c)
+		if dc.TaskID != taskID {
 			return "", fmt.Errorf("%w: parent_cycle_id does not belong to this task", domain.ErrInvalidInput)
 		}
-		if !domain.TerminalCycleStatus(c.Status) {
+		if !domain.TerminalCycleStatus(dc.Status) {
 			return "", fmt.Errorf("%w: parent cycle is not terminal", domain.ErrInvalidInput)
 		}
-		return c.ID, nil
+		return dc.ID, nil
 	}
-	var cycles []domain.TaskCycle
+	var cycles []model.TaskCycle
 	if err := tx.Where("task_id = ?", taskID).Order("attempt_seq DESC").Limit(50).Find(&cycles).Error; err != nil {
 		return "", fmt.Errorf("list cycles: %w", err)
 	}
 	for i := range cycles {
-		if domain.TerminalCycleStatus(cycles[i].Status) {
-			return cycles[i].ID, nil
+		dc := model.ToDomainTaskCycle(cycles[i])
+		if domain.TerminalCycleStatus(dc.Status) {
+			return dc.ID, nil
 		}
 	}
 	return "", fmt.Errorf("%w: no terminal cycle to retry from", domain.ErrInvalidInput)

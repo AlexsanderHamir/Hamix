@@ -22,6 +22,7 @@ import (
 
 	"github.com/AlexsanderHamir/Hamix/pkgs/tasks/domain"
 	"github.com/AlexsanderHamir/Hamix/pkgs/tasks/store/internal/kernel"
+	"github.com/AlexsanderHamir/Hamix/pkgs/tasks/store/model"
 	"gorm.io/gorm"
 )
 
@@ -41,7 +42,7 @@ func Append(ctx context.Context, db *gorm.DB, taskID string, typ domain.EventTyp
 	}
 	err := db.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
 		var n int64
-		if err := tx.Model(&domain.Task{}).Where("id = ?", taskID).Count(&n).Error; err != nil {
+		if err := tx.Model(&model.Task{}).Where("id = ?", taskID).Count(&n).Error; err != nil {
 			return fmt.Errorf("task lookup: %w", err)
 		}
 		if n == 0 {

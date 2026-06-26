@@ -10,6 +10,7 @@ import (
 
 	"github.com/AlexsanderHamir/Hamix/pkgs/tasks/domain"
 	"github.com/AlexsanderHamir/Hamix/pkgs/tasks/store/internal/kernel"
+	"github.com/AlexsanderHamir/Hamix/pkgs/tasks/store/model"
 	"gorm.io/gorm"
 	"gorm.io/gorm/clause"
 )
@@ -35,33 +36,35 @@ func AgentPickup(ctx context.Context, db *gorm.DB, taskID string, by domain.Acto
 	}
 	var out AgentPickupResult
 	err := db.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
-		var cur domain.Task
+		var cur model.Task
 		if err := tx.Clauses(clause.Locking{Strength: "UPDATE"}).Where("id = ?", taskID).First(&cur).Error; err != nil {
 			if errors.Is(err, gorm.ErrRecordNotFound) {
 				return domain.ErrNotFound
 			}
 			return fmt.Errorf("load task: %w", err)
 		}
-		if cur.Status != domain.StatusReady {
-			return fmt.Errorf("%w: task status is %q, want ready", domain.ErrInvalidInput, cur.Status)
+		dcur := model.ToDomainTask(cur)
+		if dcur.Status != domain.StatusReady {
+			return fmt.Errorf("%w: task status is %q, want ready", domain.ErrInvalidInput, dcur.Status)
 		}
-		out.ConsumedRetry = cur.PendingRetry.Clone()
-		cur.PendingRetry = nil
+		out.ConsumedRetry = dcur.PendingRetry.Clone()
+		dcur.PendingRetry = nil
 		running := domain.StatusRunning
 		nextSeq, err := kernel.NextEventSeq(tx, taskID)
 		if err != nil {
 			return err
 		}
-		if err := applyStatusPatch(tx, taskID, &cur, &running, by, &nextSeq); err != nil {
+		if err := applyStatusPatch(tx, taskID, &dcur, &running, by, &nextSeq); err != nil {
 			return err
 		}
+		cur = model.FromDomainTask(dcur)
 		if err := tx.Save(&cur).Error; err != nil {
 			return fmt.Errorf("save task: %w", err)
 		}
-		if err := hydrateDependsOn(ctx, tx, &cur); err != nil {
+		if err := hydrateDependsOn(ctx, tx, &dcur); err != nil {
 			return err
 		}
-		out.Task = &cur
+		out.Task = &dcur
 		return nil
 	})
 	if err != nil {

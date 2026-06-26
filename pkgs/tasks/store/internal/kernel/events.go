@@ -38,7 +38,7 @@ import (
 func NextEventSeq(tx *gorm.DB, taskID string) (int64, error) {
 	slog.Debug("trace", "cmd", calltrace.LogCmd, "operation", "tasks.store.kernel.NextEventSeq")
 	if tx.Dialector.Name() != "sqlite" {
-		var locked domain.Task
+		var locked model.Task
 		if err := tx.Clauses(clause.Locking{Strength: "UPDATE"}).
 			Select("id").Where("id = ?", taskID).First(&locked).Error; err != nil {
 			return 0, fmt.Errorf("lock task for event seq: %w", err)

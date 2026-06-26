@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { CustomSelect, isCustomSelectHeader } from "./custom-select";
+import { CustomSelect, isCustomSelectHeader } from "@/components/custom-select";
 import { DraftResumeModal } from "./draft-resume";
 import { DeleteConfirmDialog } from "./dialogs";
 import { filePreviewLanguageFromPath } from "./file-preview";

@@ -11,7 +11,7 @@ import {
 import { EmptyState } from "@/shared/EmptyState";
 import { FieldLabel } from "@/shared/FieldLabel";
 import { Modal } from "@/shared/Modal";
-import { CustomSelect, type CustomSelectOption } from "@/tasks/components/custom-select";
+import { CustomSelect, type CustomSelectOption } from "@/components/custom-select";
 import { RichPromptEditor } from "@/tasks/components/rich-prompt";
 import { promptHasVisibleContent } from "@/tasks/task-prompt";
 import {

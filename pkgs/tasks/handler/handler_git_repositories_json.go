@@ -66,8 +66,15 @@ type gitReconcileResponse struct {
 }
 
 type gitWorktreeRegisterJSON struct {
-	Path string `json:"path"`
-	Name string `json:"name"`
+	Path   string                     `json:"path"`
+	Name   string                     `json:"name"`
+	Branch *gitWorktreeBranchBindJSON `json:"branch,omitempty"`
+}
+
+type gitWorktreeBranchBindJSON struct {
+	Name         string `json:"name"`
+	CreateBranch bool   `json:"create_branch"`
+	StartPoint   string `json:"start_point"`
 }
 
 type gitWorktreeBranchAssociateJSON struct {
@@ -95,4 +102,16 @@ type gitLiveBranchJSON struct {
 
 type gitLiveBranchesListResponse struct {
 	Branches []gitLiveBranchJSON `json:"branches"`
+}
+
+type gitLiveWorktreeJSON struct {
+	Path       string `json:"path"`
+	Branch     string `json:"branch"`
+	IsMain     bool   `json:"is_main"`
+	Detached   bool   `json:"detached"`
+	Registered bool   `json:"registered"`
+}
+
+type gitLiveWorktreesListResponse struct {
+	Worktrees []gitLiveWorktreeJSON `json:"worktrees"`
 }

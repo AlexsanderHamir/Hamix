@@ -97,6 +97,49 @@ func (h *Handler) listGlobalGitWorktrees(w http.ResponseWriter, r *http.Request)
 	writeJSON(w, r, op, http.StatusOK, gitWorktreesListResponse{Worktrees: out})
 }
 
+func (h *Handler) listGlobalGitWorktreesLive(w http.ResponseWriter, r *http.Request) {
+	const op = "git.worktrees.list_live"
+	slog.Debug("trace", "cmd", calltrace.LogCmd, "operation", "handler.listGlobalGitWorktreesLive")
+	r = calltrace.WithRequestRoot(r, op)
+	repo, err := h.store.GetGitRepositoryByID(r.Context(), r.PathValue("repoId"))
+	if err != nil {
+		writeGitStoreError(w, r, op, err)
+		return
+	}
+	registered, err := h.store.ListGitWorktreesByRepo(r.Context(), repo.ID)
+	if err != nil {
+		writeGitStoreError(w, r, op, err)
+		return
+	}
+	registeredPaths := make(map[string]struct{}, len(registered))
+	for _, wt := range registered {
+		registeredPaths[wt.Path] = struct{}{}
+	}
+	gitSvc := h.gitService()
+	opened, err := gitSvc.OpenRepository(r.Context(), repo.Path)
+	if err != nil {
+		writeGitStoreError(w, r, op, err)
+		return
+	}
+	live, err := gitSvc.ListWorktrees(r.Context(), opened)
+	if err != nil {
+		writeGitStoreError(w, r, op, err)
+		return
+	}
+	out := make([]gitLiveWorktreeJSON, 0, len(live))
+	for _, wt := range live {
+		_, isRegistered := registeredPaths[wt.Path]
+		out = append(out, gitLiveWorktreeJSON{
+			Path:       wt.Path,
+			Branch:     wt.Branch,
+			IsMain:     wt.IsMain,
+			Detached:   strings.TrimSpace(wt.Branch) == "",
+			Registered: isRegistered,
+		})
+	}
+	writeJSON(w, r, op, http.StatusOK, gitLiveWorktreesListResponse{Worktrees: out})
+}
+
 func (h *Handler) createGlobalGitWorktree(w http.ResponseWriter, r *http.Request) {
 	const op = "git.worktrees.create_global"
 	slog.Debug("trace", "cmd", calltrace.LogCmd, "operation", "handler.createGlobalGitWorktree")
@@ -130,7 +173,15 @@ func (h *Handler) registerGlobalGitWorktree(w http.ResponseWriter, r *http.Reque
 		writeError(w, r, op, err, http.StatusBadRequest)
 		return
 	}
-	wt, err := h.store.RegisterExistingGitWorktree(r.Context(), r.PathValue("repoId"), body.Path, body.Name, h.gitService())
+	var bind store.BindBranchInput
+	if body.Branch != nil {
+		bind = store.BindBranchInput{
+			Name:         body.Branch.Name,
+			CreateBranch: body.Branch.CreateBranch,
+			StartPoint:   body.Branch.StartPoint,
+		}
+	}
+	wt, err := h.store.RegisterExistingGitWorktree(r.Context(), r.PathValue("repoId"), body.Path, body.Name, bind, h.gitService())
 	if err != nil {
 		writeGitStoreError(w, r, op, err)
 		return
@@ -226,9 +277,15 @@ func (h *Handler) associateWorktreeBranch(w http.ResponseWriter, r *http.Request
 			writeGitStoreError(w, r, op, err)
 			return
 		}
-		br, err := h.store.CreateGitBranchForRepo(r.Context(), wt.RepositoryID, store.CreateGitBranchInput{
-			Name:       body.Name,
-			StartPoint: body.StartPoint,
+		repo, err := h.store.GetGitRepositoryByID(r.Context(), wt.RepositoryID)
+		if err != nil {
+			writeGitStoreError(w, r, op, err)
+			return
+		}
+		br, err := h.store.ResolveOrCreateBranchForRepo(r.Context(), repo, store.BindBranchInput{
+			Name:         body.Name,
+			CreateBranch: body.CreateBranch,
+			StartPoint:   body.StartPoint,
 		}, h.gitService())
 		if err != nil {
 			writeGitStoreError(w, r, op, err)
@@ -272,4 +329,16 @@ func (h *Handler) listRepoProjects(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	writeJSON(w, r, op, http.StatusOK, projectsListResponse{Projects: rows, Limit: len(rows)})
+}
+
+func (h *Handler) reconcileGlobalGitRepository(w http.ResponseWriter, r *http.Request) {
+	const op = "git.repositories.reconcile_global"
+	slog.Debug("trace", "cmd", calltrace.LogCmd, "operation", "handler.reconcileGlobalGitRepository")
+	r = calltrace.WithRequestRoot(r, op)
+	repoID := r.PathValue("repoId")
+	if err := h.store.ReconcileGitRepository(r.Context(), "", repoID, h.gitService()); err != nil {
+		writeGitStoreError(w, r, op, err)
+		return
+	}
+	writeJSON(w, r, op, http.StatusAccepted, gitReconcileResponse{Status: "ok"})
 }

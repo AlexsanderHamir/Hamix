@@ -39,6 +39,8 @@ func (e *ExecError) Unwrap() error { return e.err }
 
 // Stderr returns the full trimmed git stderr (uncapped). Use this for classification,
 // not Error(), which may truncate for log safety.
+//
+//funclogmeasure:skip category=hot-path reason="Pure accessor; operation trace is emitted by Run callers."
 func (e *ExecError) Stderr() string { return e.stderr }
 
 // Run invokes `git -C <dir> <args...>` and returns trimmed stdout.

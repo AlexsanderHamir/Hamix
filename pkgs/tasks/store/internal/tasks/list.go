@@ -10,6 +10,7 @@ import (
 
 	"github.com/AlexsanderHamir/Hamix/pkgs/tasks/domain"
 	"github.com/AlexsanderHamir/Hamix/pkgs/tasks/store/internal/kernel"
+	"github.com/AlexsanderHamir/Hamix/pkgs/tasks/store/model"
 	"gorm.io/gorm"
 )
 
@@ -28,7 +29,7 @@ func ListFlat(ctx context.Context, db *gorm.DB, limit, offset int, filter *ListF
 	if offset < 0 {
 		offset = 0
 	}
-	q := db.WithContext(ctx).Model(&domain.Task{})
+	q := db.WithContext(ctx).Model(&model.Task{})
 	q = applyListFilter(q, db, filter)
 	q = applyTaskCreatedJoin(q)
 	var rows []listRowScan
@@ -71,7 +72,7 @@ func ListFlatAfter(ctx context.Context, db *gorm.DB, limit int, afterID string) 
 		}
 		return nil, false, err
 	}
-	q := db.WithContext(ctx).Model(&domain.Task{})
+	q := db.WithContext(ctx).Model(&model.Task{})
 	q = applyTaskCreatedJoin(q)
 	q = q.Where("(te.at < ? OR (te.at = ? AND tasks.id < ?))", cursorAt, cursorAt, afterID)
 	var rows []listRowScan
@@ -105,7 +106,7 @@ func ListFlatPage(ctx context.Context, db *gorm.DB, limit, offset int, filter *L
 	if offset < 0 {
 		offset = 0
 	}
-	q := db.WithContext(ctx).Model(&domain.Task{})
+	q := db.WithContext(ctx).Model(&model.Task{})
 	q = applyListFilter(q, db, filter)
 	q = applyTaskCreatedJoin(q)
 	var rows []listRowScan

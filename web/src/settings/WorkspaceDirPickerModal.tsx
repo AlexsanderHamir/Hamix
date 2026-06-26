@@ -38,6 +38,17 @@ const USER_FOLDER_CATEGORIES = new Set([
   "videos",
 ]);
 
+function normalizeBrowsePath(path: string): string {
+  return path.trim().replace(/[\\/]+$/, "");
+}
+
+function isBrowseRootPath(roots: WorkspaceBrowseRoot[], path: string): boolean {
+  const normalized = normalizeBrowsePath(path).toLowerCase();
+  return roots.some(
+    (root) => normalizeBrowsePath(root.path).toLowerCase() === normalized,
+  );
+}
+
 function partitionBrowseRoots(roots: WorkspaceBrowseRoot[]): {
   workspace: WorkspaceBrowseRoot[];
   userFolders: WorkspaceBrowseRoot[];
@@ -172,6 +183,12 @@ export function WorkspaceDirPickerModal({
 
   function goBack() {
     if (atRoots || listingPending) return;
+    // Entered from the starting-locations screen — Back returns there, not
+    // to the filesystem parent (e.g. Documents → OneDrive → Users).
+    if (loadState.kind === "ready" && isBrowseRootPath(loadState.roots, currentBrowsePath)) {
+      goRoots();
+      return;
+    }
     if (parentPath.trim() === "") {
       goRoots();
       return;
@@ -244,6 +261,10 @@ export function WorkspaceDirPickerModal({
               <PickerBreadcrumb
                 crumbs={crumbs}
                 listingPending={listingPending}
+                backToRoots={
+                  loadState.kind === "ready" &&
+                  isBrowseRootPath(loadState.roots, currentBrowsePath)
+                }
                 onBack={goBack}
                 onJump={(path) => void loadListing(path)}
               />
@@ -378,6 +399,7 @@ function RootGroup({ label, roots, listingPending, onOpen }: RootGroupProps) {
 type PickerBreadcrumbProps = {
   crumbs: Crumb[];
   listingPending: boolean;
+  backToRoots: boolean;
   onBack: () => void;
   onJump: (path: string) => void;
 };
@@ -385,6 +407,7 @@ type PickerBreadcrumbProps = {
 function PickerBreadcrumb({
   crumbs,
   listingPending,
+  backToRoots,
   onBack,
   onJump,
 }: PickerBreadcrumbProps) {
@@ -395,7 +418,7 @@ function PickerBreadcrumb({
         className="workspace-picker-back"
         onClick={onBack}
         disabled={listingPending}
-        aria-label="Go up one folder"
+        aria-label={backToRoots ? "Back to starting locations" : "Go up one folder"}
       >
         <BackIcon />
         <span>Back</span>

@@ -16,7 +16,6 @@ const (
 	runStateIdleKillPending       = "idle_kill_pending"
 	runStateIdleRecovered         = "idle_recovered"
 	RunnerStaleReason             = "runner_stale"
-	defaultStreamIdleStuckSeconds = 60
 )
 
 func streamIdleProgressEvent(kind runner.StreamIdleKind, stuck time.Duration) runner.ProgressEvent {

@@ -7,13 +7,23 @@ import { ROUTER_FUTURE_FLAGS } from "@/lib/routerFutureFlags";
 import { ModalStackProvider } from "@/shared/ModalStackContext";
 import { requestUrl } from "@/test/requestUrl";
 import { respondGlobalGitApi } from "@/test/handlers/gitGlobal";
-import { WorktreesPage } from "./WorktreesPage";
+import { RepositoryListPage } from "./RepositoryListPage";
+import { RepositoryDetailPage } from "./RepositoryDetailPage";
 import { RegisterRepositoryModal } from "./modals/RegisterRepositoryModal";
 
 const repoId = "00000000-0000-4000-8000-000000000010";
 const wtA = "00000000-0000-4000-8000-000000000020";
 const wtB = "00000000-0000-4000-8000-000000000030";
 const branchId = "00000000-0000-4000-8000-000000000040";
+
+const sampleRepo = {
+  id: repoId,
+  path: "/repo/main",
+  host_path: "",
+  default_branch: "main",
+  created_at: "2026-06-22T12:00:00Z",
+  updated_at: "2026-06-22T12:00:00Z",
+};
 
 function jsonResponse(body: unknown, init: ResponseInit = { status: 200 }): Response {
   return new Response(JSON.stringify(body), {
@@ -22,7 +32,7 @@ function jsonResponse(body: unknown, init: ResponseInit = { status: 200 }): Resp
   });
 }
 
-function renderPage(initialEntries: string[] = ["/worktrees"]) {
+function renderRoutes(initialEntries: string[] = ["/worktrees"]) {
   const client = new QueryClient({
     defaultOptions: { queries: { retry: false, gcTime: 0 } },
   });
@@ -31,7 +41,8 @@ function renderPage(initialEntries: string[] = ["/worktrees"]) {
       <MemoryRouter future={ROUTER_FUTURE_FLAGS} initialEntries={initialEntries}>
         <ModalStackProvider>
           <Routes>
-            <Route path="/worktrees" element={<WorktreesPage />} />
+            <Route path="/worktrees" element={<RepositoryListPage />} />
+            <Route path="/worktrees/:repositoryId" element={<RepositoryDetailPage />} />
           </Routes>
         </ModalStackProvider>
       </MemoryRouter>
@@ -39,7 +50,23 @@ function renderPage(initialEntries: string[] = ["/worktrees"]) {
   );
 }
 
-describe("WorktreesPage", () => {
+function mockRepositoriesList(fetchImpl?: typeof globalThis.fetch) {
+  const base = vi.spyOn(globalThis, "fetch").mockImplementation(
+    fetchImpl ??
+      (async (input: RequestInfo | URL) => {
+        const url = requestUrl(input);
+        if (url.endsWith("/git/repositories")) {
+          return jsonResponse({ repositories: [sampleRepo] });
+        }
+        const res = respondGlobalGitApi(url, "GET");
+        if (res) return res;
+        return jsonResponse({ error: "not found" }, { status: 404 });
+      }),
+  );
+  return base;
+}
+
+describe("RepositoryListPage", () => {
   afterEach(() => {
     vi.unstubAllGlobals();
   });
@@ -55,7 +82,7 @@ describe("WorktreesPage", () => {
       return jsonResponse({ error: "not found" }, { status: 404 });
     });
 
-    renderPage();
+    renderRoutes();
     expect(await screen.findByRole("heading", { name: /^repositories$/i })).toBeInTheDocument();
     expect(
       await screen.findByText(/register a repository to get started/i),
@@ -77,7 +104,7 @@ describe("WorktreesPage", () => {
       return jsonResponse({ error: "not found" }, { status: 404 });
     });
 
-    renderPage();
+    renderRoutes();
     const alert = await screen.findByRole("alert");
     expect(alert).toHaveTextContent(/could not load repositories/i);
     expect(alert).toHaveTextContent(/git API may be unavailable/i);
@@ -94,7 +121,7 @@ describe("WorktreesPage", () => {
       return jsonResponse({ error: "not found" }, { status: 404 });
     });
 
-    renderPage(["/worktrees?register=1"]);
+    renderRoutes(["/worktrees?register=1"]);
     expect(
       await screen.findByRole("button", { name: /Choose folder/i }),
     ).toBeInTheDocument();
@@ -115,22 +142,28 @@ describe("WorktreesPage", () => {
     expect(screen.getByRole("button", { name: /Choose folder/i })).toBeInTheDocument();
   });
 
+  it("lists repositories as links to the detail page", async () => {
+    mockRepositoriesList();
+    renderRoutes();
+    const link = await screen.findByRole("link", { name: /open repository main/i });
+    expect(link).toHaveAttribute("href", `/worktrees/${repoId}`);
+    expect(screen.getByText("/repo/main")).toBeInTheDocument();
+  });
+});
+
+describe("RepositoryDetailPage", () => {
+  afterEach(() => {
+    vi.unstubAllGlobals();
+  });
+
   it("renders one repository with two worktrees", async () => {
     vi.spyOn(globalThis, "fetch").mockImplementation(async (input: RequestInfo | URL) => {
       const url = requestUrl(input);
       if (url.endsWith("/git/repositories")) {
-        return jsonResponse({
-          repositories: [
-            {
-              id: repoId,
-              path: "/repo/main",
-              host_path: "",
-              default_branch: "main",
-              created_at: "2026-06-22T12:00:00Z",
-              updated_at: "2026-06-22T12:00:00Z",
-            },
-          ],
-        });
+        return jsonResponse({ repositories: [sampleRepo] });
+      }
+      if (url.endsWith(`/git/repositories/${repoId}`)) {
+        return jsonResponse(sampleRepo);
       }
       if (url.includes(`/git/repositories/${repoId}/worktrees`)) {
         return jsonResponse({
@@ -173,16 +206,12 @@ describe("WorktreesPage", () => {
       return jsonResponse({ error: "not found" }, { status: 404 });
     });
 
-    renderPage();
+    renderRoutes([`/worktrees/${repoId}`]);
     expect(
-      await screen.findByRole("heading", {
-        level: 2,
-        name: /^repositories$/i,
-      }),
+      await screen.findByRole("heading", { level: 1, name: /^main$/i }),
     ).toBeInTheDocument();
     expect(await screen.findByText("feature")).toBeInTheDocument();
-    expect(screen.getAllByText("main").length).toBeGreaterThan(0);
-    expect(screen.getAllByText("/repo/main").length).toBeGreaterThan(0);
+    expect(screen.getByRole("link", { name: /all repositories/i })).toBeInTheDocument();
   });
 
   it("maps delete 409 has_running_task to dialog copy", async () => {
@@ -190,18 +219,10 @@ describe("WorktreesPage", () => {
       const url = requestUrl(input);
       const method = init?.method ?? "GET";
       if (method === "GET" && url.endsWith("/git/repositories")) {
-        return jsonResponse({
-          repositories: [
-            {
-              id: repoId,
-              path: "/repo/main",
-              host_path: "",
-              default_branch: "main",
-              created_at: "2026-06-22T12:00:00Z",
-              updated_at: "2026-06-22T12:00:00Z",
-            },
-          ],
-        });
+        return jsonResponse({ repositories: [sampleRepo] });
+      }
+      if (method === "GET" && url.endsWith(`/git/repositories/${repoId}`)) {
+        return jsonResponse(sampleRepo);
       }
       if (method === "GET" && url.includes(`/git/repositories/${repoId}/worktrees`)) {
         return jsonResponse({
@@ -232,7 +253,7 @@ describe("WorktreesPage", () => {
       return jsonResponse({ error: "not found" }, { status: 404 });
     });
 
-    renderPage();
+    renderRoutes([`/worktrees/${repoId}`]);
     await screen.findByText("feature");
     const deleteButtons = screen.getAllByRole("button", { name: /^Delete$/i });
     await userEvent.click(deleteButtons[0]!);

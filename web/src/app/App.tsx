@@ -60,9 +60,14 @@ const ProjectContextPage = lazy(() =>
     default: m.ProjectContextPage,
   })),
 );
-const WorktreesPage = lazy(() =>
-  import("@/worktrees").then((m) => ({
-    default: m.WorktreesPage,
+const RepositoryListPage = lazy(() =>
+  import("@/worktrees/RepositoryListPage").then((m) => ({
+    default: m.RepositoryListPage,
+  })),
+);
+const RepositoryDetailPage = lazy(() =>
+  import("@/worktrees/RepositoryDetailPage").then((m) => ({
+    default: m.RepositoryDetailPage,
   })),
 );
 import { UiTestModeBanner } from "@/dev/UiTestModeBanner";
@@ -272,7 +277,8 @@ export default function App() {
             <Route index element={<TaskHome />} />
             <Route path="drafts" element={<TaskDraftsPage />} />
             <Route path="templates" element={<TaskTemplatesPage />} />
-            <Route path="worktrees" element={<WorktreesPage />} />
+            <Route path="worktrees" element={<RepositoryListPage />} />
+            <Route path="worktrees/:repositoryId" element={<RepositoryDetailPage />} />
           {projectsUiEnabled ? (
             <>
               <Route path="projects" element={<ProjectListPage />} />

@@ -233,6 +233,146 @@ describe("WorkspaceDirPickerModal", () => {
     fetchMock.mockRestore();
   });
 
+  it("returns to starting locations when Back is pressed at a browse root", async () => {
+    const fetchMock = vi.spyOn(globalThis, "fetch").mockImplementation(async (input) => {
+      const url = String(input);
+      if (url.endsWith("/settings/workspace-roots")) {
+        return jsonResponse({
+          environment: "native",
+          roots: [
+            {
+              id: "home",
+              path: "/roots",
+              label: "Home",
+              category: "home",
+              available: true,
+            },
+            {
+              id: "documents",
+              path: "/roots/OneDrive/Documents",
+              label: "Documents",
+              category: "documents",
+              available: true,
+            },
+          ],
+        });
+      }
+      if (url.includes("/settings/browse-dirs")) {
+        return browseRouter({
+          "/roots/OneDrive/Documents": {
+            path: "/roots/OneDrive/Documents",
+            parent_path: "/roots/OneDrive",
+            entries: [
+              {
+                name: "T2A",
+                path: "/roots/OneDrive/Documents/T2A",
+                has_children: false,
+                is_git_repo: true,
+              },
+            ],
+          },
+          "/roots/OneDrive/Documents/T2A": {
+            path: "/roots/OneDrive/Documents/T2A",
+            parent_path: "/roots/OneDrive/Documents",
+            is_git_repo: true,
+            entries: [],
+          },
+        })(url);
+      }
+      return new Response("not found", { status: 404 });
+    });
+
+    render(
+      <WorkspaceDirPickerModal
+        open
+        currentPath=""
+        onClose={() => {}}
+        onSelect={() => {}}
+      />,
+    );
+
+    await userEvent.click(await screen.findByRole("button", { name: /^Documents/ }));
+    expect(
+      screen.getByRole("button", { name: /Back to starting locations/ }),
+    ).toBeInTheDocument();
+    expect(screen.queryByText("Choose a folder to browse from")).not.toBeInTheDocument();
+
+    await userEvent.click(screen.getByRole("button", { name: /Back to starting locations/ }));
+
+    expect(await screen.findByText("Choose a folder to browse from")).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: /^Documents/ })).toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: /Back/ })).not.toBeInTheDocument();
+    fetchMock.mockRestore();
+  });
+
+  it("steps up one folder when Back is pressed inside a browse root", async () => {
+    const fetchMock = vi.spyOn(globalThis, "fetch").mockImplementation(async (input) => {
+      const url = String(input);
+      if (url.endsWith("/settings/workspace-roots")) {
+        return jsonResponse({
+          environment: "native",
+          roots: [
+            {
+              id: "documents",
+              path: "/roots/OneDrive/Documents",
+              label: "Documents",
+              category: "documents",
+              available: true,
+            },
+          ],
+        });
+      }
+      if (url.includes("/settings/browse-dirs")) {
+        return browseRouter({
+          "/roots/OneDrive/Documents": {
+            path: "/roots/OneDrive/Documents",
+            parent_path: "/roots/OneDrive",
+            entries: [
+              {
+                name: "T2A",
+                path: "/roots/OneDrive/Documents/T2A",
+                has_children: false,
+                is_git_repo: true,
+              },
+            ],
+          },
+          "/roots/OneDrive/Documents/T2A": {
+            path: "/roots/OneDrive/Documents/T2A",
+            parent_path: "/roots/OneDrive/Documents",
+            is_git_repo: true,
+            entries: [],
+          },
+        })(url);
+      }
+      return new Response("not found", { status: 404 });
+    });
+
+    render(
+      <WorkspaceDirPickerModal
+        open
+        currentPath=""
+        onClose={() => {}}
+        onSelect={() => {}}
+      />,
+    );
+
+    await userEvent.click(await screen.findByRole("button", { name: /^Documents/ }));
+    await userEvent.click(await screen.findByRole("button", { name: /T2A/ }));
+
+    await waitFor(() => {
+      expect(screen.getByText("/roots/OneDrive/Documents/T2A")).toBeInTheDocument();
+    });
+
+    await userEvent.click(screen.getByRole("button", { name: /Go up one folder/ }));
+
+    await waitFor(() => {
+      expect(screen.getByText("/roots/OneDrive/Documents")).toBeInTheDocument();
+    });
+    expect(screen.getByRole("button", { name: /T2A/ })).toBeInTheDocument();
+    expect(screen.queryByText("Choose a folder to browse from")).not.toBeInTheDocument();
+    fetchMock.mockRestore();
+  });
+
   it("blocks confirmation when requireGitRepository and folder is not a git checkout", async () => {
     const onSelect = vi.fn();
     const fetchMock = vi.spyOn(globalThis, "fetch").mockImplementation(async (input) => {

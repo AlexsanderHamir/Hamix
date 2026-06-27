@@ -1,4 +1,4 @@
-import type { GitBranch, GitLiveBranch, GitLiveWorktree, GitRepository, GitWorktree, GitWorktreeBranchBind } from "@/types/git";
+import type { GitBranch, GitLiveBranch, GitLiveWorktree, GitRepository, GitWorktree, GitWorktreeBranchBind, GitWorktreeProbe } from "@/types/git";
 import type { ProjectListResponse } from "@/types/project";
 import { parseProjectListResponse } from "./projects";
 import {
@@ -9,6 +9,7 @@ import {
   parseGitRepositoryList,
   parseGitWorktree,
   parseGitWorktreeList,
+  parseGitWorktreeProbe,
 } from "./parseGitApi";
 import { assertTaskPathId } from "./taskRequestBounds";
 import { apiErrorFromResponse, fetchWithTimeout, jsonHeaders } from "./shared";
@@ -149,6 +150,21 @@ export async function listGlobalGitLiveWorktrees(
   );
   if (!res.ok) throw await apiErrorFromResponse(res);
   return parseGitLiveWorktreeList((await res.json()) as unknown);
+}
+
+export async function probeGlobalGitWorktree(
+  repositoryId: string,
+  path: string,
+  options?: { signal?: AbortSignal },
+): Promise<GitWorktreeProbe> {
+  const repoId = assertTaskPathId(repositoryId, "repository id");
+  const params = new URLSearchParams({ path });
+  const res = await fetchWithTimeout(
+    `${gitRoot}/repositories/${encodeURIComponent(repoId)}/worktrees/probe?${params}`,
+    { headers: { Accept: "application/json" }, signal: options?.signal },
+  );
+  if (!res.ok) throw await apiErrorFromResponse(res);
+  return parseGitWorktreeProbe((await res.json()) as unknown);
 }
 
 export async function listGlobalGitLiveBranches(

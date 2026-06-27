@@ -41,6 +41,8 @@ type AddWorktreeOptions struct {
 // Service performs git worktree and branch operations.
 type Service interface {
 	OpenRepository(ctx context.Context, path string) (*Repository, error)
+	ResolveRegistration(ctx context.Context, path string) (mainRoot, commonDir string, err error)
+	BelongsToRepository(ctx context.Context, candidatePath, repoRootPath string) (bool, error)
 
 	ListWorktrees(ctx context.Context, repo *Repository) ([]Worktree, error)
 	AddWorktree(ctx context.Context, repo *Repository, path string, opts AddWorktreeOptions) (*Worktree, error)

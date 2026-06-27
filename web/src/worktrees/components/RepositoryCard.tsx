@@ -8,7 +8,6 @@ import {
 } from "../repositoryDisplay";
 import { worktreeGitCopy } from "../worktreeGitCopy";
 import {
-  WorktreesBranchIcon,
   WorktreesMoreIcon,
   WorktreesPlusIcon,
   WorktreesRefreshIcon,
@@ -55,13 +54,6 @@ export function RepositoryCard({
           </h2>
           <div className="worktrees-repo-card__meta-row">
             <WorktreesPathChip path={repository.path} />
-            {repository.default_branch.trim() !== "" ? (
-              <div className="worktrees-default-branch">
-                <WorktreesBranchIcon className="worktrees-default-branch__icon" />
-                <span>{worktreeGitCopy.defaultBranchLabel}:</span>
-                <strong>{repository.default_branch}</strong>
-              </div>
-            ) : null}
           </div>
           {showHostPath ? (
             <p className="worktrees-repo-card__host-path">

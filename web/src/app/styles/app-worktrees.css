@@ -678,6 +678,27 @@
   color: var(--text-secondary);
 }
 
+.worktrees-form-modal__fieldset {
+  margin: 0;
+  padding: 0;
+  border: none;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+
+.worktrees-form-modal__fieldset .settings-field-label {
+  margin-bottom: var(--space-1);
+}
+
+.worktrees-form-modal__radio {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  font-size: var(--text-sm);
+  color: var(--text-secondary);
+}
+
 .worktrees-form-modal__error {
   margin: 0;
 }

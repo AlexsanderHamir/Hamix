@@ -5,6 +5,7 @@ import type {
   GitRepository,
   GitReconcileResult,
   GitWorktree,
+  GitWorktreeProbe,
 } from "@/types/git";
 import { isRecord, parseNonEmptyString, parseOptionalNonEmptyId, parseString } from "./parseTaskApiCore";
 
@@ -15,8 +16,13 @@ function parseGitRepositoryRow(value: unknown, path: string): GitRepository {
   return {
     id: parseNonEmptyString(value.id, `${path}.id`),
     path: parseString(value.path, `${path}.path`),
+    git_common_dir: isRecord(value) && value.git_common_dir != null
+      ? parseString(value.git_common_dir, `${path}.git_common_dir`)
+      : "",
     host_path: parseString(value.host_path, `${path}.host_path`),
-    default_branch: parseString(value.default_branch, `${path}.default_branch`),
+    default_branch: isRecord(value) && value.default_branch != null
+      ? parseString(value.default_branch, `${path}.default_branch`)
+      : "",
     created_at: parseString(value.created_at, `${path}.created_at`),
     updated_at: parseString(value.updated_at, `${path}.updated_at`),
   };
@@ -142,6 +148,19 @@ export function parseGitLiveWorktreeList(raw: unknown): GitLiveWorktree[] {
     throw new Error("Invalid API response: worktrees must be array");
   }
   return rows.map((row, i) => parseGitLiveWorktreeRow(row, `worktrees[${i}]`));
+}
+
+export function parseGitWorktreeProbe(raw: unknown): GitWorktreeProbe {
+  if (!isRecord(raw)) {
+    throw new Error("Invalid API response: body must be object");
+  }
+  return {
+    path: parseString(raw.path, "path"),
+    linked: Boolean(raw.linked),
+    is_main: Boolean(raw.is_main),
+    branch: parseString(raw.branch, "branch"),
+    registered: Boolean(raw.registered),
+  };
 }
 
 export function parseGitReconcileResult(raw: unknown): GitReconcileResult {

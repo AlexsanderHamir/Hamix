@@ -12,6 +12,17 @@ export function respondGlobalGitApi(url: string, method = "GET"): Response | nul
     if (url.endsWith(`${base}/repositories`)) {
       return Response.json(globalGitRepositoriesResponse());
     }
+    if (url.includes(`${base}/repositories/`) && url.endsWith("/worktrees/probe")) {
+      const probePath = new URL(url, "http://local").searchParams.get("path") ?? "";
+      const linked = probePath.includes("/repo/");
+      return Response.json({
+        path: probePath || "/repo/wt-feature",
+        linked,
+        is_main: false,
+        branch: linked ? "feature" : "",
+        registered: false,
+      });
+    }
     if (url.includes(`${base}/repositories/`) && url.endsWith("/worktrees/live")) {
       return Response.json({
         worktrees: [

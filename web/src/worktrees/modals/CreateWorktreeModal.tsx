@@ -12,6 +12,7 @@ import {
   branchBindPayload,
   type BranchBindValue,
 } from "../components/WorktreeBranchBindFields";
+import { WorktreeInventoryReconcilePrompt } from "../components/WorktreeInventoryReconcilePrompt";
 
 type StartFromMode = "main" | "reference";
 
@@ -20,6 +21,10 @@ type Props = {
   pending: boolean;
   error: unknown;
   repositoryId: string;
+  storedPath: string;
+  reconcilePending?: boolean;
+  reconcileError?: unknown;
+  onReconcile: () => void;
   onClose: () => void;
   onSubmit: (input: {
     path: string;
@@ -35,6 +40,10 @@ export function CreateWorktreeModal({
   pending,
   error,
   repositoryId,
+  storedPath,
+  reconcilePending = false,
+  reconcileError,
+  onReconcile,
   onClose,
   onSubmit,
 }: Props) {
@@ -52,6 +61,8 @@ export function CreateWorktreeModal({
   const liveWorktreesQuery = useGlobalLiveWorktrees(repositoryId, {
     enabled: open && repositoryId !== "",
   });
+  const inventoryUnreachable =
+    liveWorktreesQuery.isError && !liveWorktreesQuery.isLoading && !liveWorktreesQuery.isFetching;
   const referenceOptions = (liveWorktreesQuery.data ?? [])
     .filter((wt) => wt.branch.trim() !== "")
     .map((wt) => ({
@@ -66,7 +77,8 @@ export function CreateWorktreeModal({
   const errorMessage = error != null ? gitDeleteErrorMessage(error) : null;
   const branchPayload = branchBindPayload(branchBind);
   const referenceReady = startFrom === "main" || (referencePath !== "" && !referenceDetached);
-  const canSubmit = path.trim() !== "" && branchPayload != null && referenceReady;
+  const canSubmit =
+    !inventoryUnreachable && path.trim() !== "" && branchPayload != null && referenceReady;
 
   const startPoint =
     startFrom === "reference" && branchPayload?.create_branch && referenceWorktree?.branch.trim()
@@ -100,6 +112,16 @@ export function CreateWorktreeModal({
             <h2 id="create-worktree-title">{worktreeGitCopy.createModalTitle}</h2>
             <p className="worktrees-form-modal__lead">{worktreeGitCopy.createModalLead}</p>
           </header>
+          {inventoryUnreachable ? (
+            <WorktreeInventoryReconcilePrompt
+              storedPath={storedPath}
+              pending={reconcilePending}
+              reconcileError={reconcileError}
+              onReconcile={onReconcile}
+            />
+          ) : null}
+          {!inventoryUnreachable ? (
+            <>
           <fieldset className="worktrees-form-modal__fieldset">
             <legend className="settings-field-label">{worktreeGitCopy.createModalStartFromLabel}</legend>
             <label className="worktrees-form-modal__radio">
@@ -174,6 +196,8 @@ export function CreateWorktreeModal({
             branchSelectId="create-worktree-branch-select"
             newBranchInputId="create-worktree-branch-new-name"
           />
+            </>
+          ) : null}
           {errorMessage ? (
             <MutationErrorBanner error={errorMessage} className="worktrees-form-modal__error" />
           ) : null}

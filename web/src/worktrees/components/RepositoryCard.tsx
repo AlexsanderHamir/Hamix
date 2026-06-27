@@ -16,6 +16,7 @@ import {
 } from "./WorktreesIcons";
 import { WorktreesMenu } from "./WorktreesMenu";
 import { WorktreeList } from "./WorktreeList";
+import { WorktreeReconcileStatus } from "./WorktreeReconcileStatus";
 
 type Props = {
   repository: GitRepository;
@@ -51,7 +52,11 @@ export function RepositoryCard({
     !repositoryPathsEquivalent(repository.path, repository.host_path);
 
   return (
-    <article className="worktrees-repo-card" aria-labelledby={`repo-${repository.id}-title`}>
+    <article
+      className="worktrees-repo-card"
+      aria-labelledby={`repo-${repository.id}-title`}
+      aria-busy={reconcilePending || undefined}
+    >
       <header className="worktrees-repo-card__header">
         <div className="worktrees-repo-card__title-line">
           <h2 id={`repo-${repository.id}-title`} className="worktrees-repo-card__title">
@@ -63,6 +68,8 @@ export function RepositoryCard({
               className="secondary worktrees-icon-menu-btn"
               icon={<WorktreesMoreIcon />}
               iconOnly
+              triggerDisabled={reconcilePending}
+              triggerBusy={reconcilePending}
               items={[
                 {
                   id: "reconcile",
@@ -93,6 +100,10 @@ export function RepositoryCard({
           ) : null}
         </div>
       </header>
+
+      {reconcilePending ? (
+        <WorktreeReconcileStatus className="worktrees-repo-card__reconcile-status" />
+      ) : null}
 
       {reconcileErrorMessage ? (
         <MutationErrorBanner

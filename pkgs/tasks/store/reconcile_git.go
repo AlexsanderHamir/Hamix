@@ -29,6 +29,11 @@ type ReconcileGitInput struct {
 	RepairGit     bool
 	DryRun        bool
 	AllowRemove   bool
+	// AllowCheckoutDiscover runs bounded sibling-folder search when the cached main
+	// path is missing (gitwork OpenRegisteredCheckout). Operator reconcile enables this.
+	AllowCheckoutDiscover bool
+	// AllowDiscover inserts git-linked worktrees Hamix has not registered. Default
+	// operator reconcile leaves this false — use Register worktree + live inventory.
 	AllowDiscover bool
 }
 
@@ -80,7 +85,7 @@ func (s *Store) ReconcileGitRepository(
 		gitSvc = gitwork.New()
 	}
 
-	opened, resolveMeta, err := s.openRepoForReconcile(ctx, repo, strings.TrimSpace(input.BootstrapPath), input.AllowDiscover, gitSvc)
+	opened, resolveMeta, err := s.openRepoForReconcile(ctx, repo, strings.TrimSpace(input.BootstrapPath), input.AllowCheckoutDiscover, gitSvc)
 	if err != nil {
 		return ReconcileGitOutput{}, err
 	}
@@ -251,31 +256,36 @@ func (s *Store) ReconcileGitRepository(
 			dbByPath[worktreePathKey(row.Path)] = row
 		}
 
-		for _, wt := range live {
-			key := worktreePathKey(wt.Path)
-			if _, ok := matchedLive[key]; ok {
-				continue
-			}
-			if _, ok := dbByPath[key]; ok {
-				continue
-			}
-			name := "discovered-" + worktreeDisplayName(wt.Path)
-			if err := tx.Create(&model.GitWorktree{
-				ID:           uuid.NewString(),
-				RepositoryID: repoID,
-				Path:         wt.Path,
-				Name:         name,
-				IsMain:       wt.IsMain,
-				CreatedAt:    now,
-			}).Error; err != nil {
-				return err
-			}
-			report.WorktreesAdded++
-			if strings.TrimSpace(wt.Branch) != "" {
-				report.NeedsBranchBind = append(report.NeedsBranchBind, ReconcileNeedsBranchBind{
-					Path:   wt.Path,
-					Branch: wt.Branch,
-				})
+		if input.AllowDiscover {
+			for _, wt := range live {
+				if wt.IsMain {
+					continue
+				}
+				key := worktreePathKey(wt.Path)
+				if _, ok := matchedLive[key]; ok {
+					continue
+				}
+				if _, ok := dbByPath[key]; ok {
+					continue
+				}
+				name := "discovered-" + worktreeDisplayName(wt.Path)
+				if err := tx.Create(&model.GitWorktree{
+					ID:           uuid.NewString(),
+					RepositoryID: repoID,
+					Path:         wt.Path,
+					Name:         name,
+					IsMain:       wt.IsMain,
+					CreatedAt:    now,
+				}).Error; err != nil {
+					return err
+				}
+				report.WorktreesAdded++
+				if strings.TrimSpace(wt.Branch) != "" {
+					report.NeedsBranchBind = append(report.NeedsBranchBind, ReconcileNeedsBranchBind{
+						Path:   wt.Path,
+						Branch: wt.Branch,
+					})
+				}
 			}
 		}
 
@@ -352,10 +362,11 @@ func (s *Store) RelocateGitRepository(
 	gitSvc gitwork.Service,
 ) (ReconcileGitOutput, error) {
 	return s.ReconcileGitRepository(ctx, projectID, repoID, ReconcileGitInput{
-		BootstrapPath: path,
-		RepairGit:     true,
-		AllowRemove:   true,
-		AllowDiscover: true,
+		BootstrapPath:         path,
+		RepairGit:             true,
+		AllowRemove:           true,
+		AllowCheckoutDiscover: true,
+		AllowDiscover:         false,
 	}, gitSvc)
 }
 
@@ -454,6 +465,7 @@ func (s *Store) openRegisteredRepo(
 	allowDiscover bool,
 	gitSvc gitwork.Service,
 ) (*gitwork.Repository, gitwork.ResolveResult, error) {
+	slog.Debug("trace", "cmd", calltrace.LogCmd, "operation", "tasks.store.openRegisteredRepo")
 	branches, err := s.ListGitBranchesByRepo(ctx, repo.ID)
 	if err != nil {
 		return nil, gitwork.ResolveResult{}, err

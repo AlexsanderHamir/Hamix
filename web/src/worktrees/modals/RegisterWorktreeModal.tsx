@@ -17,12 +17,17 @@ import {
   branchBindPayload,
   type BranchBindValue,
 } from "../components/WorktreeBranchBindFields";
+import { WorktreeInventoryReconcilePrompt } from "../components/WorktreeInventoryReconcilePrompt";
 
 type Props = {
   open: boolean;
   pending: boolean;
   error: unknown;
   repositoryId: string;
+  storedPath: string;
+  reconcilePending?: boolean;
+  reconcileError?: unknown;
+  onReconcile: () => void;
   onClose: () => void;
   onSubmit: (input: {
     path: string;
@@ -36,6 +41,10 @@ export function RegisterWorktreeModal({
   pending,
   error,
   repositoryId,
+  storedPath,
+  reconcilePending = false,
+  reconcileError,
+  onReconcile,
   onClose,
   onSubmit,
 }: Props) {
@@ -50,6 +59,8 @@ export function RegisterWorktreeModal({
   const liveWorktreesQuery = useGlobalLiveWorktrees(repositoryId, {
     enabled: open && repositoryId !== "",
   });
+  const inventoryUnreachable =
+    liveWorktreesQuery.isError && !liveWorktreesQuery.isLoading && !liveWorktreesQuery.isFetching;
   const liveWorktrees = (liveWorktreesQuery.data ?? []).filter((wt) => !wt.registered);
   const worktreeOptions = liveWorktrees.map((wt) => ({
     value: wt.path,
@@ -59,6 +70,7 @@ export function RegisterWorktreeModal({
   const pathSelect = {
     loading: liveWorktreesQuery.isLoading,
     optionCount: worktreeOptions.length,
+    inventoryError: inventoryUnreachable,
     pending,
   };
 
@@ -84,7 +96,7 @@ export function RegisterWorktreeModal({
 
   const errorMessage = error != null ? gitDeleteErrorMessage(error) : null;
   const branchPayload = branchBindPayload(branchBind);
-  const canSubmit = selectedPath !== "" && branchPayload != null;
+  const canSubmit = !inventoryUnreachable && selectedPath !== "" && branchPayload != null;
 
   return (
     <Modal
@@ -121,12 +133,21 @@ export function RegisterWorktreeModal({
           onChange={setSelectedPath}
         />
 
+        {inventoryUnreachable ? (
+          <WorktreeInventoryReconcilePrompt
+            storedPath={storedPath}
+            pending={reconcilePending}
+            reconcileError={reconcileError}
+            onReconcile={onReconcile}
+          />
+        ) : null}
+
         <label className="field">
           <span className="settings-field-label">{worktreeGitCopy.registerModalDisplayNameLabel}</span>
           <input
             type="text"
             value={displayName}
-            disabled={pending}
+            disabled={pending || inventoryUnreachable}
             placeholder={worktreeGitCopy.registerModalDisplayNamePlaceholder}
             onChange={(e) => setDisplayName(e.target.value)}
           />
@@ -134,7 +155,7 @@ export function RegisterWorktreeModal({
 
         <WorktreeBranchBindFields
           repositoryId={repositoryId}
-          enabled={open && repositoryId !== ""}
+          enabled={open && repositoryId !== "" && !inventoryUnreachable}
           pending={pending}
           value={branchBind}
           onChange={setBranchBind}

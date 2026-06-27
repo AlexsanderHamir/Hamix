@@ -26,6 +26,8 @@ type Props = {
   chevron?: boolean;
   iconOnly?: boolean;
   align?: "start" | "end";
+  triggerDisabled?: boolean;
+  triggerBusy?: boolean;
 };
 
 const MENU_GAP_PX = 4;
@@ -42,6 +44,8 @@ export function WorktreesMenu({
   chevron = false,
   iconOnly = false,
   align = "end",
+  triggerDisabled = false,
+  triggerBusy = false,
 }: Props) {
   const menuId = useId();
   const triggerRef = useRef<HTMLButtonElement>(null);
@@ -172,9 +176,18 @@ export function WorktreesMenu({
           aria-haspopup="menu"
           aria-expanded={open}
           aria-controls={menuId}
-          onClick={() => setOpen((value) => !value)}
+          aria-busy={triggerBusy || undefined}
+          disabled={triggerDisabled}
+          onClick={() => {
+            if (triggerDisabled) return;
+            setOpen((value) => !value);
+          }}
         >
-          {icon ? <span className="worktrees-menu-trigger__icon">{icon}</span> : null}
+          {triggerBusy ? (
+            <span className="worktrees-menu-trigger__spinner" aria-hidden />
+          ) : icon ? (
+            <span className="worktrees-menu-trigger__icon">{icon}</span>
+          ) : null}
           {!iconOnly ? (
             <span className="worktrees-menu-trigger__label">{triggerLabel}</span>
           ) : null}

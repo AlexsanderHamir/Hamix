@@ -408,6 +408,17 @@
   font-style: italic;
 }
 
+.workspace-picker-validation {
+  margin: var(--space-1) 0 0;
+  font-size: var(--text-xs);
+  line-height: 1.45;
+  color: var(--text-tertiary);
+}
+
+.workspace-picker-validation--error {
+  color: var(--color-error, #ef4444);
+}
+
 .workspace-picker-footer-actions {
   display: flex;
   gap: var(--space-3);

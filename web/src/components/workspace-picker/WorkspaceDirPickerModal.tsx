@@ -19,6 +19,8 @@ type Props = {
   lead?: string;
   /** When true, only git checkouts can be confirmed; folders stay visible. */
   requireGitRepository?: boolean;
+  /** When set, path must pass async validation before confirm (e.g. repo-scoped worktree probe). */
+  validatePath?: (path: string) => Promise<{ ok: boolean; message?: string }>;
 };
 
 type LoadState =
@@ -105,6 +107,7 @@ export function WorkspaceDirPickerModal({
   title = "Choose folder",
   lead,
   requireGitRepository = false,
+  validatePath,
 }: Props) {
   const resolvedLead =
     lead ??
@@ -118,6 +121,10 @@ export function WorkspaceDirPickerModal({
   const [currentPathIsGitRepo, setCurrentPathIsGitRepo] = useState(false);
   const [listingError, setListingError] = useState<string | null>(null);
   const [listingPending, setListingPending] = useState(false);
+  const [pathValidation, setPathValidation] = useState<{ ok: boolean; message?: string } | null>(
+    null,
+  );
+  const [validatingPath, setValidatingPath] = useState(false);
 
   const atRoots = currentBrowsePath.trim() === "";
 
@@ -147,6 +154,8 @@ export function WorkspaceDirPickerModal({
     setParentPath("");
     setCurrentPathIsGitRepo(false);
     setListingError(null);
+    setPathValidation(null);
+    setValidatingPath(false);
     void fetchWorkspaceRoots()
       .then((roots) => {
         if (cancelled) return;
@@ -172,6 +181,35 @@ export function WorkspaceDirPickerModal({
     if (loadState.kind !== "ready") return [];
     return computeCrumbs(loadState.roots, currentBrowsePath);
   }, [loadState, currentBrowsePath]);
+
+  useEffect(() => {
+    if (!open || !validatePath || currentBrowsePath.trim() === "") {
+      setPathValidation(null);
+      setValidatingPath(false);
+      return;
+    }
+    let cancelled = false;
+    setValidatingPath(true);
+    void validatePath(currentBrowsePath)
+      .then((result) => {
+        if (!cancelled) {
+          setPathValidation(result);
+          setValidatingPath(false);
+        }
+      })
+      .catch((err) => {
+        if (!cancelled) {
+          setPathValidation({
+            ok: false,
+            message: err instanceof Error ? err.message : "Could not validate folder",
+          });
+          setValidatingPath(false);
+        }
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [open, validatePath, currentBrowsePath]);
 
   function goRoots() {
     setEntries([]);
@@ -205,7 +243,8 @@ export function WorkspaceDirPickerModal({
 
   const hasOpenFolder = !atRoots && currentBrowsePath.trim() !== "";
   const gitRequirementMet = !requireGitRepository || currentPathIsGitRepo;
-  const canConfirm = hasOpenFolder && !listingPending && gitRequirementMet;
+  const customValidationMet = !validatePath || (pathValidation?.ok === true && !validatingPath);
+  const canConfirm = hasOpenFolder && !listingPending && gitRequirementMet && customValidationMet;
 
   const rootGroups =
     loadState.kind === "ready" ? partitionBrowseRoots(loadState.roots) : null;
@@ -345,6 +384,14 @@ export function WorkspaceDirPickerModal({
                 >
                   {hasOpenFolder ? currentBrowsePath : "Open a folder to register it"}
                 </code>
+                {validatingPath ? (
+                  <p className="workspace-picker-validation">Checking folder…</p>
+                ) : null}
+                {!validatingPath && pathValidation && !pathValidation.ok && pathValidation.message ? (
+                  <p className="workspace-picker-validation workspace-picker-validation--error" role="alert">
+                    {pathValidation.message}
+                  </p>
+                ) : null}
               </div>
               <div className="workspace-picker-footer-actions">
                 <button type="button" className="secondary" onClick={onClose}>

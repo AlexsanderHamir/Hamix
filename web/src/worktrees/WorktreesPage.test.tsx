@@ -192,7 +192,6 @@ describe("WorktreesPage", () => {
     expect(await screen.findByText("feature", { selector: ".draft-row__name" })).toBeInTheDocument();
     expect(screen.getAllByText("/repo/main").length).toBeGreaterThan(0);
     expect(screen.getAllByText("main", { selector: ".worktree-row__kind" }).length).toBeGreaterThan(0);
-    expect(screen.getByText(/Default branch/)).toBeInTheDocument();
   });
 
   it("maps delete 409 has_running_task to dialog copy", async () => {

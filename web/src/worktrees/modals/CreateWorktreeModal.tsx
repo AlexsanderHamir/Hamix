@@ -1,14 +1,19 @@
 import { useState } from "react";
 import { Modal } from "@/shared/Modal";
 import { MutationErrorBanner } from "@/shared/MutationErrorBanner";
+import { CustomSelect } from "@/components/custom-select";
 import { WorkspaceDirPickerModal } from "@/components/workspace-picker";
 import { gitDeleteErrorMessage } from "../gitDeleteErrors";
+import { useGlobalLiveWorktrees } from "../hooks/useGlobalLiveWorktrees";
 import { worktreeGitCopy } from "../worktreeGitCopy";
+import { liveWorktreeOptionLabel } from "../worktreeGitCopy";
 import {
   WorktreeBranchBindFields,
   branchBindPayload,
   type BranchBindValue,
 } from "../components/WorktreeBranchBindFields";
+
+type StartFromMode = "main" | "reference";
 
 type Props = {
   open: boolean;
@@ -21,6 +26,7 @@ type Props = {
     name?: string;
     branch: string;
     create_branch?: boolean;
+    start_point?: string;
   }) => void;
 };
 
@@ -34,6 +40,8 @@ export function CreateWorktreeModal({
 }: Props) {
   const [path, setPath] = useState("");
   const [name, setName] = useState("");
+  const [startFrom, setStartFrom] = useState<StartFromMode>("main");
+  const [referencePath, setReferencePath] = useState("");
   const [branchBind, setBranchBind] = useState<BranchBindValue>({
     selectedBranchName: "",
     newBranchName: "",
@@ -41,11 +49,29 @@ export function CreateWorktreeModal({
   });
   const [pickerOpen, setPickerOpen] = useState(false);
 
+  const liveWorktreesQuery = useGlobalLiveWorktrees(repositoryId, {
+    enabled: open && repositoryId !== "",
+  });
+  const referenceOptions = (liveWorktreesQuery.data ?? [])
+    .filter((wt) => wt.branch.trim() !== "")
+    .map((wt) => ({
+      value: wt.path,
+      label: liveWorktreeOptionLabel(wt.path, wt.is_main),
+    }));
+  const referenceWorktree = liveWorktreesQuery.data?.find((wt) => wt.path === referencePath);
+  const referenceDetached = startFrom === "reference" && referencePath !== "" && !referenceWorktree?.branch.trim();
+
   if (!open) return null;
 
   const errorMessage = error != null ? gitDeleteErrorMessage(error) : null;
   const branchPayload = branchBindPayload(branchBind);
-  const canSubmit = path.trim() !== "" && branchPayload != null;
+  const referenceReady = startFrom === "main" || (referencePath !== "" && !referenceDetached);
+  const canSubmit = path.trim() !== "" && branchPayload != null && referenceReady;
+
+  const startPoint =
+    startFrom === "reference" && branchPayload?.create_branch && referenceWorktree?.branch.trim()
+      ? referenceWorktree.branch.trim()
+      : undefined;
 
   return (
     <>
@@ -66,6 +92,7 @@ export function CreateWorktreeModal({
               name: name.trim() || undefined,
               branch: branchPayload.name,
               create_branch: branchPayload.create_branch,
+              ...(startPoint ? { start_point: startPoint } : {}),
             });
           }}
         >
@@ -73,6 +100,45 @@ export function CreateWorktreeModal({
             <h2 id="create-worktree-title">{worktreeGitCopy.createModalTitle}</h2>
             <p className="worktrees-form-modal__lead">{worktreeGitCopy.createModalLead}</p>
           </header>
+          <fieldset className="worktrees-form-modal__fieldset">
+            <legend className="settings-field-label">{worktreeGitCopy.createModalStartFromLabel}</legend>
+            <label className="worktrees-form-modal__radio">
+              <input
+                type="radio"
+                name="create-worktree-start-from"
+                checked={startFrom === "main"}
+                disabled={pending}
+                onChange={() => setStartFrom("main")}
+              />
+              {worktreeGitCopy.createModalStartFromMain}
+            </label>
+            <label className="worktrees-form-modal__radio">
+              <input
+                type="radio"
+                name="create-worktree-start-from"
+                checked={startFrom === "reference"}
+                disabled={pending}
+                onChange={() => setStartFrom("reference")}
+              />
+              {worktreeGitCopy.createModalStartFromReference}
+            </label>
+          </fieldset>
+          {startFrom === "reference" ? (
+            <CustomSelect
+              id="create-worktree-reference-select"
+              label={worktreeGitCopy.createModalReferenceLabel}
+              value={referencePath}
+              options={referenceOptions}
+              disabled={pending || liveWorktreesQuery.isLoading || referenceOptions.length === 0}
+              requirement="required"
+              onChange={setReferencePath}
+            />
+          ) : null}
+          {referenceDetached ? (
+            <p className="worktrees-form-modal__picker-empty" role="alert">
+              {worktreeGitCopy.createModalReferenceDetached}
+            </p>
+          ) : null}
           <div className="worktrees-form-modal__picker">
             <p className="worktrees-form-modal__picker-label">{worktreeGitCopy.createModalPathLabel}</p>
             <button

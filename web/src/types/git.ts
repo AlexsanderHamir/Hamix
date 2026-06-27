@@ -1,6 +1,7 @@
 export type GitRepository = {
   id: string;
   path: string;
+  git_common_dir: string;
   host_path: string;
   default_branch: string;
   created_at: string;
@@ -44,6 +45,15 @@ export type GitWorktreeBranchBind = {
   name: string;
   create_branch?: boolean;
   start_point?: string;
+};
+
+/** Probe result from `GET /git/repositories/{repoId}/worktrees/probe`. */
+export type GitWorktreeProbe = {
+  path: string;
+  linked: boolean;
+  is_main: boolean;
+  branch: string;
+  registered: boolean;
 };
 
 export type GitReconcileResult = {

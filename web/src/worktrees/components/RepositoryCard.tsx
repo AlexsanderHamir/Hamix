@@ -5,7 +5,7 @@ import {
   repositoryDisplayName,
   repositoryPathsEquivalent,
 } from "../repositoryDisplay";
-import { WorktreeRow } from "./WorktreeRow";
+import { WorktreeList } from "./WorktreeList";
 
 type Props = {
   repository: GitRepository;
@@ -103,40 +103,11 @@ export function RepositoryCard({
             No worktrees yet. Register an existing linked directory or create a new one.
           </p>
         ) : (
-          <div className="worktree-list table-wrap">
-            <div className="worktree-list-head" role="row">
-              <span className="worktree-list-head__label" role="columnheader">
-                Name
-              </span>
-              <span
-                className="worktree-list-head__label worktree-list-head__label--branch"
-                role="columnheader"
-              >
-                Branch
-              </span>
-              <span
-                className="worktree-list-head__label worktree-list-head__label--actions"
-                role="columnheader"
-              >
-                Actions
-              </span>
-            </div>
-            <ul className="draft-row-list worktree-list-rows" aria-label="Worktrees">
-              {worktrees.map((worktree) => (
-                <WorktreeRow
-                  key={worktree.id}
-                  worktree={worktree}
-                  branches={branches}
-                  onDelete={() =>
-                    onDeleteWorktree(
-                      worktree.id,
-                      worktree.name.trim() || worktree.path,
-                    )
-                  }
-                />
-              ))}
-            </ul>
-          </div>
+          <WorktreeList
+            worktrees={worktrees}
+            branches={branches}
+            onDeleteWorktree={onDeleteWorktree}
+          />
         )}
       </section>
     </article>

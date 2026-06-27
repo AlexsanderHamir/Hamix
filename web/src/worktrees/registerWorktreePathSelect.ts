@@ -1,7 +1,7 @@
 const COPY = {
   loading: "Loading linked worktrees…",
   unavailable: "Registered checkout unavailable",
-  empty: "No unregistered linked worktrees for this repository.",
+  empty: "No unregistered worktrees for this repository.",
   prompt: "Select a linked worktree",
 } as const;
 

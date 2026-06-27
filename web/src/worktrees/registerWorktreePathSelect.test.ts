@@ -17,7 +17,7 @@ describe("registerWorktreePathPlaceholder", () => {
   it("returns empty copy when settled with no options", () => {
     expect(
       registerWorktreePathPlaceholder({ loading: false, optionCount: 0, inventoryError: false }),
-    ).toBe("No unregistered linked worktrees for this repository.");
+    ).toBe("No unregistered worktrees for this repository.");
   });
 
   it("returns unavailable copy when live inventory failed", () => {

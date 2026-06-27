@@ -52,7 +52,7 @@ func (s *Store) registerGitRepository(ctx context.Context, input CreateGitReposi
 	repo := domain.GitRepository{
 		ID:            uuid.NewString(),
 		Path:          mainRoot,
-		GitCommonDir:    commonDir,
+		GitCommonDir:  commonDir,
 		HostPath:      strings.TrimSpace(input.HostPath),
 		DefaultBranch: defaultBranch,
 		CreatedAt:     now,
@@ -119,10 +119,12 @@ func (s *Store) seedMainWorktreeWithCurrentBranch(ctx context.Context, repo doma
 		CreatedAt:    now,
 	}
 	return s.db.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
-		if err := tx.Create(model.FromDomainGitBranch(branchRow)).Error; err != nil {
+		branchModel := model.FromDomainGitBranch(branchRow)
+		if err := tx.Create(&branchModel).Error; err != nil {
 			return err
 		}
-		if err := tx.Create(model.FromDomainGitWorktree(mainWT)).Error; err != nil {
+		mainWTModel := model.FromDomainGitWorktree(mainWT)
+		if err := tx.Create(&mainWTModel).Error; err != nil {
 			return err
 		}
 		return nil

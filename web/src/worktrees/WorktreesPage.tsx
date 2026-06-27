@@ -250,6 +250,14 @@ export function WorktreesPage() {
         pending={mutations.registerWorktree.isPending}
         error={mutations.registerWorktree.error}
         repositoryId={activeRepository?.id ?? ""}
+        storedPath={activeRepository?.path ?? ""}
+        reconcilePending={reconcilingRepositoryId === activeRepository?.id}
+        reconcileError={
+          activeRepository != null ? reconcileErrors[activeRepository.id] : undefined
+        }
+        onReconcile={() => {
+          if (activeRepository != null) void handleReconcile(activeRepository);
+        }}
         onClose={() => {
           setActiveRepoModal(null);
           mutations.registerWorktree.reset();
@@ -268,6 +276,14 @@ export function WorktreesPage() {
         pending={mutations.createWorktree.isPending}
         error={mutations.createWorktree.error}
         repositoryId={activeRepository?.id ?? ""}
+        storedPath={activeRepository?.path ?? ""}
+        reconcilePending={reconcilingRepositoryId === activeRepository?.id}
+        reconcileError={
+          activeRepository != null ? reconcileErrors[activeRepository.id] : undefined
+        }
+        onReconcile={() => {
+          if (activeRepository != null) void handleReconcile(activeRepository);
+        }}
         onClose={() => {
           setActiveRepoModal(null);
           mutations.createWorktree.reset();

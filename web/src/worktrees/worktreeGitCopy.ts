@@ -30,6 +30,9 @@ export const worktreeGitCopy = {
     "Link an existing git worktree directory and choose the branch Hamix should track.",
   registerModalPathLabel: "Worktree path",
   registerModalDisplayNameLabel: "Display name",
+  liveInventoryReconcileLead:
+    "Hamix can't read linked worktrees because the registered checkout path isn't available on disk. Reconcile refreshes paths from git so you can continue.",
+  liveInventoryReconcileAction: "Reconcile repository",
   registerModalDisplayNamePlaceholder: "Optional",
   registerModalSubmit: "Register worktree",
   registerModalSubmitting: "Registering…",

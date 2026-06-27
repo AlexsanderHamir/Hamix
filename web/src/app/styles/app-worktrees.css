@@ -769,6 +769,31 @@
   color: var(--text-tertiary);
 }
 
+.worktrees-form-modal__inventory-prompt {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+  padding: var(--space-4);
+  border: 1px solid var(--border-hairline);
+  border-radius: var(--radius-md);
+  background: var(--bg-subtle);
+}
+
+.worktrees-form-modal__inventory-prompt-lead {
+  margin: 0;
+  font-size: var(--text-sm);
+  line-height: 1.5;
+  color: var(--text-secondary);
+}
+
+.worktrees-form-modal__inventory-prompt .worktrees-form-modal__stored-path {
+  margin: 0;
+}
+
+.worktrees-form-modal__inventory-prompt > button {
+  align-self: flex-start;
+}
+
 .worktrees-form-modal__checkbox {
   display: flex;
   align-items: center;

@@ -360,14 +360,15 @@ flowchart TB
 
 ### `git_repositories`
 
-Global. Registered once per canonical path; not owned by a project.
+Global. One row per git object database (`git_common_dir`). Not owned by a project.
 
 | Column | Type | Notes |
 |---|---|---|
 | `id` | uuid pk | Server-assigned. |
-| `path` | text | Container-visible absolute path to the main checkout. **Unique globally.** |
+| `path` | text | Absolute path to the **main** worktree checkout. **Unique globally.** Normalized from any linked checkout at register time. |
+| `git_common_dir` | text | Shared git directory from `git rev-parse --git-common-dir`. **Unique globally.** |
 | `host_path` | text | Optional display path for Docker (`HAMIX_PATH_MAP`). |
-| `default_branch` | string | e.g. `main`. |
+| `default_branch` | string | Deprecated; retained for schema compatibility. Not shown in UI. |
 | `created_at` / `updated_at` | timestamptz | |
 
 ### `git_worktrees`

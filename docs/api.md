@@ -53,11 +53,12 @@ Git context follows [ADR-0037](./adr/ADR-0037-global-repos-project-tree.md) (glo
 | Method | Path | Notes |
 |---|---|---|
 | GET | `/git/repositories` | `{ repositories: [...] }`. |
-| POST | `/git/repositories` | Register checkout. Body `{ path, host_path?, default_branch? }`. **201**. Does not auto-create worktrees/branches. **409** `not_a_git_repository`, `duplicate`. |
+| POST | `/git/repositories` | Register checkout. Body `{ path, host_path? }`. Resolves main worktree path and `git_common_dir`. **201**. Does not auto-create worktrees/branches. **409** `not_a_git_repository`, `duplicate` (same git object database). |
 | GET | `/git/repositories/{repoId}` | Single repository. **404** `repository_not_found`. |
 | DELETE | `/git/repositories/{repoId}` | **204**. **409** `has_running_task`. |
 | GET | `/git/repositories/{repoId}/worktrees` | `{ worktrees: [...] }`. |
 | GET | `/git/repositories/{repoId}/worktrees/live` | Linked worktrees from `git worktree list`: `{ worktrees: [{ path, branch, is_main, detached, registered }] }`. |
+| GET | `/git/repositories/{repoId}/worktrees/probe?path=` | Validate a path belongs to this repo: `{ path, linked, is_main, branch, registered }`. |
 | POST | `/git/repositories/{repoId}/worktrees` | Body `{ path, name?, branch, create_branch?, start_point? }`. Creates worktree with immutable `branch_id`. **201**. **409** `branch_bound_to_worktree` when branch is already assigned. |
 | POST | `/git/repositories/{repoId}/worktrees/register` | Register existing linked worktree. Body `{ path, name?, branch?: { name, create_branch?, start_point? } }`. **201**. Sets `branch_id` from `branch` or the worktree's current checkout; immutable after create. |
 | POST | `/git/repositories/{repoId}/reconcile` | Sync DB worktree rows with `git worktree list`. **202** `{ status: "ok" }`. |

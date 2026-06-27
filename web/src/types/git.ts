@@ -14,7 +14,7 @@ export type GitWorktree = {
   path: string;
   name: string;
   is_main: boolean;
-  branch_id?: string;
+  branch_id: string;
   created_at: string;
 };
 
@@ -39,6 +39,8 @@ export type GitLiveWorktree = {
   is_main: boolean;
   detached: boolean;
   registered: boolean;
+  locked: boolean;
+  prunable: boolean;
 };
 
 export type GitWorktreeBranchBind = {

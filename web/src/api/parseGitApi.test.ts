@@ -3,6 +3,7 @@ import {
   parseGitBranch,
   parseGitBranchList,
   parseGitLiveBranchList,
+  parseGitLiveWorktreeList,
   parseGitRepository,
   parseGitRepositoryList,
   parseGitReconcileResult,
@@ -43,6 +44,7 @@ describe("parseGitApi", () => {
           path: "/repo/main",
           name: "main",
           is_main: true,
+          branch_id: "00000000-0000-4000-8000-000000000030",
           created_at: "2026-06-22T12:00:00Z",
         },
       ],
@@ -58,6 +60,7 @@ describe("parseGitApi", () => {
         path: "/repo/wt",
         name: "feature",
         is_main: false,
+        branch_id: "00000000-0000-4000-8000-000000000030",
         created_at: "2026-06-22T12:00:00Z",
       }).name,
     ).toBe("feature");
@@ -100,6 +103,24 @@ describe("parseGitApi", () => {
       branches: [{ name: "main", head_sha: "deadbeef" }],
     });
     expect(rows[0]?.name).toBe("main");
+  });
+
+  it("parses live worktree list with git metadata flags", () => {
+    const rows = parseGitLiveWorktreeList({
+      worktrees: [
+        {
+          path: "/repo/feature",
+          branch: "feature",
+          is_main: false,
+          detached: false,
+          registered: true,
+          locked: true,
+          prunable: false,
+        },
+      ],
+    });
+    expect(rows[0]?.locked).toBe(true);
+    expect(rows[0]?.prunable).toBe(false);
   });
 
   it("parses reconcile result with report", () => {

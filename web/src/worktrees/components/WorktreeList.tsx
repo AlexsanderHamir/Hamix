@@ -1,16 +1,19 @@
-import type { GitBranch, GitWorktree } from "@/types/git";
+import type { GitBranch, GitLiveWorktree, GitWorktree } from "@/types/git";
 import { worktreeGitCopy } from "../worktreeGitCopy";
+import { worktreePathsMatch } from "../worktreePathMatch";
 import { WorktreeRow } from "./WorktreeRow";
 
 type Props = {
   worktrees: GitWorktree[];
   branches: GitBranch[];
+  liveWorktrees: GitLiveWorktree[];
   onDeleteWorktree: (worktreeId: string, label: string) => void;
 };
 
 export function WorktreeList({
   worktrees,
   branches,
+  liveWorktrees,
   onDeleteWorktree,
 }: Props) {
   return (
@@ -34,16 +37,22 @@ export function WorktreeList({
         <span className="worktree-list-head__label worktree-list-head__label--menu" aria-hidden />
       </div>
       <ul className="draft-row-list worktree-list-rows" aria-label="Worktrees">
-        {worktrees.map((worktree) => (
-          <WorktreeRow
-            key={worktree.id}
-            worktree={worktree}
-            branches={branches}
-            onDelete={() =>
-              onDeleteWorktree(worktree.id, worktree.name.trim() || worktree.path)
-            }
-          />
-        ))}
+        {worktrees.map((worktree) => {
+          const liveWorktree = liveWorktrees.find((row) =>
+            worktreePathsMatch(row.path, worktree.path),
+          );
+          return (
+            <WorktreeRow
+              key={worktree.id}
+              worktree={worktree}
+              branches={branches}
+              liveWorktree={liveWorktree}
+              onDelete={() =>
+                onDeleteWorktree(worktree.id, worktree.name.trim() || worktree.path)
+              }
+            />
+          );
+        })}
       </ul>
     </div>
   );

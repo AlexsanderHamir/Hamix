@@ -11,7 +11,7 @@ function normalizeRepoPath(path: string): string {
 }
 
 /** True when two repository paths refer to the same directory. */
-export function repositoryPathsEquivalent(a: string, b: string): boolean {
+function repositoryPathsEquivalent(a: string, b: string): boolean {
   return normalizeRepoPath(a) === normalizeRepoPath(b);
 }
 

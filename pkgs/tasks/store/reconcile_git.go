@@ -29,6 +29,9 @@ type ReconcileGitInput struct {
 	RepairGit     bool
 	DryRun        bool
 	AllowRemove   bool
+	// AllowCheckoutDiscover runs bounded sibling-folder search when the cached main
+	// path is missing (gitwork OpenRegisteredCheckout). Operator reconcile enables this.
+	AllowCheckoutDiscover bool
 	// AllowDiscover inserts git-linked worktrees Hamix has not registered. Default
 	// operator reconcile leaves this false — use Register worktree + live inventory.
 	AllowDiscover bool
@@ -82,7 +85,7 @@ func (s *Store) ReconcileGitRepository(
 		gitSvc = gitwork.New()
 	}
 
-	opened, resolveMeta, err := s.openRepoForReconcile(ctx, repo, strings.TrimSpace(input.BootstrapPath), input.AllowDiscover, gitSvc)
+	opened, resolveMeta, err := s.openRepoForReconcile(ctx, repo, strings.TrimSpace(input.BootstrapPath), input.AllowCheckoutDiscover, gitSvc)
 	if err != nil {
 		return ReconcileGitOutput{}, err
 	}
@@ -356,10 +359,11 @@ func (s *Store) RelocateGitRepository(
 	gitSvc gitwork.Service,
 ) (ReconcileGitOutput, error) {
 	return s.ReconcileGitRepository(ctx, projectID, repoID, ReconcileGitInput{
-		BootstrapPath: path,
-		RepairGit:     true,
-		AllowRemove:   true,
-		AllowDiscover: false,
+		BootstrapPath:         path,
+		RepairGit:             true,
+		AllowRemove:           true,
+		AllowCheckoutDiscover: true,
+		AllowDiscover:         false,
 	}, gitSvc)
 }
 

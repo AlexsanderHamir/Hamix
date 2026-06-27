@@ -21,11 +21,12 @@ func parseGitReconcileRequest(r *http.Request) (store.ReconcileGitInput, error) 
 		}
 	}
 	return store.ReconcileGitInput{
-		BootstrapPath: strings.TrimSpace(body.BootstrapPath),
-		RepairGit:     body.Repair,
-		DryRun:        body.DryRun,
-		AllowRemove:   true,
-		AllowDiscover: false,
+		BootstrapPath:         strings.TrimSpace(body.BootstrapPath),
+		RepairGit:             body.Repair,
+		DryRun:                body.DryRun,
+		AllowRemove:           true,
+		AllowCheckoutDiscover: true,
+		AllowDiscover:         false,
 	}, nil
 }
 

@@ -48,9 +48,9 @@ func TestReconcileGitRepository_mainRenamed_autoDiscover(t *testing.T) {
 	t.Cleanup(func() { _ = os.Rename(renamed, main) })
 
 	out, err := s.ReconcileGitRepository(ctx, domain.DefaultProjectID, repo.ID, ReconcileGitInput{
-		AllowDiscover: true,
-		RepairGit:     true,
-		AllowRemove:   true,
+		AllowCheckoutDiscover: true,
+		RepairGit:             true,
+		AllowRemove:           true,
 	}, gitSvc)
 	if err != nil {
 		t.Fatalf("ReconcileGitRepository: %v", err)

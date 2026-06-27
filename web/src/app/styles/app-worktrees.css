@@ -224,14 +224,16 @@
 }
 
 .worktrees-repo-card__reconcile-error {
-  margin: 0 var(--space-6) var(--space-4);
+  margin-block: var(--space-4);
+  margin-inline: 0;
 }
 
 .worktrees-repo-card__reconcile-status {
   display: flex;
   align-items: center;
   gap: var(--space-2);
-  margin: 0 var(--space-6) var(--space-4);
+  margin-block: var(--space-4);
+  margin-inline: 0;
   padding: var(--space-3) var(--space-4);
   border-radius: var(--radius-md);
   background: color-mix(in srgb, var(--info-soft) 75%, var(--bg-subtle));
@@ -241,9 +243,28 @@
   color: var(--text-secondary);
 }
 
-.worktrees-repo-card__reconcile-spinner,
 .worktrees-menu-trigger__spinner {
+  display: inline-block;
   flex-shrink: 0;
+  width: 0.875rem;
+  height: 0.875rem;
+  border: 2px solid currentColor;
+  border-right-color: transparent;
+  border-radius: 50%;
+  animation: worktrees-reconcile-spin var(--duration-spinner) linear infinite;
+}
+
+.worktrees-repo-card__reconcile-spinner {
+  display: grid;
+  place-items: center;
+  flex-shrink: 0;
+  width: 1.125rem;
+  height: 1.125rem;
+}
+
+.worktrees-repo-card__reconcile-spinner::before {
+  content: "";
+  display: block;
   width: 0.875rem;
   height: 0.875rem;
   border: 2px solid currentColor;
@@ -259,7 +280,7 @@
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .worktrees-repo-card__reconcile-spinner,
+  .worktrees-repo-card__reconcile-spinner::before,
   .worktrees-menu-trigger__spinner {
     animation: none;
     border-right-color: currentColor;

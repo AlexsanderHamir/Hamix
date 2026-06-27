@@ -38,6 +38,7 @@ func migrateFixedWorktreeBranch(ctx context.Context, db *gorm.DB) error {
 	return nil
 }
 
+//funclogmeasure:skip category=hot-path reason="Pure helper without I/O; operation trace is emitted by the calling chokepoint."
 func backfillFixedWorktreeBranchData(ctx context.Context, db *gorm.DB) error {
 	if tableHasColumnPortable(db, "worktree_branches", "id") {
 		if err := backfillWorktreeBranchID(ctx, db); err != nil {

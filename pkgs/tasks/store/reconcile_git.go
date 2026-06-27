@@ -465,6 +465,7 @@ func (s *Store) openRegisteredRepo(
 	allowDiscover bool,
 	gitSvc gitwork.Service,
 ) (*gitwork.Repository, gitwork.ResolveResult, error) {
+	slog.Debug("trace", "cmd", calltrace.LogCmd, "operation", "tasks.store.openRegisteredRepo")
 	branches, err := s.ListGitBranchesByRepo(ctx, repo.ID)
 	if err != nil {
 		return nil, gitwork.ResolveResult{}, err

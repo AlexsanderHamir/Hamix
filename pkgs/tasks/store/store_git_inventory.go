@@ -33,6 +33,7 @@ func (s *Store) findGitWorktreeByRepoPath(
 	ctx context.Context,
 	repoID, path string,
 ) (domain.GitWorktree, bool, error) {
+	slog.Debug("trace", "cmd", calltrace.LogCmd, "operation", "tasks.store.findGitWorktreeByRepoPath")
 	rows, err := s.ListGitWorktreesByRepo(ctx, repoID)
 	if err != nil {
 		return domain.GitWorktree{}, false, err

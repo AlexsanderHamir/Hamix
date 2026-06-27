@@ -124,10 +124,35 @@ describe("WorktreesPage", () => {
             {
               id: repoId,
               path: "/repo/main",
+              git_common_dir: "/repo/main/.git",
               host_path: "",
               default_branch: "main",
               created_at: "2026-06-22T12:00:00Z",
               updated_at: "2026-06-22T12:00:00Z",
+            },
+          ],
+        });
+      }
+      if (url.includes(`/git/repositories/${repoId}/worktrees/live`)) {
+        return jsonResponse({
+          worktrees: [
+            {
+              path: "/repo/main",
+              branch: "main",
+              is_main: true,
+              detached: false,
+              registered: true,
+              locked: false,
+              prunable: false,
+            },
+            {
+              path: "/repo/feature",
+              branch: "main",
+              is_main: false,
+              detached: false,
+              registered: true,
+              locked: false,
+              prunable: false,
             },
           ],
         });
@@ -204,10 +229,26 @@ describe("WorktreesPage", () => {
             {
               id: repoId,
               path: "/repo/main",
+              git_common_dir: "/repo/main/.git",
               host_path: "",
               default_branch: "main",
               created_at: "2026-06-22T12:00:00Z",
               updated_at: "2026-06-22T12:00:00Z",
+            },
+          ],
+        });
+      }
+      if (method === "GET" && url.includes(`/git/repositories/${repoId}/worktrees/live`)) {
+        return jsonResponse({
+          worktrees: [
+            {
+              path: "/repo/feature",
+              branch: "feature",
+              is_main: false,
+              detached: false,
+              registered: true,
+              locked: false,
+              prunable: false,
             },
           ],
         });
@@ -221,6 +262,7 @@ describe("WorktreesPage", () => {
               path: "/repo/feature",
               name: "feature",
               is_main: false,
+              branch_id: branchId,
               created_at: "2026-06-22T12:00:00Z",
             },
           ],

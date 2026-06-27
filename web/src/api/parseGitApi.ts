@@ -10,7 +10,7 @@ import type {
   GitWorktree,
   GitWorktreeProbe,
 } from "@/types/git";
-import { isRecord, parseNonEmptyString, parseOptionalNonEmptyId, parseString } from "./parseTaskApiCore";
+import { isRecord, parseNonEmptyString, parseString } from "./parseTaskApiCore";
 
 function parseGitRepositoryRow(value: unknown, path: string): GitRepository {
   if (!isRecord(value)) {
@@ -41,12 +41,9 @@ function parseGitWorktreeRow(value: unknown, path: string): GitWorktree {
     path: parseString(value.path, `${path}.path`),
     name: parseString(value.name, `${path}.name`),
     is_main: Boolean(value.is_main),
+    branch_id: parseNonEmptyString(value.branch_id, `${path}.branch_id`),
     created_at: parseString(value.created_at, `${path}.created_at`),
   };
-  const branchID = parseOptionalNonEmptyId(value.branch_id, `${path}.branch_id`);
-  if (branchID) {
-    row.branch_id = branchID;
-  }
   return row;
 }
 
@@ -139,6 +136,8 @@ function parseGitLiveWorktreeRow(value: unknown, path: string): GitLiveWorktree 
     is_main: Boolean(value.is_main),
     detached: Boolean(value.detached),
     registered: Boolean(value.registered),
+    locked: Boolean(value.locked),
+    prunable: Boolean(value.prunable),
   };
 }
 

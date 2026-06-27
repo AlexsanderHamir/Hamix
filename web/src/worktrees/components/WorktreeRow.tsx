@@ -35,24 +35,21 @@ export function WorktreeRow({
       aria-label={worktreeAriaLabel(displayName)}
     >
       <div className="draft-row__meta worktree-row__meta">
-        <span className="draft-row__name" title={displayName}>
-          {displayName}
-        </span>
-        <span className="draft-row__time worktree-row__sub" title={hostHint}>
-          <code className="worktree-row__path">{hostHint}</code>
+        <div className="worktree-row__title">
+          <span className="draft-row__name" title={displayName}>
+            {displayName}
+          </span>
           {kindLabel ? (
-            <>
-              <span className="worktree-row__sub-sep" aria-hidden="true">
-                ·
-              </span>
-              <span
-                className="worktree-row__kind"
-                title={worktreeGitCopy.mainWorktreeHint}
-              >
-                {kindLabel}
-              </span>
-            </>
+            <span
+              className="worktree-row__kind"
+              title={worktreeGitCopy.mainWorktreeHint}
+            >
+              {kindLabel}
+            </span>
           ) : null}
+        </div>
+        <span className="draft-row__time worktree-row__path-line" title={hostHint}>
+          <code className="worktree-row__path">{hostHint}</code>
         </span>
       </div>
 

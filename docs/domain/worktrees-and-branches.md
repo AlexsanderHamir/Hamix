@@ -51,7 +51,7 @@ Hamix stores **absolute paths** for repositories and worktrees. Renaming or movi
 
 **Drift hint:** `GET …/worktrees/live` includes `registered: false` for linked checkouts git knows about but Hamix has not registered. The SPA shows a read-only banner; reconcile may add paths but branch binding may still be required.
 
-See [ADR-0040](../adr/ADR-0040-git-reconcile-v2.md) and `HAMIX_GIT_RECONCILE_ON_STARTUP` in [configuration.md](../configuration.md) for optional startup sync.
+See [ADR-0040](../adr/ADR-0040-git-reconcile-v2.md), [git-checkout-resolution.md](./git-checkout-resolution.md), and `HAMIX_GIT_RECONCILE_ON_STARTUP` in [configuration.md](../configuration.md) for optional startup sync.
 
 > **Important** — Workspace trees are **read-only over HTTP**. Mutations happen when the execute agent (or the operator outside Hamix) changes files on disk.
 

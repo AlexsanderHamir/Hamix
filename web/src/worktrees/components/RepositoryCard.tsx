@@ -1,4 +1,5 @@
 import type { GitRepository } from "@/types/git";
+import { EmptyState } from "@/shared/EmptyState";
 import { useGlobalBranches } from "../hooks/useGlobalBranches";
 import { useGlobalWorktrees } from "../hooks/useGlobalWorktrees";
 import {
@@ -99,9 +100,12 @@ export function RepositoryCard({
             Loading worktrees…
           </p>
         ) : worktrees.length === 0 ? (
-          <p className="worktrees-repo-card__empty">
-            No worktrees yet. Register an existing linked directory or create a new one.
-          </p>
+          <EmptyState
+            title="No worktrees yet"
+            description="Register an existing linked directory or create a new one with git worktree add."
+            hideIcon
+            className="empty-state--in-table empty-state--task-list-fresh"
+          />
         ) : (
           <WorktreeList
             worktrees={worktrees}

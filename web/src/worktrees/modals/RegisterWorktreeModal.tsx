@@ -9,11 +9,14 @@ import {
   worktreeGitCopy,
 } from "../worktreeGitCopy";
 import {
+  registerWorktreePathDisabled,
+  registerWorktreePathPlaceholder,
+} from "../registerWorktreePathSelect";
+import {
   WorktreeBranchBindFields,
   branchBindPayload,
   type BranchBindValue,
 } from "../components/WorktreeBranchBindFields";
-import { LinkedWorktreePickerModal } from "./LinkedWorktreePickerModal";
 
 type Props = {
   open: boolean;
@@ -38,8 +41,6 @@ export function RegisterWorktreeModal({
 }: Props) {
   const [selectedPath, setSelectedPath] = useState("");
   const [displayName, setDisplayName] = useState("");
-  const [pickerOpen, setPickerOpen] = useState(false);
-  const [pickerSelectedPath, setPickerSelectedPath] = useState("");
   const [branchBind, setBranchBind] = useState<BranchBindValue>({
     selectedBranchName: "",
     newBranchName: "",
@@ -55,19 +56,19 @@ export function RegisterWorktreeModal({
     label: liveWorktreeOptionLabel(wt.path, wt.is_main),
   }));
 
+  const pathSelect = {
+    loading: liveWorktreesQuery.isLoading,
+    optionCount: worktreeOptions.length,
+    pending,
+  };
+
   useEffect(() => {
     if (!open) {
       setSelectedPath("");
       setDisplayName("");
-      setPickerSelectedPath("");
       setBranchBind({ selectedBranchName: "", newBranchName: "", createNew: false });
     }
   }, [open]);
-
-  useEffect(() => {
-    if (!pickerOpen) return;
-    setPickerSelectedPath(selectedPath);
-  }, [pickerOpen, selectedPath]);
 
   useEffect(() => {
     if (!open || selectedPath === "" || branchBind.createNew) return;
@@ -86,111 +87,73 @@ export function RegisterWorktreeModal({
   const canSubmit = selectedPath !== "" && branchPayload != null;
 
   return (
-    <>
-      <Modal
-        onClose={onClose}
-        labelledBy="register-worktree-title"
-        busy={pending}
-        dismissibleWhileBusy={false}
-      >
-        <form
-          className="panel modal-sheet worktrees-form-modal"
-          onSubmit={(e) => {
-            e.preventDefault();
-            if (!canSubmit || !branchPayload) return;
-            onSubmit({
-              path: selectedPath,
-              name: displayName.trim() || undefined,
-              branch: branchPayload,
-            });
-          }}
-        >
-          <header className="worktrees-form-modal__header">
-            <h2 id="register-worktree-title">{worktreeGitCopy.registerModalTitle}</h2>
-            <p className="worktrees-form-modal__lead">{worktreeGitCopy.registerModalLead}</p>
-          </header>
-
-          <CustomSelect
-            id="register-worktree-select"
-            label={worktreeGitCopy.registerModalPathLabel}
-            value={selectedPath}
-            options={worktreeOptions}
-            disabled={pending || liveWorktreesQuery.isLoading}
-            requirement="required"
-            onChange={setSelectedPath}
-          />
-
-          <div className="worktrees-form-modal__picker">
-            <button
-              type="button"
-              className="secondary"
-              disabled={pending}
-              onClick={() => setPickerOpen(true)}
-            >
-              {worktreeGitCopy.registerModalBrowsePath}
-            </button>
-          </div>
-
-          {selectedPath !== "" ? (
-            <p className="worktrees-form-modal__selected">
-              {worktreeGitCopy.registerModalPathSelectedPrefix}{" "}
-              <code>{selectedPath}</code>
-            </p>
-          ) : null}
-
-          {worktreeOptions.length === 0 && !liveWorktreesQuery.isLoading && selectedPath === "" ? (
-            <p className="worktrees-form-modal__picker-empty">
-              {worktreeGitCopy.registerModalPathEmpty}
-            </p>
-          ) : null}
-
-          <label className="field">
-            <span className="settings-field-label">{worktreeGitCopy.registerModalDisplayNameLabel}</span>
-            <input
-              type="text"
-              value={displayName}
-              disabled={pending}
-              placeholder={worktreeGitCopy.registerModalDisplayNamePlaceholder}
-              onChange={(e) => setDisplayName(e.target.value)}
-            />
-          </label>
-
-          <WorktreeBranchBindFields
-            repositoryId={repositoryId}
-            enabled={open && repositoryId !== ""}
-            pending={pending}
-            value={branchBind}
-            onChange={setBranchBind}
-            branchSelectId="register-worktree-branch-select"
-          />
-
-          {errorMessage ? (
-            <MutationErrorBanner error={errorMessage} className="worktrees-form-modal__error" />
-          ) : null}
-
-          <div className="row stack-row-actions">
-            <button type="button" className="secondary" disabled={pending} onClick={onClose}>
-              {worktreeGitCopy.cancel}
-            </button>
-            <button type="submit" className="btn-primary" disabled={pending || !canSubmit}>
-              {pending ? worktreeGitCopy.registerModalSubmitting : worktreeGitCopy.registerModalSubmit}
-            </button>
-          </div>
-        </form>
-      </Modal>
-      <LinkedWorktreePickerModal
-        open={pickerOpen}
-        nested
-        pending={pending}
-        loading={liveWorktreesQuery.isLoading}
-        worktrees={liveWorktrees}
-        selectedPath={pickerSelectedPath}
-        onClose={() => setPickerOpen(false)}
-        onSelect={(next) => {
-          setPickerSelectedPath(next);
-          setSelectedPath(next);
+    <Modal
+      onClose={onClose}
+      labelledBy="register-worktree-title"
+      busy={pending}
+      dismissibleWhileBusy={false}
+    >
+      <form
+        className="panel modal-sheet worktrees-form-modal"
+        onSubmit={(e) => {
+          e.preventDefault();
+          if (!canSubmit || !branchPayload) return;
+          onSubmit({
+            path: selectedPath,
+            name: displayName.trim() || undefined,
+            branch: branchPayload,
+          });
         }}
-      />
-    </>
+      >
+        <header className="worktrees-form-modal__header">
+          <h2 id="register-worktree-title">{worktreeGitCopy.registerModalTitle}</h2>
+          <p className="worktrees-form-modal__lead">{worktreeGitCopy.registerModalLead}</p>
+        </header>
+
+        <CustomSelect
+          id="register-worktree-select"
+          label={worktreeGitCopy.registerModalPathLabel}
+          value={selectedPath}
+          options={worktreeOptions}
+          placeholder={registerWorktreePathPlaceholder(pathSelect)}
+          disabled={registerWorktreePathDisabled(pathSelect)}
+          requirement="required"
+          onChange={setSelectedPath}
+        />
+
+        <label className="field">
+          <span className="settings-field-label">{worktreeGitCopy.registerModalDisplayNameLabel}</span>
+          <input
+            type="text"
+            value={displayName}
+            disabled={pending}
+            placeholder={worktreeGitCopy.registerModalDisplayNamePlaceholder}
+            onChange={(e) => setDisplayName(e.target.value)}
+          />
+        </label>
+
+        <WorktreeBranchBindFields
+          repositoryId={repositoryId}
+          enabled={open && repositoryId !== ""}
+          pending={pending}
+          value={branchBind}
+          onChange={setBranchBind}
+          branchSelectId="register-worktree-branch-select"
+        />
+
+        {errorMessage ? (
+          <MutationErrorBanner error={errorMessage} className="worktrees-form-modal__error" />
+        ) : null}
+
+        <div className="row stack-row-actions">
+          <button type="button" className="secondary" disabled={pending} onClick={onClose}>
+            {worktreeGitCopy.cancel}
+          </button>
+          <button type="submit" className="btn-primary" disabled={pending || !canSubmit}>
+            {pending ? worktreeGitCopy.registerModalSubmitting : worktreeGitCopy.registerModalSubmit}
+          </button>
+        </div>
+      </form>
+    </Modal>
   );
 }

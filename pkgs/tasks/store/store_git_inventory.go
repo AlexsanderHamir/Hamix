@@ -6,21 +6,15 @@ import (
 	"fmt"
 	"log/slog"
 	"path/filepath"
-	"runtime"
 	"strings"
 
 	"github.com/AlexsanderHamir/Hamix/pkgs/gitwork"
 	"github.com/AlexsanderHamir/Hamix/pkgs/tasks/domain"
 )
 
-// worktreePathKey normalizes filesystem paths for Hamix ↔ git comparisons.
-// Git paths use forward slashes; DB rows may use OS-native separators on Windows.
+// worktreePathKey delegates to gitwork.PathKey for Hamix ↔ git path compare.
 func worktreePathKey(path string) string {
-	key := filepath.ToSlash(filepath.Clean(strings.TrimSpace(path)))
-	if runtime.GOOS == "windows" {
-		key = strings.ToLower(key)
-	}
-	return key
+	return gitwork.PathKey(path)
 }
 
 // WorktreeInventoryRow is a live git worktree plus Hamix registration state.

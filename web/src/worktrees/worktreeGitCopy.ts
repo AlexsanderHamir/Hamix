@@ -28,18 +28,6 @@ export const worktreeGitCopy = {
   registerModalLead:
     "Link an existing git worktree directory and choose the branch Hamix should track.",
   registerModalPathLabel: "Worktree path",
-  registerModalPathEmpty:
-    "No unregistered linked worktrees found. Browse for a linked directory or create one with git worktree add.",
-  registerModalBrowsePath: "Browse for worktree…",
-  registerModalBrowseTitle: "Choose linked worktree",
-  registerModalBrowseLead:
-    "Select a linked directory from git worktree list that is not already registered in Hamix.",
-  registerModalBrowseEmptyTitle: "No new worktrees to register",
-  registerModalBrowseEmptyHint:
-    "Every linked worktree for this repository is already registered. Create a new one with git worktree add, then return here.",
-  registerModalBrowseSelectHint: "Select a linked worktree above",
-  registerModalBrowseConfirm: "Use this worktree",
-  registerModalPathSelectedPrefix: "Selected:",
   registerModalDisplayNameLabel: "Display name",
   registerModalDisplayNamePlaceholder: "Optional",
   registerModalSubmit: "Register worktree",
@@ -61,6 +49,20 @@ export const worktreeGitCopy = {
   createModalSubmit: "Create worktree",
   createModalSubmitting: "Creating…",
   cancel: "Cancel",
+  relocateModalTitle: "Relocate repository",
+  relocateModalLead:
+    "Hamix cannot find this repository at its registered path. Choose the checkout on disk — Hamix verifies it is the same repo before updating paths.",
+  relocateModalStoredPathLabel: "Registered path",
+  relocateModalPathLabel: "New checkout path",
+  relocateModalChoosePath: "Choose folder",
+  relocateModalSelectedPrefix: "Selected:",
+  relocateModalNoPath: "No folder selected yet.",
+  relocateModalSubmit: "Relocate and reconcile",
+  relocateModalSubmitting: "Relocating…",
+  reconcileErrorTitle: "Reconcile failed",
+  driftBannerTitle: "Unregistered worktrees on disk",
+  driftBannerDescription:
+    "Git reports linked checkouts that Hamix has not registered yet. Reconcile adds discovered paths; register manually when you need branch binding.",
 } as const;
 
 export function worktreeAriaLabel(displayName: string): string {

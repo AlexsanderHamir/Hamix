@@ -2,7 +2,6 @@ import type { GitRepository } from "@/types/git";
 import { EmptyState } from "@/shared/EmptyState";
 import { MutationErrorBanner } from "@/shared/MutationErrorBanner";
 import { useGlobalBranches } from "../hooks/useGlobalBranches";
-import { useGlobalLiveWorktrees } from "../hooks/useGlobalLiveWorktrees";
 import { useGlobalWorktrees } from "../hooks/useGlobalWorktrees";
 import {
   repositoryDisplayName,
@@ -11,12 +10,11 @@ import {
 import { worktreeGitCopy } from "../worktreeGitCopy";
 import { gitReconcileErrorMessage } from "../gitReconcileErrors";
 import {
+  WorktreesFolderIcon,
   WorktreesMoreIcon,
   WorktreesPlusIcon,
-  WorktreesRefreshIcon,
 } from "./WorktreesIcons";
 import { WorktreesMenu } from "./WorktreesMenu";
-import { WorktreesPathChip } from "./WorktreesPathChip";
 import { WorktreeList } from "./WorktreeList";
 
 type Props = {
@@ -41,13 +39,10 @@ export function RepositoryCard({
   reconcileError,
 }: Props) {
   const worktreesQuery = useGlobalWorktrees(repository.id);
-  const liveWorktreesQuery = useGlobalLiveWorktrees(repository.id);
   const branchesQuery = useGlobalBranches(repository.id);
   const worktrees = worktreesQuery.data ?? [];
-  const liveWorktrees = liveWorktreesQuery.data ?? [];
   const branches = branchesQuery.data ?? [];
   const loading = worktreesQuery.isLoading || branchesQuery.isLoading;
-  const unregisteredLiveCount = liveWorktrees.filter((wt) => !wt.registered).length;
   const reconcileErrorMessage =
     reconcileError != null ? gitReconcileErrorMessage(reconcileError) : null;
   const repoName = repositoryDisplayName(repository.path);
@@ -58,13 +53,38 @@ export function RepositoryCard({
   return (
     <article className="worktrees-repo-card" aria-labelledby={`repo-${repository.id}-title`}>
       <header className="worktrees-repo-card__header">
-        <div className="worktrees-repo-card__heading">
+        <div className="worktrees-repo-card__title-line">
           <h2 id={`repo-${repository.id}-title`} className="worktrees-repo-card__title">
             {repoName}
           </h2>
-          <div className="worktrees-repo-card__meta-row">
-            <WorktreesPathChip path={repository.path} />
+          <div className="worktrees-repo-card__header-actions">
+            <WorktreesMenu
+              triggerLabel={worktreeGitCopy.repositoryActions}
+              className="secondary worktrees-icon-menu-btn"
+              icon={<WorktreesMoreIcon />}
+              iconOnly
+              items={[
+                {
+                  id: "reconcile",
+                  label: reconcilePending ? worktreeGitCopy.reconciling : worktreeGitCopy.reconcile,
+                  onSelect: onReconcile,
+                  disabled: reconcilePending,
+                },
+                {
+                  id: "delete-repository",
+                  label: worktreeGitCopy.deleteRepository,
+                  onSelect: onDeleteRepository,
+                  danger: true,
+                },
+              ]}
+            />
           </div>
+        </div>
+        <div className="worktrees-repo-card__heading-meta">
+          <p className="worktrees-repo-card__path" title={repository.path}>
+            <WorktreesFolderIcon className="worktrees-repo-card__path-icon" aria-hidden />
+            <span className="worktrees-repo-card__path-text">{repository.path}</span>
+          </p>
           {showHostPath ? (
             <p className="worktrees-repo-card__host-path">
               <span className="worktrees-repo-card__meta-label">{worktreeGitCopy.hostPathLabel}</span>
@@ -72,41 +92,7 @@ export function RepositoryCard({
             </p>
           ) : null}
         </div>
-        <div className="worktrees-repo-card__header-actions">
-          <button
-            type="button"
-            className="secondary worktrees-toolbar-btn"
-            disabled={reconcilePending}
-            onClick={onReconcile}
-          >
-            <WorktreesRefreshIcon className="worktrees-toolbar-btn__icon" />
-            {reconcilePending ? worktreeGitCopy.reconciling : worktreeGitCopy.reconcile}
-          </button>
-          <WorktreesMenu
-            triggerLabel={worktreeGitCopy.repositoryActions}
-            className="secondary worktrees-icon-menu-btn"
-            icon={<WorktreesMoreIcon />}
-            iconOnly
-            items={[
-              {
-                id: "delete-repository",
-                label: worktreeGitCopy.deleteRepository,
-                onSelect: onDeleteRepository,
-                danger: true,
-              },
-            ]}
-          />
-        </div>
       </header>
-
-      {unregisteredLiveCount > 0 ? (
-        <div className="worktrees-repo-card__drift-banner" role="status">
-          <p className="worktrees-repo-card__drift-title">{worktreeGitCopy.driftBannerTitle}</p>
-          <p className="worktrees-repo-card__drift-description">
-            {worktreeGitCopy.driftBannerDescription}
-          </p>
-        </div>
-      ) : null}
 
       {reconcileErrorMessage ? (
         <MutationErrorBanner

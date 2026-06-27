@@ -6,7 +6,7 @@ export const worktreeGitCopy = {
   createWorktree: "Create worktree",
   reconcile: "Reconcile",
   reconciling: "Reconciling…",
-  deleteRepository: "Delete repository",
+  deleteRepository: "Delete",
   deleteWorktree: "Delete worktree",
   repositoryActions: "Repository actions",
   worktreeActions: (name: string) => `Worktree actions for ${name}`,
@@ -60,9 +60,6 @@ export const worktreeGitCopy = {
   relocateModalSubmit: "Relocate and reconcile",
   relocateModalSubmitting: "Relocating…",
   reconcileErrorTitle: "Reconcile failed",
-  driftBannerTitle: "Unregistered worktrees on disk",
-  driftBannerDescription:
-    "Git reports linked checkouts that Hamix has not registered yet. Reconcile adds discovered paths; register manually when you need branch binding.",
 } as const;
 
 export function worktreeAriaLabel(displayName: string): string {

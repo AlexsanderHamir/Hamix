@@ -230,8 +230,10 @@ describe("WorktreesPage", () => {
 
     renderPage();
     await screen.findByText("feature");
-    const deleteButtons = screen.getAllByRole("button", { name: /^Delete$/i });
-    await userEvent.click(deleteButtons[0]!);
+    const deleteButton = screen.getByRole("button", {
+      name: /Delete worktree "feature"/i,
+    });
+    await userEvent.click(deleteButton);
     const dialog = screen.getByRole("dialog");
     await userEvent.click(within(dialog).getByRole("button", { name: /^Delete$/i }));
     await waitFor(() => {

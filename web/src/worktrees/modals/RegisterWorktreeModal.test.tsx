@@ -1,5 +1,5 @@
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { render, screen } from "@testing-library/react";
+import { render, screen, waitFor } from "@testing-library/react";
 import { describe, expect, it, vi } from "vitest";
 import { RegisterWorktreeModal } from "./RegisterWorktreeModal";
 
@@ -11,7 +11,7 @@ function jsonResponse(body: unknown, init: ResponseInit = { status: 200 }): Resp
 }
 
 describe("RegisterWorktreeModal", () => {
-  it("prompts to reconcile when live worktree inventory cannot load", async () => {
+  it("auto-reconciles with loading status when live worktree inventory cannot load", async () => {
     const fetchMock = vi.spyOn(globalThis, "fetch").mockImplementation(async (input) => {
       const url = String(input);
       if (url.includes("/worktrees/live")) {
@@ -23,6 +23,7 @@ describe("RegisterWorktreeModal", () => {
       return new Response("not found", { status: 404 });
     });
 
+    const onReconcile = vi.fn();
     const client = new QueryClient({
       defaultOptions: { queries: { retry: false, gcTime: 0 } },
     });
@@ -35,17 +36,23 @@ describe("RegisterWorktreeModal", () => {
           error={null}
           repositoryId="00000000-0000-4000-8000-000000000010"
           storedPath="/stale/old-checkout"
-          onReconcile={vi.fn()}
+          onReconcile={onReconcile}
           onClose={() => {}}
           onSubmit={() => {}}
         />
       </QueryClientProvider>,
     );
 
-    expect(await screen.findByRole("button", { name: /Reconcile repository/i })).toBeInTheDocument();
     expect(
-      screen.getByText(/registered checkout path isn't available on disk/i),
+      await screen.findByText(/registered checkout path isn't available on disk/i),
     ).toBeInTheDocument();
+    expect(await screen.findByRole("status")).toHaveTextContent(
+      /Syncing registered worktrees with git/i,
+    );
+    await waitFor(() => expect(onReconcile).toHaveBeenCalledTimes(1));
+    expect(
+      screen.queryByRole("button", { name: /Reconcile repository/i }),
+    ).not.toBeInTheDocument();
 
     fetchMock.mockRestore();
   });

@@ -16,6 +16,7 @@ import {
 } from "./WorktreesIcons";
 import { WorktreesMenu } from "./WorktreesMenu";
 import { WorktreeList } from "./WorktreeList";
+import { WorktreeReconcileStatus } from "./WorktreeReconcileStatus";
 
 type Props = {
   repository: GitRepository;
@@ -101,10 +102,7 @@ export function RepositoryCard({
       </header>
 
       {reconcilePending ? (
-        <div className="worktrees-repo-card__reconcile-status" role="status" aria-live="polite">
-          <span className="worktrees-repo-card__reconcile-spinner" aria-hidden />
-          <span>{worktreeGitCopy.reconcilingStatus}</span>
-        </div>
+        <WorktreeReconcileStatus className="worktrees-repo-card__reconcile-status" />
       ) : null}
 
       {reconcileErrorMessage ? (

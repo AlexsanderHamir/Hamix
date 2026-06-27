@@ -1,6 +1,8 @@
+import { useEffect, useRef } from "react";
 import { MutationErrorBanner } from "@/shared/MutationErrorBanner";
 import { gitReconcileErrorMessage } from "../gitReconcileErrors";
 import { worktreeGitCopy } from "../worktreeGitCopy";
+import { WorktreeReconcileStatus } from "./WorktreeReconcileStatus";
 
 type Props = {
   storedPath: string;
@@ -15,8 +17,21 @@ export function WorktreeInventoryReconcilePrompt({
   reconcileError,
   onReconcile,
 }: Props) {
+  const autoStartedRef = useRef(false);
   const reconcileErrorMessage =
     reconcileError != null ? gitReconcileErrorMessage(reconcileError) : null;
+  const showStatus = pending || reconcileErrorMessage == null;
+
+  useEffect(() => {
+    if (autoStartedRef.current) return;
+    if (pending) {
+      autoStartedRef.current = true;
+      return;
+    }
+    if (reconcileError != null) return;
+    autoStartedRef.current = true;
+    onReconcile();
+  }, [pending, reconcileError, onReconcile]);
 
   return (
     <div className="worktrees-form-modal__inventory-prompt" role="alert">
@@ -31,11 +46,14 @@ export function WorktreeInventoryReconcilePrompt({
           <code>{storedPath}</code>
         </p>
       ) : null}
-      <button type="button" disabled={pending} onClick={onReconcile}>
-        {pending ? worktreeGitCopy.reconciling : worktreeGitCopy.liveInventoryReconcileAction}
-      </button>
+      {showStatus ? <WorktreeReconcileStatus /> : null}
       {reconcileErrorMessage ? (
-        <MutationErrorBanner error={reconcileErrorMessage} className="worktrees-form-modal__error" />
+        <>
+          <MutationErrorBanner error={reconcileErrorMessage} className="worktrees-form-modal__error" />
+          <button type="button" className="secondary" disabled={pending} onClick={onReconcile}>
+            {pending ? worktreeGitCopy.reconciling : worktreeGitCopy.liveInventoryReconcileAction}
+          </button>
+        </>
       ) : null}
     </div>
   );

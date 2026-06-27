@@ -12,7 +12,6 @@ import { gitReconcileErrorMessage } from "../gitReconcileErrors";
 import {
   WorktreesMoreIcon,
   WorktreesPlusIcon,
-  WorktreesRefreshIcon,
 } from "./WorktreesIcons";
 import { WorktreesMenu } from "./WorktreesMenu";
 import { WorktreesPathChip } from "./WorktreesPathChip";
@@ -69,21 +68,18 @@ export function RepositoryCard({
           ) : null}
         </div>
         <div className="worktrees-repo-card__header-actions">
-          <button
-            type="button"
-            className="secondary worktrees-toolbar-btn"
-            disabled={reconcilePending}
-            onClick={onReconcile}
-          >
-            <WorktreesRefreshIcon className="worktrees-toolbar-btn__icon" />
-            {reconcilePending ? worktreeGitCopy.reconciling : worktreeGitCopy.reconcile}
-          </button>
           <WorktreesMenu
             triggerLabel={worktreeGitCopy.repositoryActions}
             className="secondary worktrees-icon-menu-btn"
             icon={<WorktreesMoreIcon />}
             iconOnly
             items={[
+              {
+                id: "reconcile",
+                label: reconcilePending ? worktreeGitCopy.reconciling : worktreeGitCopy.reconcile,
+                onSelect: onReconcile,
+                disabled: reconcilePending,
+              },
               {
                 id: "delete-repository",
                 label: worktreeGitCopy.deleteRepository,

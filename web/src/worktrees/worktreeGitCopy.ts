@@ -6,7 +6,7 @@ export const worktreeGitCopy = {
   createWorktree: "Create worktree",
   reconcile: "Reconcile",
   reconciling: "Reconciling…",
-  deleteRepository: "Delete repository",
+  deleteRepository: "Delete",
   deleteWorktree: "Delete worktree",
   repositoryActions: "Repository actions",
   worktreeActions: (name: string) => `Worktree actions for ${name}`,

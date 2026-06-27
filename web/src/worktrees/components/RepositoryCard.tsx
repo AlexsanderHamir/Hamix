@@ -51,7 +51,11 @@ export function RepositoryCard({
     !repositoryPathsEquivalent(repository.path, repository.host_path);
 
   return (
-    <article className="worktrees-repo-card" aria-labelledby={`repo-${repository.id}-title`}>
+    <article
+      className="worktrees-repo-card"
+      aria-labelledby={`repo-${repository.id}-title`}
+      aria-busy={reconcilePending || undefined}
+    >
       <header className="worktrees-repo-card__header">
         <div className="worktrees-repo-card__title-line">
           <h2 id={`repo-${repository.id}-title`} className="worktrees-repo-card__title">
@@ -63,6 +67,8 @@ export function RepositoryCard({
               className="secondary worktrees-icon-menu-btn"
               icon={<WorktreesMoreIcon />}
               iconOnly
+              triggerDisabled={reconcilePending}
+              triggerBusy={reconcilePending}
               items={[
                 {
                   id: "reconcile",
@@ -93,6 +99,13 @@ export function RepositoryCard({
           ) : null}
         </div>
       </header>
+
+      {reconcilePending ? (
+        <div className="worktrees-repo-card__reconcile-status" role="status" aria-live="polite">
+          <span className="worktrees-repo-card__reconcile-spinner" aria-hidden />
+          <span>{worktreeGitCopy.reconcilingStatus}</span>
+        </div>
+      ) : null}
 
       {reconcileErrorMessage ? (
         <MutationErrorBanner

@@ -6,6 +6,7 @@ export const worktreeGitCopy = {
   createWorktree: "Create worktree",
   reconcile: "Reconcile",
   reconciling: "Reconciling…",
+  reconcilingStatus: "Syncing registered worktrees with git…",
   deleteRepository: "Delete",
   deleteWorktree: "Delete worktree",
   repositoryActions: "Repository actions",

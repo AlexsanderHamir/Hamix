@@ -4,7 +4,7 @@ import {
   worktreeGitCopy,
 } from "../worktreeGitCopy";
 import { BranchPill } from "./BranchPill";
-import { WorktreesMoreIcon } from "./WorktreesIcons";
+import { WorktreesChevronRightIcon, WorktreesMoreIcon } from "./WorktreesIcons";
 import { WorktreesMenu } from "./WorktreesMenu";
 
 type Props = {
@@ -36,25 +36,23 @@ export function WorktreeRow({
 
   return (
     <li
-      className="draft-row worktree-row"
+      className="worktrees-inventory-row worktrees-inventory-row--worktree"
       data-main={worktree.is_main ? "true" : "false"}
       aria-label={worktreeAriaLabel(displayName)}
     >
-      <div className="worktree-row__title">
-        <span className="draft-row__name" title={displayName}>
+      <div className="worktrees-inventory-row__name worktree-row__name">
+        <WorktreesChevronRightIcon className="worktree-row__chevron" aria-hidden />
+        <span className="worktree-row__label" title={displayName}>
           {displayName}
         </span>
         {kindLabel ? (
-          <span
-            className="worktree-row__kind"
-            title={worktreeGitCopy.mainWorktreeHint}
-          >
+          <span className="worktree-row__kind" title={worktreeGitCopy.mainWorktreeHint}>
             {kindLabel}
           </span>
         ) : null}
       </div>
 
-      <div className="worktree-row__branch" aria-label="Branch">
+      <div className="worktrees-inventory-row__branch worktree-row__branch" aria-label="Branch">
         {branch ? (
           <BranchPill branch={branch} />
         ) : worktree.branch_id ? (
@@ -65,7 +63,7 @@ export function WorktreeRow({
       </div>
 
       <div
-        className="worktree-row__status"
+        className="worktrees-inventory-row__status worktree-row__status"
         title={worktreeGitCopy.statusUnavailableTitle}
         aria-label={worktreeGitCopy.statusUnavailableTitle}
       >
@@ -74,14 +72,16 @@ export function WorktreeRow({
         </span>
       </div>
 
-      <div className="draft-row__actions worktree-row__actions">
-        <WorktreesMenu
-          triggerLabel={worktreeGitCopy.worktreeActions(displayName)}
-          className="secondary worktrees-icon-menu-btn"
-          icon={<WorktreesMoreIcon />}
-          iconOnly
-          items={[unregisterMenuItem]}
-        />
+      <div className="worktrees-inventory-row__actions worktree-row__actions">
+        <div className="task-list-row-actions">
+          <WorktreesMenu
+            triggerLabel={worktreeGitCopy.worktreeActions(displayName)}
+            className="task-list-icon-btn"
+            icon={<WorktreesMoreIcon />}
+            iconOnly
+            items={[unregisterMenuItem]}
+          />
+        </div>
       </div>
     </li>
   );

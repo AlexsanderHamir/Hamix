@@ -66,6 +66,10 @@ export const worktreeGitCopy = {
   reconcileErrorTitle: "Reconcile failed",
 } as const;
 
+export function worktreeCountLabel(count: number): string {
+  return count === 1 ? "1 worktree" : `${count} worktrees`;
+}
+
 export function worktreeAriaLabel(displayName: string): string {
   return `Worktree: ${displayName}`;
 }

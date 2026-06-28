@@ -10,7 +10,7 @@ import { TASK_TIMINGS } from "@/constants/tasks";
 import { TaskDraftsListSkeleton } from "@/components/skeletons/TaskDraftsListSkeleton";
 import { useGlobalRepositories } from "./hooks/useGlobalRepositories";
 import { useGlobalGitMutations } from "./hooks/useGlobalGitMutations";
-import { RepositoryCard } from "./components/RepositoryCard";
+import { WorktreesInventoryTable } from "./components/WorktreesInventoryTable";
 import { DeleteConfirmDialog } from "./components/DeleteConfirmDialog";
 import type { GitDeleteTarget } from "./gitDeleteErrors";
 import { RegisterRepositoryModal } from "./modals/RegisterRepositoryModal";
@@ -139,21 +139,21 @@ export function WorktreesPage() {
     activeRepository != null && autoReconcileBlocked[activeRepository.id] === true;
 
   return (
-    <div className="task-detail-content--enter">
-      <section
-        className="panel task-list-section-panel worktrees-page"
-        aria-labelledby="worktrees-heading"
-      >
-        <header className="task-list-section-head worktrees-page__head">
+    <section
+      className="panel task-list-section-panel task-detail-content--enter worktrees-page"
+      aria-labelledby="worktrees-heading"
+    >
+      <div className="task-list-toolbar">
+        <header className="task-list-section-head">
           <div className="task-list-section-head__text">
             <h2 id="worktrees-heading" className="task-list-section-title">
               {pageTitle}
             </h2>
             {pageMode === "manage" && repositoryCount > 0 ? (
-              <p className="worktrees-page__subtitle" aria-live="polite">
-                <span className="worktrees-page__subtitle-count">{repositoryCount}</span>{" "}
+              <span className="draft-count-pill" aria-live="polite">
+                <strong>{repositoryCount}</strong>{" "}
                 {repositoryCount === 1 ? "repository" : "repositories"}
-              </p>
+              </span>
             ) : null}
           </div>
           <div className="task-list-section-actions">
@@ -164,79 +164,74 @@ export function WorktreesPage() {
                 className="task-home-new-task-btn worktrees-register-btn"
                 onClick={() => setRegisterOpen(true)}
               >
-                <WorktreesPlusIcon className="worktrees-register-btn__icon" />
+                <WorktreesPlusIcon className="worktrees-register-btn__icon" aria-hidden />
                 {worktreeGitCopy.registerRepository}
               </Button>
             ) : null}
           </div>
         </header>
+      </div>
 
-        {pageMode === "error" ? (
-          <div className="err" role="alert">
-            <p>{worktreesPageErrorMessage(repositoriesQuery.error)}</p>
-            <div className="task-detail-error-actions">
-              <button
-                type="button"
-                className="secondary"
-                onClick={() => {
-                  void repositoriesQuery.refetch();
-                }}
-              >
-                Try again
-              </button>
-            </div>
+      {pageMode === "error" ? (
+        <div className="err" role="alert">
+          <p>{worktreesPageErrorMessage(repositoriesQuery.error)}</p>
+          <div className="task-detail-error-actions">
+            <button
+              type="button"
+              className="secondary"
+              onClick={() => {
+                void repositoriesQuery.refetch();
+              }}
+            >
+              Try again
+            </button>
+          </div>
+        </div>
+      ) : null}
+
+      <div className="task-list-content task-list-content--enter">
+        {showSkeleton ? <TaskDraftsListSkeleton /> : null}
+        {pageMode === "setup" ? (
+          <div className="task-list-empty-cell">
+            <EmptyState
+              title="Register a repository to get started"
+              description="Hamix needs a git checkout before you can register worktrees, bind branches, and run agent tasks."
+              hideIcon
+              className="empty-state--in-table empty-state--task-list-fresh"
+            />
           </div>
         ) : null}
-
-        <div className="task-list-content task-list-content--enter">
-          {showSkeleton ? <TaskDraftsListSkeleton /> : null}
-          {pageMode === "setup" ? (
-            <div className="task-list-empty-cell">
-              <EmptyState
-                title="Register a repository to get started"
-                description="Hamix needs a git checkout before you can register worktrees, bind branches, and run agent tasks."
-                hideIcon
-                className="empty-state--in-table empty-state--task-list-fresh"
-              />
-            </div>
-          ) : null}
-          {pageMode === "manage" ? (
-            <div className="worktrees-page__cards">
-              {repositories.map((repository) => (
-                <RepositoryCard
-                  key={repository.id}
-                  repository={repository}
-                  reconcilePending={reconcilingRepositoryId === repository.id}
-                  reconcileError={reconcileErrors[repository.id]}
-                  onReconcile={() => void handleReconcile(repository)}
-                  onRegisterWorktree={() =>
-                    setActiveRepoModal({ kind: "register-worktree", repository })
-                  }
-                  onCreateWorktree={() =>
-                    setActiveRepoModal({ kind: "create-worktree", repository })
-                  }
-                  onDeleteRepository={() =>
-                    setDeleteTarget({
-                      kind: "repository",
-                      id: repository.id,
-                      label: repository.path,
-                      repositoryId: repository.id,
-                    })
-                  }
-                  onDeleteWorktree={(worktreeId, label) =>
-                    setDeleteTarget({
-                      kind: "worktree",
-                      id: worktreeId,
-                      label,
-                      repositoryId: repository.id,
-                    })
-                  }
-                />
-              ))}
-            </div>
-          ) : null}
-        </div>
-      </section>
+        {pageMode === "manage" ? (
+          <WorktreesInventoryTable
+            repositories={repositories}
+            reconcilePendingId={reconcilingRepositoryId}
+            reconcileErrors={reconcileErrors}
+            onReconcile={(repository) => void handleReconcile(repository)}
+            onRegisterWorktree={(repository) =>
+              setActiveRepoModal({ kind: "register-worktree", repository })
+            }
+            onCreateWorktree={(repository) =>
+              setActiveRepoModal({ kind: "create-worktree", repository })
+            }
+            onDeleteRepository={(repository) =>
+              setDeleteTarget({
+                kind: "repository",
+                id: repository.id,
+                label: repository.path,
+                repositoryId: repository.id,
+              })
+            }
+            onDeleteWorktree={(repositoryId, worktreeId, label) =>
+              setDeleteTarget({
+                kind: "worktree",
+                id: worktreeId,
+                label,
+                repositoryId,
+              })
+            }
+          />
+        ) : null}
+      </div>
 
       <RegisterRepositoryModal
         open={registerOpen}
@@ -337,7 +332,7 @@ export function WorktreesPage() {
             });
         }}
       />
-    </div>
+    </section>
   );
 }
 

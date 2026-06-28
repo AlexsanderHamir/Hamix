@@ -180,7 +180,7 @@ describe("WorktreesPage", () => {
       }),
     ).toBeInTheDocument();
     const subtitle = await screen.findByText((_, el) =>
-      el?.classList.contains("worktrees-page__subtitle") &&
+      el?.classList.contains("draft-count-pill") &&
       el.textContent?.replace(/\s+/g, " ").trim() === "1 repository"
         ? true
         : false,
@@ -189,9 +189,9 @@ describe("WorktreesPage", () => {
     expect(
       await screen.findByRole("heading", { level: 2, name: "main" }),
     ).toBeInTheDocument();
-    expect(await screen.findByText("feature", { selector: ".draft-row__name" })).toBeInTheDocument();
+    expect(await screen.findByText("feature", { selector: ".worktree-row__label" })).toBeInTheDocument();
     expect(screen.getAllByText("/repo/main").length).toBeGreaterThan(0);
-    expect(screen.queryByText("main", { selector: ".draft-row__name" })).not.toBeInTheDocument();
+    expect(screen.queryByText("main", { selector: ".worktree-row__label" })).not.toBeInTheDocument();
   });
 
   it("maps unregister 409 has_running_task to dialog copy", async () => {
@@ -250,7 +250,7 @@ describe("WorktreesPage", () => {
     });
 
     renderPage();
-    await screen.findByText("feature", { selector: ".draft-row__name" });
+    await screen.findByText("feature", { selector: ".worktree-row__label" });
     await userEvent.click(
       screen.getByRole("button", { name: /Worktree actions for feature/i }),
     );

@@ -78,7 +78,7 @@ export function WorktreesPage() {
       if (deleteTarget.kind === "repository") {
         await mutations.deleteRepository.mutateAsync(deleteTarget.id);
       } else {
-        await mutations.deleteWorktree.mutateAsync({
+        await mutations.unregisterWorktree.mutateAsync({
           worktreeId: deleteTarget.id,
           repositoryId: deleteTarget.repositoryId,
         });
@@ -91,7 +91,7 @@ export function WorktreesPage() {
 
   const deletePending =
     mutations.deleteRepository.isPending ||
-    mutations.deleteWorktree.isPending;
+    mutations.unregisterWorktree.isPending;
 
   const reconcilingRepositoryId =
     mutations.reconcile.isPending || mutations.relocateRepository.isPending

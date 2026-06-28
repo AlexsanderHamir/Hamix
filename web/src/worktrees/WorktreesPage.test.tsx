@@ -194,7 +194,7 @@ describe("WorktreesPage", () => {
     expect(screen.queryByText("main", { selector: ".draft-row__name" })).not.toBeInTheDocument();
   });
 
-  it("maps delete 409 has_running_task to dialog copy", async () => {
+  it("maps unregister 409 has_running_task to dialog copy", async () => {
     vi.spyOn(globalThis, "fetch").mockImplementation(async (input: RequestInfo | URL, init?: RequestInit) => {
       const url = requestUrl(input);
       const method = init?.method ?? "GET";
@@ -254,12 +254,12 @@ describe("WorktreesPage", () => {
     await userEvent.click(
       screen.getByRole("button", { name: /Worktree actions for feature/i }),
     );
-    await userEvent.click(screen.getByRole("menuitem", { name: /Delete worktree/i }));
+    await userEvent.click(screen.getByRole("menuitem", { name: /Unregister worktree/i }));
     const dialog = screen.getByRole("dialog");
-    await userEvent.click(within(dialog).getByRole("button", { name: /^Delete$/i }));
+    await userEvent.click(within(dialog).getByRole("button", { name: /^Unregister$/i }));
     await waitFor(() => {
       expect(within(dialog).getByText(/task still running/i)).toBeInTheDocument();
     });
-    expect(within(dialog).getByRole("button", { name: /^Delete$/i })).toBeDisabled();
+    expect(within(dialog).getByRole("button", { name: /^Unregister$/i })).toBeDisabled();
   });
 });

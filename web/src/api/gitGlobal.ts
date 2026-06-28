@@ -122,19 +122,21 @@ export async function registerGlobalGitWorktree(
   return parseGitWorktree((await res.json()) as unknown);
 }
 
-export async function deleteGlobalGitWorktree(
-  worktreeId: string,
-  options?: { force?: boolean },
-): Promise<void> {
+export async function unregisterGlobalGitWorktree(worktreeId: string): Promise<void> {
   const wtId = assertTaskPathId(worktreeId, "worktree id");
-  const params = new URLSearchParams();
-  if (options?.force) params.set("force", "true");
-  const qs = params.toString();
   const res = await fetchWithTimeout(
-    `${gitRoot}/worktrees/${encodeURIComponent(wtId)}${qs ? `?${qs}` : ""}`,
+    `${gitRoot}/worktrees/${encodeURIComponent(wtId)}`,
     { method: "DELETE" },
   );
   if (!res.ok) throw await apiErrorFromResponse(res);
+}
+
+/** @deprecated Use unregisterGlobalGitWorktree — DELETE only drops Hamix inventory. */
+export async function deleteGlobalGitWorktree(
+  worktreeId: string,
+  _options?: { force?: boolean },
+): Promise<void> {
+  return unregisterGlobalGitWorktree(worktreeId);
 }
 
 export async function listGlobalGitBranches(

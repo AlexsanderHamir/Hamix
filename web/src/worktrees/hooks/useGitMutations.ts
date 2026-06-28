@@ -5,7 +5,7 @@ import {
   createGitWorktree,
   deleteGitBranch,
   deleteGitRepository,
-  deleteGitWorktree,
+  unregisterGitWorktree,
   reconcileGitRepository,
 } from "@/api/git";
 import { gitQueryKeys } from "../queryKeys";
@@ -64,8 +64,8 @@ export function useGitMutations(projectId: string) {
   });
 
   const removeWorktree = useMutation({
-    mutationFn: (input: { worktreeId: string; repositoryId: string; force?: boolean }) =>
-      deleteGitWorktree(projectId, input.worktreeId, { force: input.force }),
+    mutationFn: (input: { worktreeId: string; repositoryId: string }) =>
+      unregisterGitWorktree(projectId, input.worktreeId),
     onSuccess: (_data, vars) => invalidateRepo(vars.repositoryId),
   });
 

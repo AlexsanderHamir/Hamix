@@ -27,9 +27,9 @@ export function WorktreeRow({
   const deleteBlocked = deleteDisabled;
   const kindLabel = worktree.is_main ? worktreeGitCopy.mainWorktreeShortLabel : null;
 
-  const deleteMenuItem = {
-    id: "delete-worktree",
-    label: worktreeGitCopy.deleteWorktree,
+  const unregisterMenuItem = {
+    id: "unregister-worktree",
+    label: worktreeGitCopy.unregisterWorktree,
     onSelect: onDelete,
     disabled: deleteBlocked,
     danger: true,
@@ -84,7 +84,7 @@ export function WorktreeRow({
           className="secondary worktrees-icon-menu-btn"
           icon={<WorktreesMoreIcon />}
           iconOnly
-          items={[deleteMenuItem]}
+          items={[unregisterMenuItem]}
         />
       </div>
     </li>

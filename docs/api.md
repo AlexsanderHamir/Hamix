@@ -64,7 +64,7 @@ Git context follows [ADR-0037](./adr/ADR-0037-global-repos-project-tree.md) (glo
 | POST | `/git/repositories/{repoId}/reconcile` | Repair registered repository/worktree paths against `git worktree list`. Body `{ bootstrap_path?, repair?, dry_run? }` (all optional). Does **not** insert unregistered worktrees — use **Register worktree** + `GET …/worktrees/live`. When the stored main path is missing, pass `bootstrap_path` or use **Relocate**. **202** `{ status, report }` where `status ∈ ok | needs_bootstrap_path | partial` and `report` includes path/remove/head counts plus optional `resolution_source`, `discovered_path`, `worktrees_skipped`. **409** `has_running_task` when a vanished worktree is still referenced (global route). **409** `bootstrap_mismatch` when `bootstrap_path` is not the same git object database. |
 | POST | `/git/repositories/{repoId}/relocate` | Operator alias: body `{ path }` runs reconcile with `bootstrap_path=path`, `repair=true`. **202** same shape as reconcile. |
 | POST | `/git/worktrees/{worktreeId}/relocate` | Manual path fix for one registered worktree. Body `{ path }`. **200** worktree JSON after probe + UPDATE. **409** `bootstrap_mismatch` when path belongs to a different repo. |
-| DELETE | `/git/worktrees/{worktreeId}` | **204**. Query `?force=true`. **409** `has_running_task`. |
+| DELETE | `/git/worktrees/{worktreeId}` | Unregister from Hamix (**204**). Does **not** run `git worktree remove` — the checkout stays on disk and reappears in live inventory. **409** `has_running_task`. |
 | GET | `/git/repositories/{repoId}/branches` | Registered branches `{ branches: [...] }`. |
 | GET | `/git/repositories/{repoId}/branches/live` | Live refs from `git branch` `{ branches: [{ name, head_sha }] }`. |
 | GET | `/git/repositories/{repoId}/projects` | Projects tied to this repo `{ projects, limit }`. |
@@ -79,7 +79,7 @@ Git context follows [ADR-0037](./adr/ADR-0037-global-repos-project-tree.md) (glo
 | DELETE | `/projects/{id}/git/repositories/{repoId}` | **204**. **409** `has_running_task` when a `running` task references the repo, a worktree, or a branch under it. |
 | GET | `/projects/{id}/git/repositories/{repoId}/worktrees` | `{ worktrees: [...] }`. |
 | POST | `/projects/{id}/git/repositories/{repoId}/worktrees` | Body `{ path, name?, branch, create_branch?, start_point? }`. **201**. **409** `path_exists`, `branch_checked_out`. |
-| DELETE | `/projects/{id}/git/worktrees/{worktreeId}` | **204**. Query `?force=true` for dirty trees. **409** `has_running_task`. Main worktree cannot be deleted (**400**). |
+| DELETE | `/projects/{id}/git/worktrees/{worktreeId}` | Unregister from Hamix (**204**). Does **not** run `git worktree remove`. **409** `has_running_task`. |
 | GET | `/projects/{id}/git/repositories/{repoId}/branches` | `{ branches: [...] }`. |
 | POST | `/projects/{id}/git/repositories/{repoId}/branches` | Body `{ name, start_point? }`. **201**. **409** `branch_exists`. |
 | DELETE | `/projects/{id}/git/branches/{branchId}` | **204**. Query `?force=true` for unmerged. **409** `has_running_task`, `branch_checked_out`. |

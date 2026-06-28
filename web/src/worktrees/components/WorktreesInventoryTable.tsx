@@ -35,8 +35,8 @@ export function WorktreesInventoryTable({
         <span className="worktrees-inventory-head__label worktrees-inventory-head__label--branch" role="columnheader">
           {worktreeGitCopy.listColumnBranch}
         </span>
-        <span className="worktrees-inventory-head__label worktrees-inventory-head__label--status" role="columnheader">
-          {worktreeGitCopy.listColumnStatus}
+        <span className="worktrees-inventory-head__label worktrees-inventory-head__label--count" role="columnheader">
+          {worktreeGitCopy.listColumnWorktreeCount}
         </span>
         <span className="worktrees-inventory-head__label worktrees-inventory-head__label--menu" aria-hidden />
       </div>

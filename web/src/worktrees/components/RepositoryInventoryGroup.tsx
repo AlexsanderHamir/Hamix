@@ -89,10 +89,12 @@ export function RepositoryInventoryGroup({
             </span>
           ) : null}
         </div>
-        <div className="worktrees-inventory-row__branch" aria-hidden />
-        <div className="worktrees-inventory-row__status">
+        <div className="worktrees-inventory-row__branch" aria-hidden="true">
+          <span className="worktrees-inventory-cell-empty">{worktreeGitCopy.cellNotApplicable}</span>
+        </div>
+        <div className="worktrees-inventory-row__count">
           {loading ? (
-            <span className="worktrees-inventory-row__status-muted">…</span>
+            <span className="worktrees-inventory-row__count-muted">…</span>
           ) : (
             <span>{worktreeCountLabel(worktrees.length)}</span>
           )}

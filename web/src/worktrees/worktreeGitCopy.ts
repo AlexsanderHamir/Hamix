@@ -14,7 +14,8 @@ export const worktreeGitCopy = {
   hostPathLabel: "Host path",
   listColumnName: "Name",
   listColumnBranch: "Branch",
-  listColumnStatus: "Status",
+  listColumnWorktreeCount: "Worktrees",
+  cellNotApplicable: "—",
   mainWorktreeShortLabel: "main",
   mainWorktreeLabel: "main worktree",
   mainWorktreeHint:

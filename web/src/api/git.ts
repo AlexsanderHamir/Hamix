@@ -110,15 +110,6 @@ export async function unregisterGitWorktree(
   if (!res.ok) throw await apiErrorFromResponse(res);
 }
 
-/** @deprecated Use unregisterGitWorktree — DELETE only drops Hamix inventory. */
-export async function deleteGitWorktree(
-  projectId: string,
-  worktreeId: string,
-  _options?: { force?: boolean },
-): Promise<void> {
-  return unregisterGitWorktree(projectId, worktreeId);
-}
-
 export async function listGitBranches(
   projectId: string,
   repositoryId: string,

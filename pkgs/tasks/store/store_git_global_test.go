@@ -157,7 +157,7 @@ func TestStore_ProjectRepositoryBinding(t *testing.T) {
 	}
 }
 
-func TestDeleteGitWorktreeByID_rejectsRunningTask(t *testing.T) {
+func TestUnregisterGitWorktreeByID_rejectsRunningTask(t *testing.T) {
 	s, ctx, gitSvc := gitTestStore(t)
 	main := initGitRepo(t)
 	repo, err := s.CreateGlobalGitRepository(ctx, CreateGitRepositoryInput{Path: main}, gitSvc)
@@ -186,7 +186,7 @@ func TestDeleteGitWorktreeByID_rejectsRunningTask(t *testing.T) {
 	if err := s.db.WithContext(ctx).Create(&task).Error; err != nil {
 		t.Fatal(err)
 	}
-	err = s.DeleteGitWorktreeByID(ctx, wt.ID, true, gitSvc)
+	err = s.UnregisterGitWorktreeByID(ctx, wt.ID)
 	if domain.GitErrCode(err) != domain.GitCodeHasRunningTask {
 		t.Fatalf("got %v want has_running_task", err)
 	}

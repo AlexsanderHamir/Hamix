@@ -104,8 +104,8 @@ func TestStore_GitWorktreeAndBranch_roundtrip(t *testing.T) {
 	if err != nil || len(branches) < 2 {
 		t.Fatalf("branches: %v len=%d", err, len(branches))
 	}
-	if err := s.DeleteGitWorktree(ctx, domain.DefaultProjectID, wt.ID, true, gitSvc); err != nil {
-		t.Fatalf("DeleteGitWorktree: %v", err)
+	if err := s.UnregisterGitWorktree(ctx, domain.DefaultProjectID, wt.ID); err != nil {
+		t.Fatalf("UnregisterGitWorktree: %v", err)
 	}
 	if err := s.DeleteGitBranch(ctx, domain.DefaultProjectID, branch.ID, true, gitSvc); err != nil {
 		t.Fatalf("DeleteGitBranch: %v", err)
@@ -155,7 +155,7 @@ func TestStore_GitDeleteGuard_runningTask(t *testing.T) {
 	if err := s.db.WithContext(ctx).Create(&task).Error; err != nil {
 		t.Fatal(err)
 	}
-	err = s.DeleteGitWorktree(ctx, domain.DefaultProjectID, wt.ID, true, gitSvc)
+	err = s.UnregisterGitWorktree(ctx, domain.DefaultProjectID, wt.ID)
 	if ge := domain.GitErrCode(err); ge != domain.GitCodeHasRunningTask {
 		t.Fatalf("got code %q want has_running_task (%v)", ge, err)
 	}

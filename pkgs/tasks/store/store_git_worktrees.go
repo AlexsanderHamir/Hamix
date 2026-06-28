@@ -67,35 +67,19 @@ func (s *Store) CreateGitWorktree(ctx context.Context, projectID, repoID string,
 	return s.createGitWorktreeOnRepo(ctx, repo, input, gitSvc)
 }
 
-// DeleteGitWorktree removes a worktree from disk and the database.
-func (s *Store) DeleteGitWorktree(ctx context.Context, projectID, worktreeID string, force bool, gitSvc gitwork.Service) error {
-	slog.Debug("trace", "cmd", calltrace.LogCmd, "operation", "tasks.store.DeleteGitWorktree")
-	wt, err := s.GetGitWorktree(ctx, projectID, worktreeID)
-	if err != nil {
+// UnregisterGitWorktree removes Hamix registration for a worktree without
+// running git worktree remove — the checkout directory stays on disk.
+func (s *Store) UnregisterGitWorktree(ctx context.Context, projectID, worktreeID string) error {
+	slog.Debug("trace", "cmd", calltrace.LogCmd, "operation", "tasks.store.UnregisterGitWorktree")
+	if _, err := s.GetGitWorktree(ctx, projectID, worktreeID); err != nil {
 		return err
 	}
 	if err := guardNoRunningTask(ctx, s.db, worktreeID); err != nil {
 		return err
 	}
-	if !wt.IsMain {
-		repo, err := s.GetGitRepository(ctx, projectID, wt.RepositoryID)
-		if err != nil {
-			return err
-		}
-		if gitSvc == nil {
-			gitSvc = gitwork.New()
-		}
-		opened, err := gitSvc.OpenRepository(ctx, repo.Path)
-		if err != nil {
-			return fmt.Errorf("open repository: %w", err)
-		}
-		if err := gitSvc.RemoveWorktree(ctx, opened, wt.Path, force); err != nil {
-			return mapGitworkRemoveErr(err)
-		}
-	}
 	res := s.db.WithContext(ctx).Delete(&model.GitWorktree{}, "id = ?", worktreeID)
 	if res.Error != nil {
-		return fmt.Errorf("delete git worktree row: %w", res.Error)
+		return fmt.Errorf("unregister git worktree row: %w", res.Error)
 	}
 	return nil
 }

@@ -191,7 +191,10 @@ func (h *Handler) deleteGlobalGitWorktree(w http.ResponseWriter, r *http.Request
 	slog.Debug("trace", "cmd", calltrace.LogCmd, "operation", "handler.deleteGlobalGitWorktree")
 	r = calltrace.WithRequestRoot(r, op)
 	force := r.URL.Query().Get("force") == "true"
-	if err := h.store.DeleteGitWorktreeByID(r.Context(), r.PathValue("worktreeId"), force, h.gitService()); err != nil {
+	if force {
+		slog.Warn("deprecated query param ignored", "cmd", calltrace.LogCmd, "operation", "handler.deleteGlobalGitWorktree", "param", "force")
+	}
+	if err := h.store.UnregisterGitWorktreeByID(r.Context(), r.PathValue("worktreeId")); err != nil {
 		writeGitStoreError(w, r, op, err)
 		return
 	}

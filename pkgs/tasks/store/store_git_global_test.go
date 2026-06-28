@@ -1,6 +1,7 @@
 package store
 
 import (
+	"os"
 	"path/filepath"
 	"testing"
 
@@ -50,11 +51,54 @@ func TestStore_GlobalGitRepository_andWorktreeBinding(t *testing.T) {
 	if domain.GitErrCode(err) != domain.GitCodeBranchBoundToWorktree {
 		t.Fatalf("duplicate branch on second worktree: got %v want branch_bound_to_worktree", err)
 	}
-	if err := s.DeleteGitWorktreeByID(ctx, wt.ID, true, gitSvc); err != nil {
-		t.Fatalf("DeleteGitWorktreeByID: %v", err)
+	if err := s.UnregisterGitWorktreeByID(ctx, wt.ID); err != nil {
+		t.Fatalf("UnregisterGitWorktreeByID: %v", err)
 	}
 	if err := s.DeleteGlobalGitRepository(ctx, repo.ID); err != nil {
 		t.Fatalf("DeleteGlobalGitRepository: %v", err)
+	}
+}
+
+func TestStore_UnregisterGitWorktreeByID_preservesDiskCheckout(t *testing.T) {
+	s, ctx, gitSvc := gitTestStore(t)
+	main := initGitRepo(t)
+
+	repo, err := s.CreateGlobalGitRepository(ctx, CreateGitRepositoryInput{Path: main}, gitSvc)
+	if err != nil {
+		t.Fatalf("CreateGlobalGitRepository: %v", err)
+	}
+	wtPath := filepath.Join(filepath.Dir(main), "wt-persist")
+	wt, err := s.CreateGitWorktreeForRepo(ctx, repo.ID, CreateGitWorktreeInput{
+		Path:         wtPath,
+		Branch:       "feature-persist",
+		CreateBranch: true,
+	}, gitSvc)
+	if err != nil {
+		t.Fatalf("CreateGitWorktreeForRepo: %v", err)
+	}
+	if err := s.UnregisterGitWorktreeByID(ctx, wt.ID); err != nil {
+		t.Fatalf("UnregisterGitWorktreeByID: %v", err)
+	}
+	wts, err := s.ListGitWorktreesByRepo(ctx, repo.ID)
+	if err != nil {
+		t.Fatalf("ListGitWorktreesByRepo: %v", err)
+	}
+	if len(wts) != 1 {
+		t.Fatalf("registered worktrees len=%d want 1 (main only)", len(wts))
+	}
+	if _, err := os.Stat(wtPath); err != nil {
+		t.Fatalf("checkout path should remain on disk after unregister: %v", err)
+	}
+	inventory, err := s.RepoWorktreeInventory(ctx, repo, gitSvc)
+	if err != nil {
+		t.Fatalf("RepoWorktreeInventory: %v", err)
+	}
+	invRow, ok := FindWorktreeInInventory(inventory, wtPath)
+	if !ok {
+		t.Fatalf("linked worktree missing from live inventory after unregister")
+	}
+	if invRow.Registered {
+		t.Fatal("worktree should be unregistered in live inventory after unregister")
 	}
 }
 

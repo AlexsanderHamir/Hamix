@@ -1,5 +1,5 @@
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { render, screen, waitFor, within } from "@testing-library/react";
+import { render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { MemoryRouter, Route, Routes } from "react-router-dom";
 import { describe, expect, it, vi, afterEach } from "vitest";
@@ -7,11 +7,11 @@ import { ROUTER_FUTURE_FLAGS } from "@/lib/routerFutureFlags";
 import { ModalStackProvider } from "@/shared/ModalStackContext";
 import { requestUrl } from "@/test/requestUrl";
 import { respondGlobalGitApi } from "@/test/handlers/gitGlobal";
-import { WorktreesPage } from "./WorktreesPage";
+import { RepositoriesListPage } from "./RepositoriesListPage";
 import { RegisterRepositoryModal } from "./modals/RegisterRepositoryModal";
 
 const repoId = "00000000-0000-4000-8000-000000000010";
-const wtA = "00000000-0000-4000-8000-000000000020";
+const repoId2 = "00000000-0000-4000-8000-000000000011";
 const wtB = "00000000-0000-4000-8000-000000000030";
 const branchId = "00000000-0000-4000-8000-000000000040";
 
@@ -22,7 +22,7 @@ function jsonResponse(body: unknown, init: ResponseInit = { status: 200 }): Resp
   });
 }
 
-function renderPage(initialEntries: string[] = ["/worktrees"]) {
+function renderListPage(initialEntries: string[] = ["/worktrees"]) {
   const client = new QueryClient({
     defaultOptions: { queries: { retry: false, gcTime: 0 } },
   });
@@ -31,7 +31,8 @@ function renderPage(initialEntries: string[] = ["/worktrees"]) {
       <MemoryRouter future={ROUTER_FUTURE_FLAGS} initialEntries={initialEntries}>
         <ModalStackProvider>
           <Routes>
-            <Route path="/worktrees" element={<WorktreesPage />} />
+            <Route path="/worktrees" element={<RepositoriesListPage />} />
+            <Route path="/worktrees/:repositoryId" element={<div>Detail</div>} />
           </Routes>
         </ModalStackProvider>
       </MemoryRouter>
@@ -39,7 +40,7 @@ function renderPage(initialEntries: string[] = ["/worktrees"]) {
   );
 }
 
-describe("WorktreesPage", () => {
+describe("RepositoriesListPage", () => {
   afterEach(() => {
     vi.unstubAllGlobals();
   });
@@ -55,7 +56,7 @@ describe("WorktreesPage", () => {
       return jsonResponse({ error: "not found" }, { status: 404 });
     });
 
-    renderPage();
+    renderListPage();
     expect(await screen.findByRole("heading", { name: /^repositories$/i })).toBeInTheDocument();
     expect(
       await screen.findByText(/register a repository to get started/i),
@@ -77,7 +78,7 @@ describe("WorktreesPage", () => {
       return jsonResponse({ error: "not found" }, { status: 404 });
     });
 
-    renderPage();
+    renderListPage();
     const alert = await screen.findByRole("alert");
     expect(alert).toHaveTextContent(/could not load repositories/i);
     expect(alert).toHaveTextContent(/git API may be unavailable/i);
@@ -94,7 +95,7 @@ describe("WorktreesPage", () => {
       return jsonResponse({ error: "not found" }, { status: 404 });
     });
 
-    renderPage(["/worktrees?register=1"]);
+    renderListPage(["/worktrees?register=1"]);
     expect(
       await screen.findByRole("button", { name: /Choose folder/i }),
     ).toBeInTheDocument();
@@ -115,7 +116,7 @@ describe("WorktreesPage", () => {
     expect(screen.getByRole("button", { name: /Choose folder/i })).toBeInTheDocument();
   });
 
-  it("renders one repository with two worktrees", async () => {
+  it("lists one repository without nested worktree rows", async () => {
     vi.spyOn(globalThis, "fetch").mockImplementation(async (input: RequestInfo | URL) => {
       const url = requestUrl(input);
       if (url.endsWith("/git/repositories")) {
@@ -124,6 +125,7 @@ describe("WorktreesPage", () => {
             {
               id: repoId,
               path: "/repo/main",
+              git_common_dir: "",
               host_path: "",
               default_branch: "main",
               created_at: "2026-06-22T12:00:00Z",
@@ -136,7 +138,7 @@ describe("WorktreesPage", () => {
         return jsonResponse({
           worktrees: [
             {
-              id: wtA,
+              id: "00000000-0000-4000-8000-000000000020",
               repository_id: repoId,
               path: "/repo/main",
               name: "main",
@@ -172,38 +174,25 @@ describe("WorktreesPage", () => {
       return jsonResponse({ error: "not found" }, { status: 404 });
     });
 
-    renderPage();
+    renderListPage();
     expect(
-      await screen.findByRole("heading", {
-        level: 2,
-        name: /^repositories$/i,
-      }),
+      await screen.findByRole("heading", { level: 2, name: /^repositories$/i }),
     ).toBeInTheDocument();
-    const subtitle = await screen.findByText((_, el) =>
-      el?.classList.contains("draft-count-pill") &&
-      el.textContent?.replace(/\s+/g, " ").trim() === "1 repository"
-        ? true
-        : false,
-    );
-    expect(subtitle).toBeInTheDocument();
-    expect(
-      await screen.findByRole("heading", { level: 2, name: "main" }),
-    ).toBeInTheDocument();
-    expect(await screen.findByText("feature", { selector: ".worktree-row__label" })).toBeInTheDocument();
-    expect(screen.getAllByText("/repo/main").length).toBeGreaterThan(0);
-    expect(screen.queryByText("main", { selector: ".worktree-row__label" })).not.toBeInTheDocument();
+    expect(await screen.findByText("main", { selector: ".draft-row__name" })).toBeInTheDocument();
+    expect(await screen.findByRole("gridcell", { name: /1 worktree/i })).toHaveTextContent("1");
+    expect(screen.queryByText("feature", { selector: ".worktree-row__label" })).not.toBeInTheDocument();
   });
 
-  it("maps unregister 409 has_running_task to dialog copy", async () => {
-    vi.spyOn(globalThis, "fetch").mockImplementation(async (input: RequestInfo | URL, init?: RequestInit) => {
+  it("navigates to repository detail when a row is clicked", async () => {
+    vi.spyOn(globalThis, "fetch").mockImplementation(async (input: RequestInfo | URL) => {
       const url = requestUrl(input);
-      const method = init?.method ?? "GET";
-      if (method === "GET" && url.endsWith("/git/repositories")) {
+      if (url.endsWith("/git/repositories")) {
         return jsonResponse({
           repositories: [
             {
               id: repoId,
               path: "/repo/main",
+              git_common_dir: "",
               host_path: "",
               default_branch: "main",
               created_at: "2026-06-22T12:00:00Z",
@@ -212,54 +201,68 @@ describe("WorktreesPage", () => {
           ],
         });
       }
-      if (method === "GET" && url.includes(`/git/repositories/${repoId}/worktrees`)) {
-        return jsonResponse({
-          worktrees: [
-            {
-              id: wtB,
-              repository_id: repoId,
-              path: "/repo/feature",
-              name: "feature",
-              is_main: false,
-              branch_id: branchId,
-              created_at: "2026-06-22T12:00:00Z",
-            },
-          ],
-        });
-      }
-      if (method === "GET" && url.includes(`/git/repositories/${repoId}/branches`)) {
-        return jsonResponse({
-          branches: [
-            {
-              id: branchId,
-              repository_id: repoId,
-              name: "feature",
-              head_sha: "abc123",
-              created_at: "2026-06-22T12:00:00Z",
-            },
-          ],
-        });
-      }
-      if (method === "DELETE") {
-        return jsonResponse(
-          { error: "task still running", code: "has_running_task" },
-          { status: 409 },
-        );
+      if (url.includes(`/git/repositories/${repoId}/worktrees`)) {
+        return jsonResponse({ worktrees: [] });
       }
       return jsonResponse({ error: "not found" }, { status: 404 });
     });
 
-    renderPage();
-    await screen.findByText("feature", { selector: ".worktree-row__label" });
-    await userEvent.click(
-      screen.getByRole("button", { name: /Worktree actions for feature/i }),
-    );
-    await userEvent.click(screen.getByRole("menuitem", { name: /Unregister worktree/i }));
-    const dialog = screen.getByRole("dialog");
-    await userEvent.click(within(dialog).getByRole("button", { name: /^Unregister$/i }));
-    await waitFor(() => {
-      expect(within(dialog).getByText(/task still running/i)).toBeInTheDocument();
+    renderListPage();
+    const row = await screen.findByRole("row", { name: /main, 0 worktrees/i });
+    await userEvent.click(row);
+    expect(await screen.findByText("Detail")).toBeInTheDocument();
+  });
+
+  it("filters repositories with the search field", async () => {
+    vi.spyOn(globalThis, "fetch").mockImplementation(async (input: RequestInfo | URL) => {
+      const url = requestUrl(input);
+      if (url.endsWith("/git/repositories")) {
+        return jsonResponse({
+          repositories: [
+            {
+              id: repoId,
+              path: "/repo/hamix",
+              git_common_dir: "",
+              host_path: "C:/Users/dev/Documents/hamix",
+              default_branch: "main",
+              created_at: "2026-06-22T12:00:00Z",
+              updated_at: "2026-06-22T12:00:00Z",
+            },
+            {
+              id: repoId2,
+              path: "/repo/other",
+              git_common_dir: "",
+              host_path: "C:/Users/dev/Documents/other",
+              default_branch: "main",
+              created_at: "2026-06-22T12:00:00Z",
+              updated_at: "2026-06-22T12:00:00Z",
+            },
+          ],
+        });
+      }
+      if (url.includes("/git/repositories/") && url.includes("/worktrees")) {
+        return jsonResponse({ worktrees: [] });
+      }
+      return jsonResponse({ error: "not found" }, { status: 404 });
     });
-    expect(within(dialog).getByRole("button", { name: /^Unregister$/i })).toBeDisabled();
+
+    renderListPage();
+    const search = await screen.findByRole("searchbox", { name: /search repositories/i });
+    expect(await screen.findByText("hamix", { selector: ".draft-row__name" })).toBeInTheDocument();
+    expect(screen.getByText("other", { selector: ".draft-row__name" })).toBeInTheDocument();
+
+    await userEvent.clear(search);
+    await userEvent.type(search, "hamix");
+    await waitFor(() => {
+      expect(screen.queryByText("other", { selector: ".draft-row__name" })).not.toBeInTheDocument();
+    });
+    expect(screen.getByText("hamix", { selector: ".draft-row__name" })).toBeInTheDocument();
+
+    await userEvent.clear(search);
+    await userEvent.type(search, "nomatch");
+    await waitFor(() => {
+      expect(screen.queryByText("hamix", { selector: ".draft-row__name" })).not.toBeInTheDocument();
+    });
+    expect(await screen.findByText(/no matching repositories/i)).toBeInTheDocument();
   });
 });

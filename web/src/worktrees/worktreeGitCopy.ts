@@ -8,17 +8,19 @@ export const worktreeGitCopy = {
   reconciling: "Reconciling…",
   reconcilingStatus: "Syncing registered worktrees with git…",
   deleteRepository: "Delete",
-  deleteWorktree: "Delete worktree",
+  unregisterWorktree: "Unregister worktree",
   repositoryActions: "Repository actions",
   worktreeActions: (name: string) => `Worktree actions for ${name}`,
   hostPathLabel: "Host path",
   listColumnName: "Name",
   listColumnBranch: "Branch",
-  listColumnStatus: "Status",
+  listColumnWorktreeCount: "Worktrees",
+  searchRepositoriesPlaceholder: "Search by name…",
+  cellNotApplicable: "—",
   mainWorktreeShortLabel: "main",
   mainWorktreeLabel: "main worktree",
   mainWorktreeHint:
-    "The primary checkout from git clone or git init. Deleting removes Hamix registration only — the checkout stays on disk.",
+    "The primary checkout from git clone or git init. Unregistering removes Hamix tracking only — the checkout stays on disk.",
   statusUnavailable: "—",
   statusUnavailableTitle: "Worktree checkout status is not available yet",
   detachedHead: "Detached HEAD",
@@ -66,12 +68,21 @@ export const worktreeGitCopy = {
   reconcileErrorTitle: "Reconcile failed",
 } as const;
 
+export function worktreeCountLabel(count: number): string {
+  return count === 1 ? "1 worktree" : `${count} worktrees`;
+}
+
+/** Numeric count for repository list cells; the column header already says "Worktrees". */
+export function repositoryListWorktreeCountDisplay(count: number): string {
+  return String(count);
+}
+
 export function worktreeAriaLabel(displayName: string): string {
   return `Worktree: ${displayName}`;
 }
 
-export function deleteWorktreeAriaLabel(displayName: string): string {
-  return `Delete worktree "${displayName}"`;
+export function unregisterWorktreeAriaLabel(displayName: string): string {
+  return `Unregister worktree "${displayName}"`;
 }
 
 export function liveWorktreeOptionLabel(path: string, isMain: boolean): string {

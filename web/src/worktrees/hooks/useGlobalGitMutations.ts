@@ -3,7 +3,7 @@ import {
   createGlobalGitRepository,
   createGlobalGitWorktree,
   deleteGlobalGitRepository,
-  deleteGlobalGitWorktree,
+  unregisterGlobalGitWorktree,
   reconcileGlobalGitRepository,
   registerGlobalGitWorktree,
   relocateGlobalGitRepository,
@@ -16,6 +16,7 @@ export function useGlobalGitMutations() {
 
   const invalidateRepo = (repositoryId: string) => {
     void qc.invalidateQueries({ queryKey: gitQueryKeys.globalRepositories() });
+    void qc.invalidateQueries({ queryKey: gitQueryKeys.globalRepository(repositoryId) });
     void qc.invalidateQueries({ queryKey: gitQueryKeys.globalWorktrees(repositoryId) });
     void qc.invalidateQueries({ queryKey: gitQueryKeys.globalBranches(repositoryId) });
     void qc.invalidateQueries({ queryKey: gitQueryKeys.globalLiveBranches(repositoryId) });
@@ -53,9 +54,9 @@ export function useGlobalGitMutations() {
     onSuccess: (_data, vars) => invalidateRepo(vars.repositoryId),
   });
 
-  const deleteWorktree = useMutation({
-    mutationFn: (vars: { worktreeId: string; repositoryId: string; force?: boolean }) =>
-      deleteGlobalGitWorktree(vars.worktreeId, { force: vars.force }),
+  const unregisterWorktree = useMutation({
+    mutationFn: (vars: { worktreeId: string; repositoryId: string }) =>
+      unregisterGlobalGitWorktree(vars.worktreeId),
     onSuccess: (_data, vars) => invalidateRepo(vars.repositoryId),
   });
 
@@ -76,7 +77,7 @@ export function useGlobalGitMutations() {
     deleteRepository,
     createWorktree,
     registerWorktree,
-    deleteWorktree,
+    unregisterWorktree,
     reconcile,
     relocateRepository,
   };

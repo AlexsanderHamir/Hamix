@@ -31,3 +31,39 @@ export function splitWorktreePath(path: string): { parent: string; base: string 
 export function shouldShowWorktreePath(worktreePath: string, repositoryPath: string): boolean {
   return !repositoryPathsEquivalent(worktreePath, repositoryPath);
 }
+
+/** Client-side filter for the repositories list search field. */
+export function repositoryMatchesSearchQuery(
+  repository: { path: string; host_path: string },
+  query: string,
+): boolean {
+  const q = query.trim().toLowerCase();
+  if (q === "") return true;
+  const name = repositoryDisplayName(repository.path).toLowerCase();
+  return (
+    name.includes(q) ||
+    repository.path.toLowerCase().includes(q) ||
+    repository.host_path.toLowerCase().includes(q)
+  );
+}
+
+/** Short scannable label for a worktree path; full path belongs in a tooltip. */
+export function worktreePathLabel(worktreePath: string, repositoryPath: string): string {
+  const trimmed = worktreePath.trim();
+  if (trimmed === "") return trimmed;
+
+  const { parent: worktreeParent, base } = splitWorktreePath(trimmed);
+  const { parent: repositoryParent } = splitWorktreePath(repositoryPath);
+
+  if (worktreeParent !== "" && worktreeParent === repositoryParent) {
+    return base;
+  }
+
+  const repoPrefix = repositoryPath.trim().replace(/\\/g, "/").replace(/\/+$/, "");
+  const worktreeNormalized = trimmed.replace(/\\/g, "/");
+  if (repoPrefix !== "" && worktreeNormalized.startsWith(`${repoPrefix}/`)) {
+    return worktreeNormalized.slice(repoPrefix.length + 1);
+  }
+
+  return trimmed;
+}

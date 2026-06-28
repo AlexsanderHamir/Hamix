@@ -4,9 +4,8 @@ import {
   worktreeGitCopy,
 } from "../worktreeGitCopy";
 import { BranchPill } from "./BranchPill";
-import { WorktreesMenu } from "./WorktreesMenu";
 import { WorktreesMoreIcon } from "./WorktreesIcons";
-import { WorktreesPathChip } from "./WorktreesPathChip";
+import { WorktreesMenu } from "./WorktreesMenu";
 
 type Props = {
   worktree: GitWorktree;
@@ -41,21 +40,18 @@ export function WorktreeRow({
       data-main={worktree.is_main ? "true" : "false"}
       aria-label={worktreeAriaLabel(displayName)}
     >
-      <div className="draft-row__meta worktree-row__meta">
-        <div className="worktree-row__title">
-          <span className="draft-row__name" title={displayName}>
-            {displayName}
+      <div className="worktree-row__title">
+        <span className="draft-row__name" title={displayName}>
+          {displayName}
+        </span>
+        {kindLabel ? (
+          <span
+            className="worktree-row__kind"
+            title={worktreeGitCopy.mainWorktreeHint}
+          >
+            {kindLabel}
           </span>
-          {kindLabel ? (
-            <span
-              className="worktree-row__kind"
-              title={worktreeGitCopy.mainWorktreeHint}
-            >
-              {kindLabel}
-            </span>
-          ) : null}
-        </div>
-        <WorktreesPathChip path={worktree.path} compact />
+        ) : null}
       </div>
 
       <div className="worktree-row__branch" aria-label="Branch">

@@ -16,7 +16,10 @@ export function WorktreeList({
   return (
     <div className="worktree-list table-wrap">
       <div className="worktree-list-head" role="row">
-        <span className="worktree-list-head__label" role="columnheader">
+        <span
+          className="worktree-list-head__label worktree-list-head__label--name"
+          role="columnheader"
+        >
           {worktreeGitCopy.listColumnName}
         </span>
         <span

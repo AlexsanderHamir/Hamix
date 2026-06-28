@@ -8,6 +8,7 @@ import (
 
 	"github.com/AlexsanderHamir/Hamix/pkgs/gitwork"
 	"github.com/AlexsanderHamir/Hamix/pkgs/tasks/domain"
+	"github.com/AlexsanderHamir/Hamix/pkgs/tasks/store/model"
 )
 
 func TestReconcileGitRepository_needsBootstrapWhenPathMissing(t *testing.T) {
@@ -63,6 +64,51 @@ func TestReconcileGitRepository_mainRenamed_autoDiscover(t *testing.T) {
 	}
 	if !out.Report.RepoPathUpdated {
 		t.Fatal("expected repo path update")
+	}
+	gotRepo, err := s.GetGitRepository(ctx, domain.DefaultProjectID, repo.ID)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if worktreePathKey(gotRepo.Path) != worktreePathKey(renamed) {
+		t.Fatalf("repo path=%q want %q", gotRepo.Path, renamed)
+	}
+}
+
+func TestReconcileGitRepository_mainRenamed_withLinkedWorktreeSibling(t *testing.T) {
+	s, ctx, gitSvc := gitTestStore(t)
+	main := initGitRepo(t)
+	repo, err := s.CreateGitRepository(ctx, domain.DefaultProjectID, CreateGitRepositoryInput{Path: main}, gitSvc)
+	if err != nil {
+		t.Fatal(err)
+	}
+	parent := filepath.Dir(main)
+	wtPath := filepath.Join(parent, "linked-sibling")
+	repoGit, err := gitSvc.OpenRepository(ctx, main)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if _, err := gitSvc.AddWorktree(ctx, repoGit, wtPath, gitwork.AddWorktreeOptions{
+		Branch:       "feature",
+		CreateBranch: true,
+	}); err != nil {
+		t.Fatalf("AddWorktree: %v", err)
+	}
+	renamed := filepath.Join(parent, "renamed-with-linked")
+	if err := os.Rename(main, renamed); err != nil {
+		t.Fatalf("rename main: %v", err)
+	}
+	t.Cleanup(func() { _ = os.Rename(renamed, main) })
+
+	out, err := s.ReconcileGitRepository(ctx, domain.DefaultProjectID, repo.ID, ReconcileGitInput{
+		AllowCheckoutDiscover: true,
+		RepairGit:             true,
+		AllowRemove:           true,
+	}, gitSvc)
+	if err != nil {
+		t.Fatalf("ReconcileGitRepository: %v", err)
+	}
+	if out.Status != reconcileStatusOK {
+		t.Fatalf("status=%q want ok", out.Status)
 	}
 	gotRepo, err := s.GetGitRepository(ctx, domain.DefaultProjectID, repo.ID)
 	if err != nil {
@@ -315,5 +361,79 @@ func TestReconcileGitRepository_dryRun_noWrites(t *testing.T) {
 	}
 	if before.Path != after.Path || before.UpdatedAt != after.UpdatedAt {
 		t.Fatal("dry run modified repository row")
+	}
+}
+
+func TestReconcileGitRepository_removesIncompleteDiscoverStubAtMainPath(t *testing.T) {
+	s, ctx, gitSvc := gitTestStore(t)
+	main := initGitRepo(t)
+	repo, err := s.CreateGlobalGitRepository(ctx, CreateGitRepositoryInput{Path: main}, gitSvc)
+	if err != nil {
+		t.Fatal(err)
+	}
+	rows, err := s.ListGitWorktreesByRepo(ctx, repo.ID)
+	if err != nil {
+		t.Fatal(err)
+	}
+	var mainRow domain.GitWorktree
+	for _, row := range rows {
+		if row.IsMain {
+			mainRow = row
+			break
+		}
+	}
+	if mainRow.ID == "" {
+		t.Fatal("expected seeded main worktree row")
+	}
+	if err := s.db.WithContext(ctx).Model(&model.GitWorktree{}).Where("id = ?", mainRow.ID).Updates(map[string]any{
+		"branch_id": "",
+		"name":      "discovered-" + filepath.Base(main),
+		"is_main":   true,
+	}).Error; err != nil {
+		t.Fatalf("simulate discover stub: %v", err)
+	}
+
+	out, err := s.ReconcileGitRepository(ctx, "", repo.ID, ReconcileGitInput{
+		AllowRemove: true,
+		RepairGit:   true,
+	}, gitSvc)
+	if err != nil {
+		t.Fatalf("ReconcileGitRepository: %v", err)
+	}
+	if out.Report.WorktreesRemoved != 1 {
+		t.Fatalf("worktrees_removed=%d want 1", out.Report.WorktreesRemoved)
+	}
+	after, err := s.ListGitWorktreesByRepo(ctx, repo.ID)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(after) != 0 {
+		t.Fatalf("worktrees after reconcile=%+v want empty", after)
+	}
+}
+
+func TestReconcileGitRepository_preservesRegisteredMainWorktree(t *testing.T) {
+	s, ctx, gitSvc := gitTestStore(t)
+	main := initGitRepo(t)
+	repo, err := s.CreateGlobalGitRepository(ctx, CreateGitRepositoryInput{Path: main}, gitSvc)
+	if err != nil {
+		t.Fatal(err)
+	}
+	out, err := s.ReconcileGitRepository(ctx, "", repo.ID, ReconcileGitInput{
+		AllowRemove: true,
+		RepairGit:   true,
+	}, gitSvc)
+	if err != nil {
+		t.Fatalf("ReconcileGitRepository: %v", err)
+	}
+	if out.Report.WorktreesRemoved != 0 {
+		t.Fatalf("worktrees_removed=%d want 0", out.Report.WorktreesRemoved)
+	}
+	rows, err := s.ListGitWorktreesByRepo(ctx, repo.ID)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(rows) != 1 || !rows[0].IsMain || rows[0].BranchID == "" {
+		t.Fatalf("registered main worktree=%+v", rows)
 	}
 }
